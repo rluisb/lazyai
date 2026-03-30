@@ -27,11 +27,20 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
   files.ensureDir(path.join(docsDir, 'templates'))
   files.ensureDir(path.join(docsDir, 'rules'))
 
-  // 2. Copy templates, rules, context
+  // 2. Copy templates, rules, docs agents
   console.log('📄  Copying shared files...')
   copyLibraryDir(path.join(libraryDir, 'templates'), path.join(docsDir, 'templates'), fileRecords, targetDir)
   copyLibraryDir(path.join(libraryDir, 'rules'), path.join(docsDir, 'rules'), fileRecords, targetDir)
-  copyLibraryDir(path.join(libraryDir, 'context'), path.join(docsDir, 'context'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/docs.md'), path.join(docsDir, 'AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/features.md'), path.join(docsDir, 'features/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/bugfixes.md'), path.join(docsDir, 'bugfixes/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/refactors.md'), path.join(docsDir, 'refactors/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/tech-debt.md'), path.join(docsDir, 'tech-debt/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/rules.md'), path.join(docsDir, 'rules/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/standards.md'), path.join(docsDir, 'standards/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/templates.md'), path.join(docsDir, 'templates/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/memory.md'), path.join(docsDir, 'memory/AGENTS.md'), fileRecords, targetDir)
+  copyLibraryFile(path.join(libraryDir, 'docs-agents/adrs.md'), path.join(docsDir, 'adrs/AGENTS.md'), fileRecords, targetDir)
 
   // 3. Copy infra
   console.log('🛠️  Copying infrastructure files...')

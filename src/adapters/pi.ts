@@ -40,12 +40,12 @@ export class PiAdapter implements ToolAdapter {
 
   private copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): void {
     if (files.fileExists(dest)) {
-      console.warn(`⚠️  Skipping existing file: ${path.relative(process.cwd(), dest)}`)
+      console.warn(`⚠️  Skipping existing file: ${path.relative(ctx.targetDir, dest)}`)
       return
     }
     files.copyFile(src, dest)
     ctx.fileRecords.push({
-      path: path.relative(process.cwd(), dest),
+      path: path.relative(ctx.targetDir, dest),
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
     })

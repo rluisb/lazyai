@@ -1,10 +1,14 @@
 import type { Command } from 'commander'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
-import type { ToolId, AiSetupConfig } from '../types.js'
+import type { ToolId, AiSetupConfig, FileRecord } from '../types.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { fileExists } from '../utils/files.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const libraryDir = join(__dirname, '../../library')
 
 export function registerAdd(program: Command): void {
   program
@@ -12,7 +16,7 @@ export function registerAdd(program: Command): void {
     .description('Add a tool to existing setup')
     .argument('<tool>', 'Tool to add: pi | opencode')
     .action(async (tool: string) => {
-      const toolId = tool as ToolId;
+      const toolId = tool as ToolId
       if (toolId !== 'pi' && toolId !== 'opencode') {
         p.log.error(`Unknown tool: ${tool}. Must be 'pi' or 'opencode'.`)
         process.exit(1)
@@ -47,7 +51,12 @@ export function registerAdd(program: Command): void {
         process.exit(1)
       }
 
-      const newFiles = await adapter.install(targetDir, 'library')
+      const newFiles: FileRecord[] = []
+      await adapter.install({
+        targetDir,
+        libraryDir,
+        fileRecords: newFiles,
+      })
       
       s.stop(`Installed ${toolId} files`)
 

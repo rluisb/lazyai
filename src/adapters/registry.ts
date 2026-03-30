@@ -3,6 +3,7 @@ import { PiAdapter } from './pi.js'
 import { OpenCodeAdapter } from './opencode.js'
 import { ClaudeCodeAdapter } from './claude-code.js'
 import { GeminiAdapter } from './gemini.js'
+import { CopilotAdapter } from './copilot.js'
 import type { ToolId } from '../types.js'
 
 export class AdapterRegistry {
@@ -13,6 +14,7 @@ export class AdapterRegistry {
     this.register(new OpenCodeAdapter())
     this.register(new ClaudeCodeAdapter())
     this.register(new GeminiAdapter())
+    this.register(new CopilotAdapter())
   }
 
   register(adapter: ToolAdapter): void {

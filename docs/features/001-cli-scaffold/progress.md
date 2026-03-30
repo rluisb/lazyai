@@ -1,58 +1,47 @@
-# Progress: AI Setup CLI
+# Progress: 001-cli-scaffold
 
-**Feature:** 001-cli-scaffold
-**Started:** 2026-03-28
-**Current phase:** Plan
-
----
-
-## Session Log
-
-### 2026-03-28 — Research (Manual)
-- **Agent:** Scout (manual)
-- **Session:** new
-- **Context loaded:** Obsidian vault, AI-Agentic-Setup-Templates, AI-Driven-Development-Workflow-Report
-- **Output:** research.md
-- **Decisions:** None — research only
-- **Status:** ✅ Complete
-
-### 2026-03-28 — PRD (Manual)
-- **Agent:** Planner (manual)
-- **Session:** continued
-- **Context loaded:** research.md
-- **Output:** prd.md (5 user stories, 10 FRs)
-- **Decisions:** MVP = US-1 (init command). Start with Pi + OpenCode only.
-- **Status:** ✅ Complete
-
-### 2026-03-28 — TechSpec (Manual)
-- **Agent:** Planner (manual)
-- **Session:** continued
-- **Context loaded:** research.md + prd.md
-- **Output:** techspec.md
-- **Decisions:** TypeScript + @clack/prompts + commander. Adapter pattern for multi-tool.
-- **ADR needed:** docs/adrs/001-typescript-clack-cli.md
-- **Status:** ✅ Complete
-
-### 2026-03-28 — Tasks (Manual)
-- **Agent:** Planner (manual)
-- **Session:** continued
-- **Context loaded:** prd.md + techspec.md
-- **Output:** tasks/tasks.md + 12 task files
-- **Decisions:** 6 phases, MVP = T001-T012
-- **Status:** ✅ Complete
+**Last Updated:** 2026-03-30
+**Phase:** 4 (MVP Complete)
+**Overall:** 12/19 tasks complete
 
 ---
 
-## ADRs Created
+## Status
 
-- docs/adrs/001-typescript-clack-cli.md — pending creation (flagged in TechSpec)
+| Task | Name | Status | Notes |
+|------|------|--------|-------|
+| T001 | Init Project | ✅ DONE | Built with tsup, strict TS |
+| T002 | CLI Entry | ✅ DONE | Commander stubbed out |
+| T003 | Prompts | ✅ DONE | @clack/prompts interactive + flags |
+| T004 | Lib: Agents | ✅ DONE | Copied scout, planner, etc. |
+| T005 | Lib: Templates/Rules | ✅ DONE | Templates and context files |
+| T006 | Lib: Prompts/Infra | ✅ DONE | Prompts and git hooks |
+| T007 | AGENTS.md Template | ✅ DONE | Root template with placeholders |
+| T008 | File Utils | ✅ DONE | Typed fs wrappers |
+| T009 | Scaffold Engine | ✅ DONE | docs/ layout + shared files |
+| T010 | Pi Adapter | ✅ DONE | Configured for .pi/ |
+| T011 | OpenCode Adapter | ✅ DONE | Configured for .opencode/ |
+| T012 | Wire Adapters | ✅ DONE | Setup config drives adapter run |
+| T013 | Command: Add | ⏳ TODO | Phase 5 |
+| T014 | Command: Update | ⏳ TODO | Phase 5 |
+| T015 | Command: Doctor | ⏳ TODO | Phase 5 |
+| T016 | Unit Tests | ⏳ TODO | Phase 6 |
+| T017 | Integration Tests | ⏳ TODO | Phase 6 |
+| T018 | Smoke Tests | ⏳ TODO | Phase 6 |
+| T019 | Write README | ⏳ TODO | Phase 6 |
 
----
+## Current Focus
 
-## Current State
+MVP implementation (T001-T012) is complete and tested successfully in a temporary directory.
 
-- **Phase:** Plan complete. Ready for implementation.
-- **Task progress:** 0/19 complete
-- **Tests:** N/A
-- **Next step:** T001 — Initialize project (package.json, tsconfig, tsup)
-- **Blockers:** None
+## Next Step
+
+Begin Phase 5: Implement `add`, `update`, and `doctor` commands (T013-T015) or move to testing.
+
+## Blockers
+
+None.
+
+## Decisions Made
+
+- 2026-03-30: Extracted adapter interface into a dedicated types file to allow parallel development of Pi and OpenCode adapters.

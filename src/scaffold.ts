@@ -1,0 +1,123 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
+import * as files from './utils/files.js'
+import type { SetupConfig, AiSetupConfig, FileRecord } from './types.js'
+import { AdapterRegistry } from './adapters/registry.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const libraryDir = path.join(__dirname, '../library')
+
+export async function runScaffold(config: SetupConfig): Promise<void> {
+  const targetDir = config.targetDir
+  const fileRecords: FileRecord[] = []
+
+  // 1. Create docs/ structure
+  console.log('\n📂  Creating docs/ structure...')
+  const docsDir = path.join(targetDir, 'docs')
+  files.ensureDir(docsDir)
+  files.ensureDir(path.join(docsDir, 'features'))
+  files.ensureDir(path.join(docsDir, 'bugfixes'))
+  files.ensureDir(path.join(docsDir, 'refactors'))
+  files.ensureDir(path.join(docsDir, 'tech-debt'))
+  files.ensureDir(path.join(docsDir, 'adrs'))
+  files.ensureDir(path.join(docsDir, 'memory'))
+  files.ensureDir(path.join(docsDir, 'standards'))
+  files.ensureDir(path.join(docsDir, 'templates'))
+  files.ensureDir(path.join(docsDir, 'rules'))
+
+  // 2. Copy templates, rules, context
+  console.log('📄  Copying shared files...')
+  copyLibraryDir(path.join(libraryDir, 'templates'), path.join(docsDir, 'templates'), fileRecords)
+  copyLibraryDir(path.join(libraryDir, 'rules'), path.join(docsDir, 'rules'), fileRecords)
+  copyLibraryDir(path.join(libraryDir, 'context'), path.join(docsDir, 'context'), fileRecords)
+
+  // 3. Copy infra
+  console.log('🛠️  Copying infrastructure files...')
+  copyLibraryFile(path.join(libraryDir, 'infra/CODEOWNERS.template'), path.join(targetDir, 'CODEOWNERS'), fileRecords)
+  
+  const hooksDir = path.join(targetDir, '.git/hooks')
+  if (files.fileExists(path.join(targetDir, '.git'))) {
+    files.ensureDir(hooksDir)
+    copyLibraryFile(path.join(libraryDir, 'infra/pre-commit.hook'), path.join(hooksDir, 'pre-commit'), fileRecords)
+  }
+  
+  copyLibraryFile(path.join(libraryDir, 'infra/compliance.md'), path.join(docsDir, 'compliance.md'), fileRecords)
+  copyLibraryFile(path.join(libraryDir, 'infra/KNOWLEDGE_MAP.template.md'), path.join(docsDir, 'KNOWLEDGE_MAP.md'), fileRecords)
+
+  // 4. Create root files (AGENTS.md + CLAUDE.md)
+  console.log('📝  Creating root files...')
+  const agentsTemplate = files.readFile(path.join(libraryDir, 'root/AGENTS.template.md'))
+  const agentsContent = agentsTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
+  
+  // Both tools rely on these root files (Pi uses CLAUDE.md, OpenCode uses AGENTS.md)
+  if (config.tools.includes('opencode')) {
+    writeRootFile(path.join(targetDir, 'AGENTS.md'), agentsContent, fileRecords)
+  }
+  if (config.tools.includes('pi')) {
+    writeRootFile(path.join(targetDir, 'CLAUDE.md'), agentsContent, fileRecords)
+  }
+
+  // 5. Run Adapters
+  const registry = new AdapterRegistry()
+  const adapters = registry.getAll(config.tools)
+  
+  for (const adapter of adapters) {
+    await adapter.install({
+      targetDir,
+      libraryDir,
+      fileRecords
+    })
+  }
+
+  // 6. Write .ai-setup.json
+  console.log('⚙️  Writing .ai-setup.json...')
+  const aiSetupConfig: AiSetupConfig = {
+    version: '0.1.0', // TODO: get from package.json
+    setupType: config.setupType,
+    tools: config.tools,
+    projectName: config.projectName,
+    installedAt: new Date().toISOString(),
+    files: fileRecords,
+  }
+  files.writeFile(path.join(targetDir, '.ai-setup.json'), JSON.stringify(aiSetupConfig, null, 2))
+}
+
+function copyLibraryDir(src: string, dest: string, records: FileRecord[]): void {
+  if (!files.fileExists(src)) return
+  
+  files.ensureDir(dest)
+  const entries = files.listDir(src)
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry)
+    const destPath = path.join(dest, entry)
+    copyLibraryFile(srcPath, destPath, records)
+  }
+}
+
+function copyLibraryFile(src: string, dest: string, records: FileRecord[]): void {
+  if (!files.fileExists(src)) return
+  if (files.fileExists(dest)) {
+    console.warn(`⚠️  Skipping existing file: ${path.relative(process.cwd(), dest)}`)
+    return
+  }
+  files.copyFile(src, dest)
+  records.push({
+    path: path.relative(process.cwd(), dest),
+    hash: files.fileHash(dest),
+    source: path.relative(libraryDir, src),
+  })
+}
+
+function writeRootFile(dest: string, content: string, records: FileRecord[]): void {
+  if (files.fileExists(dest)) {
+    console.warn(`⚠️  Skipping existing file: ${path.relative(process.cwd(), dest)}`)
+    return
+  }
+  files.writeFile(dest, content)
+  records.push({
+    path: path.relative(process.cwd(), dest),
+    hash: files.fileHash(dest),
+    source: 'root/AGENTS.template.md',
+  })
+}

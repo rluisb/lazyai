@@ -1,0 +1,13 @@
+# CODEOWNERS
+
+# Global owners
+* @[YOUR_ORG]/[YOUR_TEAM]
+
+# Documentation owners
+docs/ @[YOUR_ORG]/[YOUR_TEAM]
+
+# Source code owners
+src/ @[YOUR_ORG]/[YOUR_TEAM]
+
+# Configuration owners
+.ai-setup.json @[YOUR_ORG]/[YOUR_TEAM]

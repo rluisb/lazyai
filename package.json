@@ -1,0 +1,37 @@
+{
+  "name": "@teachable/ai-setup",
+  "version": "0.1.0",
+  "description": "One-command AI development environment scaffold",
+  "type": "module",
+  "bin": {
+    "ai-setup": "./bin/ai-setup.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "library"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["ai", "scaffold", "cli", "setup", "agents"],
+  "license": "MIT"
+}

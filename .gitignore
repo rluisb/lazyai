@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.ai-setup.json
+*.log
+.DS_Store

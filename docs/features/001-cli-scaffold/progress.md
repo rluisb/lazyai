@@ -1,8 +1,8 @@
 # Progress: 001-cli-scaffold
 
 **Last Updated:** 2026-03-30
-**Phase:** 4 (MVP Complete)
-**Overall:** 12/19 tasks complete
+**Phase:** 6 (Complete)
+**Overall:** 19/19 tasks complete
 
 ---
 
@@ -22,21 +22,21 @@
 | T010 | Pi Adapter | ✅ DONE | Configured for .pi/ |
 | T011 | OpenCode Adapter | ✅ DONE | Configured for .opencode/ |
 | T012 | Wire Adapters | ✅ DONE | Setup config drives adapter run |
-| T013 | Command: Add | ⏳ TODO | Phase 5 |
-| T014 | Command: Update | ⏳ TODO | Phase 5 |
-| T015 | Command: Doctor | ⏳ TODO | Phase 5 |
-| T016 | Unit Tests | ⏳ TODO | Phase 6 |
-| T017 | Integration Tests | ⏳ TODO | Phase 6 |
-| T018 | Smoke Tests | ⏳ TODO | Phase 6 |
-| T019 | Write README | ⏳ TODO | Phase 6 |
+| T013 | Command: Add | ✅ DONE | Phase 5 complete |
+| T014 | Command: Update | ✅ DONE | Smart refresh with hash checks |
+| T015 | Command: Doctor | ✅ DONE | Integrity verification + non-zero exit |
+| T016 | Unit Tests | ✅ DONE | Adapter + file utils coverage |
+| T017 | Integration Tests | ✅ DONE | Full non-interactive init path verified |
+| T018 | README | ✅ DONE | Usage, commands, contribution guide |
+| T019 | ADR-001 | ✅ DONE | TypeScript + @clack decision recorded |
 
 ## Current Focus
 
-MVP implementation (T001-T012) is complete and tested successfully in a temporary directory.
+All planned tasks (T001-T019) are complete. Phase 5 added add/update/doctor commands. Phase 6 added unit/integration coverage, README documentation, and ADR-001.
 
 ## Next Step
 
-Begin Phase 5: Implement `add`, `update`, and `doctor` commands (T013-T015) or move to testing.
+Project is implementation-complete. Optional next work: broaden CLI negative-path coverage, add tool-matrix integration tests, or begin a new feature.
 
 ## Blockers
 
@@ -45,3 +45,5 @@ None.
 ## Decisions Made
 
 - 2026-03-30: Extracted adapter interface into a dedicated types file to allow parallel development of Pi and OpenCode adapters.
+- 2026-03-30: Chose TypeScript + @clack/prompts + commander for the CLI; documented in ADR-001.
+- 2026-03-30: Implemented hash-based update/doctor flows using `.ai-setup.json` as the managed file inventory.

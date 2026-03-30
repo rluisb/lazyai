@@ -4,6 +4,8 @@ Scaffold an AI-ready repository in one command.
 
 `@teachable/ai-setup` creates a consistent starting point for AI-assisted development with shared docs, templates, rules, root agent instructions, and tool-specific setup for Pi and OpenCode.
 
+> Note: this project is currently intended for private/internal distribution, not public npm publishing.
+
 ## Why this exists
 
 Setting up an AI-friendly repo by hand is repetitive:
@@ -30,10 +32,18 @@ This CLI gives you a repeatable baseline and tracks managed files in `.ai-setup.
 
 ## Install
 
-### Global install
+### Internal/private use (recommended for now)
+
+Install directly from the private GitHub repository:
 
 ```bash
-npm install -g @teachable/ai-setup
+npm install -g git+ssh://git@github.com/ricardoborges-teachable/ai-setup.git
+```
+
+You can also run it without a publish step using the GitHub repo reference:
+
+```bash
+npx github:ricardoborges-teachable/ai-setup init
 ```
 
 ### Local development
@@ -43,6 +53,14 @@ npm install
 npm run build
 node ./dist/index.js --help
 ```
+
+## Internal distribution
+
+Current recommendation:
+
+- keep installation Git-based while the repo remains under `ricardoborges-teachable`
+- avoid public npm publishing for now
+- later, after transfer to UseFedora, update ownership/scope as needed
 
 ## Quick start
 

@@ -46,7 +46,7 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
   copyLibraryFile(path.join(libraryDir, 'infra/compliance.md'), path.join(docsDir, 'compliance.md'), fileRecords, targetDir)
   copyLibraryFile(path.join(libraryDir, 'infra/KNOWLEDGE_MAP.template.md'), path.join(docsDir, 'KNOWLEDGE_MAP.md'), fileRecords, targetDir)
 
-  // 4. Create root files (AGENTS.md, CLAUDE.md, etc.)
+  // 4. Create root files (AGENTS.md, CLAUDE.md, GEMINI.md, etc.)
   console.log('📝  Creating root files...')
   const agentsTemplate = files.readFile(path.join(libraryDir, 'root/AGENTS.template.md'))
   const agentsContent = agentsTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
@@ -63,6 +63,14 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
       const claudeTemplate = files.readFile(claudeTemplatePath)
       const claudeContent = claudeTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
       await writeRootFile(path.join(targetDir, 'CLAUDE.md'), claudeContent, fileRecords, targetDir, 'root/CLAUDE.template.md')
+    }
+  }
+  if (config.tools.includes('gemini')) {
+    const geminiTemplatePath = path.join(libraryDir, 'root/GEMINI.template.md')
+    if (files.fileExists(geminiTemplatePath)) {
+      const geminiTemplate = files.readFile(geminiTemplatePath)
+      const geminiContent = geminiTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
+      await writeRootFile(path.join(targetDir, 'GEMINI.md'), geminiContent, fileRecords, targetDir, 'root/GEMINI.template.md')
     }
   }
 

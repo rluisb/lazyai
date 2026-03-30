@@ -32,6 +32,22 @@
 - **Testing:** [YOUR_TESTING_STRATEGY]
 - **Git:** [YOUR_GIT_WORKFLOW]
 
+## Decision Tree
+
+Before starting work, identify the task type and follow the appropriate guide:
+
+| Task Type | Guide | Key Process |
+|-----------|-------|-------------|
+| Feature (new) | [docs/features/AGENTS.md](docs/features/AGENTS.md) | Research → PRD → TechSpec → Implement → Verify |
+| Bugfix | [docs/bugfixes/AGENTS.md](docs/bugfixes/AGENTS.md) | Reproduce → Root-cause → Fix → Regression test |
+| Refactor | [docs/refactors/AGENTS.md](docs/refactors/AGENTS.md) | ADR → Plan → Phased implementation |
+| Tech Debt | [docs/tech-debt/AGENTS.md](docs/tech-debt/AGENTS.md) | Risk assessment → Prioritize → Incremental fix |
+| Architecture Decision | [docs/adrs/AGENTS.md](docs/adrs/AGENTS.md) | Context → Options → Decision → Record |
+| Standards/Rules | [docs/standards/AGENTS.md](docs/standards/AGENTS.md) | Review existing → Propose → Document |
+| Documentation | [docs/AGENTS.md](docs/AGENTS.md) | Structure → Write → Cross-reference |
+
+> **Don't know where to start?** Read [docs/AGENTS.md](docs/AGENTS.md) first for the full documentation map.
+
 ## Rules
 
 <!-- GitHub Copilot loads .github/copilot-instructions.md for repository-wide instructions -->
@@ -56,6 +72,12 @@
 4. **Implement:** Write tests first, then implementation
 5. **Verify:** Run all quality checks before committing
 6. **Review:** Open a PR for human review and merge
+
+### Task Sizing
+
+- **Small** (<20 lines changed): Direct implementation
+- **Medium** (20-100 lines): Brief plan → implement → test
+- **Large** (100+ lines): Research → plan → staged implementation with checkpoints
 
 ## Testing
 
@@ -90,9 +112,28 @@
 <!-- Use .github/instructions/ for path-specific instructions with YAML applyTo frontmatter -->
 <!-- AGENTS.md files in directories provide agent-specific instructions -->
 
+## Documentation References
+
+Key guides for task execution:
+- `docs/AGENTS.md` — Documentation structure and navigation
+- `docs/features/AGENTS.md` — Feature development workflow
+- `docs/bugfixes/AGENTS.md` — Bug fix workflow
+- `docs/standards/AGENTS.md` — Coding standards reference
+
 ## Self-Improvement Protocol
 
 After completing a task:
 1. Update documentation if any interfaces or behaviors changed
 2. Add lessons learned to `docs/memory/`
 3. [YOUR_SELF_IMPROVEMENT_STEP]
+
+### Impact Assessment
+
+Before proposing process changes, assess severity:
+
+| Severity | Examples | Action |
+|----------|----------|--------|
+| Critical | Wrong architecture, security flaw | Stop and escalate immediately |
+| High | Missing tests, broken conventions | Fix before continuing |
+| Medium | Suboptimal pattern, minor inconsistency | Note and fix if time permits |
+| Low | Style preference, minor naming | Record for future reference |

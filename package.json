@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",
@@ -32,6 +33,12 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["ai", "scaffold", "cli", "setup", "agents"],
+  "keywords": [
+    "ai",
+    "scaffold",
+    "cli",
+    "setup",
+    "agents"
+  ],
   "license": "MIT"
 }

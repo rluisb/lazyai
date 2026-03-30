@@ -1,5 +1,5 @@
 export type SetupType = 'project' | 'workspace'
-export type ToolId = 'pi' | 'opencode'
+export type ToolId = 'pi' | 'opencode' | 'claude-code' | 'gemini' | 'copilot'
 
 export interface SetupConfig {
   setupType: SetupType

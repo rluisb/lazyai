@@ -40,13 +40,16 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
   if (opts.tools && opts.tools.length > 0) {
     config.tools = opts.tools
   } else if (!opts.interactive) {
-    throw new Error('--tools is required in non-interactive mode (pi, opencode)')
+    throw new Error('--tools is required in non-interactive mode (pi, opencode, claude-code, gemini, copilot)')
   } else {
     const tools = await p.multiselect({
       message: 'Which AI tools are you using?',
       options: [
         { value: 'pi', label: 'Pi (Claude Code)', hint: 'Uses .pi/ directory + CLAUDE.md' },
         { value: 'opencode', label: 'OpenCode', hint: 'Uses .opencode/ directory + AGENTS.md' },
+        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + CLAUDE.md' },
+        { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ directory + GEMINI.md' },
+        { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + copilot-instructions.md' },
       ],
       required: true,
     })
@@ -80,10 +83,18 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
 }
 
 export function outroSuccess(config: SetupConfig): void {
+  const rootFiles: string[] = []
+  if (config.tools.includes('opencode')) rootFiles.push('AGENTS.md')
+  if (config.tools.includes('pi') || config.tools.includes('claude-code')) rootFiles.push('CLAUDE.md')
+  if (config.tools.includes('gemini')) rootFiles.push('GEMINI.md')
+  if (config.tools.includes('copilot')) rootFiles.push('.github/copilot-instructions.md')
+
+  const fileList = rootFiles.length > 0 ? rootFiles.join(', ') : 'your config files'
+
   p.outro(`✅  Setup complete for ${config.projectName}!
 
 Next steps:
-  1. Open AGENTS.md and fill in the [YOUR_*] placeholders
+  1. Open ${fileList} and fill in the [YOUR_*] placeholders
   2. Review .ai-setup.json to see what was installed
   3. Commit the generated files to your repository
   `)

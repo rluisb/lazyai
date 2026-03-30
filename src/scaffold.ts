@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import * as files from './utils/files.js'
 import type { SetupConfig, AiSetupConfig, FileRecord } from './types.js'
 import { AdapterRegistry } from './adapters/registry.js'
+import { confirmReplace } from './utils/conflicts.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const libraryDir = path.join(__dirname, '../library')
@@ -35,33 +36,40 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
   // 3. Copy infra
   console.log('🛠️  Copying infrastructure files...')
   copyLibraryFile(path.join(libraryDir, 'infra/CODEOWNERS.template'), path.join(targetDir, 'CODEOWNERS'), fileRecords, targetDir)
-  
+
   const hooksDir = path.join(targetDir, '.git/hooks')
   if (files.fileExists(path.join(targetDir, '.git'))) {
     files.ensureDir(hooksDir)
     copyLibraryFile(path.join(libraryDir, 'infra/pre-commit.hook'), path.join(hooksDir, 'pre-commit'), fileRecords, targetDir)
   }
-  
+
   copyLibraryFile(path.join(libraryDir, 'infra/compliance.md'), path.join(docsDir, 'compliance.md'), fileRecords, targetDir)
   copyLibraryFile(path.join(libraryDir, 'infra/KNOWLEDGE_MAP.template.md'), path.join(docsDir, 'KNOWLEDGE_MAP.md'), fileRecords, targetDir)
 
-  // 4. Create root files (AGENTS.md + CLAUDE.md)
+  // 4. Create root files (AGENTS.md, CLAUDE.md, etc.)
   console.log('📝  Creating root files...')
   const agentsTemplate = files.readFile(path.join(libraryDir, 'root/AGENTS.template.md'))
   const agentsContent = agentsTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
-  
-  // Both tools rely on these root files (Pi uses CLAUDE.md, OpenCode uses AGENTS.md)
+
   if (config.tools.includes('opencode')) {
-    writeRootFile(path.join(targetDir, 'AGENTS.md'), agentsContent, fileRecords, targetDir)
+    await writeRootFile(path.join(targetDir, 'AGENTS.md'), agentsContent, fileRecords, targetDir, 'root/AGENTS.template.md')
   }
   if (config.tools.includes('pi')) {
-    writeRootFile(path.join(targetDir, 'CLAUDE.md'), agentsContent, fileRecords, targetDir)
+    await writeRootFile(path.join(targetDir, 'CLAUDE.md'), agentsContent, fileRecords, targetDir, 'root/AGENTS.template.md')
+  }
+  if (config.tools.includes('claude-code')) {
+    const claudeTemplatePath = path.join(libraryDir, 'root/CLAUDE.template.md')
+    if (files.fileExists(claudeTemplatePath)) {
+      const claudeTemplate = files.readFile(claudeTemplatePath)
+      const claudeContent = claudeTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
+      await writeRootFile(path.join(targetDir, 'CLAUDE.md'), claudeContent, fileRecords, targetDir, 'root/CLAUDE.template.md')
+    }
   }
 
   // 5. Run Adapters
   const registry = new AdapterRegistry()
   const adapters = registry.getAll(config.tools)
-  
+
   for (const adapter of adapters) {
     await adapter.install({
       targetDir,
@@ -85,7 +93,7 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
 
 function copyLibraryDir(src: string, dest: string, records: FileRecord[], targetDir: string): void {
   if (!files.fileExists(src)) return
-  
+
   files.ensureDir(dest)
   const entries = files.listDir(src)
   for (const entry of entries) {
@@ -109,15 +117,15 @@ function copyLibraryFile(src: string, dest: string, records: FileRecord[], targe
   })
 }
 
-function writeRootFile(dest: string, content: string, records: FileRecord[], targetDir: string): void {
+async function writeRootFile(dest: string, content: string, records: FileRecord[], targetDir: string, source: string): Promise<void> {
   if (files.fileExists(dest)) {
-    console.warn(`⚠️  Skipping existing file: ${path.relative(targetDir, dest)}`)
-    return
+    const shouldReplace = await confirmReplace(dest, path.relative(targetDir, dest))
+    if (!shouldReplace) return
   }
   files.writeFile(dest, content)
   records.push({
     path: path.relative(targetDir, dest),
     hash: files.fileHash(dest),
-    source: 'root/AGENTS.template.md',
+    source,
   })
 }

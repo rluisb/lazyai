@@ -14,13 +14,16 @@ export function registerAdd(program: Command): void {
   program
     .command('add')
     .description('Add a tool to existing setup')
-    .argument('<tool>', 'Tool to add: pi | opencode')
+    .argument('<tool>', 'Tool to add (e.g. pi, opencode, claude-code, gemini, copilot)')
     .action(async (tool: string) => {
-      const toolId = tool as ToolId
-      if (toolId !== 'pi' && toolId !== 'opencode') {
-        p.log.error(`Unknown tool: ${tool}. Must be 'pi' or 'opencode'.`)
+      const registry = new AdapterRegistry()
+
+      if (!registry.getRegisteredIds().includes(tool)) {
+        p.log.error(`Unknown tool: ${tool}. Available tools: ${registry.getRegisteredIds().join(', ')}`)
         process.exit(1)
       }
+
+      const toolId = tool as ToolId
 
       const targetDir = process.cwd()
       const configPath = join(targetDir, '.ai-setup.json')
@@ -39,13 +42,12 @@ export function registerAdd(program: Command): void {
       }
 
       p.intro(`Adding ${toolId} to your setup...`)
-      
+
       const s = p.spinner()
       s.start(`Installing ${toolId} files`)
-      
-      const registry = new AdapterRegistry()
+
       const adapter = registry.get(toolId)
-      
+
       if (!adapter) {
         s.stop(`Failed to load adapter for ${toolId}`, 1)
         process.exit(1)
@@ -57,12 +59,12 @@ export function registerAdd(program: Command): void {
         libraryDir,
         fileRecords: newFiles,
       })
-      
+
       s.stop(`Installed ${toolId} files`)
 
       config.tools.push(toolId)
       config.files = [...config.files, ...newFiles]
-      
+
       writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
 
       p.outro(`✅ Successfully added ${toolId}!`)

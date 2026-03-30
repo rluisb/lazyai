@@ -1,6 +1,7 @@
 import type { ToolAdapter } from './types.js'
 import { PiAdapter } from './pi.js'
 import { OpenCodeAdapter } from './opencode.js'
+import { ClaudeCodeAdapter } from './claude-code.js'
 import type { ToolId } from '../types.js'
 
 export class AdapterRegistry {
@@ -9,6 +10,7 @@ export class AdapterRegistry {
   constructor() {
     this.register(new PiAdapter())
     this.register(new OpenCodeAdapter())
+    this.register(new ClaudeCodeAdapter())
   }
 
   register(adapter: ToolAdapter): void {
@@ -23,5 +25,9 @@ export class AdapterRegistry {
     return toolIds
       .map(id => this.get(id))
       .filter((a): a is ToolAdapter => a !== undefined)
+  }
+
+  getRegisteredIds(): string[] {
+    return [...this.adapters.keys()]
   }
 }

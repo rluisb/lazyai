@@ -73,6 +73,15 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
       await writeRootFile(path.join(targetDir, 'GEMINI.md'), geminiContent, fileRecords, targetDir, 'root/GEMINI.template.md')
     }
   }
+  if (config.tools.includes('copilot')) {
+    const copilotTemplatePath = path.join(libraryDir, 'root/copilot-instructions.template.md')
+    if (files.fileExists(copilotTemplatePath)) {
+      const copilotTemplate = files.readFile(copilotTemplatePath)
+      const copilotContent = copilotTemplate.replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
+      files.ensureDir(path.join(targetDir, '.github'))
+      await writeRootFile(path.join(targetDir, '.github/copilot-instructions.md'), copilotContent, fileRecords, targetDir, 'root/copilot-instructions.template.md')
+    }
+  }
 
   // 5. Run Adapters
   const registry = new AdapterRegistry()

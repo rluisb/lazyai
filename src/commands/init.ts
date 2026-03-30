@@ -22,12 +22,15 @@ export function registerInit(program: Command): void {
         ? (opts.tools.split(',').map((t) => t.trim()) as ToolId[])
         : undefined
 
-      const config = await runPrompts({
-        type: opts.type as SetupType | undefined,
-        tools,
-        name: opts.name,
+      const promptOpts: any = {
         interactive: opts.interactive,
-      })
+      }
+      
+      if (opts.type) promptOpts.type = opts.type as SetupType
+      if (tools) promptOpts.tools = tools
+      if (opts.name) promptOpts.name = opts.name
+
+      const config = await runPrompts(promptOpts)
 
       // Dynamic import to avoid circular deps — scaffold wired in T009
       const { runScaffold } = await import('../scaffold.js')

@@ -23,3 +23,5 @@ export interface AiSetupConfig {
   installedAt: string
   files: FileRecord[]
 }
+
+export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow'

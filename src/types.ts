@@ -22,6 +22,44 @@ export interface AiSetupConfig {
   projectName: string
   installedAt: string
   files: FileRecord[]
+  selections?: WizardSelections
 }
 
 export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow'
+
+export type DocsDirId =
+  | 'features'
+  | 'bugfixes'
+  | 'refactors'
+  | 'tech-debt'
+  | 'adrs'
+  | 'memory'
+  | 'prompts'
+  | 'standards'
+  | 'templates'
+  | 'rules'
+
+export type AgentId = 'builder' | 'documenter' | 'planner' | 'red-team' | 'reviewer' | 'scout'
+export type SkillId = 'implement' | 'iterate' | 'plan' | 'research'
+export type PromptId = 'compact' | 'implement' | 'local-example' | 'plan' | 'research'
+export type TemplateId = 'adr' | 'prd' | 'progress' | 'standard' | 'task' | 'tasks' | 'tech-debt' | 'techspec'
+export type RuleId = 'cost' | 'review' | 'security' | 'workflow'
+export type InfraId = 'CODEOWNERS' | 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP'
+
+export type ConflictStrategy = 'align' | 'backup-and-replace' | 'skip'
+
+export interface WizardSelections {
+  docsDirs: DocsDirId[]
+  docsAgents: DocsDirId[]
+  templates: TemplateId[]
+  rules: RuleId[]
+  agents: AgentId[]
+  skills: SkillId[]
+  prompts: PromptId[]
+  infra: InfraId[]
+}
+
+export interface WizardConfig extends SetupConfig {
+  selections: WizardSelections
+  interactive: boolean
+}

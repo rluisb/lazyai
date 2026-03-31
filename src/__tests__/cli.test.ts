@@ -8,6 +8,17 @@ import type { AiSetupConfig } from '../types.js'
 describe('cli init integration', () => {
   let originalCwd: string
 
+  const makeTempRepo = (): string => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-init-'))
+    fs.mkdirSync(path.join(tempDir, '.git'), { recursive: true })
+    return tempDir
+  }
+
+  const runInit = async (args: string[]): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'init', ...args])
+  }
+
   beforeEach(() => {
     originalCwd = process.cwd()
   })
@@ -17,15 +28,10 @@ describe('cli init integration', () => {
   })
 
   it('runs full init and writes expected file tree', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-init-'))
-    fs.mkdirSync(path.join(tempDir, '.git'), { recursive: true })
+    const tempDir = makeTempRepo()
     process.chdir(tempDir)
 
-    const program = createProgram()
-    await program.parseAsync([
-      'node',
-      'ai-setup',
-      'init',
+    await runInit([
       '--type',
       'project',
       '--tools',
@@ -45,7 +51,6 @@ describe('cli init integration', () => {
       'docs/standards',
       'docs/templates',
       'docs/rules',
-      'docs/AGENTS.md',
       'docs/features/AGENTS.md',
       'docs/bugfixes/AGENTS.md',
       'docs/refactors/AGENTS.md',
@@ -84,5 +89,59 @@ describe('cli init integration', () => {
     expect(config.files.some((f) => f.path === '.opencode/templates/research.md')).toBe(true)
     expect(config.files.some((f) => f.path === 'docs/templates/prd.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.git/hooks/pre-commit')).toBe(true)
+  })
+
+  it('re-run with existing .ai-setup.json succeeds in non-interactive mode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    const args = [
+      '--type',
+      'project',
+      '--tools',
+      'pi,opencode',
+      '--name',
+      'rerun-test',
+      '--no-interactive',
+    ]
+
+    await runInit(args)
+    await runInit([...args, '--force'])
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
+    expect(config.projectName).toBe('rerun-test')
+    expect(config.setupType).toBe('project')
+    expect(config.tools).toEqual(['pi', 'opencode'])
+    expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
+  }, 15000)
+
+  it('supports partial tool selection with --tools opencode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--type',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'opencode-only-test',
+      '--no-interactive',
+    ])
+
+    expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/templates'))).toBe(true)
+
+    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, '.pi/agents'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, '.pi/skills'))).toBe(false)
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
+    expect(config.tools).toEqual(['opencode'])
+    expect(config.files.some((f) => f.path.startsWith('.opencode/'))).toBe(true)
+    expect(config.files.some((f) => f.path.startsWith('.pi/'))).toBe(false)
   })
 })

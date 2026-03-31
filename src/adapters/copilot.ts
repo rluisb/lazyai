@@ -1,6 +1,7 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
+import type { AgentId, SkillId, PromptId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 
 export class CopilotAdapter implements ToolAdapter {
@@ -21,9 +22,15 @@ export class CopilotAdapter implements ToolAdapter {
 
     console.log('🤖  Installing GitHub Copilot tools...')
 
+    const selectedAgents = ctx.selections?.agents ? new Set(ctx.selections.agents) : undefined
+    const selectedSkills = ctx.selections?.skills ? new Set(ctx.selections.skills) : undefined
+    const selectedPrompts = ctx.selections?.prompts ? new Set(ctx.selections.prompts) : undefined
+
     // Copy agent files to .github/
     const agentsDir = path.join(ctx.libraryDir, 'agents')
     for (const file of files.listDir(agentsDir)) {
+      const fileId = path.parse(file).name as AgentId
+      if (selectedAgents && !selectedAgents.has(fileId)) continue
       await this.copyFileWithRecord(
         path.join(agentsDir, file),
         path.join(githubDir, file),
@@ -34,6 +41,8 @@ export class CopilotAdapter implements ToolAdapter {
     // Prompts - exact copy
     const promptTemplatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(promptTemplatesDir)) {
+      const fileId = path.parse(file).name as PromptId
+      if (selectedPrompts && !selectedPrompts.has(fileId)) continue
       const srcPath = path.join(promptTemplatesDir, file)
       if (files.isDirectory(srcPath)) continue
       await this.copyFileWithRecord(
@@ -46,6 +55,8 @@ export class CopilotAdapter implements ToolAdapter {
     // Skills - transformed into Copilot prompt files
     const skillsDir = path.join(ctx.libraryDir, 'skills')
     for (const file of files.listDir(skillsDir)) {
+      const fileId = path.parse(file).name as SkillId
+      if (selectedSkills && !selectedSkills.has(fileId)) continue
       const src = path.join(skillsDir, file)
       const parsed = path.parse(file)
       const destFile = `${parsed.name}.prompt.md`

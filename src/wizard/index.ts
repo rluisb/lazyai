@@ -15,7 +15,7 @@ import type {
   WizardConfig,
   WizardSelections,
 } from '../types.js'
-import { readFile, writeFile } from '../utils/files.js'
+import { readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2 } from './phase2-docs.js'
@@ -33,8 +33,7 @@ export async function runWizard(opts: {
   cliOverrides: { type?: SetupType; tools?: ToolId[]; name?: string }
   targetDir: string
 }): Promise<void> {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url))
-  const libraryDir = path.join(__dirname, '../../library')
+  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
 
   if (opts.interactive) {
     p.intro('ai-setup wizard')

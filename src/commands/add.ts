@@ -5,10 +5,9 @@ import { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
 import type { ToolId, AiSetupConfig, FileRecord } from '../types.js'
 import { AdapterRegistry } from '../adapters/registry.js'
-import { fileExists } from '../utils/files.js'
+import { fileExists, resolveLibraryDir } from '../utils/files.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const libraryDir = join(__dirname, '../../library')
+const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 
 export function registerAdd(program: Command): void {
   program

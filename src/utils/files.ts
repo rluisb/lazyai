@@ -2,6 +2,29 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 
+
+/**
+ * Walk up from startDir until we find a directory containing package.json.
+ * Works both when running from compiled dist/ and from TypeScript source src/.
+ */
+export function findPackageRoot(startDir: string): string {
+  let dir = startDir
+  while (true) {
+    if (fs.existsSync(path.join(dir, 'package.json'))) return dir
+    const parent = path.dirname(dir)
+    if (parent === dir) throw new Error(`Could not find package root from: ${startDir}`)
+    dir = parent
+  }
+}
+
+/**
+ * Resolve the bundled library directory regardless of whether we are running
+ * from compiled output (dist/) or TypeScript source (src/).
+ */
+export function resolveLibraryDir(fromDir: string): string {
+  return path.join(findPackageRoot(fromDir), 'library')
+}
+
 export function ensureDir(dirPath: string): void {
   try {
     fs.mkdirSync(dirPath, { recursive: true })

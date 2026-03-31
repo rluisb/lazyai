@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path, { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
 import type { AiSetupConfig, FileRecord, ToolId } from '../types.js'
-import { backupFile, fileExists, fileHash, listDir, readFile, writeFile } from '../utils/files.js'
+import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
 import { resolveConflict } from '../utils/conflicts.js'
 
 interface ExpectedFile {
@@ -17,8 +17,7 @@ interface UpdateOptions {
   force?: boolean
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const libraryDir = join(__dirname, '../../library')
+const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 
 const docsAgentMappings: Array<{ source: string; destination: string }> = [
   { source: 'docs.md', destination: 'docs/AGENTS.md' },

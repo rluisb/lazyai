@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createProgram } from '../cli.js'
-import { runScaffold } from '../scaffold.js'
+import { runWizard } from '../wizard/index.js'
 import type { AiSetupConfig, SetupConfig } from '../types.js'
 
 describe('update and doctor commands', () => {
@@ -29,7 +29,16 @@ describe('update and doctor commands', () => {
       targetDir: tempDir,
     }
 
-    await runScaffold(config)
+    await runWizard({
+      interactive: false,
+      cliOverrides: {
+        type: config.setupType,
+        tools: config.tools,
+        name: config.projectName,
+      },
+      targetDir: config.targetDir,
+      ...(config.force !== undefined ? { force: config.force } : {}),
+    })
 
     const aiSetup = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
     return { tempDir, config: aiSetup }

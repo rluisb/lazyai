@@ -35,7 +35,7 @@ describe('update and doctor commands', () => {
     return { tempDir, config: aiSetup }
   }
 
-  it('update skips customized files and adds missing untracked expected files', async () => {
+  it('update --force backs up customized files and adds missing untracked expected files', async () => {
     const { tempDir, config } = await setupProject()
 
     expect(config.files.length).toBeGreaterThan(2)
@@ -47,6 +47,7 @@ describe('update and doctor commands', () => {
     }
 
     const customizedPath = path.join(tempDir, customized.path)
+    const originalCustomizedContent = fs.readFileSync(customizedPath, 'utf-8')
     fs.writeFileSync(customizedPath, `${fs.readFileSync(customizedPath, 'utf-8')}\ncustom change\n`, 'utf-8')
 
     const reduced = {
@@ -57,13 +58,17 @@ describe('update and doctor commands', () => {
     fs.writeFileSync(path.join(tempDir, '.ai-setup.json'), JSON.stringify(reduced, null, 2), 'utf-8')
 
     const program = createProgram()
-    await program.parseAsync(['node', 'ai-setup', 'update'])
+    await program.parseAsync(['node', 'ai-setup', 'update', '--force'])
 
     const nextConfig = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
 
-    expect(fs.readFileSync(customizedPath, 'utf-8')).toContain('custom change')
+    expect(fs.readFileSync(customizedPath, 'utf-8')).toBe(originalCustomizedContent)
     expect(nextConfig.files.find((f) => f.path === reAddTarget.path)).toBeTruthy()
     expect(fs.existsSync(path.join(tempDir, reAddTarget.path))).toBe(true)
+
+    const backupPath = path.join(tempDir, '.ai-setup-backup', customized.path)
+    expect(fs.existsSync(backupPath)).toBe(true)
+    expect(fs.readFileSync(backupPath, 'utf-8')).toContain('custom change')
   })
 
   it('doctor exits non-zero when tracked files are modified', async () => {

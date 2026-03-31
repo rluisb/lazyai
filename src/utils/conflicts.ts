@@ -1,23 +1,59 @@
 import * as p from '@clack/prompts'
-import { fileExists } from './files.js'
+import { fileExists, fileHash } from './files.js'
 
-/**
- * Checks if a file exists at the given path and prompts the user to confirm replacement.
- * Returns true if the file doesn't exist (safe to write) or if the user confirms replacement.
- * Returns false if the file exists and the user declines replacement.
- */
-export async function confirmReplace(filePath: string, displayName?: string): Promise<boolean> {
-  if (!fileExists(filePath)) return true
+export type ConflictResolution = 'overwrite' | 'skip' | 'backup-and-overwrite'
 
-  const label = displayName || filePath
-  const replace = await p.confirm({
-    message: `${label} already exists. Replace?`,
+export interface ConflictOptions {
+  force?: boolean | undefined
+  trackedHash?: string | undefined
+}
+
+export async function resolveConflict(
+  destPath: string,
+  displayName: string,
+  options: ConflictOptions = {}
+): Promise<ConflictResolution> {
+  if (!fileExists(destPath)) return 'overwrite'
+
+  if (options.force) {
+    return 'backup-and-overwrite'
+  }
+
+  if (options.trackedHash) {
+    const currentHash = fileHash(destPath)
+    if (currentHash === options.trackedHash) {
+      return 'overwrite'
+    }
+
+    const replaceCustomized = await p.confirm({
+      message: `File ${displayName} has been customized. Overwrite? (backup will be created)`,
+    })
+
+    if (p.isCancel(replaceCustomized)) {
+      p.cancel('Operation cancelled.')
+      process.exit(0)
+    }
+
+    return replaceCustomized ? 'backup-and-overwrite' : 'skip'
+  }
+
+  const replaceExisting = await p.confirm({
+    message: `File ${displayName} already exists. Replace? (backup will be created)`,
   })
 
-  if (p.isCancel(replace)) {
+  if (p.isCancel(replaceExisting)) {
     p.cancel('Operation cancelled.')
     process.exit(0)
   }
 
-  return replace as boolean
+  return replaceExisting ? 'backup-and-overwrite' : 'skip'
+}
+
+/**
+ * Backward-compatible wrapper around resolveConflict.
+ */
+export async function confirmReplace(filePath: string, displayName?: string): Promise<boolean> {
+  const label = displayName || filePath
+  const resolution = await resolveConflict(filePath, label)
+  return resolution !== 'skip'
 }

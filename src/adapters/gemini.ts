@@ -1,7 +1,7 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
-import { confirmReplace } from '../utils/conflicts.js'
+import { resolveConflict } from '../utils/conflicts.js'
 
 export class GeminiAdapter implements ToolAdapter {
   getToolId(): string {
@@ -53,8 +53,12 @@ export class GeminiAdapter implements ToolAdapter {
       const geminiMdPath = path.join(ctx.targetDir, 'GEMINI.md')
 
       if (files.fileExists(templatePath)) {
-        const shouldWrite = await confirmReplace(geminiMdPath, 'GEMINI.md')
-        if (shouldWrite) {
+        const resolution = await resolveConflict(geminiMdPath, 'GEMINI.md', { force: ctx.force })
+        if (resolution !== 'skip') {
+          if (resolution === 'backup-and-overwrite') {
+            files.backupFile(geminiMdPath, ctx.targetDir)
+          }
+
           const content = files.readFile(templatePath)
           files.writeFile(geminiMdPath, content)
           ctx.fileRecords.push({
@@ -74,12 +78,16 @@ export class GeminiAdapter implements ToolAdapter {
   }
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const shouldWrite = await confirmReplace(dest, path.relative(ctx.targetDir, dest))
-    if (!shouldWrite) return
+    const relPath = path.relative(ctx.targetDir, dest)
+    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    if (resolution === 'skip') return
+    if (resolution === 'backup-and-overwrite') {
+      files.backupFile(dest, ctx.targetDir)
+    }
 
     files.copyFile(src, dest)
     ctx.fileRecords.push({
-      path: path.relative(ctx.targetDir, dest),
+      path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
     })

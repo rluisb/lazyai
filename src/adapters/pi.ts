@@ -1,6 +1,8 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
+import { backupFile } from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
+import { resolveConflict } from '../utils/conflicts.js'
 
 export class PiAdapter implements ToolAdapter {
   getToolId(): string {
@@ -19,19 +21,19 @@ export class PiAdapter implements ToolAdapter {
     // Agents - exact copy
     const agentsDir = path.join(ctx.libraryDir, 'agents')
     for (const file of files.listDir(agentsDir)) {
-      this.copyFileWithRecord(path.join(agentsDir, file), path.join(piDir, 'agents', file), ctx)
+      await this.copyFileWithRecord(path.join(agentsDir, file), path.join(piDir, 'agents', file), ctx)
     }
 
     // Templates - exact copy
     const templatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(templatesDir)) {
-      this.copyFileWithRecord(path.join(templatesDir, file), path.join(piDir, 'templates', file), ctx)
+      await this.copyFileWithRecord(path.join(templatesDir, file), path.join(piDir, 'templates', file), ctx)
     }
 
     // Skills - exact copy
     const skillsDir = path.join(ctx.libraryDir, 'skills')
     for (const file of files.listDir(skillsDir)) {
-      this.copyFileWithRecord(path.join(skillsDir, file), path.join(piDir, 'skills', file), ctx)
+      await this.copyFileWithRecord(path.join(skillsDir, file), path.join(piDir, 'skills', file), ctx)
     }
   }
 
@@ -41,14 +43,22 @@ export class PiAdapter implements ToolAdapter {
     // Basic remove implementation - in a real scenario we'd use fs.rmSync(piDir, { recursive: true, force: true })
   }
 
-  private copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): void {
-    if (files.fileExists(dest)) {
-      console.warn(`⚠️  Skipping existing file: ${path.relative(ctx.targetDir, dest)}`)
+  private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+    const relPath = path.relative(ctx.targetDir, dest)
+    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+
+    if (resolution === 'skip') {
+      console.warn(`⚠️  Skipping existing file: ${relPath}`)
       return
     }
+
+    if (resolution === 'backup-and-overwrite') {
+      backupFile(dest, ctx.targetDir)
+    }
+
     files.copyFile(src, dest)
     ctx.fileRecords.push({
-      path: path.relative(ctx.targetDir, dest),
+      path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
     })

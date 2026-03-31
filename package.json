@@ -1,5 +1,5 @@
 {
-  "name": "@teachable/ai-setup",
+  "name": "@ricardoborges-teachable/ai-setup",
   "version": "0.1.0",
   "description": "One-command AI development environment scaffold",
   "type": "module",

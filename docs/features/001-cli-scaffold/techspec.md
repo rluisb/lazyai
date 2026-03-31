@@ -42,7 +42,7 @@ A Node.js CLI package published to npm. Uses the adapter pattern to package tool
 ## Architecture
 
 ```
-User runs: npx @teachable/ai-setup init
+User runs: npx @ricardoborges-teachable/ai-setup init
     │
     ▼
 ┌─────────────┐
@@ -125,7 +125,7 @@ This enables:
 
 **Non-interactive mode** (for scripts/CI):
 ```bash
-npx @teachable/ai-setup init --type project --tools pi,opencode --name my-api --no-interactive
+npx @ricardoborges-teachable/ai-setup init --type project --tools pi,opencode --name my-api --no-interactive
 ```
 
 ## Dependencies

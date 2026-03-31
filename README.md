@@ -1,8 +1,8 @@
-# @teachable/ai-setup
+# @ricardoborges-teachable/ai-setup
 
 Scaffold an AI-ready repository in one command.
 
-`@teachable/ai-setup` generates a consistent AI collaboration baseline: project docs, docs-scoped `AGENTS.md` guides, workflow templates, root instruction files, and adapter-specific folders for supported tools.
+`@ricardoborges-teachable/ai-setup` generates a consistent AI collaboration baseline: project docs, docs-scoped `AGENTS.md` guides, workflow templates, root instruction files, and adapter-specific folders for supported tools.
 
 ## What it covers
 
@@ -27,7 +27,7 @@ Scaffold an AI-ready repository in one command.
 ### Interactive setup (Recommended)
 
 ```bash
-npx @teachable/ai-setup init
+npx @ricardoborges-teachable/ai-setup init
 ```
 
 The interactive wizard will guide you through:
@@ -39,7 +39,7 @@ The interactive wizard will guide you through:
 ### Non-interactive init
 
 ```bash
-npx @teachable/ai-setup init --type project --tools opencode,pi --name my-repo --no-interactive
+npx @ricardoborges-teachable/ai-setup init --type project --tools opencode,pi --name my-repo --no-interactive
 ```
 
 ### Commands

@@ -13,7 +13,7 @@ Create a buildable TypeScript project with the right package structure for an np
 
 ## Subtasks
 
-- [ ] Create `package.json` with name `@teachable/ai-setup`, bin entry, type module
+- [ ] Create `package.json` with name `@ricardoborges-teachable/ai-setup`, bin entry, type module
 - [ ] Create `tsconfig.json` with strict mode, ESM output
 - [ ] Create `tsup.config.ts` for building to `dist/`
 - [ ] Create `bin/ai-setup.js` shebang entry point (`#!/usr/bin/env node`)

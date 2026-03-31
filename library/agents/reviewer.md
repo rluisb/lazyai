@@ -34,6 +34,12 @@ For each review:
 4. Look for security issues
 5. Check test coverage
 
+## Confidence Gate
+
+- **High confidence:** issue clear pass/fail recommendation.
+- **Medium confidence:** issue conditional recommendation and list blocking unknowns.
+- **Low confidence:** withhold recommendation, request missing evidence, and flag review as incomplete.
+
 ## Output Format
 
 ```

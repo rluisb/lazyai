@@ -34,6 +34,12 @@ For each review:
 4. Test assumptions in the spec
 5. Propose red team test cases
 
+## Confidence Gate
+
+- **High confidence:** rank threats and provide prioritized exploit paths.
+- **Medium confidence:** provide provisional ranking and mark assumptions requiring validation.
+- **Low confidence:** avoid definitive threat ranking, request missing boundary/context data first.
+
 ## Self-Improvement
 
 After each session:

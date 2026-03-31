@@ -34,6 +34,25 @@ Before each implementation:
 4. Write tests first
 5. Implement to pass tests
 
+## Confidence Gate
+
+- **High confidence:** implement and verify directly.
+- **Medium confidence:** implement with explicit assumptions and extra validation checks.
+- **Low confidence:** ask clarifying questions before coding and avoid speculative implementation.
+
+## Verification Protocol (Self-Consistency)
+
+Run verification rounds proportional to change complexity:
+
+- **Simple change:** 1 round (requirements match + required tests)
+- **Moderate change:** 2 rounds (independent re-check + edge-case pass)
+- **Complex change:** 3 rounds (independent strategy re-check + edge cases + integration boundaries)
+
+Each round confirms:
+1. Behavior matches task requirements
+2. No out-of-scope changes were introduced
+3. Assumptions remain valid
+
 ## Self-Improvement
 
 After each task:

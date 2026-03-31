@@ -18,7 +18,7 @@ interface UpdateOptions {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const libraryDir = join(__dirname, '../../library')
+const libraryDir = join(__dirname, '../library')
 
 const docsAgentMappings: Array<{ source: string; destination: string }> = [
   { source: 'docs.md', destination: 'docs/AGENTS.md' },

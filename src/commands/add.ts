@@ -8,7 +8,7 @@ import { AdapterRegistry } from '../adapters/registry.js'
 import { fileExists } from '../utils/files.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const libraryDir = join(__dirname, '../../library')
+const libraryDir = join(__dirname, '../library')
 
 export function registerAdd(program: Command): void {
   program

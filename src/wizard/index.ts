@@ -34,7 +34,7 @@ export async function runWizard(opts: {
   targetDir: string
 }): Promise<void> {
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
-  const libraryDir = path.join(__dirname, '../../library')
+  const libraryDir = path.join(__dirname, '../library')
 
   if (opts.interactive) {
     p.intro('ai-setup wizard')

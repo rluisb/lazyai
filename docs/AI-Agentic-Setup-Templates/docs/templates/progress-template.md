@@ -48,3 +48,19 @@
 - **Tests:** [N passing, N failing]
 - **Next step:** [what comes next]
 - **Blockers:** [active blockers — or "None"]
+
+---
+
+## Change Requests
+
+<!-- Append one entry per review round that required code changes.
+     Trivial style-only rounds may be batched into one entry.
+     Never delete entries. Only append. -->
+
+### CR Round [N] — [YYYY-MM-DD]
+- **Reviewer:** [name]
+- **Feedback type:** [CI failure | Bug found | Style | Disagreement | Scope expansion]
+- **Items:** [N total — N critical, N major, N minor]
+- **Action taken:** [fixed direct | fix + plan | rejected scope (ticket #NNN) | discussed]
+- **Files changed:** [paths — or "N/A"]
+- **Status:** ✅ Resolved | ⏳ In Progress | 🚫 Rejected

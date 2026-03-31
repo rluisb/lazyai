@@ -1,9 +1,9 @@
 import type { Command } from 'commander'
-import { runPrompts, outroSuccess } from '../prompts.js'
-import type { ToolId, SetupType } from '../types.js'
+import type { SetupType, ToolId } from '../types.js'
+import { runWizard } from '../wizard/index.js'
 
 interface InitOptions {
-  type?: string
+  type?: SetupType
   tools?: string
   name?: string
   force?: boolean
@@ -21,24 +21,26 @@ export function registerInit(program: Command): void {
     .option('--no-interactive', 'Non-interactive mode — requires all flags')
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
-        ? (opts.tools.split(',').map((t) => t.trim()) as ToolId[])
+        ? (opts.tools.split(',').map((t) => t.trim()).filter(Boolean) as ToolId[])
         : undefined
 
-      const promptOpts: any = {
-        interactive: opts.interactive,
+      const cliOverrides: {
+        type?: SetupType
+        tools?: ToolId[]
+        name?: string
+      } = {}
+
+      if (opts.type) cliOverrides.type = opts.type
+      if (tools) cliOverrides.tools = tools
+      if (opts.name) cliOverrides.name = opts.name
+
+      const wizardOpts = {
+        interactive: opts.interactive !== false,
+        cliOverrides,
+        targetDir: process.cwd(),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
       }
-      
-      if (opts.type) promptOpts.type = opts.type as SetupType
-      if (tools) promptOpts.tools = tools
-      if (opts.name) promptOpts.name = opts.name
 
-      const config = await runPrompts(promptOpts)
-      config.force = opts.force
-
-      // Dynamic import to avoid circular deps — scaffold wired in T009
-      const { runScaffold } = await import('../scaffold.js')
-      await runScaffold(config)
-
-      outroSuccess(config)
+      await runWizard(wizardOpts)
     })
 }

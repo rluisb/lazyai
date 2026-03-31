@@ -2,6 +2,7 @@ import path from 'node:path'
 import * as files from '../utils/files.js'
 import { backupFile } from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
+import type { AgentId, SkillId, PromptId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 
 export class PiAdapter implements ToolAdapter {
@@ -18,15 +19,23 @@ export class PiAdapter implements ToolAdapter {
 
     console.log('🤖  Installing Pi (Claude Code) tools...')
 
+    const selectedAgents = ctx.selections?.agents ? new Set(ctx.selections.agents) : undefined
+    const selectedSkills = ctx.selections?.skills ? new Set(ctx.selections.skills) : undefined
+    const selectedPrompts = ctx.selections?.prompts ? new Set(ctx.selections.prompts) : undefined
+
     // Agents - exact copy
     const agentsDir = path.join(ctx.libraryDir, 'agents')
     for (const file of files.listDir(agentsDir)) {
+      const fileId = path.parse(file).name as AgentId
+      if (selectedAgents && !selectedAgents.has(fileId)) continue
       await this.copyFileWithRecord(path.join(agentsDir, file), path.join(piDir, 'agents', file), ctx)
     }
 
     // Templates - exact copy
     const templatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(templatesDir)) {
+      const fileId = path.parse(file).name as PromptId
+      if (selectedPrompts && !selectedPrompts.has(fileId)) continue
       const srcPath = path.join(templatesDir, file)
       if (files.isDirectory(srcPath)) continue
       await this.copyFileWithRecord(srcPath, path.join(piDir, 'templates', file), ctx)
@@ -35,6 +44,8 @@ export class PiAdapter implements ToolAdapter {
     // Skills - exact copy
     const skillsDir = path.join(ctx.libraryDir, 'skills')
     for (const file of files.listDir(skillsDir)) {
+      const fileId = path.parse(file).name as SkillId
+      if (selectedSkills && !selectedSkills.has(fileId)) continue
       await this.copyFileWithRecord(path.join(skillsDir, file), path.join(piDir, 'skills', file), ctx)
     }
   }

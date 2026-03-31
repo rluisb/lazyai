@@ -67,7 +67,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   if (templates.length > 0) selections.templates = templates
 
   // Rules: look for docs/rules/<name>.md
-  const ALL_RULES: RuleId[] = ['cost', 'review', 'security', 'workflow']
+  const ALL_RULES: RuleId[] = ['access', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow']
   const rules = ALL_RULES.filter(r => files.some(f => f === `docs/rules/${r}.md`))
   if (rules.length > 0) selections.rules = rules
 
@@ -87,7 +87,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   if (agents.length > 0) selections.agents = agents
 
   // Skills
-  const ALL_SKILLS: SkillId[] = ['implement', 'iterate', 'plan', 'research']
+  const ALL_SKILLS: SkillId[] = ['anti-speculation', 'implement', 'iterate', 'lessons-learned', 'memory-write', 'parallel-execution', 'plan', 'research', 'tdd-loop']
   const skills = ALL_SKILLS.filter(s =>
     files.some(f => f.endsWith(`/${s}.md`) && (f.includes('commands/') || f.includes('skills/') || f.includes('prompts/'))),
   )

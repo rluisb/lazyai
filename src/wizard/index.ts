@@ -189,6 +189,8 @@ export async function runWizard(opts: {
       skills,
       prompts,
       fileRecords,
+      strategy,
+      perFileOverrides,
       ...(opts.force !== undefined ? { force: opts.force } : {}),
     })
   }

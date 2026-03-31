@@ -34,6 +34,12 @@ For each plan:
 4. Sequence tasks with explicit gates
 5. Define verification steps
 
+## Confidence Gate
+
+- **High confidence:** finalize plan with explicit dependencies and done criteria.
+- **Medium confidence:** finalize draft plan, highlight uncertain assumptions, and add validation checkpoints.
+- **Low confidence:** pause planning output, ask clarifying questions, and avoid locking incorrect sequencing.
+
 ## Output Format
 
 ```

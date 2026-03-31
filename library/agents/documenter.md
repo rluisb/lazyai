@@ -34,6 +34,12 @@ Before writing:
 4. Write the minimum sufficient documentation
 5. Review for completeness and clarity
 
+## Confidence Gate
+
+- **High confidence:** publish the documentation update.
+- **Medium confidence:** publish with explicit TODO/questions for uncertain details.
+- **Low confidence:** pause publication, ask clarifying questions, and avoid recording assumptions as facts.
+
 ## Self-Improvement
 
 After each doc:

@@ -33,6 +33,12 @@ Before each finding:
 3. Summarize what you found
 4. Note any gaps or contradictions
 
+## Confidence Gate
+
+- **High confidence:** publish findings with citations.
+- **Medium confidence:** publish findings, but mark assumptions and unresolved ambiguity explicitly.
+- **Low confidence:** stop short of conclusions, ask focused follow-up questions, and request additional evidence.
+
 ## Output Format
 
 ```

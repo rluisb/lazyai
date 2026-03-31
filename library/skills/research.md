@@ -22,6 +22,17 @@
 5. **Produce Structured Findings**
    - Summarize what was found, what is uncertain, and what to do next.
 
+## Trace Protocol (ReAct, complex investigations only)
+
+When research is multi-step or ambiguous, keep a compact trace:
+
+1. **Thought:** next evidence needed
+2. **Action:** search/read step taken
+3. **Observation:** what evidence was found
+4. **Decision:** continue, pivot, or escalate question
+
+Skip this for straightforward lookups.
+
 ## Output Format
 
 ```markdown

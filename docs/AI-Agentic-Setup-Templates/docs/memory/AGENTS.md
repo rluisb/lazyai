@@ -16,21 +16,6 @@ Patterns, gotchas, and learnings discovered by agents during work that should pe
 - Keep each file under 50 lines. One topic per file.
 - Delete memory files that have been promoted to rules or standards.
 
-## Multi-Session Handoffs
-
-Use a dedicated handoff directory for cross-session continuity:
-
-- Path: `docs/memory/handoffs/`
-- Naming: `YYYY-MM-DD-[topic].md`
-- Read the latest handoff at session start before planning
-
-Handoff file should capture:
-1. Current objective and status (done/in-progress/blocked)
-2. Decisions made and rationale
-3. Open assumptions/questions
-4. Next 1–2 concrete actions
-5. Risks/watchouts for the next session
-
 ## Examples of Memory Content
 - "The payments module has a 5-second timeout on webhook processing — discovered during bugfix 004"
 - "When adding a new entity to the billing module, also update the billing.module.ts providers array"

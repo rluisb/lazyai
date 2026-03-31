@@ -23,6 +23,8 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
   files.ensureDir(path.join(docsDir, 'tech-debt'))
   files.ensureDir(path.join(docsDir, 'adrs'))
   files.ensureDir(path.join(docsDir, 'memory'))
+  files.ensureDir(path.join(docsDir, 'memory/handoffs'))
+  files.ensureDir(path.join(docsDir, 'prompts'))
   files.ensureDir(path.join(docsDir, 'standards'))
   files.ensureDir(path.join(docsDir, 'templates'))
   files.ensureDir(path.join(docsDir, 'rules'))
@@ -41,6 +43,7 @@ export async function runScaffold(config: SetupConfig): Promise<void> {
   await copyLibraryFile(path.join(libraryDir, 'docs-agents/templates.md'), path.join(docsDir, 'templates/AGENTS.md'), fileRecords, targetDir, config.force)
   await copyLibraryFile(path.join(libraryDir, 'docs-agents/memory.md'), path.join(docsDir, 'memory/AGENTS.md'), fileRecords, targetDir, config.force)
   await copyLibraryFile(path.join(libraryDir, 'docs-agents/adrs.md'), path.join(docsDir, 'adrs/AGENTS.md'), fileRecords, targetDir, config.force)
+  await copyLibraryDir(path.join(libraryDir, 'prompts/local-examples'), path.join(docsDir, 'prompts/local-examples'), fileRecords, targetDir, config.force)
 
   // 3. Copy infra
   console.log('🛠️  Copying infrastructure files...')
@@ -126,6 +129,10 @@ async function copyLibraryDir(src: string, dest: string, records: FileRecord[], 
   for (const entry of entries) {
     const srcPath = path.join(src, entry)
     const destPath = path.join(dest, entry)
+    if (files.isDirectory(srcPath)) {
+      await copyLibraryDir(srcPath, destPath, records, targetDir, force)
+      continue
+    }
     await copyLibraryFile(srcPath, destPath, records, targetDir, force)
   }
 }

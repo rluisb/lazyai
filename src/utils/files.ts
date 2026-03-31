@@ -79,6 +79,14 @@ export function listDir(dirPath: string): string[] {
   }
 }
 
+export function isDirectory(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 export function backupFile(filePath: string, targetDir: string): string {
   const backupRoot = path.join(targetDir, '.ai-setup-backup')
   ensureDir(backupRoot)

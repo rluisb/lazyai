@@ -34,8 +34,10 @@ export class CopilotAdapter implements ToolAdapter {
     // Prompts - exact copy
     const promptTemplatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(promptTemplatesDir)) {
+      const srcPath = path.join(promptTemplatesDir, file)
+      if (files.isDirectory(srcPath)) continue
       await this.copyFileWithRecord(
-        path.join(promptTemplatesDir, file),
+        srcPath,
         path.join(templatesDir, file),
         ctx,
       )

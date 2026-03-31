@@ -35,22 +35,6 @@ docs/refactors/NNN-refactor-name/
 - If the refactor introduces a new pattern → update docs/standards/.
 - Keep existing tests passing at every step. Add new tests for new patterns.
 
-## Decision-Making Protocol (Required for structural refactors)
-
-Before committing to a refactor direction:
-
-1. Generate **2+ viable alternatives**.
-2. Evaluate each option using:
-   - complexity
-   - consistency with current code patterns
-   - reversibility / rollback safety
-   - performance impact
-   - team familiarity
-3. Choose one path and state why it is preferred now.
-4. Record tradeoffs and what risk is accepted by rejecting other options.
-
-If the decision changes architecture or boundaries, capture it in an ADR.
-
 ## Self-Improvement — After Every Refactor
 
 Before ending the session, run the Impact Check from root AGENTS.md.

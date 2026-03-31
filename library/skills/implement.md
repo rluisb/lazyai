@@ -26,6 +26,17 @@
 - One task at a time
 - Checkpoint after each task
 
+## Trace Protocol (ReAct, complex tasks only)
+
+For multi-step or risky work, keep a concise trace:
+
+1. **Thought:** key implementation consideration
+2. **Action:** test/edit/command executed
+3. **Observation:** concrete outcome
+4. **Decision:** continue, revise, or escalate
+
+Skip this for trivial, direct edits.
+
 ## Output Format
 
 ```markdown

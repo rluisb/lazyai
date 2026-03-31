@@ -33,6 +33,17 @@ Before each finding:
 3. Summarize what you found
 4. Note any gaps or contradictions
 
+## Trace Protocol (ReAct style, complex investigations only)
+
+Use when the task is multi-step, ambiguous, or high-risk.
+
+1. **Thought:** what evidence you need next
+2. **Action:** what search/read step you take
+3. **Observation:** what the source confirms or contradicts
+4. **Decision:** continue, pivot, or escalate open question
+
+Keep traces concise and citation-backed.
+
 ## Confidence Gate
 
 - **High confidence:** publish findings with citations.

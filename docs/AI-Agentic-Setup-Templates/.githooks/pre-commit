@@ -1,0 +1,16 @@
+#!/bin/bash
+# Pre-commit hook: Verify AGENTS.md and CLAUDE.md are in sync
+# Install: git config core.hooksPath .githooks
+
+if [ -f "AGENTS.md" ] && [ -f "CLAUDE.md" ]; then
+  if ! diff -q AGENTS.md CLAUDE.md > /dev/null 2>&1; then
+    echo ""
+    echo "❌ ERROR: AGENTS.md and CLAUDE.md are out of sync."
+    echo ""
+    echo "These files must be identical. To fix:"
+    echo "  cp AGENTS.md CLAUDE.md    # or the other direction"
+    echo "  git add AGENTS.md CLAUDE.md"
+    echo ""
+    exit 1
+  fi
+fi

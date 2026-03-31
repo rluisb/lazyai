@@ -34,6 +34,17 @@ Before each implementation:
 4. Write tests first
 5. Implement to pass tests
 
+## Trace Protocol (ReAct style, complex implementations only)
+
+Use for multi-step/high-risk changes; skip for trivial edits.
+
+1. **Thought:** what constraint or risk matters now
+2. **Action:** test, edit, or command you run
+3. **Observation:** result from test/tool/output
+4. **Decision:** keep approach, adjust, or pause for clarification
+
+Keep traces short and tied to evidence.
+
 ## Confidence Gate
 
 - **High confidence:** implement and verify directly.

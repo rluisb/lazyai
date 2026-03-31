@@ -95,6 +95,37 @@ Skip for trivial tasks (small, direct edits with clear requirements).
 3. Consider at least one alternative approach
 4. Check your selected approach against loaded context and constraints
 
+## Architecture Decision Protocol (ToT, for ADR/refactor-impacting changes)
+
+Run this only when work affects architecture, major boundaries, or ADR/refactor decisions.
+
+1. Generate **at least 2 viable alternatives**
+2. Evaluate each option against:
+   - complexity
+   - consistency with existing patterns
+   - reversibility
+   - performance impact
+   - team familiarity
+3. Choose one path and explain why it wins now
+4. Record tradeoffs and rejected-option risks
+5. If non-trivial, record in `@docs/adrs/`
+
+Mini example:
+- A: Keep synchronous processing (simpler, weaker performance)
+- B: Queue + worker (more complex, stronger reversibility/performance)
+- Decision: **B** for reliability and latency goals; tradeoff is operational overhead
+
+## Trace Protocol (ReAct style, complex tasks only)
+
+Use this for multi-step, ambiguous, or high-risk work. Skip for trivial edits.
+
+1. **Thought:** key reasoning for this step
+2. **Action:** command/edit/research to run
+3. **Observation:** concrete result/evidence
+4. **Decision:** proceed, adjust, or stop
+
+Keep traces concise and evidence-based.
+
 ## Confidence Gate
 
 - **High confidence:** proceed with implementation and verification.
@@ -131,12 +162,17 @@ Each round must confirm:
 ## Session Start Checks
 
 1. Read this file completely
-2. Review recent git log for context
-3. Check `docs/` for project documentation and standards
-4. Verify you are on the correct branch
-5. Record assumptions and mark each as verified or unverified
-6. State uncertainty level (low/medium/high) and biggest unknown
-7. [YOUR_SESSION_CHECK]
+2. Check the latest handoff in `docs/memory/handoffs/` (if present)
+3. Review recent git log for context
+4. Check `docs/` for project documentation and standards
+5. Verify you are on the correct branch
+6. Record assumptions and mark each as verified or unverified
+7. State uncertainty level (low/medium/high) and biggest unknown
+8. [YOUR_SESSION_CHECK]
+
+Example references:
+- `docs/prompts/local-examples/preflight-task-framing.md`
+- `docs/prompts/local-examples/react-trace-and-handoff.md`
 
 ## Recovery Procedures
 
@@ -174,6 +210,21 @@ After completing a task:
 1. Update documentation if any interfaces or behaviors changed
 2. Add lessons learned to `docs/memory/`
 3. [YOUR_SELF_IMPROVEMENT_STEP]
+
+## Session End Protocol (Multi-Session Handoff)
+
+If work is ongoing or leaves unresolved decisions, write/update:
+`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+
+Include:
+1. Objective + current status
+2. Decisions made + rationale
+3. Open questions/assumptions
+4. Next 1–2 concrete actions
+5. Risks/watchouts
+
+Example reference:
+- `docs/prompts/local-examples/commit-message-pattern.md`
 
 ### Impact Assessment
 

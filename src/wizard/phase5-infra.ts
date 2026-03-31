@@ -4,7 +4,6 @@ import * as p from '@clack/prompts'
 import type { InfraId, WizardSelections } from '../types.js'
 
 const ALL_INFRA: { value: InfraId; label: string; hint: string }[] = [
-  { value: 'CODEOWNERS', label: 'CODEOWNERS', hint: 'GitHub code ownership file' },
   { value: 'pre-commit', label: 'pre-commit', hint: 'Git pre-commit hook for AI checks' },
   { value: 'compliance', label: 'compliance', hint: 'AI compliance documentation' },
   { value: 'KNOWLEDGE_MAP', label: 'KNOWLEDGE_MAP', hint: 'Project knowledge map for AI context' },

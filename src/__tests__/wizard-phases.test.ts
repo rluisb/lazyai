@@ -109,18 +109,21 @@ describe('wizard phases 1-7', () => {
     expect(result.docsAgents.every((agent) => result.docsDirs.includes(agent))).toBe(true)
   })
 
-  it('Phase 3: non-interactive returns all 8 templates and all 4 rules', async () => {
+  it('Phase 3: non-interactive returns all 11 templates and all 4 rules', async () => {
     const result = await runPhase3({ interactive: false, prior: {} })
 
     expect(result.templates).toEqual([
       'adr',
-      'prd',
+      'bugfix-rca-template',
+      'code-review-template',
+      'postmortem-template',
+      'prd-template',
       'progress',
       'standard',
       'task',
-      'tasks',
-      'tech-debt',
-      'techspec',
+      'tasks-template',
+      'tech-debt-template',
+      'techspec-template',
     ])
     expect(result.rules).toEqual(['cost', 'review', 'security', 'workflow'])
   })
@@ -133,7 +136,7 @@ describe('wizard phases 1-7', () => {
     expect(result.prompts).toEqual(['compact', 'implement', 'local-example', 'plan', 'research'])
   })
 
-  it('Phase 5: non-interactive returns all 4 infra items when .git exists', async () => {
+  it('Phase 5: non-interactive returns all 3 infra items when .git exists', async () => {
     const tempDir = makeTempDir('ai-setup-phase5-with-git-')
 
     try {
@@ -145,7 +148,7 @@ describe('wizard phases 1-7', () => {
         targetDir: tempDir,
       })
 
-      expect(result.infra).toEqual(['CODEOWNERS', 'pre-commit', 'compliance', 'KNOWLEDGE_MAP'])
+      expect(result.infra).toEqual(['pre-commit', 'compliance', 'KNOWLEDGE_MAP'])
     } finally {
       rmSync(tempDir, { recursive: true, force: true })
     }
@@ -161,7 +164,7 @@ describe('wizard phases 1-7', () => {
         targetDir: tempDir,
       })
 
-      expect(result.infra).toEqual(['CODEOWNERS', 'compliance', 'KNOWLEDGE_MAP'])
+      expect(result.infra).toEqual(['compliance', 'KNOWLEDGE_MAP'])
       expect(result.infra).not.toContain('pre-commit')
     } finally {
       rmSync(tempDir, { recursive: true, force: true })

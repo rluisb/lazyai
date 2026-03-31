@@ -141,7 +141,7 @@ describe('scaffoldInfra', () => {
     await scaffoldInfra({
       targetDir: tempDir,
       libraryDir,
-      infra: ['CODEOWNERS'],
+      infra: [],
       projectName: 'demo-project',
       fileRecords,
       strategy: 'skip' as ConflictStrategy,

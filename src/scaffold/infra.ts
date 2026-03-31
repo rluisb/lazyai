@@ -18,7 +18,6 @@ export interface ScaffoldInfraOptions {
  * Scaffolds infrastructure files into the target directory.
  *
  * Behavior:
- * - `CODEOWNERS`: read `library/infra/CODEOWNERS.template`, write to `targetDir/CODEOWNERS`
  * - `pre-commit`: if `.git` exists at targetDir, create `.git/hooks/` and copy `library/infra/pre-commit.hook` → `.git/hooks/pre-commit`
  * - `compliance`: copy `library/infra/compliance.md` → `docs/compliance.md`
  * - `KNOWLEDGE_MAP`: read `library/infra/KNOWLEDGE_MAP.template.md`, replace `[YOUR_PROJECT_NAME]` with projectName, write to `targetDir/KNOWLEDGE_MAP.md`
@@ -30,17 +29,6 @@ export async function scaffoldInfra(opts: ScaffoldInfraOptions): Promise<void> {
 
   if (infra.length === 0) {
     return
-  }
-
-  // Process CODEOWNERS
-  if (infra.includes('CODEOWNERS')) {
-    const src = path.join(libraryDir, 'infra', 'CODEOWNERS.template')
-    const dest = path.join(targetDir, 'CODEOWNERS')
-
-    if (fileExists(src)) {
-      const content = readFile(src)
-      await writeRootFile(dest, content, fileRecords, targetDir, 'infra/CODEOWNERS.template', strategy, perFileOverrides)
-    }
   }
 
   // Process pre-commit hook

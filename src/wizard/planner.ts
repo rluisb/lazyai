@@ -18,10 +18,6 @@ const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
 }
 
 const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { destPath: string; srcPath: string }> = {
-  CODEOWNERS: {
-    destPath: 'CODEOWNERS',
-    srcPath: 'infra/CODEOWNERS.template',
-  },
   'pre-commit': {
     destPath: '.git/hooks/pre-commit',
     srcPath: 'infra/pre-commit.hook',

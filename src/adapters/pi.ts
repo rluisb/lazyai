@@ -27,7 +27,9 @@ export class PiAdapter implements ToolAdapter {
     // Templates - exact copy
     const templatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(templatesDir)) {
-      await this.copyFileWithRecord(path.join(templatesDir, file), path.join(piDir, 'templates', file), ctx)
+      const srcPath = path.join(templatesDir, file)
+      if (files.isDirectory(srcPath)) continue
+      await this.copyFileWithRecord(srcPath, path.join(piDir, 'templates', file), ctx)
     }
 
     // Skills - exact copy

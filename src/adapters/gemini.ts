@@ -39,8 +39,10 @@ export class GeminiAdapter implements ToolAdapter {
     // Templates - exact copy
     const templatesDir = path.join(ctx.libraryDir, 'prompts')
     for (const file of files.listDir(templatesDir)) {
+      const srcPath = path.join(templatesDir, file)
+      if (files.isDirectory(srcPath)) continue
       await this.copyFileWithRecord(
-        path.join(templatesDir, file),
+        srcPath,
         path.join(geminiDir, 'templates', file),
         ctx,
       )

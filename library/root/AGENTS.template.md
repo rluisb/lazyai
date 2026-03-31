@@ -100,6 +100,7 @@ Default to repository conventions before introducing new patterns.
 - Read: `docs/adrs/` existing ADRs (understand past decisions)
 - Read: `docs/templates/adr-template.md`
 - Read: `docs/standards/` (understand current patterns)
+- Use: **Architecture Decision Protocol** below before selecting a path
 
 ### Don't know yet
 - Read: `docs/KNOWLEDGE_MAP.md` (orient yourself)
@@ -158,6 +159,39 @@ Skip for trivial tasks (small, direct edits with clear requirements).
 2. Re-state your understanding of the request
 3. Consider at least one alternative approach
 4. Check your selected approach against loaded context and constraints
+
+### Architecture Decision Protocol (ToT, for ADR/refactor-impacting changes)
+
+Run this only when the task affects architecture, major module boundaries, or an ADR/refactor path.
+
+1. Generate **at least 2 viable alternatives** (A/B, optionally C)
+2. Evaluate each option against:
+   - complexity
+   - consistency with current patterns
+   - reversibility
+   - performance impact
+   - team familiarity
+3. Choose one path and state why it wins now
+4. Record explicit tradeoffs and rejected-option risks
+5. If decision is non-trivial, document it in `docs/adrs/`
+
+Mini example (concise):
+- A: Keep sync workflow (low complexity, poor performance)
+- B: Queue + worker (higher complexity, better reversibility/performance)
+- Decision: **B**, because latency/SLO risk outweighs implementation cost
+- Tradeoff: Added operational surface (queue monitoring)
+
+### Trace Protocol (ReAct style, complex tasks only)
+
+Use this for multi-step, ambiguous, or high-risk tasks. Skip for trivial edits.
+
+Format:
+1. **Thought:** what matters for this step
+2. **Action:** command/edit/research you will perform
+3. **Observation:** result/evidence
+4. **Decision:** continue, adjust, or stop
+
+Keep each step short, evidence-based, and tied to scope.
 
 ### Confidence Gate
 
@@ -222,8 +256,13 @@ When compaction is triggered:
 
 Before doing any work:
 1. **Sync check:** If both AGENTS.md and CLAUDE.md exist, verify they are identical. If they differ → flag immediately. Do not proceed until resolved.
-2. **Context check:** Read this file's Decision Tree. Load ONLY what your task needs.
-3. **Standards check:** If you're about to write code, check if a relevant standard exists in `docs/standards/`. Read it before writing.
+2. **Handoff check:** Read the latest file in `docs/memory/handoffs/` (if present) before planning.
+3. **Context check:** Read this file's Decision Tree. Load ONLY what your task needs.
+4. **Standards check:** If you're about to write code, check if a relevant standard exists in `docs/standards/`. Read it before writing.
+
+Example references:
+- Pre-flight framing: `docs/prompts/local-examples/preflight-task-framing.md`
+- Trace format example: `docs/prompts/local-examples/react-trace-and-handoff.md`
 
 ---
 
@@ -280,6 +319,22 @@ Output format:
 ```
 
 The human decides whether to update now or create a follow-up task.
+
+### Session End Protocol (Multi-Session Handoff)
+
+When work spans sessions or leaves unresolved items, create/update a handoff note in:
+`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+
+Minimum handoff content:
+1. Current objective and status (done/in-progress/blocked)
+2. Decisions made (with rationale)
+3. Open assumptions/questions
+4. Next 1–2 concrete actions
+5. Risks/watchouts for the next agent
+
+Example references:
+- Handoff structure: `docs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `docs/prompts/local-examples/commit-message-pattern.md`
 
 ### Severity of Updates
 

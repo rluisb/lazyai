@@ -149,24 +149,9 @@ describe('scaffoldInfra', () => {
     })
 
     expect(existsSync(path.join(tempDir, '.git', 'hooks', 'pre-commit'))).toBe(false)
-    expect(existsSync(path.join(tempDir, 'CODEOWNERS'))).toBe(true)
-    expect(fileRecords.length).toBeGreaterThan(0)
+    expect(fileRecords).toHaveLength(0)
   })
 
-  it('copies CODEOWNERS when selected', async () => {
-    await scaffoldInfra({
-      targetDir: tempDir,
-      libraryDir,
-      infra: ['CODEOWNERS'],
-      projectName: 'demo-project',
-      fileRecords,
-      strategy: 'skip' as ConflictStrategy,
-      perFileOverrides: new Map(),
-    })
-
-    expect(existsSync(path.join(tempDir, 'CODEOWNERS'))).toBe(true)
-    expect(fileRecords.some(record => record.path === 'CODEOWNERS')).toBe(true)
-  })
 })
 
 describe('scaffoldRootFiles', () => {

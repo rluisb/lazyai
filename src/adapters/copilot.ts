@@ -15,6 +15,8 @@ export class CopilotAdapter implements ToolAdapter {
 
     const instructionsDir = path.join(githubDir, 'instructions')
     files.ensureDir(instructionsDir)
+    const agentsContextDir = path.join(githubDir, 'agents')
+    files.ensureDir(agentsContextDir)
     const promptsDir = path.join(githubDir, 'prompts')
     files.ensureDir(promptsDir)
     const templatesDir = path.join(githubDir, 'templates')
@@ -63,6 +65,34 @@ export class CopilotAdapter implements ToolAdapter {
       const dest = path.join(promptsDir, destFile)
       await this.copySkillAsPromptWithRecord(src, dest, ctx)
     }
+
+    // Install tool-agents context files
+    const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
+    const contextFileName = 'AGENTS.md'
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'agents-dir.md'),
+      path.join(agentsContextDir, contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'skills-dir.md'),
+      path.join(promptsDir, contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'templates-dir.md'),
+      path.join(templatesDir, contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'root-dir.md'),
+      path.join(githubDir, contextFileName),
+      ctx,
+    )
 
     // Create copilot-instructions.md from template (only if not already created by scaffold)
     const alreadyCreated = ctx.fileRecords.some(r => r.path === '.github/copilot-instructions.md')

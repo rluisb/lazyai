@@ -12,6 +12,7 @@ export class GeminiAdapter implements ToolAdapter {
   async install(ctx: AdapterContext): Promise<void> {
     const geminiDir = path.join(ctx.targetDir, '.gemini')
     files.ensureDir(geminiDir)
+    files.ensureDir(path.join(geminiDir, 'agents'))
     files.ensureDir(path.join(geminiDir, 'skills'))
     files.ensureDir(path.join(geminiDir, 'templates'))
 
@@ -58,6 +59,34 @@ export class GeminiAdapter implements ToolAdapter {
         ctx,
       )
     }
+
+    // Install tool-agents context files
+    const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
+    const contextFileName = 'GEMINI.md'
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'agents-dir.md'),
+      path.join(geminiDir, 'agents', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'skills-dir.md'),
+      path.join(geminiDir, 'skills', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'templates-dir.md'),
+      path.join(geminiDir, 'templates', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'root-dir.md'),
+      path.join(geminiDir, contextFileName),
+      ctx,
+    )
 
     // Create GEMINI.md from template (only if not already created by scaffold)
     const alreadyCreated = ctx.fileRecords.some(r => r.path === 'GEMINI.md')

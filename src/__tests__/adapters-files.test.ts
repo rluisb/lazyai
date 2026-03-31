@@ -87,9 +87,14 @@ describe('tool adapters', () => {
 
     ensureDir(path.join(libraryDir, 'agents'))
     ensureDir(path.join(libraryDir, 'prompts'))
+    ensureDir(path.join(libraryDir, 'tool-agents'))
     writeFile(path.join(libraryDir, 'agents/builder.md'), '# builder')
     writeFile(path.join(libraryDir, 'agents/reviewer.md'), '# reviewer')
     writeFile(path.join(libraryDir, 'prompts/plan.md'), '# plan')
+    writeFile(path.join(libraryDir, 'tool-agents/agents-dir.md'), '# agents context')
+    writeFile(path.join(libraryDir, 'tool-agents/skills-dir.md'), '# skills context')
+    writeFile(path.join(libraryDir, 'tool-agents/templates-dir.md'), '# templates context')
+    writeFile(path.join(libraryDir, 'tool-agents/root-dir.md'), '# root context')
   })
 
   it('Pi adapter installs agents/templates and records metadata', async () => {
@@ -101,10 +106,18 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.pi/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.pi/templates/plan.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.pi/skills'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/agents/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/skills/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/templates/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/AGENTS.md'))).toBe(true)
 
     expect(fileRecords.map((f) => f.path).sort()).toEqual([
+      '.pi/AGENTS.md',
+      '.pi/agents/AGENTS.md',
       '.pi/agents/builder.md',
       '.pi/agents/reviewer.md',
+      '.pi/skills/AGENTS.md',
+      '.pi/templates/AGENTS.md',
       '.pi/templates/plan.md',
     ])
     expect(fileRecords.every((f) => f.hash.length === 16)).toBe(true)
@@ -121,9 +134,20 @@ describe('tool adapters', () => {
     expect(readFile(existingPath)).toBe('# builder')
     expect(fileExists(path.join(targetDir, '.opencode/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/commands'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode/agents/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode/commands/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode/templates/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode/AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.ai-setup-backup/.opencode/agents/builder.md'))).toBe(true)
 
-    expect(fileRecords.some((f) => f.path === '.opencode/agents/builder.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === '.opencode/agents/reviewer.md')).toBe(true)
+    expect(fileRecords.map((f) => f.path).sort()).toEqual([
+      '.opencode/AGENTS.md',
+      '.opencode/agents/AGENTS.md',
+      '.opencode/agents/builder.md',
+      '.opencode/agents/reviewer.md',
+      '.opencode/commands/AGENTS.md',
+      '.opencode/templates/AGENTS.md',
+      '.opencode/templates/plan.md',
+    ])
   })
 })

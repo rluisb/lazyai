@@ -40,10 +40,11 @@ export type DocsDirId =
   | 'rules'
 
 export type AgentId = 'builder' | 'documenter' | 'planner' | 'red-team' | 'reviewer' | 'scout'
-export type SkillId = 'implement' | 'iterate' | 'plan' | 'research'
+export type SkillId = 'anti-speculation' | 'implement' | 'iterate' | 'lessons-learned' | 'memory-write' | 'parallel-execution' | 'plan' | 'research' | 'tdd-loop'
 export type PromptId = 'compact' | 'implement' | 'local-example' | 'plan' | 'research'
 export type TemplateId = 'adr' | 'prd' | 'progress' | 'standard' | 'task' | 'tasks' | 'tech-debt' | 'techspec'
-export type RuleId = 'cost' | 'review' | 'security' | 'workflow'
+export type RuleId = 'access' | 'code-style' | 'cost' | 'review' | 'security' | 'testing' | 'workflow'
+export type ToolAgentId = 'agents-dir' | 'root-dir' | 'skills-dir' | 'templates-dir'
 export type InfraId = 'CODEOWNERS' | 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP'
 
 export type ConflictStrategy = 'align' | 'backup-and-replace' | 'skip'

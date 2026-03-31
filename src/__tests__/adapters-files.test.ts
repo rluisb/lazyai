@@ -110,24 +110,20 @@ describe('tool adapters', () => {
     expect(fileRecords.every((f) => f.hash.length === 16)).toBe(true)
   })
 
-  it('OpenCode adapter installs agents and skips existing files', async () => {
+  it('OpenCode adapter installs agents and force-overwrites existing files with backup', async () => {
     const existingPath = path.join(targetDir, '.opencode/agents/builder.md')
     ensureDir(path.dirname(existingPath))
     writeFile(existingPath, 'customized')
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-
     const adapter = new OpenCodeAdapter()
-    await adapter.install({ targetDir, libraryDir, fileRecords })
+    await adapter.install({ targetDir, libraryDir, fileRecords, force: true })
 
-    expect(readFile(existingPath)).toBe('customized')
+    expect(readFile(existingPath)).toBe('# builder')
     expect(fileExists(path.join(targetDir, '.opencode/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/commands'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.ai-setup-backup/.opencode/agents/builder.md'))).toBe(true)
 
-    expect(fileRecords.some((f) => f.path === '.opencode/agents/builder.md')).toBe(false)
+    expect(fileRecords.some((f) => f.path === '.opencode/agents/builder.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.opencode/agents/reviewer.md')).toBe(true)
-    expect(warnSpy).toHaveBeenCalled()
-
-    warnSpy.mockRestore()
   })
 })

@@ -78,3 +78,27 @@ export function listDir(dirPath: string): string[] {
     return []
   }
 }
+
+export function backupFile(filePath: string, targetDir: string): string {
+  const backupRoot = path.join(targetDir, '.ai-setup-backup')
+  ensureDir(backupRoot)
+
+  let relativePath = path.relative(targetDir, filePath)
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    relativePath = path.basename(filePath)
+  }
+
+  const normalizedRelativePath = relativePath.replaceAll('\\', '/')
+  let backupPath = path.join(backupRoot, normalizedRelativePath)
+  if (fileExists(backupPath)) {
+    backupPath = `${backupPath}.${Date.now()}`
+  }
+
+  ensureDir(path.dirname(backupPath))
+  fs.copyFileSync(filePath, backupPath)
+
+  const backupRelative = path.relative(backupRoot, backupPath).replaceAll('\\', '/')
+  console.log(`📦 Backed up: ${normalizedRelativePath} → .ai-setup-backup/${backupRelative}`)
+
+  return backupPath
+}

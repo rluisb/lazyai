@@ -6,6 +6,7 @@ export interface SetupConfig {
   tools: ToolId[]
   projectName: string
   targetDir: string
+  force?: boolean | undefined
 }
 
 export interface FileRecord {

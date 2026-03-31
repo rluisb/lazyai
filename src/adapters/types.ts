@@ -4,6 +4,7 @@ export interface AdapterContext {
   targetDir: string
   libraryDir: string
   fileRecords: FileRecord[]
+  force?: boolean | undefined
 }
 
 export interface ToolAdapter {

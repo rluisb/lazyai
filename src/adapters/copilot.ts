@@ -1,7 +1,7 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
-import { confirmReplace } from '../utils/conflicts.js'
+import { resolveConflict } from '../utils/conflicts.js'
 
 export class CopilotAdapter implements ToolAdapter {
   getToolId(): string {
@@ -58,8 +58,12 @@ export class CopilotAdapter implements ToolAdapter {
       const copilotMdPath = path.join(githubDir, 'copilot-instructions.md')
 
       if (files.fileExists(templatePath)) {
-        const shouldWrite = await confirmReplace(copilotMdPath, '.github/copilot-instructions.md')
-        if (shouldWrite) {
+        const resolution = await resolveConflict(copilotMdPath, '.github/copilot-instructions.md', { force: ctx.force })
+        if (resolution !== 'skip') {
+          if (resolution === 'backup-and-overwrite') {
+            files.backupFile(copilotMdPath, ctx.targetDir)
+          }
+
           const content = files.readFile(templatePath)
           files.writeFile(copilotMdPath, content)
           ctx.fileRecords.push({
@@ -79,25 +83,33 @@ export class CopilotAdapter implements ToolAdapter {
   }
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const shouldWrite = await confirmReplace(dest, path.relative(ctx.targetDir, dest))
-    if (!shouldWrite) return
+    const relPath = path.relative(ctx.targetDir, dest)
+    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    if (resolution === 'skip') return
+    if (resolution === 'backup-and-overwrite') {
+      files.backupFile(dest, ctx.targetDir)
+    }
 
     files.copyFile(src, dest)
     ctx.fileRecords.push({
-      path: path.relative(ctx.targetDir, dest),
+      path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
     })
   }
 
   private async copySkillAsPromptWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const shouldWrite = await confirmReplace(dest, path.relative(ctx.targetDir, dest))
-    if (!shouldWrite) return
+    const relPath = path.relative(ctx.targetDir, dest)
+    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    if (resolution === 'skip') return
+    if (resolution === 'backup-and-overwrite') {
+      files.backupFile(dest, ctx.targetDir)
+    }
 
     const transformed = `---\nmode: agent\n---\n\n${files.readFile(src)}`
     files.writeFile(dest, transformed)
     ctx.fileRecords.push({
-      path: path.relative(ctx.targetDir, dest),
+      path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
     })

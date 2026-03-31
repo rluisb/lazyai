@@ -6,6 +6,7 @@ interface InitOptions {
   type?: string
   tools?: string
   name?: string
+  force?: boolean
   interactive: boolean
 }
 
@@ -16,6 +17,7 @@ export function registerInit(program: Command): void {
     .option('--type <type>', 'Setup type: project | workspace')
     .option('--tools <tools>', 'Comma-separated tool list: pi,opencode')
     .option('--name <name>', 'Project name (defaults to directory name)')
+    .option('--force', 'Overwrite all existing managed files (creates backups)')
     .option('--no-interactive', 'Non-interactive mode — requires all flags')
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
@@ -31,6 +33,7 @@ export function registerInit(program: Command): void {
       if (opts.name) promptOpts.name = opts.name
 
       const config = await runPrompts(promptOpts)
+      config.force = opts.force
 
       // Dynamic import to avoid circular deps — scaffold wired in T009
       const { runScaffold } = await import('../scaffold.js')

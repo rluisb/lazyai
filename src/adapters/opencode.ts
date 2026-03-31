@@ -47,6 +47,34 @@ export class OpenCodeAdapter implements ToolAdapter {
       if (selectedSkills && !selectedSkills.has(fileId)) continue
       await this.copyFileWithRecord(path.join(skillsDir, file), path.join(ocDir, 'commands', file), ctx)
     }
+
+    // Install tool-agents context files
+    const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
+    const contextFileName = 'AGENTS.md'
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'agents-dir.md'),
+      path.join(ocDir, 'agents', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'skills-dir.md'),
+      path.join(ocDir, 'commands', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'templates-dir.md'),
+      path.join(ocDir, 'templates', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'root-dir.md'),
+      path.join(ocDir, contextFileName),
+      ctx,
+    )
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

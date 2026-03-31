@@ -13,6 +13,7 @@ export class ClaudeCodeAdapter implements ToolAdapter {
     const claudeDir = path.join(ctx.targetDir, '.claude')
     files.ensureDir(claudeDir)
     files.ensureDir(path.join(claudeDir, 'rules'))
+    files.ensureDir(path.join(claudeDir, 'agents'))
     files.ensureDir(path.join(claudeDir, 'commands'))
     files.ensureDir(path.join(claudeDir, 'templates'))
 
@@ -59,6 +60,34 @@ export class ClaudeCodeAdapter implements ToolAdapter {
         ctx,
       )
     }
+
+    // Install tool-agents context files
+    const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
+    const contextFileName = 'CLAUDE.md'
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'agents-dir.md'),
+      path.join(claudeDir, 'agents', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'skills-dir.md'),
+      path.join(claudeDir, 'commands', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'templates-dir.md'),
+      path.join(claudeDir, 'templates', contextFileName),
+      ctx,
+    )
+
+    await this.copyFileWithRecord(
+      path.join(toolAgentsDir, 'root-dir.md'),
+      path.join(claudeDir, contextFileName),
+      ctx,
+    )
 
     // Create CLAUDE.md from template (only if not already created by scaffold)
     const alreadyCreated = ctx.fileRecords.some(r => r.path === 'CLAUDE.md')

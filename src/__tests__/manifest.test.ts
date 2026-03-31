@@ -59,7 +59,7 @@ describe('extractSelections', () => {
       agents: ['builder'],
       skills: ['implement'],
       prompts: ['plan'],
-      infra: ['CODEOWNERS'],
+      infra: ['pre-commit'],
     }
     const manifest = buildManifest(['docs/features/example.md'], selections)
 
@@ -116,12 +116,12 @@ describe('extractSelections', () => {
     expect(result.skills).toEqual(['implement'])
   })
 
-  it('infers infra from CODEOWNERS and git hook files', () => {
-    const manifest = buildManifest(['CODEOWNERS', '.git/hooks/pre-commit'])
+  it('infers infra from git hook and compliance files', () => {
+    const manifest = buildManifest(['.git/hooks/pre-commit', 'docs/compliance.md'])
 
     const result = extractSelections(manifest)
 
-    expect(result.infra).toEqual(['CODEOWNERS', 'pre-commit'])
+    expect(result.infra).toEqual(['pre-commit', 'compliance'])
   })
 
   it('returns empty partial when manifest has empty files array', () => {

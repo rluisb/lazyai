@@ -62,7 +62,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   if (docsAgents.length > 0) selections.docsAgents = docsAgents
 
   // Templates: look for docs/templates/<name>.md
-  const ALL_TEMPLATES: TemplateId[] = ['adr', 'prd', 'progress', 'standard', 'task', 'tasks', 'tech-debt', 'techspec']
+  const ALL_TEMPLATES: TemplateId[] = ['adr', 'bugfix-rca-template', 'code-review-template', 'postmortem-template', 'prd-template', 'progress', 'standard', 'task', 'tasks-template', 'tech-debt-template', 'techspec-template']
   const templates = ALL_TEMPLATES.filter(t => files.some(f => f === `docs/templates/${t}.md`))
   if (templates.length > 0) selections.templates = templates
 
@@ -99,7 +99,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   if (prompts.length > 0) selections.prompts = prompts
 
   // Infra
-  const ALL_INFRA: InfraId[] = ['CODEOWNERS', 'pre-commit', 'compliance', 'KNOWLEDGE_MAP']
+  const ALL_INFRA: InfraId[] = ['pre-commit', 'compliance', 'KNOWLEDGE_MAP']
   const infra = ALL_INFRA.filter(i =>
     files.some(f => {
       const name = f.split('/').pop() || ''

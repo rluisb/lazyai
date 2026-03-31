@@ -1,3 +1,9 @@
+---
+name: Documenter
+model: claude-sonnet-4-5
+mode: auto
+---
+
 # Documenter Agent
 
 ## Model

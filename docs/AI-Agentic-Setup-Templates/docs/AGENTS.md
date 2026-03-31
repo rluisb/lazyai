@@ -18,9 +18,6 @@
 | docs/refactors/ | Refactor work artifacts | Full flow + mandatory ADR |
 | docs/tech-debt/ | Tech debt work artifacts | Shortened flow: research → techspec → tasks (no PRD) |
 | docs/memory/ | Agent learnings | Patterns discovered during work |
-| docs/change-requests/ | Change request artifacts | CR flow: triage → size gate → implement → CR log |
-| docs/code-reviews/ | Code review artifacts | External PR reviews using Reviewer in External Mode |
-| docs/hotfixes/ | Hotfix work artifacts | Expedited P0/P1 flow: reproduce → RCA → deploy → post-mortem |
 
 ## Rules
 - All docs are markdown. No other formats.

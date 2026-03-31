@@ -27,9 +27,6 @@ These templates define the structure for project documents. They are NOT example
 | tech-debt-template.md | Technical debt assessment | docs/tech-debt/NNN-*/techspec.md |
 | standard-template.md | Project coding standards | docs/standards/[pattern-name].md |
 | progress-template.md | Feature trace log | docs/features/NNN-*/progress.md |
-| code-review-template.md | Structured findings for PR reviews | docs/code-reviews/NNN-*.md |
-| bugfix-rca-template.md | Root cause analysis for bugs | docs/bugfixes/NNN-*/rca.md |
-| postmortem-template.md | P0/P1 incident post-mortems | docs/hotfixes/NNN-*/postmortem.md |
 
 ## Self-Improvement
 When a new template is created or existing one updated:

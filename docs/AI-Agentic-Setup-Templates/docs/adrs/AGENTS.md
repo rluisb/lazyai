@@ -17,6 +17,22 @@ Architecture Decision Records — short documents that capture WHY a technical d
 - Number sequentially across the entire project: 001, 002, 003...
 - Use template: docs/templates/adr-template.md
 
+## Decision-Making Protocol (Required)
+
+Before finalizing any ADR decision:
+
+1. Generate **2+ viable alternatives**.
+2. Evaluate each alternative using these criteria:
+   - complexity
+   - consistency with existing patterns
+   - reversibility
+   - performance
+   - team familiarity
+3. Select one path and explain why it is best *now*.
+4. Record key tradeoffs and the risk of rejected options.
+
+Use concise scoring/notes if helpful, but always keep rationale explicit.
+
 ## When to Create an ADR
 - Non-obvious technology choice (why library X over Y)
 - Architecture pattern change (why we moved from pattern A to B)

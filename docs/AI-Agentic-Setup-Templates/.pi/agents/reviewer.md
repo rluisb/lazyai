@@ -1,3 +1,9 @@
+---
+name: Reviewer
+model: claude-opus-4-5
+mode: semi
+---
+
 # Reviewer Agent
 
 ## Model

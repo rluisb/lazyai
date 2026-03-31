@@ -60,7 +60,6 @@ describe('cli init integration', () => {
       'docs/standards/AGENTS.md',
       'docs/templates/AGENTS.md',
       'docs/rules/AGENTS.md',
-      'CODEOWNERS',
       'AGENTS.md',
       'CLAUDE.md',
       '.git/hooks/pre-commit',
@@ -87,7 +86,7 @@ describe('cli init integration', () => {
     expect(config.files.some((f) => f.path === '.pi/skills/research.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.opencode/commands/research.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.opencode/templates/research.md')).toBe(true)
-    expect(config.files.some((f) => f.path === 'docs/templates/prd.md')).toBe(true)
+    expect(config.files.some((f) => f.path === 'docs/templates/task.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })
 

@@ -1,3 +1,9 @@
+---
+name: Planner
+model: claude-opus-4-5
+mode: semi
+---
+
 # Planner Agent
 
 ## Model

@@ -12,6 +12,8 @@ export class ClaudeCodeAdapter implements ToolAdapter {
     const claudeDir = path.join(ctx.targetDir, '.claude')
     files.ensureDir(claudeDir)
     files.ensureDir(path.join(claudeDir, 'rules'))
+    files.ensureDir(path.join(claudeDir, 'commands'))
+    files.ensureDir(path.join(claudeDir, 'templates'))
 
     console.log('🤖  Installing Claude Code tools...')
 
@@ -21,6 +23,26 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       await this.copyFileWithRecord(
         path.join(agentsDir, file),
         path.join(claudeDir, file),
+        ctx,
+      )
+    }
+
+    // Skills - exact copy to .claude/commands
+    const skillsDir = path.join(ctx.libraryDir, 'skills')
+    for (const file of files.listDir(skillsDir)) {
+      await this.copyFileWithRecord(
+        path.join(skillsDir, file),
+        path.join(claudeDir, 'commands', file),
+        ctx,
+      )
+    }
+
+    // Templates - exact copy to .claude/templates
+    const templatesDir = path.join(ctx.libraryDir, 'prompts')
+    for (const file of files.listDir(templatesDir)) {
+      await this.copyFileWithRecord(
+        path.join(templatesDir, file),
+        path.join(claudeDir, 'templates', file),
         ctx,
       )
     }

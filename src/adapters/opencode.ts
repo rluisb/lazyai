@@ -12,6 +12,7 @@ export class OpenCodeAdapter implements ToolAdapter {
     files.ensureDir(ocDir)
     files.ensureDir(path.join(ocDir, 'agents'))
     files.ensureDir(path.join(ocDir, 'commands'))
+    files.ensureDir(path.join(ocDir, 'templates'))
 
     console.log('🤖  Installing OpenCode tools...')
 
@@ -21,8 +22,17 @@ export class OpenCodeAdapter implements ToolAdapter {
       this.copyFileWithRecord(path.join(agentsDir, file), path.join(ocDir, 'agents', file), ctx)
     }
 
-    // Note: skills would be transformed here when we add skills to library
-    // For now, leaving the commands dir empty as per current MVP state
+    // Templates - exact copy
+    const templatesDir = path.join(ctx.libraryDir, 'prompts')
+    for (const file of files.listDir(templatesDir)) {
+      this.copyFileWithRecord(path.join(templatesDir, file), path.join(ocDir, 'templates', file), ctx)
+    }
+
+    // Skills - exact copy to commands
+    const skillsDir = path.join(ctx.libraryDir, 'skills')
+    for (const file of files.listDir(skillsDir)) {
+      this.copyFileWithRecord(path.join(skillsDir, file), path.join(ocDir, 'commands', file), ctx)
+    }
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

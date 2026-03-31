@@ -28,8 +28,11 @@ export class PiAdapter implements ToolAdapter {
       this.copyFileWithRecord(path.join(templatesDir, file), path.join(piDir, 'templates', file), ctx)
     }
 
-    // Note: skills would be transformed here when we add skills to library
-    // For now, leaving the skills dir empty as per current MVP state
+    // Skills - exact copy
+    const skillsDir = path.join(ctx.libraryDir, 'skills')
+    for (const file of files.listDir(skillsDir)) {
+      this.copyFileWithRecord(path.join(skillsDir, file), path.join(piDir, 'skills', file), ctx)
+    }
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

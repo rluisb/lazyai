@@ -64,6 +64,7 @@ describe('cli init integration', () => {
       '.pi/skills',
       '.opencode/agents',
       '.opencode/commands',
+      '.opencode/templates',
       '.ai-setup.json',
     ]
 
@@ -78,6 +79,9 @@ describe('cli init integration', () => {
     expect(config.files.length).toBeGreaterThan(20)
     expect(config.files.some((f) => f.path === '.pi/agents/builder.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.opencode/agents/builder.md')).toBe(true)
+    expect(config.files.some((f) => f.path === '.pi/skills/research.md')).toBe(true)
+    expect(config.files.some((f) => f.path === '.opencode/commands/research.md')).toBe(true)
+    expect(config.files.some((f) => f.path === '.opencode/templates/research.md')).toBe(true)
     expect(config.files.some((f) => f.path === 'docs/templates/prd.md')).toBe(true)
     expect(config.files.some((f) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })

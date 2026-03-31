@@ -3,6 +3,7 @@ import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
 import type { AgentId, SkillId, PromptId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import { stripYamlFrontmatter } from '../utils/frontmatter.js'
 
 export class GeminiAdapter implements ToolAdapter {
   getToolId(): string {
@@ -27,7 +28,7 @@ export class GeminiAdapter implements ToolAdapter {
     for (const file of files.listDir(agentsDir)) {
       const fileId = path.parse(file).name as AgentId
       if (selectedAgents && !selectedAgents.has(fileId)) continue
-      await this.copyFileWithRecord(
+      await this.copyAgentFileWithRecord(
         path.join(agentsDir, file),
         path.join(geminiDir, file),
         ctx,
@@ -95,7 +96,11 @@ export class GeminiAdapter implements ToolAdapter {
       const geminiMdPath = path.join(ctx.targetDir, 'GEMINI.md')
 
       if (files.fileExists(templatePath)) {
-        const resolution = await resolveConflict(geminiMdPath, 'GEMINI.md', { force: ctx.force })
+        const effectiveStrategy = ctx.perFileOverrides?.get(geminiMdPath) ?? ctx.strategy
+        const resolution = await resolveConflict(geminiMdPath, 'GEMINI.md', {
+          force: ctx.force,
+          ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+        })
         if (resolution !== 'skip') {
           if (resolution === 'backup-and-overwrite') {
             files.backupFile(geminiMdPath, ctx.targetDir)
@@ -121,13 +126,38 @@ export class GeminiAdapter implements ToolAdapter {
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
     const relPath = path.relative(ctx.targetDir, dest)
-    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
     if (resolution === 'skip') return
     if (resolution === 'backup-and-overwrite') {
       files.backupFile(dest, ctx.targetDir)
     }
 
     files.copyFile(src, dest)
+    ctx.fileRecords.push({
+      path: relPath,
+      hash: files.fileHash(dest),
+      source: path.relative(ctx.libraryDir, src),
+    })
+  }
+
+  private async copyAgentFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+    const relPath = path.relative(ctx.targetDir, dest)
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
+    if (resolution === 'skip') return
+    if (resolution === 'backup-and-overwrite') {
+      files.backupFile(dest, ctx.targetDir)
+    }
+
+    const transformed = stripYamlFrontmatter(files.readFile(src))
+    files.writeFile(dest, transformed)
     ctx.fileRecords.push({
       path: relPath,
       hash: files.fileHash(dest),

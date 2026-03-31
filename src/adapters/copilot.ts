@@ -3,6 +3,7 @@ import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
 import type { AgentId, SkillId, PromptId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import { ensureModeAgentFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
 
 export class CopilotAdapter implements ToolAdapter {
   getToolId(): string {
@@ -33,7 +34,7 @@ export class CopilotAdapter implements ToolAdapter {
     for (const file of files.listDir(agentsDir)) {
       const fileId = path.parse(file).name as AgentId
       if (selectedAgents && !selectedAgents.has(fileId)) continue
-      await this.copyFileWithRecord(
+      await this.copyAgentFileWithRecord(
         path.join(agentsDir, file),
         path.join(githubDir, file),
         ctx,
@@ -101,7 +102,11 @@ export class CopilotAdapter implements ToolAdapter {
       const copilotMdPath = path.join(githubDir, 'copilot-instructions.md')
 
       if (files.fileExists(templatePath)) {
-        const resolution = await resolveConflict(copilotMdPath, '.github/copilot-instructions.md', { force: ctx.force })
+        const effectiveStrategy = ctx.perFileOverrides?.get(copilotMdPath) ?? ctx.strategy
+        const resolution = await resolveConflict(copilotMdPath, '.github/copilot-instructions.md', {
+          force: ctx.force,
+          ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+        })
         if (resolution !== 'skip') {
           if (resolution === 'backup-and-overwrite') {
             files.backupFile(copilotMdPath, ctx.targetDir)
@@ -127,7 +132,11 @@ export class CopilotAdapter implements ToolAdapter {
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
     const relPath = path.relative(ctx.targetDir, dest)
-    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
     if (resolution === 'skip') return
     if (resolution === 'backup-and-overwrite') {
       files.backupFile(dest, ctx.targetDir)
@@ -141,15 +150,40 @@ export class CopilotAdapter implements ToolAdapter {
     })
   }
 
-  private async copySkillAsPromptWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+  private async copyAgentFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
     const relPath = path.relative(ctx.targetDir, dest)
-    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
     if (resolution === 'skip') return
     if (resolution === 'backup-and-overwrite') {
       files.backupFile(dest, ctx.targetDir)
     }
 
-    const transformed = `---\nmode: agent\n---\n\n${files.readFile(src)}`
+    const transformed = stripYamlFrontmatter(files.readFile(src))
+    files.writeFile(dest, transformed)
+    ctx.fileRecords.push({
+      path: relPath,
+      hash: files.fileHash(dest),
+      source: path.relative(ctx.libraryDir, src),
+    })
+  }
+
+  private async copySkillAsPromptWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+    const relPath = path.relative(ctx.targetDir, dest)
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
+    if (resolution === 'skip') return
+    if (resolution === 'backup-and-overwrite') {
+      files.backupFile(dest, ctx.targetDir)
+    }
+
+    const transformed = ensureModeAgentFrontmatter(stripYamlFrontmatter(files.readFile(src)))
     files.writeFile(dest, transformed)
     ctx.fileRecords.push({
       path: relPath,

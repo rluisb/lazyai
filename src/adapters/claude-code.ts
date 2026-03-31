@@ -96,7 +96,11 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       const claudeMdPath = path.join(ctx.targetDir, 'CLAUDE.md')
 
       if (files.fileExists(templatePath)) {
-        const resolution = await resolveConflict(claudeMdPath, 'CLAUDE.md', { force: ctx.force })
+        const effectiveStrategy = ctx.perFileOverrides?.get(claudeMdPath) ?? ctx.strategy
+        const resolution = await resolveConflict(claudeMdPath, 'CLAUDE.md', {
+          force: ctx.force,
+          ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+        })
         if (resolution !== 'skip') {
           if (resolution === 'backup-and-overwrite') {
             files.backupFile(claudeMdPath, ctx.targetDir)
@@ -122,7 +126,11 @@ export class ClaudeCodeAdapter implements ToolAdapter {
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
     const relPath = path.relative(ctx.targetDir, dest)
-    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
     if (resolution === 'skip') return
     if (resolution === 'backup-and-overwrite') {
       files.backupFile(dest, ctx.targetDir)

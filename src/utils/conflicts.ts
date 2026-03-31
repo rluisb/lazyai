@@ -1,11 +1,13 @@
 import * as p from '@clack/prompts'
 import { fileExists, fileHash } from './files.js'
+import type { ConflictStrategy } from '../types.js'
 
 export type ConflictResolution = 'overwrite' | 'skip' | 'backup-and-overwrite'
 
 export interface ConflictOptions {
   force?: boolean | undefined
   trackedHash?: string | undefined
+  strategy?: ConflictStrategy | undefined
 }
 
 export async function resolveConflict(
@@ -14,6 +16,17 @@ export async function resolveConflict(
   options: ConflictOptions = {}
 ): Promise<ConflictResolution> {
   if (!fileExists(destPath)) return 'overwrite'
+
+  // Deterministic strategy from Phase 7 wizard (bypasses interactive prompts)
+  if (options.strategy) {
+    switch (options.strategy) {
+      case 'skip':
+        return 'skip'
+      case 'backup-and-replace':
+      case 'align':
+        return 'backup-and-overwrite'
+    }
+  }
 
   if (options.force) {
     return 'backup-and-overwrite'

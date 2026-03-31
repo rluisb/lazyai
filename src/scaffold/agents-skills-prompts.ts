@@ -1,5 +1,5 @@
 import { AdapterRegistry } from '../adapters/registry.js'
-import type { ToolId, AgentId, SkillId, PromptId, FileRecord } from '../types.js'
+import type { ToolId, AgentId, SkillId, PromptId, FileRecord, ConflictStrategy } from '../types.js'
 
 export interface ScaffoldAgentsSkillsPromptsOptions {
   targetDir: string
@@ -10,6 +10,8 @@ export interface ScaffoldAgentsSkillsPromptsOptions {
   prompts: PromptId[]
   fileRecords: FileRecord[]
   force?: boolean
+  strategy?: ConflictStrategy
+  perFileOverrides?: Map<string, ConflictStrategy>
 }
 
 /**
@@ -22,17 +24,22 @@ export interface ScaffoldAgentsSkillsPromptsOptions {
  * Current behavior: Calls adapter.install() which copies all agents/skills/prompts for each tool.
  */
 export async function scaffoldAgentsSkillsPrompts(opts: ScaffoldAgentsSkillsPromptsOptions): Promise<void> {
-  const { targetDir, libraryDir, tools, fileRecords, force } = opts
+  const { targetDir, libraryDir, tools, fileRecords, force, strategy, perFileOverrides } = opts
 
   const registry = new AdapterRegistry()
   const adapters = registry.getAll(tools)
 
   for (const adapter of adapters) {
+    const strategyOpts = strategy ? { strategy } : {}
+    const perFileOverrideOpts = perFileOverrides ? { perFileOverrides } : {}
+
     await adapter.install({
       targetDir,
       libraryDir,
       fileRecords,
       force,
+      ...strategyOpts,
+      ...perFileOverrideOpts,
     })
   }
 }

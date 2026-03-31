@@ -4,6 +4,7 @@ import { backupFile } from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
 import type { AgentId, SkillId, PromptId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import { stripYamlFrontmatter } from '../utils/frontmatter.js'
 
 export class PiAdapter implements ToolAdapter {
   getToolId(): string {
@@ -28,7 +29,7 @@ export class PiAdapter implements ToolAdapter {
     for (const file of files.listDir(agentsDir)) {
       const fileId = path.parse(file).name as AgentId
       if (selectedAgents && !selectedAgents.has(fileId)) continue
-      await this.copyFileWithRecord(path.join(agentsDir, file), path.join(piDir, 'agents', file), ctx)
+      await this.copyAgentFileWithRecord(path.join(agentsDir, file), path.join(piDir, 'agents', file), ctx)
     }
 
     // Templates - exact copy
@@ -86,7 +87,11 @@ export class PiAdapter implements ToolAdapter {
 
   private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
     const relPath = path.relative(ctx.targetDir, dest)
-    const resolution = await resolveConflict(dest, relPath, { force: ctx.force })
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
 
     if (resolution === 'skip') {
       console.warn(`⚠️  Skipping existing file: ${relPath}`)
@@ -98,6 +103,32 @@ export class PiAdapter implements ToolAdapter {
     }
 
     files.copyFile(src, dest)
+    ctx.fileRecords.push({
+      path: relPath,
+      hash: files.fileHash(dest),
+      source: path.relative(ctx.libraryDir, src),
+    })
+  }
+
+  private async copyAgentFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+    const relPath = path.relative(ctx.targetDir, dest)
+    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
+    const resolution = await resolveConflict(dest, relPath, {
+      force: ctx.force,
+      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+    })
+
+    if (resolution === 'skip') {
+      console.warn(`⚠️  Skipping existing file: ${relPath}`)
+      return
+    }
+
+    if (resolution === 'backup-and-overwrite') {
+      backupFile(dest, ctx.targetDir)
+    }
+
+    const transformed = stripYamlFrontmatter(files.readFile(src))
+    files.writeFile(dest, transformed)
     ctx.fileRecords.push({
       path: relPath,
       hash: files.fileHash(dest),

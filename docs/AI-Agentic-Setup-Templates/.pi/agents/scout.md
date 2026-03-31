@@ -1,3 +1,9 @@
+---
+name: Scout
+model: claude-opus-4-5
+mode: semi
+---
+
 # Scout Agent
 
 ## Model

@@ -1,3 +1,9 @@
+---
+name: Red Team
+model: claude-opus-4-5
+mode: semi
+---
+
 # Red-Team Agent
 
 ## Model

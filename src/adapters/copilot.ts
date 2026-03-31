@@ -14,6 +14,10 @@ export class CopilotAdapter implements ToolAdapter {
 
     const instructionsDir = path.join(githubDir, 'instructions')
     files.ensureDir(instructionsDir)
+    const promptsDir = path.join(githubDir, 'prompts')
+    files.ensureDir(promptsDir)
+    const templatesDir = path.join(githubDir, 'templates')
+    files.ensureDir(templatesDir)
 
     console.log('🤖  Installing GitHub Copilot tools...')
 
@@ -25,6 +29,26 @@ export class CopilotAdapter implements ToolAdapter {
         path.join(githubDir, file),
         ctx,
       )
+    }
+
+    // Prompts - exact copy
+    const promptTemplatesDir = path.join(ctx.libraryDir, 'prompts')
+    for (const file of files.listDir(promptTemplatesDir)) {
+      await this.copyFileWithRecord(
+        path.join(promptTemplatesDir, file),
+        path.join(templatesDir, file),
+        ctx,
+      )
+    }
+
+    // Skills - transformed into Copilot prompt files
+    const skillsDir = path.join(ctx.libraryDir, 'skills')
+    for (const file of files.listDir(skillsDir)) {
+      const src = path.join(skillsDir, file)
+      const parsed = path.parse(file)
+      const destFile = `${parsed.name}.prompt.md`
+      const dest = path.join(promptsDir, destFile)
+      await this.copySkillAsPromptWithRecord(src, dest, ctx)
     }
 
     // Create copilot-instructions.md from template (only if not already created by scaffold)
@@ -59,6 +83,19 @@ export class CopilotAdapter implements ToolAdapter {
     if (!shouldWrite) return
 
     files.copyFile(src, dest)
+    ctx.fileRecords.push({
+      path: path.relative(ctx.targetDir, dest),
+      hash: files.fileHash(dest),
+      source: path.relative(ctx.libraryDir, src),
+    })
+  }
+
+  private async copySkillAsPromptWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
+    const shouldWrite = await confirmReplace(dest, path.relative(ctx.targetDir, dest))
+    if (!shouldWrite) return
+
+    const transformed = `---\nmode: agent\n---\n\n${files.readFile(src)}`
+    files.writeFile(dest, transformed)
     ctx.fileRecords.push({
       path: path.relative(ctx.targetDir, dest),
       hash: files.fileHash(dest),

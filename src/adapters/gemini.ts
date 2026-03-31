@@ -11,6 +11,8 @@ export class GeminiAdapter implements ToolAdapter {
   async install(ctx: AdapterContext): Promise<void> {
     const geminiDir = path.join(ctx.targetDir, '.gemini')
     files.ensureDir(geminiDir)
+    files.ensureDir(path.join(geminiDir, 'skills'))
+    files.ensureDir(path.join(geminiDir, 'templates'))
 
     console.log('♊  Installing Gemini CLI tools...')
 
@@ -20,6 +22,26 @@ export class GeminiAdapter implements ToolAdapter {
       await this.copyFileWithRecord(
         path.join(agentsDir, file),
         path.join(geminiDir, file),
+        ctx,
+      )
+    }
+
+    // Skills - exact copy
+    const skillsDir = path.join(ctx.libraryDir, 'skills')
+    for (const file of files.listDir(skillsDir)) {
+      await this.copyFileWithRecord(
+        path.join(skillsDir, file),
+        path.join(geminiDir, 'skills', file),
+        ctx,
+      )
+    }
+
+    // Templates - exact copy
+    const templatesDir = path.join(ctx.libraryDir, 'prompts')
+    for (const file of files.listDir(templatesDir)) {
+      await this.copyFileWithRecord(
+        path.join(templatesDir, file),
+        path.join(geminiDir, 'templates', file),
         ctx,
       )
     }

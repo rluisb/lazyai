@@ -14,7 +14,7 @@ export function registerEject(program: Command) {
 }
 
 export async function ejectCommand(targetDir: string) {
-  intro('Ejecting from @teachable/ai-setup');
+  intro('Ejecting from @ricardoborges-teachable/ai-setup');
   
   const manifest = await readManifest(targetDir);
   

@@ -216,12 +216,24 @@ Worker builds → Reviewer judges → Context resets → Repeat until SHIP. No m
 
 ### 3.6 Work Types
 
+**Proactive work** (you initiate):
+
 | Type | Flow | PRD? | ADR? |
 |------|------|------|------|
 | **Feature** | Full RPI | Yes | If applicable |
-| **Bugfix** | Shortened: Research → TechSpec → Tasks | No | Rarely |
-| **Refactor** | Full RPI | Yes | **Always** |
+| **Bugfix (P2/P3)** | Shortened: RCA → TechSpec → Tasks | No | Rarely |
+| **Refactor MICRO** | Document intent → Implement → Review | No | No |
+| **Refactor MACRO** | Full RPI + Compatibility Matrix | Yes | **Always** |
 | **Tech Debt** | Shortened: Research → TechSpec → Tasks | No | If applicable |
+
+**Reactive work** (something happened, you respond):
+
+| Type | Trigger | Flow |
+|------|---------|------|
+| **Change Request** (`/change-request`) | PR review feedback received | Triage → Size Gate → Implement → CR Log |
+| **Code Review** (`/code-review`) | Teammate's PR needs review | Context Assembly → Reviewer (External Mode) → Structured Output |
+| **Hotfix** (`/hotfix`) | P0/P1 production incident | Reproduce → RCA → Implement → Expedited Review → Deploy → Post-mortem |
+| **Bugfix (P0/P1)** | Severity-triaged bug | Same as Hotfix path |
 
 ### 3.7 The 7 Canonical Workflow Patterns
 
@@ -462,6 +474,14 @@ SELF-IMPROVEMENT
 • New pattern? → create standard
 • Bug from missing rule? → add rule
 • Explained twice? → write it down
+
+REACTIVE FLOWS (respond to events)
+• PR feedback received?  → /change-request (triage → size gate → CR log)
+• Teammate PR to review? → /code-review (context assembly → Reviewer External Mode)
+• P0/P1 incident?        → /hotfix (reproduce → RCA → expedited → post-mortem)
+• P2/P3 bug?             → /bugfix (RCA → techspec → scheduled)
+• Refactor < 50 lines?   → MICRO path (no PRD/TechSpec)
+• Refactor ≥ 50 lines?   → MACRO path (full RPI + compatibility matrix + ADR)
 ```
 
 ---
@@ -497,6 +517,12 @@ SELF-IMPROVEMENT
 | **Sub-Agent** | Separate AI session with own context, prompt, and tool restrictions |
 | **TechSpec** | Technical Specification — HOW/architecture |
 | **Tech Debt** | Planned risk reduction — separate work type with own flow |
+| **Change Request** | Reactive workflow for responding to PR review feedback |
+| **Code Review** | Reactive workflow for reviewing a teammate's PR (External PR Mode) |
+| **Hotfix** | Expedited P0/P1 fix flow with mandatory post-mortem |
+| **Post-mortem** | Blameless incident analysis artifact — 5-why, impact, prevention actions |
+| **Compatibility Matrix** | Table of callers/consumers mapped to breaking-change risk (MACRO refactors) |
+| **RCA** | Root Cause Analysis — 5-why drill to systemic cause, used in bugfix and hotfix flows |
 | **TillDone** | Task discipline: list all tasks before using any tools |
 | **Tree of Thoughts (ToT)** | Exploring multiple approaches before committing to one |
 | **WORKSPACE.md** | Optional file declaring monorepo/multi-repo structure |

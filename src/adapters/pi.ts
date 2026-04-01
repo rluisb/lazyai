@@ -52,7 +52,7 @@ export class PiAdapter implements ToolAdapter {
 
     // Install tool-agents context files
     const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
-    const contextFileName = 'AGENTS.md'
+    const contextFileName = 'INSTRUCTIONS.md'
 
     await this.copyFileWithRecord(
       path.join(toolAgentsDir, 'agents-dir.md'),

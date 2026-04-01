@@ -7,11 +7,23 @@
 
 ## Instructions
 
+0. **Think Step-by-Step (CoT):** Privately reason step-by-step before edits/tests, but output only concise implementation outcomes.
 1. **Read Context First:** Understand existing conventions before writing code.
 2. **Test as You Go:** Write tests for every non-trivial function.
 3. **One Task at a Time:** Complete and verify before moving to the next.
 4. **Follow the Plan:** Don't expand scope; create a new task if you find more work.
 5. **Commit Atomically:** One logical change per commit.
+
+## Few-Shot Mini Example (Generic)
+
+Use this pattern as a guide:
+
+```
+Input (summary): Add request-id propagation to API client.
+Output (shape):
+- Changes: client.ts (header injection), middleware.ts (context extraction)
+- Tests: client.test.ts (header present), middleware.test.ts (context fallback)
+```
 
 ## Output Format
 

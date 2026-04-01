@@ -3,6 +3,7 @@ import * as p from '@clack/prompts'
 import { join } from 'node:path'
 import type { ArtifactType } from '../types.js'
 import { fileExists, writeFile } from '../utils/files.js'
+import { validateRequiredText } from '../utils/validation.js'
 import { GeneratorRegistry } from '../generators/registry.js'
 import { discoverLibraryArtifacts } from '../generators/workflow.js'
 
@@ -42,7 +43,10 @@ function ensurePromptText(value: string | symbol): string {
 }
 
 async function askText(message: string, placeholder?: string): Promise<string> {
-  const textOptions: { message: string; placeholder?: string; defaultValue?: string } = { message }
+  const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string) => string | undefined } = {
+    message,
+    validate: (value) => validateRequiredText(value, message),
+  }
   if (placeholder !== undefined) {
     textOptions.placeholder = placeholder
     textOptions.defaultValue = placeholder
@@ -178,8 +182,9 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
       }
 
       if (question.type === 'text') {
-        const textOptions: { message: string; placeholder?: string; defaultValue?: string } = {
+        const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string) => string | undefined } = {
           message: question.label,
+          validate: (value) => validateRequiredText(value, question.label),
         }
         if (question.default !== undefined) {
           textOptions.placeholder = question.default

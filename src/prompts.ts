@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts'
 import path from 'node:path'
 import type { SetupConfig, SetupType, ToolId } from './types.js'
+import { validateFilesystemSafeName } from './utils/validation.js'
 
 export interface PromptOptions {
   type?: SetupType
@@ -71,6 +72,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
       message: 'Project name?',
       placeholder: defaultName,
       defaultValue: defaultName,
+      validate: (value) => validateFilesystemSafeName(value, 'Project name'),
     })
     if (p.isCancel(projectName)) {
       p.cancel('Setup cancelled.')

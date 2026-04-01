@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts'
 import path from 'node:path'
 import { readManifest } from '../utils/manifest.js'
+import { validateFilesystemSafeName } from '../utils/validation.js'
 import type { SetupType, ToolId, WizardSelections } from '../types.js'
 
 export interface Phase1Result {
@@ -104,6 +105,7 @@ export async function runPhase1(opts: {
       message: 'Project name?',
       placeholder: defaultName,
       defaultValue: defaultName,
+      validate: (value) => validateFilesystemSafeName(value, 'Project name'),
     }))
 
   if (p.isCancel(projectNameResult)) {

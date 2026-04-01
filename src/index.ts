@@ -1,10 +1,4 @@
 import { run } from './cli.js'
+import { handleError } from './errors/index.js'
 
-run().catch((err: unknown) => {
-  if (err instanceof Error) {
-    console.error(`\n❌  ${err.message}\n`)
-  } else {
-    console.error('\n❌  An unexpected error occurred\n', err)
-  }
-  process.exit(1)
-})
+run().catch(handleError)

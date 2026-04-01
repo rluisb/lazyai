@@ -102,6 +102,6 @@ describe('wizard integration (non-interactive)', () => {
 
     const manifest = JSON.parse(readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.selections).toBeDefined()
-    expect(manifest.tools).toEqual(['opencode'])
+    expect(manifest.config.tools).toEqual(['opencode'])
   })
 })

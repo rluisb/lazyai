@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { intro, outro, confirm, log } from '@clack/prompts';
 import { readManifest } from '../utils/manifest.js';
+import { Errors, AiSetupError } from '../errors/index.js'
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -44,8 +45,8 @@ export async function ejectCommand(targetDir: string) {
     await fs.unlink(manifestPath);
     log.success('Successfully removed .ai-setup.json');
     outro('Eject complete. You now fully own all files.');
-  } catch (err: any) {
-    log.error(`Failed to eject: ${err.message}`);
-    outro('Eject failed');
+  } catch (err: unknown) {
+    if (err instanceof AiSetupError) throw err
+    throw Errors.unknown(err instanceof Error ? err.message : String(err))
   }
 }

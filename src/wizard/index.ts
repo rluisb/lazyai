@@ -8,14 +8,17 @@ import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import type {
-  AiSetupConfig,
   FileRecord,
   SetupType,
   ToolId,
   WizardConfig,
   WizardSelections,
 } from '../types.js'
-import { readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
+import type { StoreData } from '../store/schema.js'
+import { readFile, resolveLibraryDir } from '../utils/files.js'
+import { appendOperation, writeStore } from '../store/index.js'
+import { Errors } from '../errors/index.js'
+import { OperationTracker } from '../errors/operation.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2 } from './phase2-docs.js'
@@ -33,6 +36,8 @@ export async function runWizard(opts: {
   cliOverrides: { type?: SetupType; tools?: ToolId[]; name?: string }
   targetDir: string
 }): Promise<void> {
+  const tracker = new OperationTracker('init')
+
   try {
     const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
 
@@ -151,6 +156,7 @@ export async function runWizard(opts: {
         strategy,
         perFileOverrides,
       })
+      tracker.trackSuccess('scaffold:docs')
 
       await scaffoldTemplatesRules({
         targetDir: opts.targetDir,
@@ -161,6 +167,7 @@ export async function runWizard(opts: {
         strategy,
         perFileOverrides,
       })
+      tracker.trackSuccess('scaffold:templates-rules')
 
       await scaffoldInfra({
         targetDir: opts.targetDir,
@@ -171,6 +178,7 @@ export async function runWizard(opts: {
         strategy,
         perFileOverrides,
       })
+      tracker.trackSuccess('scaffold:infra')
 
       await scaffoldRootFiles({
         targetDir: opts.targetDir,
@@ -181,6 +189,7 @@ export async function runWizard(opts: {
         strategy,
         perFileOverrides,
       })
+      tracker.trackSuccess('scaffold:root-files')
 
       await scaffoldAgentsSkillsPrompts({
         targetDir: opts.targetDir,
@@ -194,6 +203,13 @@ export async function runWizard(opts: {
         perFileOverrides,
         ...(opts.force !== undefined ? { force: opts.force } : {}),
       })
+      tracker.trackSuccess('scaffold:agents-skills-prompts')
+
+      for (const [sourcePath, strategyOverride] of perFileOverrides.entries()) {
+        if (strategyOverride === 'backup-and-replace' || strategyOverride === 'align') {
+          tracker.registerBackup(sourcePath, `${sourcePath}.backup`)
+        }
+      }
     }
 
     if (opts.interactive) {
@@ -205,26 +221,45 @@ export async function runWizard(opts: {
       await installFiles()
     }
 
-    const manifestData: AiSetupConfig = {
-      version: '0.1.0',
-      setupType,
-      tools,
-      projectName,
-      installedAt: new Date().toISOString(),
-      files: fileRecords,
+    const now = new Date().toISOString()
+    const storeData: StoreData = {
+      meta: {
+        schemaVersion: 1,
+        cliVersion: '0.1.0',
+        installedAt: now,
+        lastUpdatedAt: now,
+      },
+      config: {
+        setupType,
+        tools,
+        projectName,
+        targetDir: opts.targetDir,
+      },
       selections,
+      files: fileRecords.map((file) => ({
+        ...file,
+        status: 'installed',
+        installedAt: now,
+        lastCheckedAt: now,
+      })),
+      sync: {
+        lastSyncAt: now,
+        dirty: false,
+      },
+      operations: [],
     }
 
-    writeFile(path.join(opts.targetDir, '.ai-setup.json'), JSON.stringify(manifestData, null, 2))
+    await writeStore(opts.targetDir, storeData)
+    await appendOperation(opts.targetDir, tracker.toOperation())
     outroSuccess(config)
   } catch (error) {
     if (p.isCancel(error)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      throw Errors.userCancelled()
     }
 
-    const message = error instanceof Error ? error.message : String(error)
-    p.cancel(`Setup failed: ${message}`)
-    process.exit(1)
+    tracker.trackFailure('wizard:init', error instanceof Error ? error.message : String(error))
+
+    if (error instanceof Error) throw error
+    throw Errors.unknown(String(error))
   }
 }

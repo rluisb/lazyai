@@ -70,7 +70,7 @@ describe('file utils', () => {
   it('throws when copying from a missing source directory', () => {
     const tempDir = makeTempDir('ai-setup-copy-error-')
     expect(() => copyDir(path.join(tempDir, 'missing'), path.join(tempDir, 'dest'))).toThrow(
-      'Source directory does not exist',
+      'Directory not found',
     )
   })
 })

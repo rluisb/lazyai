@@ -1,3 +1,10 @@
+import type { WizardSelections as StoreWizardSelections } from './store/schema.js'
+
+// Re-export store types (source of truth is zod schemas)
+export type { StoreData, TrackedFile, Operation, Meta, Config, Sync } from './store/schema.js'
+export type WizardSelections = StoreWizardSelections
+export { CURRENT_SCHEMA_VERSION } from './store/schema.js'
+
 export type SetupType = 'project' | 'workspace'
 export type ToolId = 'pi' | 'opencode' | 'claude-code' | 'gemini' | 'copilot'
 
@@ -15,6 +22,10 @@ export interface FileRecord {
   source: string
 }
 
+/**
+ * @deprecated Use StoreData from ./store/schema.js.
+ * This legacy manifest shape is kept for backward compatibility only.
+ */
 export interface AiSetupConfig {
   version: string
   setupType: SetupType
@@ -48,17 +59,6 @@ export type ToolAgentId = 'agents-dir' | 'root-dir' | 'skills-dir' | 'templates-
 export type InfraId = 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP'
 
 export type ConflictStrategy = 'align' | 'backup-and-replace' | 'skip'
-
-export interface WizardSelections {
-  docsDirs: DocsDirId[]
-  docsAgents: DocsDirId[]
-  templates: TemplateId[]
-  rules: RuleId[]
-  agents: AgentId[]
-  skills: SkillId[]
-  prompts: PromptId[]
-  infra: InfraId[]
-}
 
 export interface WizardConfig extends SetupConfig {
   selections: WizardSelections

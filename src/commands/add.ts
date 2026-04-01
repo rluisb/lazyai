@@ -1,11 +1,12 @@
 import type { Command } from 'commander'
-import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
-import type { ToolId, AiSetupConfig, FileRecord } from '../types.js'
+import type { ToolId, FileRecord } from '../types.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { fileExists, resolveLibraryDir } from '../utils/files.js'
+import { createStore, writeStore } from '../store/index.js'
+import { Errors } from '../errors/index.js'
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 
@@ -18,8 +19,9 @@ export function registerAdd(program: Command): void {
       const registry = new AdapterRegistry()
 
       if (!registry.getRegisteredIds().includes(tool)) {
-        p.log.error(`Unknown tool: ${tool}. Available tools: ${registry.getRegisteredIds().join(', ')}`)
-        process.exit(1)
+        throw Errors.invalidInput(`unknown tool: ${tool}`, {
+          available: registry.getRegisteredIds(),
+        })
       }
 
       const toolId = tool as ToolId
@@ -28,14 +30,13 @@ export function registerAdd(program: Command): void {
       const configPath = join(targetDir, '.ai-setup.json')
 
       if (!fileExists(configPath)) {
-        p.log.error('No .ai-setup.json found. Please run init first.')
-        process.exit(1)
+        throw Errors.manifestNotFound(targetDir)
       }
 
-      const configStr = readFileSync(configPath, 'utf-8')
-      const config = JSON.parse(configStr) as AiSetupConfig
+      const db = await createStore(targetDir)
+      const data = db.data
 
-      if (config.tools.includes(toolId)) {
+      if (data.config.tools.includes(toolId)) {
         p.log.info(`${toolId} is already installed.`)
         return
       }
@@ -49,7 +50,7 @@ export function registerAdd(program: Command): void {
 
       if (!adapter) {
         s.stop(`Failed to load adapter for ${toolId}`, 1)
-        process.exit(1)
+        throw Errors.missingDependency(`adapter:${toolId}`)
       }
 
       const newFiles: FileRecord[] = []
@@ -61,10 +62,19 @@ export function registerAdd(program: Command): void {
 
       s.stop(`Installed ${toolId} files`)
 
-      config.tools.push(toolId)
-      config.files = [...config.files, ...newFiles]
+      data.config.tools.push(toolId)
+      const now = new Date().toISOString()
+      data.files = [
+        ...data.files,
+        ...newFiles.map((file) => ({
+          ...file,
+          status: 'installed' as const,
+          installedAt: now,
+          lastCheckedAt: now,
+        })),
+      ]
 
-      writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+      await writeStore(targetDir, data)
 
       p.outro(`✅ Successfully added ${toolId}!`)
     })

@@ -28,6 +28,12 @@ export function createProgram(): Command {
     .name('ai-setup')
     .description('AI development environment scaffold — one command to set up your AI tools')
     .version(getVersion())
+    .option('-v, --verbose', 'Enable verbose debug output')
+    .hook('preAction', (thisCommand) => {
+      if (thisCommand.opts().verbose) {
+        process.env.AI_SETUP_DEBUG = '1'
+      }
+    })
 
   registerInit(program)
   registerAdd(program)

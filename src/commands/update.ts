@@ -1,11 +1,14 @@
 import type { Command } from 'commander'
-import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path, { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
-import type { AiSetupConfig, FileRecord, ToolId } from '../types.js'
+import type { ToolId } from '../types.js'
+import type { StoreData, TrackedFile } from '../store/schema.js'
 import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import { appendOperation, createStore, writeStore } from '../store/index.js'
+import { Errors } from '../errors/index.js'
+import { OperationTracker } from '../errors/operation.js'
 
 interface ExpectedFile {
   path: string
@@ -32,7 +35,7 @@ const docsAgentMappings: Array<{ source: string; destination: string }> = [
   { source: 'adrs.md', destination: 'docs/adrs/AGENTS.md' },
 ]
 
-function buildExpectedFiles(config: AiSetupConfig, targetDir: string): ExpectedFile[] {
+function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] {
   const expected: ExpectedFile[] = []
 
   const upsertExpected = (entry: ExpectedFile): void => {
@@ -155,49 +158,49 @@ function buildExpectedFiles(config: AiSetupConfig, targetDir: string): ExpectedF
 
   const rootAgentsTemplatePath = join(libraryDir, 'root/AGENTS.template.md')
   if (fileExists(rootAgentsTemplatePath)) {
-    const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName)
-    if (config.tools.includes('opencode')) {
+    const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName)
+    if (data.config.tools.includes('opencode')) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
     }
-    if (config.tools.includes('pi') && !config.tools.includes('claude-code')) {
+    if (data.config.tools.includes('pi') && !data.config.tools.includes('claude-code')) {
       addContent('CLAUDE.md', 'root/AGENTS.template.md', rootContent)
     }
   }
 
-  if (config.tools.includes('claude-code')) {
+  if (data.config.tools.includes('claude-code')) {
     const rootClaudeTemplatePath = join(libraryDir, 'root/CLAUDE.template.md')
     if (fileExists(rootClaudeTemplatePath)) {
       addContent(
         'CLAUDE.md',
         'root/CLAUDE.template.md',
-        readFile(rootClaudeTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName),
+        readFile(rootClaudeTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
       )
     }
   }
 
-  if (config.tools.includes('gemini')) {
+  if (data.config.tools.includes('gemini')) {
     const rootGeminiTemplatePath = join(libraryDir, 'root/GEMINI.template.md')
     if (fileExists(rootGeminiTemplatePath)) {
       addContent(
         'GEMINI.md',
         'root/GEMINI.template.md',
-        readFile(rootGeminiTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName),
+        readFile(rootGeminiTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
       )
     }
   }
 
-  if (config.tools.includes('copilot')) {
+  if (data.config.tools.includes('copilot')) {
     const rootCopilotTemplatePath = join(libraryDir, 'root/copilot-instructions.template.md')
     if (fileExists(rootCopilotTemplatePath)) {
       addContent(
         '.github/copilot-instructions.md',
         'root/copilot-instructions.template.md',
-        readFile(rootCopilotTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, config.projectName),
+        readFile(rootCopilotTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
       )
     }
   }
 
-  for (const tool of config.tools) {
+  for (const tool of data.config.tools) {
     addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude' : tool === 'gemini' ? '.gemini' : '.github')
     addSkillsAndPromptsForTool(tool)
   }
@@ -212,24 +215,26 @@ export function registerUpdate(program: Command): void {
     .option('--force', 'Overwrite all existing managed files (creates backups)')
     .action(async (opts: UpdateOptions) => {
       const targetDir = process.cwd()
+      const tracker = new OperationTracker('update')
       const configPath = join(targetDir, '.ai-setup.json')
 
       if (!fileExists(configPath)) {
-        p.log.error('No .ai-setup.json found. Please run init first.')
-        process.exit(1)
+        throw Errors.manifestNotFound(targetDir)
       }
 
-      const config = JSON.parse(readFileSync(configPath, 'utf-8')) as AiSetupConfig
-      const expectedFiles = buildExpectedFiles(config, targetDir)
-      const trackedByPath = new Map(config.files.map((record) => [record.path, record]))
+      const db = await createStore(targetDir)
+      const data = db.data
+      const expectedFiles = buildExpectedFiles(data, targetDir)
+      const trackedByPath = new Map(data.files.map((record) => [record.path, record]))
 
-      const updatedRecords = new Map<string, FileRecord>()
-      const newRecords: FileRecord[] = []
+      const updatedRecords = new Map<string, TrackedFile>()
+      const newRecords: TrackedFile[] = []
       const missing: string[] = []
       const skipped: string[] = []
 
       let updatedCount = 0
       let addedCount = 0
+      const now = new Date().toISOString()
 
       p.intro('Updating ai-setup managed files...')
 
@@ -253,15 +258,25 @@ export function registerUpdate(program: Command): void {
         }
 
         if (resolution === 'backup-and-overwrite') {
-          backupFile(absPath, targetDir)
+          const backupPath = backupFile(absPath, targetDir)
+          tracker.registerBackup(absPath, backupPath)
         }
 
-        writeFile(absPath, entry.content)
+        try {
+          writeFile(absPath, entry.content)
+          tracker.trackSuccess(entry.path)
+        } catch (error) {
+          tracker.trackFailure(entry.path, error instanceof Error ? error.message : String(error))
+          throw error
+        }
 
-        const nextRecord: FileRecord = {
+        const nextRecord: TrackedFile = {
           path: entry.path,
           hash: fileHash(absPath),
           source: entry.source,
+          status: 'installed',
+          installedAt: tracked?.installedAt ?? now,
+          lastCheckedAt: now,
         }
 
         if (tracked) {
@@ -273,15 +288,16 @@ export function registerUpdate(program: Command): void {
         }
       }
 
-      const nextFiles: FileRecord[] = config.files.map((record) => updatedRecords.get(record.path) ?? record)
+      const nextFiles: TrackedFile[] = data.files.map((record) => updatedRecords.get(record.path) ?? record)
       for (const record of newRecords) {
         if (!nextFiles.some((existing) => existing.path === record.path)) {
           nextFiles.push(record)
         }
       }
 
-      config.files = nextFiles
-      writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+      data.files = nextFiles
+      await writeStore(targetDir, data)
+      await appendOperation(targetDir, tracker.toOperation())
 
       p.log.success(`Updated ${updatedCount} tracked file(s)`)
       p.log.success(`Added ${addedCount} new file(s)`)

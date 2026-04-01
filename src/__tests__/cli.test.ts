@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createProgram } from '../cli.js'
+import { createImportCommand } from '../commands/import.js'
+import { createMigrateCommand } from '../commands/migrate.js'
 import type { AiSetupConfig } from '../types.js'
 
 describe('cli init integration', () => {
@@ -142,5 +144,15 @@ describe('cli init integration', () => {
     expect(config.tools).toEqual(['opencode'])
     expect(config.files.some((f) => f.path.startsWith('.opencode/'))).toBe(true)
     expect(config.files.some((f) => f.path.startsWith('.pi/'))).toBe(false)
+  })
+})
+
+describe('migration command options', () => {
+  it('exposes --interactive on import command', () => {
+    expect(createImportCommand().helpInformation()).toContain('--interactive')
+  })
+
+  it('exposes --interactive on migrate command', () => {
+    expect(createMigrateCommand().helpInformation()).toContain('--interactive')
   })
 })

@@ -9,6 +9,8 @@ import { registerDoctor } from './commands/doctor.js'
 import { registerStatus } from './commands/status.js'
 import { registerCreate } from './commands/create.js'
 import { registerEject } from './commands/eject.js'
+import { createImportCommand } from './commands/import.js'
+import { createMigrateCommand } from './commands/migrate.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -36,6 +38,10 @@ export function createProgram(): Command {
   registerStatus(program)
   registerCreate(program)
   registerEject(program)
+
+  // Add migration commands
+  program.addCommand(createImportCommand())
+  program.addCommand(createMigrateCommand())
 
   return program
 }

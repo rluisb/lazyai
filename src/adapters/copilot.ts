@@ -32,10 +32,12 @@ export class CopilotAdapter implements ToolAdapter {
     // Copy agent files to .github/
     const agentsDir = path.join(ctx.libraryDir, 'agents')
     for (const file of files.listDir(agentsDir)) {
+      const src = path.join(agentsDir, file)
+      if (files.isDirectory(src)) continue
       const fileId = path.parse(file).name as AgentId
       if (selectedAgents && !selectedAgents.has(fileId)) continue
       await this.copyAgentFileWithRecord(
-        path.join(agentsDir, file),
+        src,
         path.join(githubDir, file),
         ctx,
       )
@@ -58,9 +60,10 @@ export class CopilotAdapter implements ToolAdapter {
     // Skills - transformed into Copilot prompt files
     const skillsDir = path.join(ctx.libraryDir, 'skills')
     for (const file of files.listDir(skillsDir)) {
+      const src = path.join(skillsDir, file)
+      if (files.isDirectory(src)) continue
       const fileId = path.parse(file).name as SkillId
       if (selectedSkills && !selectedSkills.has(fileId)) continue
-      const src = path.join(skillsDir, file)
       const parsed = path.parse(file)
       const destFile = `${parsed.name}.prompt.md`
       const dest = path.join(promptsDir, destFile)

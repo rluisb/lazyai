@@ -106,18 +106,18 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.pi/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.pi/templates/plan.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.pi/skills'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/agents/AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/skills/AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/templates/AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/agents/INSTRUCTIONS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/skills/INSTRUCTIONS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/templates/INSTRUCTIONS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/INSTRUCTIONS.md'))).toBe(true)
 
     expect(fileRecords.map((f) => f.path).sort()).toEqual([
-      '.pi/AGENTS.md',
-      '.pi/agents/AGENTS.md',
+      '.pi/INSTRUCTIONS.md',
+      '.pi/agents/INSTRUCTIONS.md',
       '.pi/agents/builder.md',
       '.pi/agents/reviewer.md',
-      '.pi/skills/AGENTS.md',
-      '.pi/templates/AGENTS.md',
+      '.pi/skills/INSTRUCTIONS.md',
+      '.pi/templates/INSTRUCTIONS.md',
       '.pi/templates/plan.md',
     ])
     expect(fileRecords.every((f) => f.hash.length === 16)).toBe(true)

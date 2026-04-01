@@ -1,8 +1,11 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import type { ToolAdapter, AdapterContext } from './types.js'
-import type { AgentId, SkillId, PromptId } from '../types.js'
-import { resolveConflict } from '../utils/conflicts.js'
+import {
+  copyLibraryDirectory,
+  installRootTemplateIfMissing,
+  installToolContextFiles,
+} from './shared.js'
 
 export class ClaudeCodeAdapter implements ToolAdapter {
   getToolId(): string {
@@ -19,128 +22,47 @@ export class ClaudeCodeAdapter implements ToolAdapter {
 
     console.log('🤖  Installing Claude Code tools...')
 
-    const selectedAgents = ctx.selections?.agents ? new Set(ctx.selections.agents) : undefined
-    const selectedSkills = ctx.selections?.skills ? new Set(ctx.selections.skills) : undefined
-    const selectedPrompts = ctx.selections?.prompts ? new Set(ctx.selections.prompts) : undefined
-
-    // Copy agent files to .claude/
-    const agentsDir = path.join(ctx.libraryDir, 'agents')
-    for (const file of files.listDir(agentsDir)) {
-      const fileId = path.parse(file).name as AgentId
-      if (selectedAgents && !selectedAgents.has(fileId)) continue
-      await this.copyFileWithRecord(
-        path.join(agentsDir, file),
-        path.join(claudeDir, file),
-        ctx,
-      )
-    }
-
-    // Skills - exact copy to .claude/commands
-    const skillsDir = path.join(ctx.libraryDir, 'skills')
-    for (const file of files.listDir(skillsDir)) {
-      const fileId = path.parse(file).name as SkillId
-      if (selectedSkills && !selectedSkills.has(fileId)) continue
-      await this.copyFileWithRecord(
-        path.join(skillsDir, file),
-        path.join(claudeDir, 'commands', file),
-        ctx,
-      )
-    }
-
-    // Templates - exact copy to .claude/templates
-    const templatesDir = path.join(ctx.libraryDir, 'prompts')
-    for (const file of files.listDir(templatesDir)) {
-      const fileId = path.parse(file).name as PromptId
-      if (selectedPrompts && !selectedPrompts.has(fileId)) continue
-      const srcPath = path.join(templatesDir, file)
-      if (files.isDirectory(srcPath)) continue
-      await this.copyFileWithRecord(
-        srcPath,
-        path.join(claudeDir, 'templates', file),
-        ctx,
-      )
-    }
-
-    // Install tool-agents context files
-    const toolAgentsDir = path.join(ctx.libraryDir, 'tool-agents')
-    const contextFileName = 'CLAUDE.md'
-
-    await this.copyFileWithRecord(
-      path.join(toolAgentsDir, 'agents-dir.md'),
-      path.join(claudeDir, 'agents', contextFileName),
+    await copyLibraryDirectory({
       ctx,
-    )
+      sourceSubdir: 'agents',
+      selectionKey: 'agents',
+      toDestPath: (file) => path.join(claudeDir, file),
+    })
 
-    await this.copyFileWithRecord(
-      path.join(toolAgentsDir, 'skills-dir.md'),
-      path.join(claudeDir, 'commands', contextFileName),
+    await copyLibraryDirectory({
       ctx,
-    )
+      sourceSubdir: 'skills',
+      selectionKey: 'skills',
+      toDestPath: (file) => path.join(claudeDir, 'commands', file),
+    })
 
-    await this.copyFileWithRecord(
-      path.join(toolAgentsDir, 'templates-dir.md'),
-      path.join(claudeDir, 'templates', contextFileName),
+    await copyLibraryDirectory({
       ctx,
-    )
+      sourceSubdir: 'prompts',
+      selectionKey: 'prompts',
+      toDestPath: (file) => path.join(claudeDir, 'templates', file),
+    })
 
-    await this.copyFileWithRecord(
-      path.join(toolAgentsDir, 'root-dir.md'),
-      path.join(claudeDir, contextFileName),
+    await installToolContextFiles({
       ctx,
-    )
+      toolDir: claudeDir,
+      contextFileName: 'CLAUDE.md',
+      agentsDestDir: 'agents',
+      skillsDestDir: 'commands',
+      templatesDestDir: 'templates',
+    })
 
-    // Create CLAUDE.md from template (only if not already created by scaffold)
-    const alreadyCreated = ctx.fileRecords.some(r => r.path === 'CLAUDE.md')
-    if (!alreadyCreated) {
-      const templatePath = path.join(ctx.libraryDir, 'root', 'CLAUDE.template.md')
-      const claudeMdPath = path.join(ctx.targetDir, 'CLAUDE.md')
-
-      if (files.fileExists(templatePath)) {
-        const effectiveStrategy = ctx.perFileOverrides?.get(claudeMdPath) ?? ctx.strategy
-        const resolution = await resolveConflict(claudeMdPath, 'CLAUDE.md', {
-          force: ctx.force,
-          ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
-        })
-        if (resolution !== 'skip') {
-          if (resolution === 'backup-and-overwrite') {
-            files.backupFile(claudeMdPath, ctx.targetDir)
-          }
-
-          const content = files.readFile(templatePath)
-          files.writeFile(claudeMdPath, content)
-          ctx.fileRecords.push({
-            path: 'CLAUDE.md',
-            hash: files.fileHash(claudeMdPath),
-            source: 'root/CLAUDE.template.md',
-          })
-        }
-      }
-    }
+    await installRootTemplateIfMissing({
+      ctx,
+      recordPath: 'CLAUDE.md',
+      destPath: path.join(ctx.targetDir, 'CLAUDE.md'),
+      templateSource: 'root/CLAUDE.template.md',
+    })
   }
 
   async remove(ctx: AdapterContext): Promise<void> {
-    const claudeDir = path.join(ctx.targetDir, '.claude')
+    void ctx
     console.log('🗑️  Removing Claude Code tools...')
     // Basic remove implementation
-  }
-
-  private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const relPath = path.relative(ctx.targetDir, dest)
-    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
-    const resolution = await resolveConflict(dest, relPath, {
-      force: ctx.force,
-      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
-    })
-    if (resolution === 'skip') return
-    if (resolution === 'backup-and-overwrite') {
-      files.backupFile(dest, ctx.targetDir)
-    }
-
-    files.copyFile(src, dest)
-    ctx.fileRecords.push({
-      path: relPath,
-      hash: files.fileHash(dest),
-      source: path.relative(ctx.libraryDir, src),
-    })
   }
 }

@@ -119,17 +119,11 @@ export class OpenCodeParser extends BaseParser {
       const content = await fs.readFile(agentsPath, 'utf-8');
       
       // Extract project name
-      const nameMatch = content.match(/#\s+(.+?)\s*-?\s*AI Agent/i) ||
-                       content.match(/#\s+(.+?)\s*$/m);
-      if (nameMatch) {
-        projectName = nameMatch[1].trim();
-      }
+      projectName = this.getFirstMatch(content, /#\s+(.+?)\s*-?\s*AI Agent/i) ||
+        this.getFirstMatch(content, /#\s+(.+?)\s*$/m)
 
       // Extract description (first paragraph after title)
-      const descMatch = content.match(/#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s)/s);
-      if (descMatch) {
-        description = descMatch[1].trim();
-      }
+      description = this.getFirstMatch(content, /#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s)/s)
 
       files.push({ path: 'AGENTS.md', content, type: 'config' });
     } catch {
@@ -154,8 +148,7 @@ export class OpenCodeParser extends BaseParser {
           const agentId = path.basename(file, '.md');
           
           // Extract agent name from first heading
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : agentId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || agentId;
 
           agents.push({
             id: agentId,
@@ -191,8 +184,7 @@ export class OpenCodeParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const commandId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : commandId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || commandId;
 
           commands.push({
             id: commandId,
@@ -226,8 +218,7 @@ export class OpenCodeParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const templateId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : templateId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || templateId;
 
           templates.push({
             id: templateId,
@@ -246,9 +237,9 @@ export class OpenCodeParser extends BaseParser {
       // No templates directory
     }
 
-    return {
-      projectName,
-      description,
+    return this.buildParsedSetup({
+      ...(projectName ? { projectName } : {}),
+      ...(description ? { description } : {}),
       agents,
       rules,
       commands,
@@ -259,7 +250,7 @@ export class OpenCodeParser extends BaseParser {
         adapter: this.id,
         parsedAt: new Date().toISOString(),
       },
-    };
+    });
   }
 
   async merge(
@@ -293,7 +284,14 @@ export class OpenCodeParser extends BaseParser {
         if (diff3Result.hasConflicts) {
           if (strategy === 'smart') {
             // Keep conflicts for manual resolution
-            conflicts.push(...diff3Result.conflicts);
+            conflicts.push(...diff3Result.conflicts.map(conflict => ({
+              file: 'AGENTS.md',
+              lineStart: conflict.lineStart,
+              lineEnd: conflict.lineEnd,
+              baseContent: conflict.base.join('\n'),
+              oursContent: conflict.ours.join('\n'),
+              theirsContent: conflict.theirs.join('\n'),
+            })));
             modifiedFiles.push('AGENTS.md');
           } else if (strategy === 'preserve') {
             // Keep existing
@@ -389,9 +387,9 @@ export class OpenCodeParser extends BaseParser {
 
   private extractDescription(content: string): string {
     // Try to find description after title
-    const match = content.match(/^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
-    if (match) {
-      return match[1].trim().substring(0, 200);
+    const description = this.getFirstMatch(content, /^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
+    if (description) {
+      return description.substring(0, 200);
     }
     return '';
   }

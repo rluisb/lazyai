@@ -116,15 +116,9 @@ export class ClaudeCodeParser extends BaseParser {
       const claudePath = path.join(context.sourcePath, 'CLAUDE.md');
       const content = await fs.readFile(claudePath, 'utf-8');
       
-      const nameMatch = content.match(/#\s+(.+?)\s*$/m);
-      if (nameMatch) {
-        projectName = nameMatch[1].trim();
-      }
+      projectName = this.getFirstMatch(content, /#\s+(.+?)\s*$/m)
 
-      const descMatch = content.match(/##\s+Overview\s*\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
-      if (descMatch) {
-        description = descMatch[1].trim();
-      }
+      description = this.getFirstMatch(content, /##\s+Overview\s*\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s)
 
       files.push({ path: 'CLAUDE.md', content, type: 'config' });
     } catch {
@@ -146,8 +140,7 @@ export class ClaudeCodeParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const agentId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : agentId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || agentId;
 
           agents.push({
             id: agentId,
@@ -181,8 +174,7 @@ export class ClaudeCodeParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const commandId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : commandId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || commandId;
 
           commands.push({
             id: commandId,
@@ -232,9 +224,9 @@ export class ClaudeCodeParser extends BaseParser {
       // No rules
     }
 
-    return {
-      projectName,
-      description,
+    return this.buildParsedSetup({
+      ...(projectName ? { projectName } : {}),
+      ...(description ? { description } : {}),
       agents,
       rules,
       commands,
@@ -245,7 +237,7 @@ export class ClaudeCodeParser extends BaseParser {
         adapter: this.id,
         parsedAt: new Date().toISOString(),
       },
-    };
+    });
   }
 
   async merge(
@@ -276,7 +268,14 @@ export class ClaudeCodeParser extends BaseParser {
         
         if (diff3Result.hasConflicts) {
           if (strategy === 'smart') {
-            conflicts.push(...diff3Result.conflicts);
+            conflicts.push(...diff3Result.conflicts.map(conflict => ({
+              file: 'CLAUDE.md',
+              lineStart: conflict.lineStart,
+              lineEnd: conflict.lineEnd,
+              baseContent: conflict.base.join('\n'),
+              oursContent: conflict.ours.join('\n'),
+              theirsContent: conflict.theirs.join('\n'),
+            })));
             modifiedFiles.push('CLAUDE.md');
           } else if (strategy === 'preserve') {
             warnings.push('CLAUDE.md: keeping existing version');
@@ -349,9 +348,9 @@ export class ClaudeCodeParser extends BaseParser {
   }
 
   private extractDescription(content: string): string {
-    const match = content.match(/^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
-    if (match) {
-      return match[1].trim().substring(0, 200);
+    const description = this.getFirstMatch(content, /^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
+    if (description) {
+      return description.substring(0, 200);
     }
     return '';
   }

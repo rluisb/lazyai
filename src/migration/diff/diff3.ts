@@ -61,16 +61,31 @@ export function myersDiff(oldLines: string[], newLines: string[]): DiffResult {
   for (const edit of edits) {
     switch (edit.type) {
       case 'equal':
-        unchanged.push({ line: oldLines[oldIndex], index: oldIndex });
+        {
+          const oldLine = oldLines[oldIndex]
+          if (oldLine !== undefined) {
+            unchanged.push({ line: oldLine, index: oldIndex });
+          }
+        }
         oldIndex++;
         newIndex++;
         break;
       case 'delete':
-        removed.push({ line: oldLines[oldIndex], index: oldIndex });
+        {
+          const removedLine = oldLines[oldIndex]
+          if (removedLine !== undefined) {
+            removed.push({ line: removedLine, index: oldIndex });
+          }
+        }
         oldIndex++;
         break;
       case 'insert':
-        added.push({ line: newLines[newIndex], index: newIndex });
+        {
+          const addedLine = newLines[newIndex]
+          if (addedLine !== undefined) {
+            added.push({ line: addedLine, index: newIndex });
+          }
+        }
         newIndex++;
         break;
     }
@@ -97,10 +112,12 @@ function computeEdits(oldLines: string[], newLines: string[]): { edits: Edit[] }
   
   for (let i = 1; i <= oldLen; i++) {
     for (let j = 1; j <= newLen; j++) {
+      const currentRow = table[i]!;
+      const previousRow = table[i - 1]!;
       if (oldLines[i - 1] === newLines[j - 1]) {
-        table[i][j] = table[i - 1][j - 1] + 1;
+        currentRow[j] = previousRow[j - 1]! + 1;
       } else {
-        table[i][j] = Math.max(table[i - 1][j], table[i][j - 1]);
+        currentRow[j] = Math.max(previousRow[j]!, currentRow[j - 1]!);
       }
     }
   }
@@ -115,7 +132,10 @@ function computeEdits(oldLines: string[], newLines: string[]): { edits: Edit[] }
       tempEdits.unshift({ type: 'equal', oldIndex: i - 1, newIndex: j - 1 });
       i--;
       j--;
-    } else if (j > 0 && (i === 0 || table[i][j - 1] >= table[i - 1][j])) {
+    } else if (
+      j > 0 &&
+      (i === 0 || (table[i]?.[j - 1] ?? 0) >= (table[i - 1]?.[j] ?? 0))
+    ) {
       tempEdits.unshift({ type: 'insert', newIndex: j - 1 });
       j--;
     } else {
@@ -154,10 +174,13 @@ export function diff3(
     const oursChanged = isChangedAt(diffOurs, baseIndex);
     const theirsChanged = isChangedAt(diffTheirs, baseIndex);
     
-    if (!oursChanged && !theirsChanged) {
-      // No changes - use base
+      if (!oursChanged && !theirsChanged) {
+        // No changes - use base
       if (baseIndex < base.length) {
-        merged.push(base[baseIndex]);
+        const baseLine = base[baseIndex]
+        if (baseLine !== undefined) {
+          merged.push(baseLine)
+        }
         baseIndex++;
       }
       oursIndex++;
@@ -165,7 +188,10 @@ export function diff3(
     } else if (oursChanged && !theirsChanged) {
       // Only ours changed - use ours
       if (oursIndex < ours.length) {
-        merged.push(ours[oursIndex]);
+        const ourLine = ours[oursIndex]
+        if (ourLine !== undefined) {
+          merged.push(ourLine)
+        }
       }
       baseIndex++;
       oursIndex++;
@@ -173,43 +199,65 @@ export function diff3(
     } else if (!oursChanged && theirsChanged) {
       // Only theirs changed - use theirs
       if (theirsIndex < theirs.length) {
-        merged.push(theirs[theirsIndex]);
+        const theirLine = theirs[theirsIndex]
+        if (theirLine !== undefined) {
+          merged.push(theirLine)
+        }
       }
       baseIndex++;
       oursIndex++;
       theirsIndex++;
     } else {
-      // Both changed - conflict!
-      const conflictStart = merged.length;
-      
-      // Add conflict markers
-      merged.push('\u003c\u003c\u003c\u003c\u003c OURS');
-      
-      // Add our changes
-      while (oursIndex < ours.length && isChangedAt(diffOurs, baseIndex)) {
-        merged.push(ours[oursIndex]);
+      const ourLine = oursIndex < ours.length ? ours[oursIndex] : undefined;
+      const theirLine = theirsIndex < theirs.length ? theirs[theirsIndex] : undefined;
+
+      if (ourLine === theirLine) {
+        // Both changed in the same way - clean merge
+        if (ourLine !== undefined) {
+          merged.push(ourLine);
+        }
+        baseIndex++;
         oursIndex++;
-      }
-      
-      merged.push('=====');
-      
-      // Add their changes
-      while (theirsIndex < theirs.length && isChangedAt(diffTheirs, baseIndex)) {
-        merged.push(theirs[theirsIndex]);
         theirsIndex++;
+      } else {
+        // Both changed differently - conflict!
+        const conflictStart = merged.length;
+        
+        // Add conflict markers
+        merged.push('\u003c\u003c\u003c\u003c\u003c OURS');
+        
+        // Add our changes
+        while (oursIndex < ours.length && isChangedAt(diffOurs, baseIndex)) {
+          const ourChangedLine = ours[oursIndex]
+          if (ourChangedLine !== undefined) {
+            merged.push(ourChangedLine)
+          }
+          oursIndex++;
+        }
+        
+        merged.push('=====');
+        
+        // Add their changes
+        while (theirsIndex < theirs.length && isChangedAt(diffTheirs, baseIndex)) {
+          const theirChangedLine = theirs[theirsIndex]
+          if (theirChangedLine !== undefined) {
+            merged.push(theirChangedLine)
+          }
+          theirsIndex++;
+        }
+        
+        merged.push('\u003e\u003e\u003e\u003e\u003e THEIRS');
+        
+        conflicts.push({
+          lineStart: conflictStart + 1,
+          lineEnd: merged.length,
+          base: base.slice(baseIndex, baseIndex + 1),
+          ours: ours.slice(oursIndex - 1, oursIndex),
+          theirs: theirs.slice(theirsIndex - 1, theirsIndex),
+        });
+        
+        baseIndex++;
       }
-      
-      merged.push('\u003e\u003e\u003e\u003e\u003e THEIRS');
-      
-      conflicts.push({
-        lineStart: conflictStart + 1,
-        lineEnd: merged.length,
-        base: base.slice(baseIndex, baseIndex + 1),
-        ours: ours.slice(oursIndex - 1, oursIndex),
-        theirs: theirs.slice(theirsIndex - 1, theirsIndex),
-      });
-      
-      baseIndex++;
     }
   }
   
@@ -240,10 +288,16 @@ export function merge2Way(base: string[], changes: string[]): string[] {
     const isAdded = diff.added.some(l => l.index === changesIndex);
     
     if (isAdded) {
-      result.push(changes[changesIndex]);
+      const changeLine = changes[changesIndex]
+      if (changeLine !== undefined) {
+        result.push(changeLine)
+      }
       changesIndex++;
     } else if (!isDeleted) {
-      result.push(base[baseIndex]);
+      const baseLine = base[baseIndex]
+      if (baseLine !== undefined) {
+        result.push(baseLine)
+      }
       baseIndex++;
       changesIndex++;
     } else {

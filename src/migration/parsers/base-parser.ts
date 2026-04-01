@@ -125,18 +125,49 @@ export abstract class BaseParser {
       const projectNameMatch = file.content.match(/#\s+(.+?)\s*-?\s*AI Agent/i) ||
                                file.content.match(/#\s+Project[:\s]+(.+)/i) ||
                                file.content.match(/name:\s*["']?([^"'\n]+)["']?/i);
-      if (projectNameMatch && !metadata.projectName) {
-        metadata.projectName = projectNameMatch[1].trim();
+      const projectName = projectNameMatch?.[1]?.trim();
+      if (projectName && !metadata.projectName) {
+        metadata.projectName = projectName;
       }
 
       // Try to extract tech stack
       const stackMatch = file.content.match(/Stack[:\s]+\n?([\s\S]+?)(?=\n\n|\n#|$)/i);
-      if (stackMatch && !metadata.techStack) {
-        metadata.techStack = stackMatch[1].trim();
+      const techStack = stackMatch?.[1]?.trim();
+      if (techStack && !metadata.techStack) {
+        metadata.techStack = techStack;
       }
     }
 
     return metadata;
+  }
+
+  protected getFirstMatch(content: string, pattern: RegExp): string | undefined {
+    const value = content.match(pattern)?.[1]
+    return value?.trim()
+  }
+
+  protected buildParsedSetup(input: {
+    projectName?: string
+    description?: string
+    agents: ParsedSetup['agents']
+    rules: ParsedSetup['rules']
+    commands: ParsedSetup['commands']
+    templates: ParsedSetup['templates']
+    customSections: ParsedSetup['customSections']
+    files: ParsedSetup['files']
+    metadata: ParsedSetup['metadata']
+  }): ParsedSetup {
+    return {
+      ...(input.projectName ? { projectName: input.projectName } : {}),
+      ...(input.description ? { description: input.description } : {}),
+      agents: input.agents,
+      rules: input.rules,
+      commands: input.commands,
+      templates: input.templates,
+      customSections: input.customSections,
+      files: input.files,
+      metadata: input.metadata,
+    }
   }
 }
 

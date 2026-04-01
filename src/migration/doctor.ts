@@ -18,6 +18,21 @@ export async function checkDrift(
   const extraFiles: string[] = [];
   const modifiedFiles: ModifiedFile[] = [];
 
+  const aiSetupPatterns = [
+    'AGENTS.md',
+    'CLAUDE.md',
+    'GEMINI.md',
+    'KNOWLEDGE_MAP.md',
+    'docs/**/*',
+    '.opencode/**/*',
+    '.claude/**/*',
+    '.pi/**/*',
+    '.gemini/**/*',
+    '.github/copilot-instructions.md',
+    '.github/prompts/**/*',
+    '.github/instructions/**/*',
+  ];
+
   // Load current .ai-setup.json
   let currentConfig: any = null;
   try {
@@ -25,15 +40,35 @@ export async function checkDrift(
     const configContent = await fs.readFile(configPath, 'utf-8');
     currentConfig = JSON.parse(configContent);
   } catch {
-    // No config file - treat everything as drift
+    // No config file - treat discovered AI setup files as extra drift
+    for (const pattern of aiSetupPatterns) {
+      try {
+        const files = await glob(pattern, {
+          cwd: targetPath,
+          absolute: false,
+        });
+
+        for (const file of files) {
+          if (!extraFiles.includes(file)) {
+            extraFiles.push(file);
+          }
+        }
+      } catch {
+        // Pattern might not match anything
+      }
+    }
+
     return {
       clean: false,
-      drifts: [{
-        file: '.ai-setup.json',
-        type: 'missing',
-      }],
+      drifts: [
+        {
+          file: '.ai-setup.json',
+          type: 'missing',
+        },
+        ...extraFiles.map((file) => ({ file, type: 'extra' as const })),
+      ],
       missingFiles: ['.ai-setup.json'],
-      extraFiles: [],
+      extraFiles,
       modifiedFiles: [],
     };
   }
@@ -66,21 +101,6 @@ export async function checkDrift(
   }
 
   // Find extra files (not tracked in .ai-setup.json)
-  const aiSetupPatterns = [
-    'AGENTS.md',
-    'CLAUDE.md',
-    'GEMINI.md',
-    'KNOWLEDGE_MAP.md',
-    'docs/**/*',
-    '.opencode/**/*',
-    '.claude/**/*',
-    '.pi/**/*',
-    '.gemini/**/*',
-    '.github/copilot-instructions.md',
-    '.github/prompts/**/*',
-    '.github/instructions/**/*',
-  ];
-
   for (const pattern of aiSetupPatterns) {
     try {
       const files = await glob(pattern, {
@@ -90,7 +110,7 @@ export async function checkDrift(
 
       for (const file of files) {
         const isTracked = currentConfig.files?.some((f: any) => f.path === file);
-        if (!isTracked) {
+        if (!isTracked && !extraFiles.includes(file)) {
           extraFiles.push(file);
         }
       }

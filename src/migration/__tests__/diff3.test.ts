@@ -17,7 +17,7 @@ describe('Myers Diff', () => {
     const result = myersDiff(base, changed);
     
     expect(result.added).toHaveLength(1);
-    expect(result.added[0].line).toBe('line3');
+    expect(result.added[0]?.line).toBe('line3');
     expect(result.removed).toHaveLength(0);
   });
 
@@ -27,7 +27,7 @@ describe('Myers Diff', () => {
     const result = myersDiff(base, changed);
     
     expect(result.removed).toHaveLength(1);
-    expect(result.removed[0].line).toBe('line2');
+    expect(result.removed[0]?.line).toBe('line2');
     expect(result.added).toHaveLength(0);
   });
 });

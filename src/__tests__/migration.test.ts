@@ -6,7 +6,8 @@ import {
   importSetup, 
   detectAdapters, 
   migrationCheck,
-  detectExistingSetup 
+  detectExistingSetup,
+  formatPlan,
 } from '../migration/index.js';
 import { myersDiff, diff3, hasConflicts } from '../migration/diff/diff3.js';
 
@@ -146,6 +147,37 @@ describe('Migration Engine', () => {
       // because it shows the plan
       expect(result.plan).toBeDefined();
       expect(result.stats.filesCreated).toBeGreaterThanOrEqual(0);
+    });
+
+    it('formats migration plans with a readable summary', () => {
+      const formatted = formatPlan({
+        sourcePath: '/source',
+        targetPath: '/target',
+        adapters: ['opencode'],
+        actions: [
+          { type: 'create', targetPath: 'AGENTS.md', description: 'Create AGENTS.md', reason: 'new file' },
+          { type: 'backup', sourcePath: 'AGENTS.md', targetPath: '.ai-setup-backup/AGENTS.md', description: 'Backup AGENTS.md', reason: 'safe backup' },
+        ],
+        conflicts: [
+          {
+            file: 'AGENTS.md',
+            lineStart: 10,
+            lineEnd: 12,
+            baseContent: 'base',
+            oursContent: 'ours',
+            theirsContent: 'theirs',
+          },
+        ],
+        estimatedFiles: 2,
+        estimatedConflicts: 1,
+        canProceed: false,
+      });
+
+      expect(formatted).toContain('Migration plan');
+      expect(formatted).toContain('Detected adapters: OpenCode');
+      expect(formatted).toContain('Summary:');
+      expect(formatted).toContain('Unresolved conflicts: 1');
+      expect(formatted).toContain('Status: blocked until conflicts are resolved');
     });
   });
 

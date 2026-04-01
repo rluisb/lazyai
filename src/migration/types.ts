@@ -16,6 +16,7 @@ export interface MigrationOptions {
   mergeStrategy: MergeStrategy;
   verbose?: boolean;
   skipBackup?: boolean;
+  interactive?: boolean;
 }
 
 export type MergeStrategy = 'smart' | 'preserve' | 'replace' | 'append';
@@ -124,6 +125,7 @@ export interface MergeConflict {
   theirsContent: string;
   resolved?: boolean;
   resolution?: string;
+  resolvedContent?: string;
 }
 
 export interface MigrationPlan {

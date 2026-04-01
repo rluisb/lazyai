@@ -10,4 +10,5 @@ export default defineConfig({
   minify: false,
   shims: true,
   dts: true,
+  external: ['glob'],
 })

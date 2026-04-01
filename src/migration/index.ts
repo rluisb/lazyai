@@ -30,6 +30,7 @@ export interface ImportOptions {
   mergeStrategy?: MergeStrategy;
   verbose?: boolean;
   skipBackup?: boolean;
+  interactive?: boolean;
 }
 
 /**
@@ -47,6 +48,7 @@ export async function importSetup(options: ImportOptions = {}): Promise<Migratio
       mergeStrategy,
       verbose: options.verbose || false,
       skipBackup: options.skipBackup || false,
+      interactive: options.interactive || false,
     },
   };
 
@@ -78,37 +80,36 @@ export async function importSetup(options: ImportOptions = {}): Promise<Migratio
     // Step 3: Generate migration plan
     const plan = await generateMigrationPlan(context, detections, parsers);
 
-    if (!plan.canProceed) {
-      return {
-        success: false,
-        plan,
-        executedActions: [],
-        errors: ['Migration cannot proceed due to unresolved conflicts'],
-        warnings: plan.conflicts.map(c => `Conflict in ${c.file}`),
-        stats: {
-          filesCreated: 0,
-          filesModified: 0,
-          filesBackedUp: 0,
-          filesSkipped: 0,
-          conflictsResolved: 0,
-          conflictsUnresolved: plan.conflicts.length,
-        },
-      };
-    }
-
-    // Step 4: If preview mode, return plan without executing
     if (options.preview) {
       return {
         success: true,
         plan,
         executedActions: [],
         errors: [],
-        warnings: [],
+        warnings: plan.conflicts.map(c => `Conflict in ${c.file || 'unknown file'}`),
         stats: {
           filesCreated: plan.actions.filter(a => a.type === 'create').length,
           filesModified: plan.actions.filter(a => a.type === 'modify').length,
           filesBackedUp: 0,
           filesSkipped: plan.actions.filter(a => a.type === 'skip').length,
+          conflictsResolved: plan.conflicts.filter(c => c.resolved).length,
+          conflictsUnresolved: plan.conflicts.filter(c => !c.resolved).length,
+        },
+      };
+    }
+
+    if (!plan.canProceed && !context.options.interactive) {
+      return {
+        success: false,
+        plan,
+        executedActions: [],
+        errors: ['Migration cannot proceed due to unresolved conflicts'],
+        warnings: plan.conflicts.map(c => `Conflict in ${c.file || 'unknown file'}`),
+        stats: {
+          filesCreated: 0,
+          filesModified: 0,
+          filesBackedUp: 0,
+          filesSkipped: 0,
           conflictsResolved: 0,
           conflictsUnresolved: plan.conflicts.length,
         },
@@ -177,3 +178,4 @@ export async function detectAdapters(path?: string): Promise<string[]> {
 
 export { detectExistingSetup, getAllParsers, generateMigrationPlan };
 export type { MigrationPlan, MigrationResult, DriftCheckResult };
+export { formatPlan } from "./plan.js";

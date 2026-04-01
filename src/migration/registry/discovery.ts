@@ -1,12 +1,9 @@
-/**
- * Parser Discovery - Loads parsers from multiple sources
- * 
- * Discovery hierarchy:
- * 1. Project local: ./ai-setup/plugins/*/parser.ts
- * 2. Global user: ~/.ai-setup/parsers/*/parser.js
- * 3. NPM packages: @ai-setup/parsers-*
- * 4. Built-in: src/migration/parsers/*.ts (fallback)
- */
+// Parser Discovery - Loads parsers from multiple sources
+// Discovery hierarchy:
+// 1. Project local: ./ai-setup/plugins/*/parser.ts
+// 2. Global user: ~/.ai-setup/parsers/*/parser.js
+// 3. NPM packages: @ai-setup/parsers-*
+// 4. Built-in: src/migration/parsers/*.ts (fallback)
 
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -25,35 +22,23 @@ export interface ParserSource {
   version?: string;
 }
 
-/**
- * Discover all available parsers from all sources
- */
 export async function discoverParsers(projectPath?: string): Promise<ParserSource[]> {
   const sources: ParserSource[] = [];
 
-  // 1. Discover project local parsers
   if (projectPath) {
     const localParsers = await discoverLocalParsers(projectPath);
     sources.push(...localParsers);
   }
 
-  // 2. Discover global user parsers
   const globalParsers = await discoverGlobalParsers();
   sources.push(...globalParsers);
 
-  // 3. Discover NPM package parsers
   const npmParsers = await discoverNpmParsers(projectPath);
   sources.push(...npmParsers);
-
-  // 4. Built-in parsers are loaded separately
 
   return sources;
 }
 
-/**
- * Discover project-local parsers
- * Location: ./ai-setup/plugins/*/parser.ts (or .js)
- */
 async function discoverLocalParsers(projectPath: string): Promise<ParserSource[]> {
   const sources: ParserSource[] = [];
   const pluginsDir = path.join(projectPath, 'ai-setup', 'plugins');
@@ -61,7 +46,7 @@ async function discoverLocalParsers(projectPath: string): Promise<ParserSource[]
   try {
     await fs.access(pluginsDir);
   } catch {
-    return sources; // Directory doesn't exist
+    return sources;
   }
 
   try {
@@ -71,7 +56,6 @@ async function discoverLocalParsers(projectPath: string): Promise<ParserSource[]
       if (entry.isDirectory()) {
         const parserPath = path.join(pluginsDir, entry.name, 'parser');
         
-        // Check for .ts or .js
         for (const ext of ['.ts', '.js', '.mjs']) {
           const fullPath = parserPath + ext;
           try {
@@ -96,10 +80,6 @@ async function discoverLocalParsers(projectPath: string): Promise<ParserSource[]
   return sources;
 }
 
-/**
- * Discover global user parsers
- * Location: ~/.ai-setup/parsers/*/parser.js
- */
 async function discoverGlobalParsers(): Promise<ParserSource[]> {
   const sources: ParserSource[] = [];
   const globalDir = path.join(os.homedir(), '.ai-setup', 'parsers');
@@ -107,7 +87,7 @@ async function discoverGlobalParsers(): Promise<ParserSource[]> {
   try {
     await fs.access(globalDir);
   } catch {
-    return sources; // Directory doesn't exist
+    return sources;
   }
 
   try {
@@ -120,7 +100,6 @@ async function discoverGlobalParsers(): Promise<ParserSource[]> {
         try {
           await fs.access(parserPath);
           
-          // Try to read version from package.json if exists
           let version: string | undefined;
           const packageJsonPath = path.join(globalDir, entry.name, 'package.json');
           try {
@@ -135,7 +114,7 @@ async function discoverGlobalParsers(): Promise<ParserSource[]> {
             name: entry.name,
             path: parserPath,
             source: 'global',
-            version,
+            ...(version ? { version } : {}),
           });
         } catch {
           // Parser doesn't exist
@@ -149,22 +128,16 @@ async function discoverGlobalParsers(): Promise<ParserSource[]> {
   return sources;
 }
 
-/**
- * Discover NPM package parsers
- * Pattern: @ai-setup/parsers-*
- */
 async function discoverNpmParsers(projectPath?: string): Promise<ParserSource[]> {
   const sources: ParserSource[] = [];
 
   try {
-    // Try to find ai-setup in node_modules
     const searchPaths: string[] = [];
     
     if (projectPath) {
       searchPaths.push(path.join(projectPath, 'node_modules'));
     }
     
-    // Also check global node_modules
     try {
       const { execSync } = await import('child_process');
       const globalPath = execSync('npm root -g', { encoding: 'utf-8' }).trim();
@@ -188,7 +161,6 @@ async function discoverNpmParsers(projectPath?: string): Promise<ParserSource[]>
             try {
               const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
               
-              // Look for main entry point
               const mainFile = packageJson.main || 'dist/parser.js';
               const parserPath = path.join(packagePath, mainFile);
               
@@ -217,13 +189,9 @@ async function discoverNpmParsers(projectPath?: string): Promise<ParserSource[]>
   return sources;
 }
 
-/**
- * Load a parser from a source
- */
 export async function loadParser(source: ParserSource): Promise<BaseParser | null> {
   try {
     if (source.source === 'npm' || source.source === 'global') {
-      // Dynamic import for JS modules
       const module = await import(source.path);
       const ParserClass = module.default || module.Parser;
       
@@ -231,8 +199,6 @@ export async function loadParser(source: ParserSource): Promise<BaseParser | nul
         return new ParserClass();
       }
     } else if (source.source === 'local') {
-      // For local TypeScript files, we might need to use ts-node or similar
-      // For now, treat as dynamic import
       const module = await import(source.path);
       const ParserClass = module.default || module.Parser;
       
@@ -247,14 +213,10 @@ export async function loadParser(source: ParserSource): Promise<BaseParser | nul
   return null;
 }
 
-/**
- * Get all parsers including built-in
- */
 export async function getAllParsers(projectPath?: string): Promise<BaseParser[]> {
   const parsers: BaseParser[] = [];
   const loadedIds = new Set<string>();
 
-  // 1. Load discovered parsers (project-local, global, npm)
   const sources = await discoverParsers(projectPath);
   
   for (const source of sources) {
@@ -267,8 +229,7 @@ export async function getAllParsers(projectPath?: string): Promise<BaseParser[]>
     }
   }
 
-  // 2. Load built-in parsers (fallback)
-  // These are imported statically to ensure they're always available
+  // Load built-in parsers
   const { OpenCodeParser } = await import('../parsers/opencode-parser.js');
   const { ClaudeCodeParser } = await import('../parsers/claude-parser.js');
   const { PiParser } = await import('../parsers/pi-parser.js');
@@ -290,13 +251,9 @@ export async function getAllParsers(projectPath?: string): Promise<BaseParser[]>
     }
   }
 
-  // Sort by priority
   return parsers.sort((a, b) => b.getPriority() - a.getPriority());
 }
 
-/**
- * Create a parser template for community extensions
- */
 export function createParserTemplate(id: string, name: string): string {
   return `import { BaseParser } from '@ricardoborges-teachable/ai-setup/migration';
 
@@ -311,7 +268,6 @@ export class ${name}Parser extends BaseParser {
   ];
 
   async detect(context) {
-    // TODO: Implement detection logic
     return {
       detected: false,
       confidence: 0,
@@ -322,7 +278,6 @@ export class ${name}Parser extends BaseParser {
   }
 
   async parse(context) {
-    // TODO: Implement parsing logic
     return {
       agents: [],
       rules: [],
@@ -335,7 +290,6 @@ export class ${name}Parser extends BaseParser {
   }
 
   async merge(existing, strategy, options) {
-    // TODO: Implement merge logic
     return {
       success: true,
       merged: true,

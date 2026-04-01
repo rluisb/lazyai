@@ -4,6 +4,7 @@ import { runWizard } from '../wizard/index.js'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { detectAdapters, importSetup } from '../migration/index.js'
+import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
 interface InitOptions {
   type?: SetupType
@@ -53,11 +54,12 @@ export function registerInit(program: Command): void {
         const adapters = await detectAdapters(sourcePath)
         
         if (adapters.length === 0) {
-          spinner.stop(pc.yellow('No existing AI setup detected'))
+          spinner.stop(pc.yellow('No supported AI setup detected'))
           console.log(pc.gray(`Searched in: ${sourcePath}`))
+          console.log(pc.gray(MIGRATION_MARKER_HINT))
           console.log(pc.gray('Continuing with fresh init...'))
         } else {
-          spinner.stop(pc.green(`Found ${adapters.length} adapter(s): ${adapters.join(', ')}`))
+          spinner.stop(pc.green(`Detected ${adapters.length} setup(s): ${formatAdapterList(adapters)}`))
           
           // Run migration
           spinner.start('Migrating existing setup...')
@@ -72,7 +74,7 @@ export function registerInit(program: Command): void {
           
           if (result.success) {
             console.log(pc.green('\n✅ Successfully migrated existing setup!'))
-            console.log(pc.gray(`\nMigrated ${result.stats.filesCreated + result.stats.filesModified} files`))
+            console.log(pc.gray(`\nMigrated ${result.stats.filesCreated + result.stats.filesModified} file(s)`))
             
             if (result.backupPath) {
               console.log(pc.gray(`Backup created at: ${result.backupPath}`))

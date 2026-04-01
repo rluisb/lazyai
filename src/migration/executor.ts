@@ -6,12 +6,14 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
+import * as p from '@clack/prompts';
 import {
   MigrationContext,
   MigrationPlan,
   MigrationResult,
   MigrationAction,
   MigrationStats,
+  MergeConflict,
 } from './types.js';
 
 export async function executeMigrationPlan(
@@ -33,6 +35,10 @@ export async function executeMigrationPlan(
   let backupPath: string | undefined;
 
   try {
+    if (context.options.interactive) {
+      await resolvePlanConflictsInteractively(plan);
+    }
+
     // Step 1: Create backup directory
     if (!context.options.skipBackup) {
       backupPath = await createBackupDir(context.targetPath);
@@ -77,34 +83,171 @@ export async function executeMigrationPlan(
     // Step 5: Count conflicts
     stats.conflictsResolved = plan.conflicts.filter(c => c.resolved).length;
     stats.conflictsUnresolved = plan.conflicts.filter(c => !c.resolved).length;
+    plan.canProceed = stats.conflictsUnresolved === 0;
 
     // Step 6: Create .ai-setup.json if it doesn't exist
     await createAiSetupManifest(context, plan, executedActions);
 
-    return {
+    return buildMigrationResult({
       success: errors.length === 0,
       plan,
       executedActions,
-      backupPath,
+      ...(backupPath ? { backupPath } : {}),
       errors,
       warnings,
       stats,
-    };
+    });
 
   } catch (error) {
     // Fatal error - try to rollback if possible
     errors.push(`Fatal error during migration: ${error}`);
     
-    return {
+    return buildMigrationResult({
       success: false,
       plan,
       executedActions,
-      backupPath,
+      ...(backupPath ? { backupPath } : {}),
       errors,
       warnings,
       stats,
-    };
+    });
   }
+}
+
+interface BuildMigrationResultInput {
+  success: boolean;
+  plan: MigrationPlan;
+  executedActions: MigrationAction[];
+  backupPath?: string;
+  errors: string[];
+  warnings: string[];
+  stats: MigrationStats;
+}
+
+function buildMigrationResult(input: BuildMigrationResultInput): MigrationResult {
+  return {
+    success: input.success,
+    plan: input.plan,
+    executedActions: input.executedActions,
+    ...(input.backupPath ? { backupPath: input.backupPath } : {}),
+    errors: input.errors,
+    warnings: input.warnings,
+    stats: input.stats,
+  };
+}
+
+type InteractiveResolution = 'keep-existing' | 'use-new' | 'manual-edit';
+
+export async function resolvePlanConflictsInteractively(plan: MigrationPlan): Promise<void> {
+  for (const conflict of plan.conflicts) {
+    if (conflict.resolved) {
+      continue;
+    }
+
+    p.note(
+      renderConflictDiff(conflict),
+      `Conflict in ${conflict.file || 'unknown file'}:${conflict.lineStart}-${conflict.lineEnd}`,
+    );
+
+    const resolution = await p.select({
+      message: `How should ${conflict.file || 'this file'} be resolved?`,
+      options: [
+        { value: 'keep-existing', label: 'Keep Existing', hint: 'Preserve the current file contents' },
+        { value: 'use-new', label: 'Use New', hint: 'Apply the incoming ai-setup version' },
+        { value: 'manual-edit', label: 'Manual Edit', hint: 'Enter the merged content yourself' },
+      ],
+    });
+
+    if (p.isCancel(resolution)) {
+      throw new Error('Migration cancelled during interactive conflict resolution');
+    }
+
+    await applyConflictResolution(conflict, resolution as InteractiveResolution);
+  }
+}
+
+async function applyConflictResolution(
+  conflict: MergeConflict,
+  resolution: InteractiveResolution,
+): Promise<void> {
+  switch (resolution) {
+    case 'keep-existing':
+      conflict.resolved = true;
+      conflict.resolution = resolution;
+      conflict.resolvedContent = getConflictSide(conflict, 'ours');
+      return;
+    case 'use-new':
+      conflict.resolved = true;
+      conflict.resolution = resolution;
+      conflict.resolvedContent = getConflictSide(conflict, 'theirs');
+      return;
+    case 'manual-edit':
+      await resolveManualEdit(conflict);
+      return;
+  }
+}
+
+async function resolveManualEdit(conflict: MergeConflict): Promise<void> {
+  const edited = await p.text({
+    message: `Enter merged content for ${conflict.file || 'the conflict'}`,
+    initialValue: buildManualEditSeed(conflict),
+    placeholder: 'Type the final merged content',
+  });
+
+  if (p.isCancel(edited)) {
+    throw new Error('Migration cancelled during interactive conflict resolution');
+  }
+
+  conflict.resolved = true;
+  conflict.resolution = 'manual-edit';
+  conflict.resolvedContent = String(edited);
+}
+
+function buildManualEditSeed(conflict: MergeConflict): string {
+  const existing = getConflictSide(conflict, 'ours');
+  const incoming = getConflictSide(conflict, 'theirs');
+
+  return [
+    '<<<<<<< EXISTING',
+    existing,
+    '=======',
+    incoming,
+    '>>>>>>> NEW',
+  ].join('\n');
+}
+
+function getConflictSide(
+  conflict: MergeConflict,
+  side: 'base' | 'ours' | 'theirs',
+): string {
+  const legacyValue = (conflict as MergeConflict & Record<string, unknown>)[side];
+
+  if (side === 'base') {
+    return conflict.baseContent || normalizeLegacyConflictSide(legacyValue);
+  }
+
+  if (side === 'ours') {
+    return conflict.oursContent || normalizeLegacyConflictSide(legacyValue);
+  }
+
+  return conflict.theirsContent || normalizeLegacyConflictSide(legacyValue);
+}
+
+function normalizeLegacyConflictSide(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.join('\n');
+  }
+
+  return typeof value === 'string' ? value : '';
+}
+
+export function renderConflictDiff(conflict: MergeConflict): string {
+  return [
+    '--- Existing',
+    getConflictSide(conflict, 'ours') || '(empty)',
+    '+++ New',
+    getConflictSide(conflict, 'theirs') || '(empty)',
+  ].join('\n');
 }
 
 async function createBackupDir(targetPath: string): Promise<string> {

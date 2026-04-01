@@ -167,15 +167,21 @@ async function getExistingAiSetupFiles(targetPath: string): Promise<string[]> {
 
 export function formatPlan(plan: MigrationPlan): string {
   const lines: string[] = [];
+  const adapterLabels: Record<string, string> = {
+    opencode: 'OpenCode',
+    'claude-code': 'Claude Code',
+    pi: 'Pi',
+    gemini: 'Gemini CLI',
+    copilot: 'GitHub Copilot',
+  };
   
-  lines.push('╔═══════════════════════════════════════════════════════════╗');
-  lines.push('║              MIGRATION PLAN                               ║');
-  lines.push('╚═══════════════════════════════════════════════════════════╝');
+  lines.push('Migration plan');
+  lines.push('==============');
   lines.push('');
   
   lines.push(`Source: ${plan.sourcePath}`);
   lines.push(`Target: ${plan.targetPath}`);
-  lines.push(`Adapters: ${plan.adapters.join(', ')}`);
+  lines.push(`Detected adapters: ${plan.adapters.map((adapter) => adapterLabels[adapter] || adapter).join(', ')}`);
   lines.push('');
   
   // Group actions by type
@@ -183,6 +189,15 @@ export function formatPlan(plan: MigrationPlan): string {
   const modifies = plan.actions.filter(a => a.type === 'modify');
   const backups = plan.actions.filter(a => a.type === 'backup');
   const skips = plan.actions.filter(a => a.type === 'skip');
+  const unresolved = plan.conflicts.filter(c => !c.resolved);
+
+  lines.push('Summary:');
+  lines.push(`  Create: ${creates.length}`);
+  lines.push(`  Modify: ${modifies.length}`);
+  lines.push(`  Backup: ${backups.length}`);
+  lines.push(`  Skip: ${skips.length}`);
+  lines.push(`  Unresolved conflicts: ${unresolved.length}`);
+  lines.push('');
   
   if (creates.length > 0) {
     lines.push(`📁 Create ${creates.length} new file(s):`);
@@ -208,18 +223,24 @@ export function formatPlan(plan: MigrationPlan): string {
     lines.push('');
   }
   
-  if (plan.conflicts.length > 0) {
-    const unresolved = plan.conflicts.filter(c => !c.resolved);
+  if (unresolved.length > 0) {
     lines.push(`⚠️  ${unresolved.length} unresolved conflict(s):`);
     for (const conflict of unresolved) {
       lines.push(`   ! ${conflict.file} (lines ${conflict.lineStart}-${conflict.lineEnd})`);
     }
     lines.push('');
+    lines.push('Suggested next steps:');
+    lines.push('  • Re-run with --interactive to resolve conflicts one by one');
+    lines.push('  • Or choose --strategy preserve/replace for a simpler merge path');
+    lines.push('');
+  } else {
+    lines.push('No unresolved conflicts detected.');
+    lines.push('');
   }
   
   lines.push(plan.canProceed 
-    ? '✅ Migration can proceed'
-    : '❌ Migration blocked - resolve conflicts first');
+    ? 'Status: ready to apply ✅'
+    : 'Status: blocked until conflicts are resolved ❌');
   
   return lines.join('\n');
 }

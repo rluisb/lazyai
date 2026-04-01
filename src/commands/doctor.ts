@@ -92,8 +92,8 @@ async function runMigrationCheck(verbose?: boolean): Promise<void> {
   
   try {
     const result: DriftCheckResult = await migrationCheck({
-      verbose,
       path: targetDir,
+      ...(verbose !== undefined ? { verbose } : {}),
     })
     
     spinner.stop('Analysis complete')

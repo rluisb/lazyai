@@ -115,15 +115,9 @@ export class GeminiParser extends BaseParser {
       const geminiPath = path.join(context.sourcePath, 'GEMINI.md');
       const content = await fs.readFile(geminiPath, 'utf-8');
       
-      const nameMatch = content.match(/^#\s+(.+?)$/m);
-      if (nameMatch) {
-        projectName = nameMatch[1].trim();
-      }
+      projectName = this.getFirstMatch(content, /^#\s+(.+?)$/m)
 
-      const descMatch = content.match(/##\s+(?:Overview|Description)\s*\n\n(.+?)(?=\n\n|#{1,6}\s|$)/is);
-      if (descMatch) {
-        description = descMatch[1].trim();
-      }
+      description = this.getFirstMatch(content, /##\s+(?:Overview|Description)\s*\n\n(.+?)(?=\n\n|#{1,6}\s|$)/is)
 
       files.push({ path: 'GEMINI.md', content, type: 'config' });
     } catch {
@@ -143,8 +137,7 @@ export class GeminiParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const agentId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : agentId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || agentId;
 
           agents.push({
             id: agentId,
@@ -178,8 +171,7 @@ export class GeminiParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const skillId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : skillId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || skillId;
 
           commands.push({
             id: skillId,
@@ -211,8 +203,7 @@ export class GeminiParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const templateId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : templateId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || templateId;
 
           templates.push({
             id: templateId,
@@ -231,9 +222,9 @@ export class GeminiParser extends BaseParser {
       // No templates
     }
 
-    return {
-      projectName,
-      description,
+    return this.buildParsedSetup({
+      ...(projectName ? { projectName } : {}),
+      ...(description ? { description } : {}),
       agents,
       rules,
       commands,
@@ -244,7 +235,7 @@ export class GeminiParser extends BaseParser {
         adapter: this.id,
         parsedAt: new Date().toISOString(),
       },
-    };
+    });
   }
 
   async merge(
@@ -274,7 +265,14 @@ export class GeminiParser extends BaseParser {
         
         if (diff3Result.hasConflicts) {
           if (strategy === 'smart') {
-            conflicts.push(...diff3Result.conflicts);
+            conflicts.push(...diff3Result.conflicts.map(conflict => ({
+              file: 'GEMINI.md',
+              lineStart: conflict.lineStart,
+              lineEnd: conflict.lineEnd,
+              baseContent: conflict.base.join('\n'),
+              oursContent: conflict.ours.join('\n'),
+              theirsContent: conflict.theirs.join('\n'),
+            })));
             modifiedFiles.push('GEMINI.md');
           } else if (strategy === 'preserve') {
             warnings.push('GEMINI.md: keeping existing version');
@@ -342,9 +340,9 @@ export class GeminiParser extends BaseParser {
   }
 
   private extractDescription(content: string): string {
-    const match = content.match(/^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
-    if (match) {
-      return match[1].trim().substring(0, 200);
+    const description = this.getFirstMatch(content, /^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
+    if (description) {
+      return description.substring(0, 200);
     }
     return '';
   }

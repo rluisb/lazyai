@@ -151,15 +151,9 @@ export class CopilotParser extends BaseParser {
       const instructionsPath = path.join(context.sourcePath, '.github', 'copilot-instructions.md');
       const content = await fs.readFile(instructionsPath, 'utf-8');
       
-      const nameMatch = content.match(/^#\s+(.+?)$/m);
-      if (nameMatch) {
-        projectName = nameMatch[1].trim();
-      }
+      projectName = this.getFirstMatch(content, /^#\s+(.+?)$/m)
 
-      const descMatch = content.match(/##\s+(?:Overview|Description)\s*\n\n(.+?)(?=\n\n|#{1,6}\s|$)/is);
-      if (descMatch) {
-        description = descMatch[1].trim();
-      }
+      description = this.getFirstMatch(content, /##\s+(?:Overview|Description)\s*\n\n(.+?)(?=\n\n|#{1,6}\s|$)/is)
 
       files.push({ path: '.github/copilot-instructions.md', content, type: 'config' });
     } catch {
@@ -179,8 +173,7 @@ export class CopilotParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const promptId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : promptId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || promptId;
 
           commands.push({
             id: promptId,
@@ -243,8 +236,7 @@ export class CopilotParser extends BaseParser {
           const content = await fs.readFile(fullPath, 'utf-8');
           
           const fileId = path.basename(file, '.md');
-          const nameMatch = content.match(/^#\s+(.+?)$/m);
-          const name = nameMatch ? nameMatch[1].trim() : fileId;
+          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || fileId;
 
           // Categorize based on content
           if (content.toLowerCase().includes('agent') || content.toLowerCase().includes('role')) {
@@ -276,9 +268,9 @@ export class CopilotParser extends BaseParser {
       // No copilot directory files
     }
 
-    return {
-      projectName,
-      description,
+    return this.buildParsedSetup({
+      ...(projectName ? { projectName } : {}),
+      ...(description ? { description } : {}),
       agents,
       rules,
       commands,
@@ -289,7 +281,7 @@ export class CopilotParser extends BaseParser {
         adapter: this.id,
         parsedAt: new Date().toISOString(),
       },
-    };
+    });
   }
 
   async merge(
@@ -319,7 +311,14 @@ export class CopilotParser extends BaseParser {
         
         if (diff3Result.hasConflicts) {
           if (strategy === 'smart') {
-            conflicts.push(...diff3Result.conflicts);
+            conflicts.push(...diff3Result.conflicts.map(conflict => ({
+              file: '.github/copilot-instructions.md',
+              lineStart: conflict.lineStart,
+              lineEnd: conflict.lineEnd,
+              baseContent: conflict.base.join('\n'),
+              oursContent: conflict.ours.join('\n'),
+              theirsContent: conflict.theirs.join('\n'),
+            })));
             modifiedFiles.push('.github/copilot-instructions.md');
           } else if (strategy === 'preserve') {
             warnings.push('copilot-instructions.md: keeping existing version');
@@ -394,9 +393,9 @@ export class CopilotParser extends BaseParser {
   }
 
   private extractDescription(content: string): string {
-    const match = content.match(/^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
-    if (match) {
-      return match[1].trim().substring(0, 200);
+    const description = this.getFirstMatch(content, /^#\s+.+?\n\n(.+?)(?=\n\n|#{1,6}\s|```|$)/s);
+    if (description) {
+      return description.substring(0, 200);
     }
     return '';
   }

@@ -47,12 +47,69 @@ npx @ricardoborges-teachable/ai-setup init --type project --tools opencode,pi --
 | Command | Description |
 |---|---|
 | `init` | Run the setup wizard to scaffold the environment |
+| `import [path]` | Detect and migrate an existing AI tool setup into `ai-setup` |
+| `migrate [path]` | Alias for `import` |
 | `add <tool>` | Add an adapter (`pi`, `opencode`, `claude-code`, `gemini`, `copilot`) to an existing setup |
 | `update` | Reconcile managed files with current library templates (preserves/prompts on conflicts) |
 | `doctor` | Verify tracked files against `.ai-setup.json` hashes to find drift or missing files |
 | `create` | Scaffold a new template document (e.g., `npx ai-setup create adr`) |
 | `eject` | Remove `.ai-setup.json` tracking but keep all generated files |
 | `status` | Show current setup status |
+
+## Migration engine
+
+The migration engine helps you adopt `ai-setup` without throwing away an existing AI-tooling workflow.
+
+It currently supports detecting and importing setups from:
+
+- OpenCode
+- Claude Code
+- Pi
+- Gemini CLI
+- GitHub Copilot
+
+### Common migration flows
+
+```bash
+# Preview a migration plan for the current repo
+npx @ricardoborges-teachable/ai-setup import --preview
+
+# Migrate another repo into the current working tree
+npx @ricardoborges-teachable/ai-setup import ../older-project --yes
+
+# Use the alias command
+npx @ricardoborges-teachable/ai-setup migrate --strategy preserve
+
+# Run init, but import an existing setup first
+npx @ricardoborges-teachable/ai-setup init --migrate --from ../legacy-ai-config
+
+# Check drift after migration
+npx @ricardoborges-teachable/ai-setup doctor --migration-check --verbose
+```
+
+### Merge strategies
+
+| Strategy | When to use it | Behavior |
+|---|---|---|
+| `smart` | Default choice when you want merge help | Builds a plan, attempts a 3-way merge, and stops when manual review is needed |
+| `preserve` | You want to keep current files wherever there is overlap | Prefers existing content and adds new `ai-setup` files around it |
+| `replace` | You want a clean `ai-setup` baseline | Replaces overlapping files and creates backups first |
+| `append` | You want combined content where the parser supports it | Appends or combines content for supported file types |
+
+### What the CLI does for you
+
+1. Scans for supported markers such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.opencode/`, `.claude/`, `.pi/`, `.gemini/`, and GitHub Copilot instruction files.
+2. Builds a migration plan before applying changes.
+3. Shows conflicts before execution.
+4. Creates backups unless you pass `--skip-backup`.
+5. Writes or updates `.ai-setup.json` so you can run drift checks afterwards.
+
+### Documentation and examples
+
+- Full guide: [`docs/features/002-migration-engine/README.md`](docs/features/002-migration-engine/README.md)
+- Example migration: [`docs/features/002-migration-engine/examples/opencode-to-ai-setup.md`](docs/features/002-migration-engine/examples/opencode-to-ai-setup.md)
+- Example migration: [`docs/features/002-migration-engine/examples/claude-code-to-ai-setup.md`](docs/features/002-migration-engine/examples/claude-code-to-ai-setup.md)
+- Community parser guide: [`docs/features/002-migration-engine/COMMUNITY-PARSERS.md`](docs/features/002-migration-engine/COMMUNITY-PARSERS.md)
 
 ## Update + conflict behavior
 

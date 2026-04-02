@@ -1,6 +1,6 @@
 {
   "name": "@ricardoborges-teachable/ai-setup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One-command AI development environment scaffold",
   "type": "module",
   "bin": {
@@ -23,6 +23,7 @@
   "dependencies": {
     "@clack/prompts": "^0.9.1",
     "commander": "^12.1.0",
+    "glob": "^13.0.6",
     "lowdb": "^7.0.1",
     "zod": "^3.25.76"
   },

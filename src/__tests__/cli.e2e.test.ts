@@ -1,8 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
 import { join } from 'node:path'
 
 const binPath = join(__dirname, '../../bin/ai-setup.js')
+
+function getFailureOutput(command: string, cwd?: string): string {
+  try {
+    execSync(command, { stdio: 'pipe', cwd })
+    throw new Error('Expected command to fail')
+  } catch (err: any) {
+    return `${err.stdout?.toString() ?? ''}${err.stderr?.toString() ?? ''}`
+  }
+}
 
 describe('CLI End-to-End', () => {
   it('shows help output when run with --help', () => {
@@ -33,5 +44,26 @@ describe('CLI End-to-End', () => {
       expect(err.status).toBe(1)
       expect(err.stderr.toString()).toContain("error: unknown command 'potato'")
     }
+  })
+
+  it('shows actionable help for an invalid migration strategy', () => {
+    const output = getFailureOutput(`node ${binPath} import --strategy potato`)
+
+    expect(output).toContain('Unknown merge strategy "potato"')
+    expect(output).toContain('Supported strategies:')
+    expect(output).toContain('smart')
+    expect(output).toContain('preserve')
+    expect(output).toContain('replace')
+    expect(output).toContain('append')
+  })
+
+  it('shows clearer guidance when no supported setup is detected', () => {
+    const tempDir = fs.mkdtempSync(join(os.tmpdir(), 'ai-setup-empty-'))
+
+    const output = getFailureOutput(`node ${binPath} import --yes`, tempDir)
+
+    expect(output).toContain('No supported AI setup detected')
+    expect(output).toContain('Expected markers include:')
+    expect(output).toContain('ai-setup import /path/to/project')
   })
 })

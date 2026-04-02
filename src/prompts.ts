@@ -1,9 +1,10 @@
 import * as p from '@clack/prompts'
 import path from 'node:path'
-import type { SetupConfig, SetupType, ToolId } from './types.js'
+import type { SetupConfig, SetupScope, SetupType, ToolId } from './types.js'
 import { validateFilesystemSafeName } from './utils/validation.js'
 
 export interface PromptOptions {
+  scope?: SetupScope
   type?: SetupType
   tools?: ToolId[]
   name?: string
@@ -17,24 +18,28 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
     targetDir: process.cwd(),
   }
 
-  // Setup type
-  if (opts.type) {
-    config.setupType = opts.type
+  // Setup scope
+  if (opts.scope || opts.type) {
+    const setupScope = (opts.scope ?? opts.type) as SetupScope
+    config.setupScope = setupScope
+    config.setupType = setupScope
   } else if (!opts.interactive) {
-    throw new Error('--type is required in non-interactive mode (project | workspace)')
+    throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
   } else {
-    const setupType = await p.select({
-      message: 'What are you setting up?',
+    const setupScope = await p.select({
+      message: 'Setup scope:',
       options: [
-        { value: 'project', label: 'Project', hint: 'For a single repository' },
-        { value: 'workspace', label: 'Workspace', hint: 'For a multi-repo organization' },
+        { value: 'global', label: 'Global', hint: 'Install to ~/.ai/ + native tool global paths' },
+        { value: 'workspace', label: 'Workspace', hint: 'Planning repo with multi-project management' },
+        { value: 'project', label: 'Project', hint: 'Self-contained single repository' },
       ],
     })
-    if (p.isCancel(setupType)) {
+    if (p.isCancel(setupScope)) {
       p.cancel('Setup cancelled.')
       process.exit(0)
     }
-    config.setupType = setupType as SetupType
+    config.setupScope = setupScope as SetupScope
+    config.setupType = setupScope as SetupScope
   }
 
   // Tool selection

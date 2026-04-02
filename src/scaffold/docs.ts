@@ -1,13 +1,14 @@
 import path from 'node:path'
 import { ensureDir, copyFile, fileExists, fileHash } from '../utils/files.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { DocsDirId, FileRecord, ConflictStrategy } from '../types.js'
+import type { FileRecord, ConflictStrategy, SetupScope } from '../types.js'
 
 export interface ScaffoldDocsOptions {
   targetDir: string
+  setupScope?: SetupScope
   libraryDir: string
-  docsDirs: DocsDirId[]
-  docsAgents: DocsDirId[]
+  docsDirs: string[]
+  docsAgents: string[]
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
@@ -25,7 +26,7 @@ export interface ScaffoldDocsOptions {
  * - If `docsDirs` is empty, create no directories
  */
 export async function scaffoldDocs(opts: ScaffoldDocsOptions): Promise<void> {
-  const { targetDir, libraryDir, docsDirs, docsAgents, fileRecords, strategy, perFileOverrides } = opts
+  const { targetDir, setupScope, libraryDir, docsDirs, docsAgents, fileRecords, strategy, perFileOverrides } = opts
 
   // Create docs root
   const docsDir = path.join(targetDir, 'docs')
@@ -37,6 +38,12 @@ export async function scaffoldDocs(opts: ScaffoldDocsOptions): Promise<void> {
 
       // Special case: memory also needs handoffs subdirectory
       if (dir === 'memory') {
+        if (setupScope === 'workspace') {
+          ensureDir(path.join(docsDir, 'memory', 'decisions'))
+          ensureDir(path.join(docsDir, 'memory', 'patterns'))
+          ensureDir(path.join(docsDir, 'memory', 'projects'))
+        }
+
         ensureDir(path.join(docsDir, 'memory', 'handoffs'))
       }
     }

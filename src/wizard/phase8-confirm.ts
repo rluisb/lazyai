@@ -29,6 +29,7 @@ export async function runPhase8(opts: {
 
   // Category display names
   const categoryNames: Record<string, string> = {
+    constitution: 'Constitution files',
     docs: 'Documentation dirs',
     'docs-agents': 'Docs AGENTS.md files',
     templates: 'Templates',

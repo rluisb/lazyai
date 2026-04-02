@@ -23,6 +23,7 @@ describe('update and doctor commands', () => {
     process.chdir(tempDir)
 
     const config: SetupConfig = {
+      setupScope: 'project',
       setupType: 'project',
       tools: ['pi', 'opencode'],
       projectName: 'test-project',
@@ -32,7 +33,7 @@ describe('update and doctor commands', () => {
     await runWizard({
       interactive: false,
       cliOverrides: {
-        type: config.setupType,
+        scope: config.setupScope,
         tools: config.tools,
         name: config.projectName,
       },

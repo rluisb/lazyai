@@ -139,7 +139,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
         }
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.github/templates/${name}.md`)
+        addPrompt(name, `.github/ai-templates/${name}.md`)
       }
     }
   }
@@ -201,7 +201,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   }
 
   for (const tool of data.config.tools) {
-    addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude' : tool === 'gemini' ? '.gemini' : '.github')
+    addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude' : tool === 'gemini' ? '.gemini' : '.github/agents')
     addSkillsAndPromptsForTool(tool)
   }
 

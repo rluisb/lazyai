@@ -1,59 +1,108 @@
 # @ricardoborges-teachable/ai-setup
 
-Scaffold an AI-ready repository in one command.
+Scaffold an AI-ready development environment with a single command.
 
-`@ricardoborges-teachable/ai-setup` generates a consistent AI collaboration baseline: project docs, docs-scoped `AGENTS.md` guides, workflow templates, root instruction files, and adapter-specific folders for supported tools.
+## Architecture
 
-## What it covers
+ai-setup uses a **canonical source → compile** model:
 
-- Structured `docs/` foundation for features, bugfixes, refactors, tech debt, ADRs, memory, prompts, rules, standards, and templates
-- Rich docs-scoped agent guidance under `docs/*/AGENTS.md`
-- Pluggable Adapter Architecture supporting leading AI assistants
-- Rich "Standard Library" of AI Artifacts (Rules, Skills, Agents, Templates)
-- Safe update/merge behavior with conflict prompts, backup creation, and manifest tracking (`.ai-setup.json`).
+1. `ai-setup init` creates a tool-agnostic `.ai/` directory as the source of truth
+2. `ai-setup compile` transforms `.ai/` into tool-native directories
 
-## Supported adapters
+### `.ai/` Structure
 
-| Tool ID | Adapter | Root instruction file | Adapter output |
-|---|---|---|---|
-| `pi` | Pi (Claude Code wrapper) | `CLAUDE.md` | `.pi/agents`, `.pi/skills`, `.pi/templates` |
-| `opencode` | OpenCode | `AGENTS.md` | `.opencode/agents`, `.opencode/commands`, `.opencode/templates` |
-| `claude-code` | Claude Code | `CLAUDE.md` | `.claude/` agent files, `.claude/commands`, `.claude/templates`, `.claude/rules/` |
-| `gemini` | Gemini CLI | `GEMINI.md` | `.gemini/` agent files, `.gemini/skills`, `.gemini/templates` |
-| `copilot` | GitHub Copilot | `.github/copilot-instructions.md` | `.github/` agent files, `.github/prompts`, `.github/templates`, `.github/instructions/` |
+```text
+.ai/
+├── config.yml          # Scope, tools, repos, quality gates
+├── constitution/       # Project principles, constraints, quality gates
+│   ├── constitution.md
+│   ├── constraints.md
+│   ├── quality-gates.md
+│   └── uncertainty.md
+├── memory/             # AI memory and context persistence
+│   ├── decisions/      # (workspace only)
+│   ├── handoffs/
+│   ├── patterns/       # (workspace only)
+│   └── projects/       # (workspace only)
+└── [agents, skills, prompts, templates, rules — coming soon]
+```
+
+## Scopes
+
+| Scope | Target | Use Case |
+|-------|--------|----------|
+| `global` | `~/.ai/` + native tool global paths | Personal defaults across all projects |
+| `workspace` | Planning repo only | Multi-repo team with shared planning |
+| `project` | Current directory | Self-contained single repository |
+
+### Global Scope
+
+- Creates `~/.ai/` with canonical structure
+- Compiles to `~/.config/opencode/` (opencode) and `~/.claude/` (claude-code)
+- Copilot, Gemini, Pi don't support file-based global config — fallback to project scope
+
+### Workspace Scope
+
+- All setup goes ONLY in the planning repo
+- Referenced repos are listed in config, never modified
+- Scans referenced repos to detect type (Rails, Next.js, Go, etc.)
+
+### Project Scope
+
+- Self-contained in the current directory
+- Layers on top of global `~/.ai/` if it exists
+
+## Supported Tools
+
+| Tool | Config Dir | Skills Dir | Root File | Global Support |
+|------|-----------|------------|-----------|----------------|
+| opencode | `.opencode/` | `commands/` (project) / `command/` (global) | `AGENTS.md` | ✅ |
+| claude-code | `.claude/` | `commands/` | `CLAUDE.md` | ✅ |
+| copilot | `.github/` | `prompts/*.prompt.md` | `copilot-instructions.md` | ❌ |
+| gemini | `.gemini/` | `skills/` | `GEMINI.md` | ❌ |
+| pi | `.pi/` | `skills/` | (none) | ❌ |
 
 ## Usage
 
-### Interactive setup (Recommended)
+### Interactive setup
 
 ```bash
 npx @ricardoborges-teachable/ai-setup init
 ```
 
-The interactive wizard will guide you through:
-1. Identifying your project details.
-2. Selecting which AI coding assistants you use.
-3. Choosing which rules, agents, skills, and templates to install.
-4. Handling any conflicts with existing files.
-
-### Non-interactive init
+### Non-interactive
 
 ```bash
-npx @ricardoborges-teachable/ai-setup init --type project --tools opencode,pi --name my-repo --no-interactive
+# Project scope
+npx @ricardoborges-teachable/ai-setup init --scope project --tools opencode,claude-code --name my-repo --no-interactive
+
+# Global scope
+npx @ricardoborges-teachable/ai-setup init --scope global --tools opencode,claude-code --no-interactive
+
+# Workspace scope
+npx @ricardoborges-teachable/ai-setup init --scope workspace --tools opencode --name my-workspace --planning-repo ./planning --repos ../app1,../app2 --no-interactive
+```
+
+### Compile (re-generate tool dirs from .ai/)
+
+```bash
+npx @ricardoborges-teachable/ai-setup compile
+npx @ricardoborges-teachable/ai-setup compile --tools opencode --force
+npx @ricardoborges-teachable/ai-setup compile --scope global
 ```
 
 ### Commands
 
 | Command | Description |
-|---|---|
-| `init` | Run the setup wizard to scaffold the environment |
-| `import [path]` | Detect and migrate an existing AI tool setup into `ai-setup` |
-| `migrate [path]` | Alias for `import` |
-| `add <tool>` | Add an adapter (`pi`, `opencode`, `claude-code`, `gemini`, `copilot`) to an existing setup |
-| `update` | Reconcile managed files with current library templates (preserves/prompts on conflicts) |
-| `doctor` | Verify tracked files against `.ai-setup.json` hashes to find drift or missing files |
-| `create` | Scaffold a new template document (e.g., `npx ai-setup create adr`) |
-| `eject` | Remove `.ai-setup.json` tracking but keep all generated files |
+|---------|-------------|
+| `init` | Run the setup wizard (creates `.ai/` + compiles to tool dirs) |
+| `compile` | Re-compile `.ai/` artifacts to tool-native directories |
+| `import [path]` | Detect and migrate an existing AI tool setup |
+| `add <tool>` | Add a tool adapter to existing setup |
+| `update` | Reconcile managed files with current library templates |
+| `doctor` | Verify tracked files against manifest hashes |
+| `create` | Scaffold a new template document |
+| `eject` | Remove tracking but keep generated files |
 | `status` | Show current setup status |
 
 ## Migration engine

@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest'
+import { vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -21,6 +22,11 @@ describe('cli init integration', () => {
     await program.parseAsync(['node', 'ai-setup', 'init', ...args])
   }
 
+  const runCompile = async (args: string[] = []): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'compile', ...args])
+  }
+
   beforeEach(() => {
     originalCwd = process.cwd()
   })
@@ -34,7 +40,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     await runInit([
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'pi,opencode',
@@ -80,7 +86,7 @@ describe('cli init integration', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
     expect(config.config.projectName).toBe('integration-test')
-    expect(config.config.setupType).toBe('project')
+    expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(config.files.length).toBeGreaterThan(20)
     expect(config.files.some((f: { path: string }) => f.path === '.pi/agents/builder.md')).toBe(true)
@@ -97,7 +103,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     const args = [
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'pi,opencode',
@@ -111,7 +117,7 @@ describe('cli init integration', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
     expect(config.config.projectName).toBe('rerun-test')
-    expect(config.config.setupType).toBe('project')
+    expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
@@ -122,7 +128,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     await runInit([
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'opencode',
@@ -144,6 +150,166 @@ describe('cli init integration', () => {
     expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
+  })
+
+  it('compile restores tool files from store without modifying store file', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode,claude-code',
+      '--name',
+      'compile-project-test',
+      '--no-interactive',
+    ])
+
+    const opencodeAgent = path.join(tempDir, '.opencode/agents/builder.md')
+    const claudeAgent = path.join(tempDir, '.claude/agents/builder.md')
+    fs.rmSync(opencodeAgent)
+    fs.rmSync(claudeAgent)
+
+    const storePath = path.join(tempDir, '.ai-setup.json')
+    const beforeStore = fs.readFileSync(storePath, 'utf-8')
+
+    await runCompile(['--tools', 'opencode'])
+
+    const afterStore = fs.readFileSync(storePath, 'utf-8')
+    expect(afterStore).toBe(beforeStore)
+    expect(fs.existsSync(opencodeAgent)).toBe(true)
+    expect(fs.existsSync(claudeAgent)).toBe(false)
+  })
+
+  it('compile with --scope global reads manifest from ~/.ai and restores global tool paths', async () => {
+    const tempDir = makeTempRepo()
+    const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-global-compile-'))
+    const originalHome = process.env.HOME
+    process.env.HOME = tempHome
+    process.chdir(tempDir)
+
+    try {
+      await runInit([
+        '--scope',
+        'global',
+        '--tools',
+        'opencode,claude-code',
+        '--no-interactive',
+      ])
+
+      const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+
+      fs.rmSync(opencodeAgent)
+      fs.rmSync(claudeAgent, { recursive: true, force: true })
+
+      await runCompile(['--scope', 'global'])
+
+      expect(fs.existsSync(opencodeAgent)).toBe(true)
+      expect(fs.existsSync(claudeAgent)).toBe(true)
+      expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
+      expect(fs.existsSync(path.join(tempHome, '.ai/.ai-setup.json'))).toBe(true)
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env.HOME
+      } else {
+        process.env.HOME = originalHome
+      }
+      fs.rmSync(tempHome, { recursive: true, force: true })
+    }
+  })
+
+  it('compile fails when setup manifest does not exist', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await expect(runCompile()).rejects.toThrow(/Setup manifest not found/)
+  })
+
+  it('compile global uses native global target paths and logs unsupported tools', async () => {
+    const tempDir = makeTempRepo()
+    const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    const originalHome = process.env.HOME
+    process.env.HOME = tempHome
+    process.chdir(tempDir)
+
+    try {
+      await runInit([
+        '--scope',
+        'global',
+        '--tools',
+        'opencode,claude-code,copilot',
+        '--no-interactive',
+      ])
+
+      const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+      fs.rmSync(opencodeAgent)
+      fs.rmSync(claudeAgent, { recursive: true, force: true })
+
+      const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+      await runCompile(['--scope', 'global', '--tools', 'opencode,copilot'])
+
+      expect(fs.existsSync(opencodeAgent)).toBe(true)
+      expect(fs.existsSync(claudeAgent)).toBe(false)
+      expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
+      infoSpy.mockRestore()
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env.HOME
+      } else {
+        process.env.HOME = originalHome
+      }
+      fs.rmSync(tempHome, { recursive: true, force: true })
+    }
+  })
+
+  it('supports workspace init + workspace compile from planning repo', async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-workspace-cli-'))
+    const planningRepoDir = path.join(workspaceRoot, 'planning-repo')
+    const fedoraRepoDir = path.join(workspaceRoot, 'fedora')
+    const checkoutRepoDir = path.join(workspaceRoot, 'creator-checkout')
+
+    fs.mkdirSync(planningRepoDir, { recursive: true })
+    fs.mkdirSync(fedoraRepoDir, { recursive: true })
+    fs.mkdirSync(checkoutRepoDir, { recursive: true })
+
+    process.chdir(workspaceRoot)
+
+    await runInit([
+      '--scope',
+      'workspace',
+      '--planning-repo',
+      planningRepoDir,
+      '--repos',
+      '../fedora,../creator-checkout',
+      '--tools',
+      'opencode,claude-code',
+      '--name',
+      'teachable-workspace',
+      '--no-interactive',
+    ])
+
+    expect(fs.existsSync(path.join(planningRepoDir, '.ai-setup.json'))).toBe(true)
+    expect(fs.existsSync(path.join(fedoraRepoDir, '.ai-setup.json'))).toBe(false)
+    expect(fs.existsSync(path.join(checkoutRepoDir, '.ai-setup.json'))).toBe(false)
+
+    const opencodeAgent = path.join(planningRepoDir, '.opencode/agents/builder.md')
+    fs.rmSync(opencodeAgent)
+
+    process.chdir(planningRepoDir)
+    await runCompile(['--scope', 'workspace', '--tools', 'opencode'])
+
+    expect(fs.existsSync(opencodeAgent)).toBe(true)
+
+    const config = JSON.parse(fs.readFileSync(path.join(planningRepoDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.setupScope).toBe('workspace')
+    expect(config.config.workspaceName).toBe('teachable-workspace')
+    expect(config.config.repos).toEqual([
+      { name: 'fedora', path: '../fedora', type: 'unknown' },
+      { name: 'creator-checkout', path: '../creator-checkout', type: 'unknown' },
+    ])
   })
 })
 

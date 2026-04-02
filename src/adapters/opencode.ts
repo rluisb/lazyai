@@ -10,10 +10,15 @@ export class OpenCodeAdapter implements ToolAdapter {
   }
 
   async install(ctx: AdapterContext): Promise<void> {
-    const ocDir = path.join(ctx.targetDir, '.opencode')
+    const isGlobal = ctx.setupScope === 'global'
+    const ocDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.opencode')
+    const commandsDir = isGlobal ? 'command' : 'commands'
+    const skillsDir = isGlobal ? 'skill' : 'skills'
+
     files.ensureDir(ocDir)
     files.ensureDir(path.join(ocDir, 'agents'))
-    files.ensureDir(path.join(ocDir, 'commands'))
+    files.ensureDir(path.join(ocDir, commandsDir))
+    files.ensureDir(path.join(ocDir, skillsDir))
     files.ensureDir(path.join(ocDir, 'templates'))
 
     console.log('🤖  Installing OpenCode tools...')
@@ -39,7 +44,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       ctx,
       sourceSubdir: 'skills',
       selectionKey: 'skills',
-      toDestPath: (file) => path.join(ocDir, 'commands', file),
+      toDestPath: (file) => path.join(ocDir, commandsDir, file),
       warnOnSkip: true,
     })
 
@@ -48,7 +53,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       toolDir: ocDir,
       contextFileName: 'AGENTS.md',
       agentsDestDir: 'agents',
-      skillsDestDir: 'commands',
+      skillsDestDir: commandsDir,
       templatesDestDir: 'templates',
       warnOnSkip: true,
     })

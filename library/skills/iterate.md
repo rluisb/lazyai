@@ -27,6 +27,25 @@ phase: iterate
 6. **Run Full Quality Gates**
    - Confirm broader project health before handoff.
 
+## Reflexion Step
+
+When a loop iteration fails:
+
+1. **Verbalize the failure** — Write a brief reflection in the task journal:
+   > "This attempt failed because [specific reason]. The approach of [what was tried]
+   > did not work due to [root cause]. In the next attempt, I will [adjusted strategy]."
+
+2. **Preserve the reflection** — This verbal reflection MUST be included in session compaction
+   as high-priority content. It prevents repeating the same failed approach.
+
+3. **Reset with context** — When starting a fresh session for the next attempt, include:
+   - The original requirement
+   - The reflection from the failed attempt
+   - Any partial progress that should be preserved
+
+4. **Escalate after 2 reflections** — If two consecutive iterations produce failure reflections
+   on the same issue, escalate: invoke the Reviewer agent or request human guidance.
+
 ## Principles
 
 - Fix-only mode (no feature creep)

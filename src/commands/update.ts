@@ -2,6 +2,7 @@ import type { Command } from 'commander'
 import { fileURLToPath } from 'node:url'
 import path, { dirname, join } from 'node:path'
 import * as p from '@clack/prompts'
+import { ALL_SKILLS } from '../types.js'
 import type { ToolId } from '../types.js'
 import type { StoreData, TrackedFile } from '../store/schema.js'
 import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
@@ -94,7 +95,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'pi') {
-      for (const name of ['research', 'plan', 'implement', 'iterate']) {
+      for (const name of ALL_SKILLS) {
         addSkill(name, `.pi/skills/${name}.md`)
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
@@ -103,7 +104,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'opencode') {
-      for (const name of ['research', 'plan', 'implement', 'iterate']) {
+      for (const name of ALL_SKILLS) {
         addSkill(name, `.opencode/commands/${name}.md`)
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
@@ -112,7 +113,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'claude-code') {
-      for (const name of ['research', 'plan', 'implement', 'iterate']) {
+      for (const name of ALL_SKILLS) {
         addSkill(name, `.claude/commands/${name}.md`)
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
@@ -121,7 +122,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'gemini') {
-      for (const name of ['research', 'plan', 'implement', 'iterate']) {
+      for (const name of ALL_SKILLS) {
         addSkill(name, `.gemini/skills/${name}.md`)
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
@@ -130,7 +131,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'copilot') {
-      for (const name of ['research', 'plan', 'implement', 'iterate']) {
+      for (const name of ALL_SKILLS) {
         const source = `skills/${name}.md`
         const srcPath = join(libraryDir, source)
         if (fileExists(srcPath)) {

@@ -26,6 +26,22 @@ Output (shape):
 - Open Questions: should retries be capped per tenant?
 ```
 
+```
+Input (summary): Investigate API auth intermittently returning 401.
+Output (shape):
+- Sources: [auth-client.ts:30-92], [token-cache.ts:10-67]
+- Findings: stale token reused after refresh race under concurrency
+- Open Questions: lock per key or singleflight cache?
+```
+
+```
+Input (summary): Explore how feature flags flow through UI rendering.
+Output (shape):
+- Sources: [flags/provider.tsx:1-70], [dashboard/page.tsx:18-140]
+- Findings: server flag preload exists, client fallback bypasses default guard
+- Open Questions: should fallback be removed for deterministic SSR?
+```
+
 ## Common Mistakes to Avoid
 - ❌ Listing findings without evidence (file paths, line numbers)
 - ❌ Making assumptions instead of reading actual code

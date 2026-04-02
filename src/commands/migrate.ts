@@ -12,6 +12,7 @@ export function createMigrateCommand(): Command {
     .option('-v, --verbose', 'Show detailed output')
     .option('-i, --interactive', 'Resolve merge conflicts interactively')
     .option('--skip-backup', 'Skip creating backup')
+    .option('--no-canonical', 'Use legacy output format instead of .ai canonical output')
     .option('-y, --yes', 'Auto-confirm without prompts')
     .action(async (sourcePath: string | undefined, options: MigrateOptions) => {
       await runMigrationCommand('migrate', sourcePath, options);

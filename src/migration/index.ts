@@ -17,11 +17,12 @@ import {
   MigrationResult,
   MergeStrategy,
   DriftCheckResult,
+  ParsedSetup,
 } from './types.js';
 import { detectExistingSetup, hasAdapter } from './detector.js';
 import { getAllParsers } from './registry/discovery.js';
 import { generateMigrationPlan } from './plan.js';
-import { executeMigrationPlan } from './executor.js';
+import { executeMigrationPlan, executeMigrationToCanonical } from './executor.js';
 import { checkDrift } from './doctor.js';
 
 export interface ImportOptions {
@@ -31,6 +32,7 @@ export interface ImportOptions {
   verbose?: boolean;
   skipBackup?: boolean;
   interactive?: boolean;
+  canonicalOutput?: boolean;
 }
 
 /**
@@ -39,6 +41,7 @@ export interface ImportOptions {
 export async function importSetup(options: ImportOptions = {}): Promise<MigrationResult> {
   const sourcePath = options.path || process.cwd();
   const mergeStrategy = options.mergeStrategy || 'smart';
+  const canonicalOutput = options.canonicalOutput !== false;
   
   const context: MigrationContext = {
     sourcePath,
@@ -117,6 +120,23 @@ export async function importSetup(options: ImportOptions = {}): Promise<Migratio
     }
 
     // Step 5: Execute migration
+    if (canonicalOutput) {
+      const parsedSetups: ParsedSetup[] = [];
+      for (const detection of detections) {
+        const parser = parsers.find((candidate) => candidate.id === detection.adapterId);
+        if (!parser) continue;
+        parsedSetups.push(await parser.parse(context));
+      }
+
+      const result = await executeMigrationToCanonical({
+        context,
+        plan,
+        parsedSetups,
+      });
+
+      return result;
+    }
+
     const result = await executeMigrationPlan(context, plan);
 
     return result;

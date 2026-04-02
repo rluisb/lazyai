@@ -37,6 +37,9 @@ import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { planFiles } from './planner.js'
 import { AdapterRegistry } from '../adapters/registry.js'
+import { detectExistingSetup } from '../migration/detector.js'
+import { getAllParsers } from '../migration/registry/discovery.js'
+import { writeToCanonical } from '../migration/canonical-writer.js'
 import {
   isGlobalSupportedTool,
   logUnsupportedGlobalTool,
@@ -67,6 +70,7 @@ function resolveTargetDirForScope(scope: SetupScope, targetDir: string, homeDir:
 export async function runWizard(opts: {
   interactive: boolean
   force?: boolean
+  absorb?: boolean
   homeDir?: string
   cliOverrides: {
     scope?: SetupScope
@@ -135,6 +139,54 @@ export async function runWizard(opts: {
     }
 
     const selections = buildDefaultSelections(effectiveTargetDir)
+    const fileRecords: FileRecord[] = []
+
+    const migrationContext = {
+      sourcePath: effectiveTargetDir,
+      targetPath: effectiveTargetDir,
+      options: {
+        preview: false,
+        mergeStrategy: 'preserve' as const,
+        verbose: false,
+        skipBackup: true,
+        interactive: false,
+      },
+    }
+
+    const detections = await detectExistingSetup(migrationContext)
+    if (detections.length > 0) {
+      let shouldAbsorb = opts.absorb === true
+
+      if (!shouldAbsorb && opts.interactive) {
+        const detectionSummary = detections.map((item) => item.adapterName).join(', ')
+        const absorbAnswer = await p.confirm({
+          message: `Found existing tool setup (${detectionSummary}). Absorb into .ai/?`,
+          initialValue: true,
+        })
+
+        if (p.isCancel(absorbAnswer)) {
+          throw Errors.userCancelled()
+        }
+
+        shouldAbsorb = absorbAnswer === true
+      }
+
+      if (shouldAbsorb) {
+        const parsers = await getAllParsers(effectiveTargetDir)
+
+        for (const detection of detections) {
+          const parser = parsers.find((candidate) => candidate.id === detection.adapterId)
+          if (!parser) continue
+
+          const parsedSetup = await parser.parse(migrationContext)
+          await writeToCanonical({
+            targetDir: effectiveTargetDir,
+            parsedSetup,
+            fileRecords,
+          })
+        }
+      }
+    }
 
     const config: WizardConfig = {
       setupScope,
@@ -179,8 +231,6 @@ export async function runWizard(opts: {
     const phase8Opts = { interactive: opts.interactive, plan, config }
     const confirmed = await runPhase8(phase8Opts)
     if (!confirmed) return
-
-    const fileRecords: FileRecord[] = []
 
     const installFiles = async (): Promise<void> => {
       await scaffoldDocs({

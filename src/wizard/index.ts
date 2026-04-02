@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts'
+import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,6 +49,25 @@ import {
   logUnsupportedGlobalTool,
   resolveGlobalToolTargetDir,
 } from '../utils/global-paths.js'
+
+const _require = createRequire(import.meta.url)
+
+function resolveCliVersion(): string {
+  const candidates = ['../../package.json', '../package.json']
+
+  for (const candidate of candidates) {
+    try {
+      const pkg = _require(candidate) as { version?: string }
+      if (pkg.version) return pkg.version
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return '0.0.0'
+}
+
+const cliVersion = resolveCliVersion()
 
 function buildDefaultSelections(targetDir: string): WizardSelections {
   const hasGitDir = fileExists(path.join(targetDir, '.git'))
@@ -388,7 +408,7 @@ export async function runWizard(opts: {
     const storeData: StoreData = {
       meta: {
         schemaVersion: 1,
-        cliVersion: '0.1.0',
+        cliVersion,
         installedAt: now,
         lastUpdatedAt: now,
       },

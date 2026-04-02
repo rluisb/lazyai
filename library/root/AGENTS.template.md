@@ -227,6 +227,27 @@ When compaction is triggered:
 4. Preserve current progress and next immediate action
 5. Drop redundant narrative and stale exploration details
 
+## Token Discipline
+
+Prevent context bloat and preserve high-signal working memory:
+
+1. **Read only what is needed** for the current decision — no speculative file reads
+2. **Prefer targeted ranges** over full-file dumps when reading code
+3. **Summarize findings** in 3-7 bullet points before moving on
+4. **Reuse prior summaries** instead of re-reading unchanged content
+5. **Compress at checkpoints** — after investigations, before subtask switches, when context is stale
+
+### Anti-Patterns
+- Reading many files "just in case"
+- Repeating full logs or command output in responses
+- Carrying outdated investigation context across unrelated subtasks
+- Re-reading files that haven't changed since last read
+
+### Output Discipline
+- Keep status updates concise and decision-focused
+- Report only what changes decisions, risk, or next action
+- Aim for the 40-60% rule: keep 40-60% of context window available for working memory
+
 ## Sub-Agent Delegation
 
 When a task requires a different expertise (e.g., security review during implementation):

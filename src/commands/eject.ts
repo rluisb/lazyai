@@ -15,7 +15,11 @@ export function registerEject(program: Command) {
     });
 }
 
-export async function ejectCommand(targetDir: string) {
+interface EjectCommandOptions {
+  confirmEject?: () => Promise<boolean | symbol>
+}
+
+export async function ejectCommand(targetDir: string, opts?: EjectCommandOptions) {
   intro('Ejecting from @ricardoborges-teachable/ai-setup');
 
   const manifestPath = path.join(targetDir, '.ai-setup.json')
@@ -30,10 +34,12 @@ export async function ejectCommand(targetDir: string) {
   log.warn(`This will remove the .ai-setup.json manifest.`);
   log.warn(`Your ${numFiles} managed files will be kept, but ai-setup will no longer update them.`);
   
-  const shouldEject = await confirm({
-    message: 'Are you sure you want to eject?',
-    initialValue: false
-  });
+  const shouldEject = opts?.confirmEject
+    ? await opts.confirmEject()
+    : await confirm({
+        message: 'Are you sure you want to eject?',
+        initialValue: false
+      });
 
   if (!shouldEject || typeof shouldEject === 'symbol') {
     outro('Eject cancelled');

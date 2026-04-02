@@ -7,6 +7,7 @@ import { createProgram } from '../cli.js'
 import { createImportCommand } from '../commands/import.js'
 import { createMigrateCommand } from '../commands/migrate.js'
 import type { AiSetupConfig } from '../types.js'
+import { ejectCommand } from '../commands/eject.js'
 
 describe('cli init integration', () => {
   let originalCwd: string
@@ -25,6 +26,21 @@ describe('cli init integration', () => {
   const runCompile = async (args: string[] = []): Promise<void> => {
     const program = createProgram()
     await program.parseAsync(['node', 'ai-setup', 'compile', ...args])
+  }
+
+  const runStatus = async (): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'status'])
+  }
+
+  const runEject = async (): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'eject'])
+  }
+
+  const runAdd = async (tool: string): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'add', tool])
   }
 
   beforeEach(() => {
@@ -321,6 +337,81 @@ describe('cli init integration', () => {
       }
       fs.rmSync(tempHome, { recursive: true, force: true })
     }
+  })
+
+  it('status shows installed tools and setup scope after init', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode,claude-code',
+      '--name',
+      'status-test',
+      '--no-interactive',
+    ])
+
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    await runStatus()
+
+    const output = writeSpy.mock.calls.map((call) => String(call[0])).join('')
+    expect(output).toContain('Scope: project')
+    expect(output).toContain('Tools: opencode, claude-code')
+    expect(output).not.toContain('coming soon')
+
+    writeSpy.mockRestore()
+  })
+
+  it('eject removes .ai-setup.json after confirmation', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'eject-test',
+      '--no-interactive',
+    ])
+
+    expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(true)
+
+    await ejectCommand(tempDir, {
+      confirmEject: async () => true,
+    })
+
+    expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
+  })
+
+  it('add installs claude-code files and updates manifest tools list', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'add-test',
+      '--no-interactive',
+    ])
+
+    expect(fs.existsSync(path.join(tempDir, '.claude'))).toBe(false)
+
+    await runAdd('claude-code')
+
+    expect(fs.existsSync(path.join(tempDir, '.claude', 'commands'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.claude', 'rules'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.tools).toContain('claude-code')
+    expect(config.files.some((f: { path: string }) => f.path.startsWith('.claude/'))).toBe(true)
   })
 
   it('supports workspace init + workspace compile from planning repo', async () => {

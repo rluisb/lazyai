@@ -1,3 +1,10 @@
+---
+name: plan
+description: Create structured implementation plan with TechSpec.
+trigger: /plan
+phase: plan
+---
+
 # Plan Skill
 
 **Command:** `/plan [research-file]`

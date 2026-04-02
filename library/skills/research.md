@@ -1,3 +1,10 @@
+---
+name: research
+description: Evidence-based codebase investigation.
+trigger: /research
+phase: research
+---
+
 # Research Skill
 
 **Command:** `/research [topic]`
@@ -19,8 +26,19 @@
 4. **Identify Patterns and Gaps**
    - Document established patterns and reusable approaches.
    - Highlight inconsistencies, missing coverage, and risks.
-5. **Produce Structured Findings**
+5. **Generate Domain Knowledge**
+   - Capture key patterns, dependencies, and constraints supported by evidence.
+   - Discard any generated claims not grounded in code or docs.
+6. **Produce Structured Findings**
    - Summarize what was found, what is uncertain, and what to do next.
+
+### Step 5: Generate Domain Knowledge
+Before finalizing findings, generate 3-5 relevant domain facts about the investigated area:
+1. State key architectural patterns or conventions discovered
+2. Note dependency relationships between components
+3. Identify constraints or invariants that code must respect
+4. Cross-check generated facts against actual codebase evidence
+5. Discard any facts not supported by code evidence
 
 ## Trace Protocol (ReAct, complex investigations only)
 

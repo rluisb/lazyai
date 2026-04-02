@@ -1,3 +1,10 @@
+---
+name: lessons-learned
+description: Extract reusable lessons from completed tasks.
+trigger: /lessons-learned
+phase: close
+---
+
 # Lessons Learned
 
 ## Purpose

@@ -197,6 +197,10 @@ When compaction is triggered, preserve:
 4. Current progress and next immediate action
 5. Only high-signal details (drop redundant narrative)
 
+## Sub-Agent Delegation
+For tasks requiring different expertise or fresh context, delegate to a sub-agent with clear scope.
+Provide only relevant context. Accept final results only — intermediate work stays internal.
+
 ## Token Discipline
 
 Prevent context bloat and preserve high-signal working memory:

@@ -1,3 +1,10 @@
+---
+name: parallel-execution
+description: Execute independent sub-tasks concurrently.
+trigger: /parallel-execution
+phase: implement
+---
+
 # Parallel Execution
 
 ## Purpose

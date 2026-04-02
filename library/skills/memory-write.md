@@ -1,3 +1,10 @@
+---
+name: memory-write
+description: Capture decisions and knowledge for future sessions.
+trigger: /memory-write
+phase: close
+---
+
 # Memory Write
 
 ## Purpose

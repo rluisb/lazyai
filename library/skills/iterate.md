@@ -1,3 +1,10 @@
+---
+name: iterate
+description: Run focused test-fix-verify loops until targeted scope is green.
+trigger: /iterate
+phase: iterate
+---
+
 # Iterate Skill
 
 **Command:** `/iterate [task-file]`

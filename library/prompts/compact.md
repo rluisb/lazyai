@@ -28,6 +28,11 @@ Output (shape):
 - Dropped Context: unrelated UI brainstorming
 ```
 
+## Common Mistakes to Avoid
+- ❌ Losing critical file paths or decision rationale during compaction
+- ❌ Summarizing too aggressively — preserve exact values and specifics
+- ❌ Dropping open questions or unresolved items
+
 ## Output Format
 
 ```

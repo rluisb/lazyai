@@ -227,6 +227,26 @@ When compaction is triggered:
 4. Preserve current progress and next immediate action
 5. Drop redundant narrative and stale exploration details
 
+## Sub-Agent Delegation
+
+When a task requires a different expertise (e.g., security review during implementation):
+
+### When to Delegate
+- Task requires a different model or reasoning style
+- Current context is too polluted for clean analysis
+- Work can be isolated without shared state
+
+### Delegation Protocol
+1. Define the sub-task scope clearly (input, expected output)
+2. Provide only the relevant context (not the full session)
+3. The sub-agent returns a final result only — intermediate work stays internal
+4. Integrate the sub-agent's result into the main session
+
+### When NOT to Delegate
+- Simple lookups that don't need fresh context
+- Tasks that depend heavily on current session state
+- Quick verification steps (use inline reasoning instead)
+
 ---
 
 ## Testing

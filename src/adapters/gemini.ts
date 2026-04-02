@@ -26,7 +26,7 @@ export class GeminiAdapter implements ToolAdapter {
       ctx,
       sourceSubdir: 'agents',
       selectionKey: 'agents',
-      toDestPath: (file) => path.join(geminiDir, file),
+      toDestPath: (file) => path.join(geminiDir, 'agents', file),
       transform: stripYamlFrontmatter,
     })
 

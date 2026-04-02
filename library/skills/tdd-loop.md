@@ -1,3 +1,10 @@
+---
+name: tdd-loop
+description: Test-driven development cycle with red-green-refactor.
+trigger: /tdd-loop
+phase: implement
+---
+
 # TDD Loop
 
 ## Purpose

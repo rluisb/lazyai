@@ -25,6 +25,11 @@ Output (shape):
 - Tests: client.test.ts (header present), middleware.test.ts (context fallback)
 ```
 
+## Common Mistakes to Avoid
+- ❌ Implementing features not explicitly requested (speculation)
+- ❌ Skipping test verification before marking complete
+- ❌ Making changes to files not listed in the plan
+
 ## Output Format
 
 ```

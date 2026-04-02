@@ -17,5 +17,11 @@ Use inline markers in specifications and code comments:
 - `[CONFIDENCE: MEDIUM]` — implement but plan validation
 - `[CONFIDENCE: LOW]` — spike/prototype before committing
 
+<!-- Example usage in a specification:
+"The cache invalidation strategy uses TTL-based expiry. [CONFIDENCE: HIGH]
+We assume Redis cluster failover takes <5 seconds. [CONFIDENCE: MEDIUM]
+The WebSocket reconnection will handle 10K concurrent users. [CONFIDENCE: LOW]"
+-->
+
 ## Resolution
 Low-confidence items must be resolved (upgraded or abandoned) before merging to main.

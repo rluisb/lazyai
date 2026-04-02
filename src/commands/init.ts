@@ -10,6 +10,7 @@ interface InitOptions {
   scope?: SetupScope
   type?: SetupType
   planningRepo?: string
+  repos?: string
   tools?: string
   name?: string
   force?: boolean
@@ -25,6 +26,7 @@ export function registerInit(program: Command): void {
     .option('--scope <scope>', 'Setup scope: global | workspace | project')
     .option('--type <type>', 'Deprecated alias for --scope')
     .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
+    .option('--repos <paths>', 'Workspace repo references as comma-separated relative paths')
     .option('--tools <tools>', 'Comma-separated tool list: pi,opencode')
     .option('--name <name>', 'Project name (defaults to directory name)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')
@@ -35,11 +37,15 @@ export function registerInit(program: Command): void {
       const tools = opts.tools
         ? (opts.tools.split(',').map((t) => t.trim()).filter(Boolean) as ToolId[])
         : undefined
+      const repos = opts.repos
+        ? opts.repos.split(',').map((repoPath) => repoPath.trim()).filter(Boolean)
+        : undefined
 
       const cliOverrides: {
         scope?: SetupScope
         type?: SetupType
         planningRepo?: string
+        repos?: string[]
         tools?: ToolId[]
         name?: string
       } = {}
@@ -47,6 +53,7 @@ export function registerInit(program: Command): void {
       if (opts.scope) cliOverrides.scope = opts.scope
       if (opts.type) cliOverrides.type = opts.type
       if (opts.planningRepo) cliOverrides.planningRepo = opts.planningRepo
+      if (repos) cliOverrides.repos = repos
       if (tools) cliOverrides.tools = tools
       if (opts.name) cliOverrides.name = opts.name
 

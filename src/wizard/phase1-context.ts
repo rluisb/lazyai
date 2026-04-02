@@ -1,16 +1,66 @@
 import * as p from '@clack/prompts'
 import path from 'node:path'
 import { homedir } from 'node:os'
+import { readdirSync } from 'node:fs'
 import { readManifest } from '../utils/manifest.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
-import { fileExists } from '../utils/files.js'
+import { fileExists, isDirectory } from '../utils/files.js'
 import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
 
 export interface Phase1Result {
   setupScope: SetupScope
   tools: ToolId[]
   projectName: string
+  workspaceName?: string
   planningRepoPath?: string
+  repos?: Array<{ name: string; path: string }>
+}
+
+function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string }> {
+  if (!raw) return []
+
+  const planningRepoAbsolute = path.resolve(planningRepoPath)
+  const trimmed = raw.trim()
+  if (!trimmed) return []
+
+  const toRepoRef = (repoPathInput: string): { name: string; path: string } => {
+    const resolved = path.resolve(planningRepoAbsolute, repoPathInput)
+    const relativePath = path.relative(planningRepoAbsolute, resolved) || '.'
+    const normalizedPath = relativePath.replaceAll('\\', '/')
+    return {
+      name: path.basename(resolved),
+      path: normalizedPath,
+    }
+  }
+
+  if (trimmed.includes(',')) {
+    return trimmed
+      .split(',')
+      .map(entry => entry.trim())
+      .filter(Boolean)
+      .map(toRepoRef)
+  }
+
+  const parentDirCandidate = path.resolve(planningRepoAbsolute, trimmed)
+  if (!fileExists(parentDirCandidate) || !isDirectory(parentDirCandidate)) {
+    return [toRepoRef(trimmed)]
+  }
+
+  try {
+    const entries = readdirSync(parentDirCandidate, { withFileTypes: true })
+    return entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => {
+        const repoAbsolute = path.join(parentDirCandidate, entry.name)
+        return {
+          name: entry.name,
+          path: path.relative(planningRepoAbsolute, repoAbsolute).replaceAll('\\', '/'),
+        }
+      })
+      .filter(repo => repo.path !== '.')
+  } catch {
+    return [toRepoRef(trimmed)]
+  }
 }
 
 /**
@@ -24,6 +74,7 @@ export async function runPhase1(opts: {
     setupType?: SetupType
     tools?: ToolId[]
     projectName?: string
+    workspaceName?: string
     planningRepoPath?: string
   }
   cliOverrides: {
@@ -32,6 +83,7 @@ export async function runPhase1(opts: {
     tools?: ToolId[]
     name?: string
     planningRepo?: string
+    repos?: string[]
   }
   targetDir: string
 }): Promise<Phase1Result> {
@@ -39,8 +91,24 @@ export async function runPhase1(opts: {
   if (!opts.interactive) {
     const setupScope = opts.cliOverrides.scope ?? opts.cliOverrides.type
     const tools = opts.cliOverrides.tools
-    const projectName = opts.cliOverrides.name ?? (setupScope === 'global' ? 'global' : undefined)
+    const projectName =
+      setupScope === 'workspace'
+        ? path.basename(path.resolve(opts.cliOverrides.planningRepo ?? opts.targetDir))
+        : opts.cliOverrides.name ?? (setupScope === 'global' ? 'global' : undefined)
+    const workspaceName = setupScope === 'workspace' ? opts.cliOverrides.name : undefined
     const planningRepoPath = opts.cliOverrides.planningRepo
+      ? path.resolve(opts.cliOverrides.planningRepo)
+      : undefined
+    const parsedRepos =
+      setupScope === 'workspace'
+        ? (opts.cliOverrides.repos ?? []).map((repoPath) => {
+            const resolved = path.resolve(planningRepoPath ?? opts.targetDir, repoPath)
+            return {
+              name: path.basename(resolved),
+              path: path.relative(path.resolve(planningRepoPath ?? opts.targetDir), resolved).replaceAll('\\', '/'),
+            }
+          })
+        : []
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
@@ -51,12 +119,17 @@ export async function runPhase1(opts: {
     if (!projectName) {
       throw new Error('Project name is required in non-interactive mode (use --name or provide via config)')
     }
+    if (setupScope === 'workspace' && !planningRepoPath) {
+      throw new Error('--planning-repo is required in non-interactive mode when --scope=workspace')
+    }
 
     return {
       setupScope,
       tools,
       projectName,
+      ...(workspaceName ? { workspaceName } : {}),
       ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
+      ...(setupScope === 'workspace' && parsedRepos.length > 0 ? { repos: parsedRepos } : {}),
     }
   }
 
@@ -72,7 +145,9 @@ export async function runPhase1(opts: {
   let setupScope: SetupScope
   let tools: ToolId[]
   let projectName: string
+  let workspaceName: string | undefined
   let planningRepoPath: string | undefined
+  let repos: Array<{ name: string; path: string }> = []
 
   // Prompt 1: Setup scope
   const setupScopeResult =
@@ -124,26 +199,25 @@ export async function runPhase1(opts: {
   }
   tools = toolsResult as ToolId[]
 
-  // Prompt 3: Project name
-  const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
-  const projectNameResult =
-    opts.cliOverrides.name ||
-    opts.prior.projectName ||
-    (await p.text({
-      message: 'Project name?',
-      placeholder: defaultName,
-      defaultValue: defaultName,
-      validate: (value) => validateFilesystemSafeName(value, 'Project name'),
-    }))
-
-  if (p.isCancel(projectNameResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
-  }
-  projectName = projectNameResult
-
   if (setupScope === 'workspace') {
     const defaultPlanningRepoPath = opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir
+
+    const workspaceNameResult =
+      opts.cliOverrides.name ||
+      opts.prior.workspaceName ||
+      (await p.text({
+        message: 'Workspace name?',
+        placeholder: path.basename(opts.targetDir),
+        defaultValue: path.basename(opts.targetDir),
+        validate: (value) => validateFilesystemSafeName(value, 'Workspace name'),
+      }))
+
+    if (p.isCancel(workspaceNameResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+    workspaceName = workspaceNameResult
+
     const planningRepoPathResult =
       opts.cliOverrides.planningRepo ||
       opts.prior.planningRepoPath ||
@@ -158,13 +232,50 @@ export async function runPhase1(opts: {
       process.exit(0)
     }
 
-    planningRepoPath = planningRepoPathResult
+    planningRepoPath = path.resolve(planningRepoPathResult)
+    projectName = path.basename(planningRepoPath)
+
+    const reposPromptDefault = opts.cliOverrides.repos?.join(', ') ?? ''
+    const reposInputResult =
+      opts.cliOverrides.repos?.join(',') ||
+      (await p.text({
+        message: 'Referenced repos (comma-separated paths or parent directory)?',
+        placeholder: '../fedora, ../creator-checkout or ..',
+        defaultValue: reposPromptDefault,
+      }))
+
+    if (p.isCancel(reposInputResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+
+    repos = parseWorkspaceRepos(reposInputResult, planningRepoPath)
+  } else {
+    // Prompt 3: Project name
+    const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
+    const projectNameResult =
+      opts.cliOverrides.name ||
+      opts.prior.projectName ||
+      (await p.text({
+        message: 'Project name?',
+        placeholder: defaultName,
+        defaultValue: defaultName,
+        validate: (value) => validateFilesystemSafeName(value, 'Project name'),
+      }))
+
+    if (p.isCancel(projectNameResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+    projectName = projectNameResult
   }
 
   return {
     setupScope,
     tools: tools as ToolId[],
     projectName,
+    ...(workspaceName ? { workspaceName } : {}),
     ...(planningRepoPath ? { planningRepoPath } : {}),
+    ...(repos.length > 0 ? { repos } : {}),
   }
 }

@@ -70,10 +70,6 @@ export function registerCompile(program: Command): void {
       const store = await readStoreReadonly(storeDir)
       const effectiveScope = opts.scope ?? store.config.setupScope
 
-      if (effectiveScope === 'workspace') {
-        throw Errors.invalidInput('workspace compile is not supported yet')
-      }
-
       const overrideTools = parseTools(opts.tools, registry)
       const requestedTools = overrideTools ?? store.config.tools
 

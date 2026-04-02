@@ -16,8 +16,11 @@ export interface SetupConfig {
   setupType?: SetupType
   tools: ToolId[]
   projectName: string
+  workspaceName?: string
   targetDir: string
   planningRepoPath?: string
+  repos?: Array<{ name: string; path: string }>
+  globalRef?: string
   force?: boolean | undefined
 }
 

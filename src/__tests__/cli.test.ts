@@ -219,6 +219,53 @@ describe('cli init integration', () => {
       fs.rmSync(tempHome, { recursive: true, force: true })
     }
   })
+
+  it('supports workspace init + workspace compile from planning repo', async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-workspace-cli-'))
+    const planningRepoDir = path.join(workspaceRoot, 'planning-repo')
+    const fedoraRepoDir = path.join(workspaceRoot, 'fedora')
+    const checkoutRepoDir = path.join(workspaceRoot, 'creator-checkout')
+
+    fs.mkdirSync(planningRepoDir, { recursive: true })
+    fs.mkdirSync(fedoraRepoDir, { recursive: true })
+    fs.mkdirSync(checkoutRepoDir, { recursive: true })
+
+    process.chdir(workspaceRoot)
+
+    await runInit([
+      '--scope',
+      'workspace',
+      '--planning-repo',
+      planningRepoDir,
+      '--repos',
+      '../fedora,../creator-checkout',
+      '--tools',
+      'opencode,claude-code',
+      '--name',
+      'teachable-workspace',
+      '--no-interactive',
+    ])
+
+    expect(fs.existsSync(path.join(planningRepoDir, '.ai-setup.json'))).toBe(true)
+    expect(fs.existsSync(path.join(fedoraRepoDir, '.ai-setup.json'))).toBe(false)
+    expect(fs.existsSync(path.join(checkoutRepoDir, '.ai-setup.json'))).toBe(false)
+
+    const opencodeAgent = path.join(planningRepoDir, '.opencode/agents/builder.md')
+    fs.rmSync(opencodeAgent)
+
+    process.chdir(planningRepoDir)
+    await runCompile(['--scope', 'workspace', '--tools', 'opencode'])
+
+    expect(fs.existsSync(opencodeAgent)).toBe(true)
+
+    const config = JSON.parse(fs.readFileSync(path.join(planningRepoDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.setupScope).toBe('workspace')
+    expect(config.config.workspaceName).toBe('teachable-workspace')
+    expect(config.config.repos).toEqual([
+      { name: 'fedora', path: '../fedora' },
+      { name: 'creator-checkout', path: '../creator-checkout' },
+    ])
+  })
 })
 
 describe('migration command options', () => {

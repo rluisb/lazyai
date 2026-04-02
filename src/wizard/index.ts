@@ -73,6 +73,7 @@ export async function runWizard(opts: {
     tools?: ToolId[]
     name?: string
     planningRepo?: string
+    repos?: string[]
   }
   targetDir: string
 }): Promise<void> {
@@ -91,6 +92,7 @@ export async function runWizard(opts: {
       setupType?: SetupType
       tools?: ToolId[]
       projectName?: string
+      workspaceName?: string
       planningRepoPath?: string
     } = manifest
       ? {
@@ -102,7 +104,7 @@ export async function runWizard(opts: {
         }
       : {}
 
-    const { setupScope, tools, projectName, planningRepoPath } = await runPhase1({
+    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos } = await runPhase1({
       interactive: opts.interactive,
       prior,
       cliOverrides: opts.cliOverrides,
@@ -110,8 +112,17 @@ export async function runWizard(opts: {
     })
 
     const userHomeDir = opts.homeDir ?? homedir()
-    const effectiveTargetDir = resolveTargetDirForScope(setupScope, opts.targetDir, userHomeDir)
+    const effectiveTargetDir =
+      setupScope === 'workspace'
+        ? (() => {
+            if (!planningRepoPath) {
+              throw Errors.invalidInput('workspace setup requires planningRepoPath')
+            }
+            return path.resolve(planningRepoPath)
+          })()
+        : resolveTargetDirForScope(setupScope, opts.targetDir, userHomeDir)
     const effectiveProjectName = projectName || (setupScope === 'global' ? 'global' : path.basename(effectiveTargetDir))
+    const globalRef = setupScope === 'workspace' && fileExists(path.join(userHomeDir, '.ai')) ? '~/.ai/' : undefined
     const installableTools = setupScope === 'global' ? tools.filter(isGlobalSupportedTool) : tools
 
     if (setupScope === 'global') {
@@ -129,8 +140,11 @@ export async function runWizard(opts: {
       setupType: setupScope,
       tools: installableTools,
       projectName: effectiveProjectName,
+      ...(workspaceName ? { workspaceName } : {}),
       targetDir: effectiveTargetDir,
       ...(planningRepoPath ? { planningRepoPath } : {}),
+      ...(repos && repos.length > 0 ? { repos } : {}),
+      ...(globalRef ? { globalRef } : {}),
       selections,
       interactive: opts.interactive,
       force: opts.force,
@@ -169,9 +183,10 @@ export async function runWizard(opts: {
 
     const installFiles = async (): Promise<void> => {
       await scaffoldDocs({
-          targetDir: effectiveTargetDir,
-          libraryDir,
-          docsDirs: ALL_DOCS_DIRS,
+        targetDir: effectiveTargetDir,
+        setupScope,
+        libraryDir,
+        docsDirs: ALL_DOCS_DIRS,
         docsAgents: ALL_DOCS_DIRS,
         fileRecords,
         strategy,
@@ -279,8 +294,11 @@ export async function runWizard(opts: {
         setupType: setupScope === 'global' ? 'project' : setupScope,
         tools: installableTools,
         projectName: effectiveProjectName,
+        ...(workspaceName ? { workspaceName } : {}),
         targetDir: effectiveTargetDir,
         ...(planningRepoPath ? { planningRepoPath } : {}),
+        ...(repos && repos.length > 0 ? { repos } : {}),
+        ...(globalRef ? { globalRef } : {}),
       },
       selections,
       files: fileRecords.map((file) => ({

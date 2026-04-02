@@ -82,7 +82,23 @@ describe('wizard phases 1 and 7', () => {
     })
 
     expect(result.setupScope).toBe('workspace')
-    expect(result.planningRepoPath).toBe('/tmp/planning-repo')
+    expect(result.planningRepoPath).toBe(path.resolve('/tmp/planning-repo'))
+    expect(result.projectName).toBe('planning-repo')
+  })
+
+  it('Phase 1: non-interactive workspace missing --planning-repo throws', async () => {
+    await expect(
+      runPhase1({
+        interactive: false,
+        prior: {},
+        cliOverrides: {
+          scope: 'workspace',
+          tools: ['pi'],
+          name: 'workspace-name',
+        },
+        targetDir: '/tmp',
+      }),
+    ).rejects.toThrow('--planning-repo is required in non-interactive mode when --scope=workspace')
   })
 
   it('Phase 1: non-interactive missing --scope throws required in non-interactive mode', async () => {

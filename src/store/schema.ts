@@ -46,8 +46,18 @@ export const configSchema = z.object({
   setupType: setupTypeSchema.optional(),
   tools: toolIdSchema.array(),
   projectName: z.string(),
+  workspaceName: z.string().optional(),
   targetDir: z.string(),
   planningRepoPath: z.string().optional(),
+  repos: z
+    .array(
+      z.object({
+        name: z.string(),
+        path: z.string(),
+      }),
+    )
+    .optional(),
+  globalRef: z.string().optional(),
 })
 
 export const wizardSelectionsSchema = z.object({

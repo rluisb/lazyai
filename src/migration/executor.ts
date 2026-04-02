@@ -14,7 +14,10 @@ import {
   MigrationAction,
   MigrationStats,
   MergeConflict,
+  ParsedSetup,
 } from './types.js';
+import type { FileRecord } from '../types.js';
+import { writeToCanonical } from './canonical-writer.js';
 
 export async function executeMigrationPlan(
   context: MigrationContext,
@@ -102,6 +105,118 @@ export async function executeMigrationPlan(
     // Fatal error - try to rollback if possible
     errors.push(`Fatal error during migration: ${error}`);
     
+    return buildMigrationResult({
+      success: false,
+      plan,
+      executedActions,
+      ...(backupPath ? { backupPath } : {}),
+      errors,
+      warnings,
+      stats,
+    });
+  }
+}
+
+export async function executeMigrationToCanonical(options: {
+  context: MigrationContext;
+  plan: MigrationPlan;
+  parsedSetups: ParsedSetup[];
+}): Promise<MigrationResult> {
+  const { context, plan, parsedSetups } = options;
+  const executedActions: MigrationAction[] = [];
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const stats: MigrationStats = {
+    filesCreated: 0,
+    filesModified: 0,
+    filesBackedUp: 0,
+    filesSkipped: 0,
+    conflictsResolved: 0,
+    conflictsUnresolved: 0,
+  };
+
+  const fileRecords: FileRecord[] = [];
+  let backupPath: string | undefined;
+
+  try {
+    if (!context.options.skipBackup) {
+      backupPath = await createBackupDir(context.targetPath);
+    }
+
+    if (backupPath) {
+      for (const parsed of parsedSetups) {
+        for (const file of parsed.files) {
+          const backupAction: MigrationAction = {
+            type: 'backup',
+            sourcePath: file.path,
+            targetPath: path.join('.ai-setup-backup', file.path),
+            description: `Backup ${file.path}`,
+            reason: 'Before canonical migration write',
+          };
+
+          try {
+            await executeBackupAction(backupAction, context, backupPath);
+            executedActions.push(backupAction);
+            stats.filesBackedUp += 1;
+          } catch {
+            // Some parsers include virtual files; skip silently.
+          }
+        }
+      }
+    }
+
+    for (const parsed of parsedSetups) {
+      const canonicalResult = await writeToCanonical({
+        targetDir: context.targetPath,
+        parsedSetup: parsed,
+        fileRecords,
+        dryRun: context.options.preview === true,
+      });
+
+      const createdPaths = [
+        ...canonicalResult.agents,
+        ...canonicalResult.skills,
+        ...canonicalResult.prompts,
+        ...canonicalResult.rules,
+        ...(canonicalResult.rootConfig ? [canonicalResult.rootConfig] : []),
+      ];
+
+      for (const targetPath of createdPaths) {
+        executedActions.push({
+          type: 'create',
+          targetPath,
+          description: `Create ${targetPath}`,
+          reason: `Canonical migration from ${parsed.metadata.adapter || 'adapter'}`,
+        });
+      }
+
+      for (const targetPath of canonicalResult.skipped) {
+        executedActions.push({
+          type: 'skip',
+          targetPath,
+          description: `Skip ${targetPath}`,
+          reason: 'File already exists',
+        });
+      }
+
+      stats.filesCreated += createdPaths.length;
+      stats.filesSkipped += canonicalResult.skipped.length;
+    }
+
+    await createAiSetupManifest(context, plan, executedActions, fileRecords);
+
+    return buildMigrationResult({
+      success: errors.length === 0,
+      plan,
+      executedActions,
+      ...(backupPath ? { backupPath } : {}),
+      errors,
+      warnings,
+      stats,
+    });
+  } catch (error) {
+    errors.push(`Fatal error during canonical migration: ${error}`);
+
     return buildMigrationResult({
       success: false,
       plan,
@@ -302,7 +417,8 @@ async function executeModifyAction(
 async function createAiSetupManifest(
   context: MigrationContext,
   plan: MigrationPlan,
-  executedActions: MigrationAction[]
+  executedActions: MigrationAction[],
+  fileRecords?: FileRecord[]
 ): Promise<void> {
   const manifestPath = path.join(context.targetPath, '.ai-setup.json');
   
@@ -330,16 +446,28 @@ async function createAiSetupManifest(
     }
   }
   
-  // Track migrated files
-  for (const action of executedActions) {
-    if (action.type === 'create' || action.type === 'modify') {
-      const existingFile = existingManifest.files.find((f: any) => f.path === action.targetPath);
-      if (!existingFile) {
-        existingManifest.files.push({
-          path: action.targetPath,
-          hash: 'migrated', // Will be updated by doctor
-          source: 'migration',
-        });
+  if (fileRecords && fileRecords.length > 0) {
+    for (const record of fileRecords) {
+      const existingFile = existingManifest.files.find((f: any) => f.path === record.path);
+      if (existingFile) {
+        existingFile.hash = record.hash;
+        existingFile.source = record.source;
+      } else {
+        existingManifest.files.push(record);
+      }
+    }
+  } else {
+    // Track migrated files
+    for (const action of executedActions) {
+      if (action.type === 'create' || action.type === 'modify') {
+        const existingFile = existingManifest.files.find((f: any) => f.path === action.targetPath);
+        if (!existingFile) {
+          existingManifest.files.push({
+            path: action.targetPath,
+            hash: 'migrated', // Will be updated by doctor
+            source: 'migration',
+          });
+        }
       }
     }
   }

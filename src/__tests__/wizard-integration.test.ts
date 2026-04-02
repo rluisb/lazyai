@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -79,6 +79,28 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(false)
     expect(existsSync(path.join(tempDir, '.github', 'copilot-instructions.md'))).toBe(false)
+  })
+
+  it('absorbs existing tool files into .ai when absorb is enabled', async () => {
+    mkdirSync(path.join(tempDir, '.opencode', 'agents'), { recursive: true })
+    const customAgentPath = path.join(tempDir, '.opencode', 'agents', 'custom-agent.md')
+    const customAgentContent = '# Custom Agent\n\nKeep my custom instructions.'
+    writeFileSync(customAgentPath, customAgentContent, 'utf-8')
+
+    await runWizard({
+      interactive: false,
+      absorb: true,
+      cliOverrides: {
+        scope: 'project',
+        tools: ['opencode'],
+        name: 'test-project',
+      },
+      targetDir: tempDir,
+    })
+
+    const canonicalAgentPath = path.join(tempDir, '.ai', 'agents', 'custom-agent.md')
+    expect(existsSync(canonicalAgentPath)).toBe(true)
+    expect(readFileSync(canonicalAgentPath, 'utf-8')).toContain('Keep my custom instructions.')
   })
 
   it('re-run preserves manifest selections field', async () => {

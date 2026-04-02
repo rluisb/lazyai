@@ -12,6 +12,7 @@ export interface MigrationCommandOptions {
   skipBackup?: boolean
   interactive?: boolean
   yes?: boolean
+  canonical?: boolean
 }
 
 const ADAPTER_LABELS: Record<string, string> = {
@@ -67,6 +68,7 @@ export async function runMigrationCommand(
   const analysisResult = await importSetup({
     path: resolvedSource,
     preview: true,
+    canonicalOutput: options.canonical !== false,
     mergeStrategy: strategy,
     ...(options.verbose !== undefined ? { verbose: options.verbose } : {}),
     ...(options.skipBackup !== undefined ? { skipBackup: options.skipBackup } : {}),
@@ -107,6 +109,7 @@ export async function runMigrationCommand(
   const executeResult = await importSetup({
     path: resolvedSource,
     preview: false,
+    canonicalOutput: options.canonical !== false,
     mergeStrategy: strategy,
     ...(options.verbose !== undefined ? { verbose: options.verbose } : {}),
     ...(options.skipBackup !== undefined ? { skipBackup: options.skipBackup } : {}),

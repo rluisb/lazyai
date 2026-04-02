@@ -58,7 +58,7 @@ Then ask your clarifying questions. Then produce the document.
 | ADR | docs/templates/adr-template.md | docs/adrs/NNN-*.md |
 
 ## Behavior
--### Multi-Plan Generation
+### Multi-Plan Generation
 For complex features (3+ implementation phases or significant architectural decisions):
 1. Generate 2 alternative plan outlines
 2. Evaluate each against: delivery speed, risk, reversibility, testing complexity

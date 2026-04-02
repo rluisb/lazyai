@@ -25,6 +25,20 @@ Output (shape):
 - Tests: client.test.ts (header present), middleware.test.ts (context fallback)
 ```
 
+```
+Input (summary): Create retry policy helper for webhook delivery.
+Output (shape):
+- Changes: new file retry-policy.ts with capped exponential backoff
+- Tests: retry-policy.test.ts covers cap, jitter range, and max attempts
+```
+
+```
+Input (summary): Modify user sync to skip deactivated records.
+Output (shape):
+- Changes: sync-service.ts adds active-status guard before upsert
+- Tests: sync-service.test.ts verifies deactivated records are ignored
+```
+
 ## Common Mistakes to Avoid
 - ❌ Implementing features not explicitly requested (speculation)
 - ❌ Skipping test verification before marking complete

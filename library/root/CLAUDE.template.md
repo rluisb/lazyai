@@ -176,8 +176,20 @@ Example references:
 
 ## Recovery Procedures
 
-- If tests fail: [YOUR_RECOVERY_PROCEDURE]
-- If build breaks: [YOUR_RECOVERY_PROCEDURE]
+- If tests fail:
+  1. `git stash` to save current changes
+  2. `git checkout -- <file>` to restore last known good state
+  3. Re-read the failing test/error output carefully
+  4. Identify the root cause before attempting a fix
+  5. Apply minimal fix targeting only the root cause
+  6. Run tests again to verify the fix doesn't introduce new failures
+- If build breaks:
+  1. `git stash` to save current changes
+  2. `git checkout -- <file>` to restore last known good state
+  3. Re-read the failing test/error output carefully
+  4. Identify the root cause before attempting a fix
+  5. Apply minimal fix targeting only the root cause
+  6. Run tests again to verify the fix doesn't introduce new failures
 
 ## Memory & Context
 

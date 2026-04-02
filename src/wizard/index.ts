@@ -36,6 +36,11 @@ import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { planFiles } from './planner.js'
 import { AdapterRegistry } from '../adapters/registry.js'
+import {
+  isGlobalSupportedTool,
+  logUnsupportedGlobalTool,
+  resolveGlobalToolTargetDir,
+} from '../utils/global-paths.js'
 
 function buildDefaultSelections(targetDir: string): WizardSelections {
   const hasGitDir = fileExists(path.join(targetDir, '.git'))
@@ -56,35 +61,6 @@ function resolveTargetDirForScope(scope: SetupScope, targetDir: string, homeDir:
   }
 
   return targetDir
-}
-
-function resolveGlobalToolTargetDir(tool: ToolId, homeDir: string): string | null {
-  if (tool === 'opencode') {
-    return path.join(homeDir, '.config', 'opencode')
-  }
-
-  if (tool === 'claude-code') {
-    return path.join(homeDir, '.claude')
-  }
-
-  return null
-}
-
-function logUnsupportedGlobalTool(tool: ToolId): void {
-  const messages: Partial<Record<ToolId, string>> = {
-    copilot: "Copilot doesn't support file-based global config. Use project scope instead.",
-    gemini: "Gemini doesn't support file-based global config. Use project scope instead.",
-    pi: "Pi doesn't support file-based global config. Use project scope instead.",
-  }
-
-  const message = messages[tool]
-  if (message) {
-    console.info(message)
-  }
-}
-
-function isGlobalSupportedTool(tool: ToolId): boolean {
-  return tool === 'opencode' || tool === 'claude-code'
 }
 
 export async function runWizard(opts: {

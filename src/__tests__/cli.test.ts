@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest'
+import { vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -19,6 +20,11 @@ describe('cli init integration', () => {
   const runInit = async (args: string[]): Promise<void> => {
     const program = createProgram()
     await program.parseAsync(['node', 'ai-setup', 'init', ...args])
+  }
+
+  const runCompile = async (args: string[] = []): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'compile', ...args])
   }
 
   beforeEach(() => {
@@ -144,6 +150,74 @@ describe('cli init integration', () => {
     expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
+  })
+
+  it('compile restores tool files from store without modifying store file', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode,claude-code',
+      '--name',
+      'compile-project-test',
+      '--no-interactive',
+    ])
+
+    const opencodeAgent = path.join(tempDir, '.opencode/agents/builder.md')
+    const claudeAgent = path.join(tempDir, '.claude/agents/builder.md')
+    fs.rmSync(opencodeAgent)
+    fs.rmSync(claudeAgent)
+
+    const storePath = path.join(tempDir, '.ai-setup.json')
+    const beforeStore = fs.readFileSync(storePath, 'utf-8')
+
+    await runCompile(['--tools', 'opencode'])
+
+    const afterStore = fs.readFileSync(storePath, 'utf-8')
+    expect(afterStore).toBe(beforeStore)
+    expect(fs.existsSync(opencodeAgent)).toBe(true)
+    expect(fs.existsSync(claudeAgent)).toBe(false)
+  })
+
+  it('compile global uses native global target paths and logs unsupported tools', async () => {
+    const tempDir = makeTempRepo()
+    const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    const originalHome = process.env.HOME
+    process.env.HOME = tempHome
+    process.chdir(tempDir)
+
+    try {
+      await runInit([
+        '--scope',
+        'global',
+        '--tools',
+        'opencode,claude-code,copilot',
+        '--no-interactive',
+      ])
+
+      const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+      fs.rmSync(opencodeAgent)
+      fs.rmSync(claudeAgent, { recursive: true, force: true })
+
+      const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+      await runCompile(['--scope', 'global', '--tools', 'opencode,copilot'])
+
+      expect(fs.existsSync(opencodeAgent)).toBe(true)
+      expect(fs.existsSync(claudeAgent)).toBe(false)
+      expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
+      infoSpy.mockRestore()
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env.HOME
+      } else {
+        process.env.HOME = originalHome
+      }
+      fs.rmSync(tempHome, { recursive: true, force: true })
+    }
   })
 })
 

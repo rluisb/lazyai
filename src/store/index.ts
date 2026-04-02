@@ -1,8 +1,10 @@
 import { Low, Memory } from 'lowdb'
 import { JSONFile } from 'lowdb/node'
 import { join } from 'path'
+import { existsSync, readFileSync } from 'node:fs'
 import { defaultStore, type StoreData, type Operation } from './schema.js'
 import { migrate } from './migrations.js'
+import { Errors } from '../errors/index.js'
 
 const STORE_FILE_NAME = '.ai-setup.json'
 
@@ -39,6 +41,21 @@ export async function createTestStore(data?: Partial<StoreData>): Promise<Low<St
 export async function readStore(targetDir: string): Promise<StoreData> {
   const db = await createStore(targetDir)
   return db.data
+}
+
+export async function readStoreReadonly(targetDir: string): Promise<StoreData> {
+  const storePath = join(targetDir, STORE_FILE_NAME)
+
+  if (!existsSync(storePath)) {
+    throw Errors.manifestNotFound(targetDir)
+  }
+
+  try {
+    const raw = JSON.parse(readFileSync(storePath, 'utf-8')) as unknown
+    return migrate(targetDir, raw)
+  } catch (error) {
+    throw Errors.manifestCorrupt(targetDir, error instanceof Error ? error : new Error(String(error)))
+  }
 }
 
 export async function writeStore(targetDir: string, data: StoreData): Promise<void> {

@@ -10,20 +10,34 @@ import type {
   RuleId,
   InfraId,
 } from '../types.js'
-import { fileExists, readFile } from './files.js'
+import { fileExists } from './files.js'
+import { readStore } from '../store/index.js'
 
 const MANIFEST_FILE = '.ai-setup.json'
 
 /**
- * Read existing .ai-setup.json manifest from a target directory.
- * Returns null if file is absent or contains invalid JSON.
+ * @deprecated Use readStore() from src/store/index.ts directly.
+ * This wrapper remains only for backward compatibility and will be removed in a future version.
  */
 export async function readManifest(targetDir: string): Promise<AiSetupConfig | null> {
   const manifestPath = join(targetDir, MANIFEST_FILE)
-  if (!(await fileExists(manifestPath))) return null
+  if (!fileExists(manifestPath)) return null
+
   try {
-    const raw = await readFile(manifestPath)
-    return JSON.parse(raw) as AiSetupConfig
+    const data = await readStore(targetDir)
+    return {
+      version: data.meta.cliVersion,
+      setupType: data.config.setupType,
+      tools: data.config.tools,
+      projectName: data.config.projectName,
+      installedAt: data.meta.installedAt,
+      files: data.files.map((file) => ({
+        path: file.path,
+        hash: file.hash,
+        source: file.source,
+      })),
+      selections: data.selections,
+    }
   } catch {
     return null
   }

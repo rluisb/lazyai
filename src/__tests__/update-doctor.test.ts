@@ -93,14 +93,7 @@ describe('update and doctor commands', () => {
     const targetPath = path.join(tempDir, target.path)
     fs.writeFileSync(targetPath, `${fs.readFileSync(targetPath, 'utf-8')}\nmutated\n`, 'utf-8')
 
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: string | number | null | undefined) => {
-      throw new Error(`process.exit:${code}`)
-    }) as never)
-
     const program = createProgram()
-    await expect(program.parseAsync(['node', 'ai-setup', 'doctor'])).rejects.toThrow('process.exit:1')
-    expect(exitSpy).toHaveBeenCalledWith(1)
-
-    exitSpy.mockRestore()
+    await expect(program.parseAsync(['node', 'ai-setup', 'doctor'])).rejects.toThrow('Doctor found 1 integrity issue(s)')
   })
 })

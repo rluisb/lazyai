@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { Errors } from '../errors/index.js'
 
 
 /**
@@ -12,7 +13,7 @@ export function findPackageRoot(startDir: string): string {
   while (true) {
     if (fs.existsSync(path.join(dir, 'package.json'))) return dir
     const parent = path.dirname(dir)
-    if (parent === dir) throw new Error(`Could not find package root from: ${startDir}`)
+    if (parent === dir) throw Errors.dirNotFound(`Could not find package root from: ${startDir}`)
     dir = parent
   }
 }
@@ -29,7 +30,7 @@ export function ensureDir(dirPath: string): void {
   try {
     fs.mkdirSync(dirPath, { recursive: true })
   } catch (err) {
-    throw new Error(`Cannot create directory ${dirPath}: ${(err as Error).message}`)
+    throw Errors.filePermission(dirPath, `create directory (${(err as Error).message})`)
   }
 }
 
@@ -46,7 +47,7 @@ export function readFile(filePath: string): string {
   try {
     return fs.readFileSync(filePath, 'utf-8')
   } catch (err) {
-    throw new Error(`Cannot read ${filePath}: ${(err as Error).message}`)
+    throw Errors.filePermission(filePath, `read (${(err as Error).message})`)
   }
 }
 
@@ -55,7 +56,7 @@ export function writeFile(filePath: string, content: string): void {
     ensureDir(path.dirname(filePath))
     fs.writeFileSync(filePath, content, 'utf-8')
   } catch (err) {
-    throw new Error(`Cannot write to ${filePath}: ${(err as Error).message}`)
+    throw Errors.filePermission(filePath, `write (${(err as Error).message})`)
   }
 }
 
@@ -64,13 +65,13 @@ export function copyFile(src: string, dest: string): void {
     ensureDir(path.dirname(dest))
     fs.copyFileSync(src, dest)
   } catch (err) {
-    throw new Error(`Cannot copy ${src} → ${dest}: ${(err as Error).message}`)
+    throw Errors.unknown(`copy failed: ${src} → ${dest} (${(err as Error).message})`)
   }
 }
 
 export function copyDir(src: string, dest: string): void {
   if (!fileExists(src)) {
-    throw new Error(`Source directory does not exist: ${src}`)
+    throw Errors.dirNotFound(src)
   }
   ensureDir(dest)
   const entries = fs.readdirSync(src, { withFileTypes: true })
@@ -90,7 +91,7 @@ export function fileHash(filePath: string): string {
     const content = fs.readFileSync(filePath)
     return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16)
   } catch (err) {
-    throw new Error(`Cannot hash ${filePath}: ${(err as Error).message}`)
+    throw Errors.filePermission(filePath, `hash (${(err as Error).message})`)
   }
 }
 

@@ -78,18 +78,18 @@ describe('cli init integration', () => {
       expect(fs.existsSync(path.join(tempDir, rel)), `${rel} should exist`).toBe(true)
     }
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
-    expect(config.projectName).toBe('integration-test')
-    expect(config.setupType).toBe('project')
-    expect(config.tools).toEqual(['pi', 'opencode'])
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.projectName).toBe('integration-test')
+    expect(config.config.setupType).toBe('project')
+    expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(config.files.length).toBeGreaterThan(20)
-    expect(config.files.some((f) => f.path === '.pi/agents/builder.md')).toBe(true)
-    expect(config.files.some((f) => f.path === '.opencode/agents/builder.md')).toBe(true)
-    expect(config.files.some((f) => f.path === '.pi/skills/research.md')).toBe(true)
-    expect(config.files.some((f) => f.path === '.opencode/commands/research.md')).toBe(true)
-    expect(config.files.some((f) => f.path === '.opencode/templates/research.md')).toBe(true)
-    expect(config.files.some((f) => f.path === 'docs/templates/task.md')).toBe(true)
-    expect(config.files.some((f) => f.path === '.git/hooks/pre-commit')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.pi/agents/builder.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.pi/skills/research.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.opencode/commands/research.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.opencode/templates/research.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === 'docs/templates/task.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })
 
   it('re-run with existing .ai-setup.json succeeds in non-interactive mode', async () => {
@@ -109,10 +109,10 @@ describe('cli init integration', () => {
     await runInit(args)
     await runInit([...args, '--force'])
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
-    expect(config.projectName).toBe('rerun-test')
-    expect(config.setupType).toBe('project')
-    expect(config.tools).toEqual(['pi', 'opencode'])
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.projectName).toBe('rerun-test')
+    expect(config.config.setupType).toBe('project')
+    expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
   }, 15000)
@@ -140,10 +140,10 @@ describe('cli init integration', () => {
     expect(fs.existsSync(path.join(tempDir, '.pi/agents'))).toBe(false)
     expect(fs.existsSync(path.join(tempDir, '.pi/skills'))).toBe(false)
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as AiSetupConfig
-    expect(config.tools).toEqual(['opencode'])
-    expect(config.files.some((f) => f.path.startsWith('.opencode/'))).toBe(true)
-    expect(config.files.some((f) => f.path.startsWith('.pi/'))).toBe(false)
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(config.config.tools).toEqual(['opencode'])
+    expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
   })
 })
 

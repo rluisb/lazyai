@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts'
 import { fileExists, fileHash } from './files.js'
 import type { ConflictStrategy } from '../types.js'
+import { Errors } from '../errors/index.js'
 
 export type ConflictResolution = 'overwrite' | 'skip' | 'backup-and-overwrite'
 
@@ -44,7 +45,7 @@ export async function resolveConflict(
 
     if (p.isCancel(replaceCustomized)) {
       p.cancel('Operation cancelled.')
-      process.exit(0)
+      throw Errors.userCancelled()
     }
 
     return replaceCustomized ? 'backup-and-overwrite' : 'skip'
@@ -56,7 +57,7 @@ export async function resolveConflict(
 
   if (p.isCancel(replaceExisting)) {
     p.cancel('Operation cancelled.')
-    process.exit(0)
+    throw Errors.userCancelled()
   }
 
   return replaceExisting ? 'backup-and-overwrite' : 'skip'

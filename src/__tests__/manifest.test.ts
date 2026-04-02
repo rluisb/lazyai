@@ -45,7 +45,13 @@ describe('readManifest', () => {
     const manifest = buildManifest(['docs/features/example.md'])
     fs.writeFileSync(path.join(tempDir, '.ai-setup.json'), JSON.stringify(manifest), 'utf-8')
 
-    await expect(readManifest(tempDir)).resolves.toEqual(manifest)
+    const result = await readManifest(tempDir)
+    expect(result?.version).toBe('1.0.0')
+    expect(result?.setupType).toBe('project')
+    expect(result?.tools).toEqual(['opencode'])
+    expect(result?.projectName).toBe('test-project')
+    expect(result?.files).toHaveLength(1)
+    expect(result?.files?.[0]?.path).toBe('docs/features/example.md')
   })
 })
 

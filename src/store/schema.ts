@@ -1,0 +1,147 @@
+import { z } from 'zod'
+
+export const CURRENT_SCHEMA_VERSION = 1
+
+export const setupTypeSchema = z.enum(['project', 'workspace'])
+export const toolIdSchema = z.enum(['pi', 'opencode', 'claude-code', 'gemini', 'copilot'])
+export const agentIdSchema = z.enum(['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout'])
+export const skillIdSchema = z.enum([
+  'anti-speculation',
+  'implement',
+  'iterate',
+  'lessons-learned',
+  'memory-write',
+  'parallel-execution',
+  'plan',
+  'research',
+  'tdd-loop',
+])
+export const promptIdSchema = z.enum(['compact', 'implement', 'local-example', 'plan', 'research'])
+export const templateIdSchema = z.enum([
+  'adr',
+  'bugfix-rca-template',
+  'code-review-template',
+  'postmortem-template',
+  'prd-template',
+  'progress',
+  'standard',
+  'task',
+  'tasks-template',
+  'tech-debt-template',
+  'techspec-template',
+])
+export const ruleIdSchema = z.enum(['access', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow'])
+export const infraIdSchema = z.enum(['pre-commit', 'compliance', 'KNOWLEDGE_MAP'])
+export const docsDirIdSchema = z.enum([
+  'features',
+  'bugfixes',
+  'refactors',
+  'tech-debt',
+  'adrs',
+  'memory',
+  'prompts',
+  'standards',
+  'templates',
+  'rules',
+])
+
+export const metaSchema = z.object({
+  schemaVersion: z.number(),
+  cliVersion: z.string(),
+  installedAt: z.string(),
+  lastUpdatedAt: z.string(),
+})
+
+export const configSchema = z.object({
+  setupType: setupTypeSchema,
+  tools: toolIdSchema.array(),
+  projectName: z.string(),
+  targetDir: z.string(),
+})
+
+export const wizardSelectionsSchema = z.object({
+  docsDirs: docsDirIdSchema.array(),
+  docsAgents: docsDirIdSchema.array(),
+  templates: templateIdSchema.array(),
+  rules: ruleIdSchema.array(),
+  agents: agentIdSchema.array(),
+  skills: skillIdSchema.array(),
+  prompts: promptIdSchema.array(),
+  infra: infraIdSchema.array(),
+})
+
+export const trackedFileSchema = z.object({
+  path: z.string(),
+  hash: z.string(),
+  source: z.string(),
+  status: z.enum(['installed', 'modified', 'missing', 'conflict']).optional(),
+  installedAt: z.string().optional(),
+  lastCheckedAt: z.string().optional(),
+})
+
+export const syncSchema = z.object({
+  lastSyncAt: z.string(),
+  dirty: z.boolean(),
+})
+
+export const operationSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  timestamp: z.string(),
+  filesAffected: z.array(z.string()),
+  result: z.enum(['success', 'failure', 'partial']),
+  backupPaths: z.array(z.string()).optional(),
+  error: z.string().optional(),
+})
+
+export const storeDataSchema = z.object({
+  meta: metaSchema,
+  config: configSchema,
+  selections: wizardSelectionsSchema,
+  files: trackedFileSchema.array(),
+  sync: syncSchema,
+  operations: operationSchema.array(),
+})
+
+export type StoreData = z.infer<typeof storeDataSchema>
+export type TrackedFile = z.infer<typeof trackedFileSchema>
+export type Operation = z.infer<typeof operationSchema>
+export type WizardSelections = z.infer<typeof wizardSelectionsSchema>
+export type Meta = z.infer<typeof metaSchema>
+export type Config = z.infer<typeof configSchema>
+export type Sync = z.infer<typeof syncSchema>
+
+export function defaultStore(): StoreData {
+  const now = new Date().toISOString()
+
+  return {
+    meta: {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      cliVersion: '0.1.0',
+      installedAt: now,
+      lastUpdatedAt: now,
+    },
+    config: {
+      setupType: 'project',
+      tools: [],
+      projectName: '',
+      targetDir: '',
+    },
+    selections: {
+      docsDirs: [],
+      docsAgents: [],
+      templates: [],
+      rules: [],
+      agents: [],
+      skills: [],
+      prompts: [],
+      infra: [],
+    },
+    files: [],
+    sync: {
+      lastSyncAt: now,
+      dirty: true,
+    },
+    operations: [],
+  }
+}

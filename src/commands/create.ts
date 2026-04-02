@@ -2,6 +2,7 @@ import type { Command } from 'commander'
 import * as p from '@clack/prompts'
 import { join } from 'node:path'
 import type { ArtifactType } from '../types.js'
+import { Errors } from '../errors/index.js'
 import { fileExists, writeFile } from '../utils/files.js'
 import { validateRequiredText } from '../utils/validation.js'
 import { GeneratorRegistry } from '../generators/registry.js'
@@ -32,12 +33,12 @@ function parseArtifactType(value: string): ArtifactType {
   if (normalized === 'agent' || normalized === 'skill' || normalized === 'command' || normalized === 'prompt' || normalized === 'template' || normalized === 'workflow') {
     return normalized
   }
-  throw new Error(`Invalid artifact type: ${value}`)
+  throw Errors.invalidInput(`invalid artifact type: ${value}`)
 }
 
 function ensurePromptText(value: string | symbol): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error('Prompt value cannot be empty')
+    throw Errors.invalidInput('prompt value cannot be empty')
   }
   return value
 }
@@ -55,7 +56,7 @@ async function askText(message: string, placeholder?: string): Promise<string> {
   const result = await p.text(textOptions)
   if (p.isCancel(result)) {
     p.cancel('Create cancelled.')
-    process.exit(0)
+    throw Errors.userCancelled()
   }
   return ensurePromptText(result)
 }
@@ -92,7 +93,7 @@ async function buildWorkflowStepsInteractively(targetDir: string): Promise<strin
 
     if (p.isCancel(selected)) {
       p.cancel('Create cancelled.')
-      process.exit(0)
+      throw Errors.userCancelled()
     }
 
     const refs = Array.isArray(selected) ? selected.join(',') : ''
@@ -106,7 +107,7 @@ async function buildWorkflowStepsInteractively(targetDir: string): Promise<strin
 
     if (p.isCancel(addAnother)) {
       p.cancel('Create cancelled.')
-      process.exit(0)
+      throw Errors.userCancelled()
     }
 
     keepAdding = Boolean(addAnother)
@@ -157,14 +158,14 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
   const generator = registry.get(type)
 
   if (!generator) {
-    throw new Error(`No generator registered for type: ${type}`)
+    throw Errors.missingDependency(`generator:${type}`)
   }
 
   const targetDir = process.cwd()
   const name = positionalName ?? opts.name ?? (opts.interactive ? await askText(`Name for ${type}?`) : undefined)
 
   if (!name) {
-    throw new Error(`A name is required for create ${type} in non-interactive mode`) 
+    throw Errors.invalidInput(`a name is required for create ${type} in non-interactive mode`)
   }
 
   const answers = extractAnswersFromOptions(type, opts)
@@ -195,7 +196,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
 
         if (p.isCancel(result)) {
           p.cancel('Create cancelled.')
-          process.exit(0)
+          throw Errors.userCancelled()
         }
 
         if (result || question.required) {
@@ -212,7 +213,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
 
         if (p.isCancel(result)) {
           p.cancel('Create cancelled.')
-          process.exit(0)
+          throw Errors.userCancelled()
         }
 
         answers[question.key] = result
@@ -227,7 +228,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
 
         if (p.isCancel(result)) {
           p.cancel('Create cancelled.')
-          process.exit(0)
+          throw Errors.userCancelled()
         }
 
         answers[question.key] = result
@@ -262,7 +263,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
   for (const file of generated) {
     const outputPath = join(targetDir, file.path)
     if (fileExists(outputPath) && !opts.force) {
-      throw new Error(`File already exists: ${file.path} (use --force to overwrite)`)
+      throw Errors.invalidInput(`file already exists: ${file.path} (use --force to overwrite)`)
     }
     writeFile(outputPath, file.content)
   }
@@ -346,14 +347,14 @@ export function registerCreate(program: Command): void {
 
         if (p.isCancel(selected)) {
           p.cancel('Create cancelled.')
-          process.exit(0)
+          throw Errors.userCancelled()
         }
 
         selectedType = String(selected)
       }
 
       if (!selectedType) {
-        throw new Error('Type is required in non-interactive mode (use --type)')
+        throw Errors.invalidInput('type is required in non-interactive mode (use --type)')
       }
 
       await runCreate(parseArtifactType(selectedType), undefined, opts)

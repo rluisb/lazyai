@@ -31,6 +31,11 @@ describe('CLI End-to-End', () => {
     expect(output.trim()).toMatch(/^[0-9]+\.[0-9]+\.[0-9]+$/)
   })
 
+  it('accepts --verbose flag', () => {
+    const output = execSync(`node ${binPath} --verbose --help`).toString()
+    expect(output).toContain('--verbose')
+  })
+
   it('fails gracefully on unknown command', () => {
     try {
       execSync(`node ${binPath} potato`, { stdio: 'pipe' })

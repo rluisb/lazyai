@@ -50,6 +50,12 @@ Then execute each attack vector and report results.
 7. **Business logic abuse** — negative amounts, duplicate submissions
 8. **Error leakage** — does error expose internal details?
 
+### Adversarial Prompt Checks
+- Review agent configuration files for injection vulnerabilities
+- Test that user-provided content cannot override agent instructions
+- Verify privilege boundaries between auto and semi modes
+- Check for secret exposure in agent outputs
+
 ## Output Format
 
 ```

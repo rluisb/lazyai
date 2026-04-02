@@ -31,7 +31,7 @@ export const templateIdSchema = z.enum([
   'tech-debt-template',
   'techspec-template',
 ])
-export const ruleIdSchema = z.enum(['access', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow'])
+export const ruleIdSchema = z.enum(['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow'])
 export const infraIdSchema = z.enum(['pre-commit', 'compliance', 'KNOWLEDGE_MAP'])
 
 export const metaSchema = z.object({

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -47,6 +47,11 @@ describe('MCP scaffold and compile', () => {
               url: 'https://example.com/mcp',
               headers: { REMOTE_API_KEY: '${REMOTE_API_KEY}' },
               enabled: false,
+            },
+            remoteEnabled: {
+              url: 'https://example.com/remote-enabled',
+              headers: { REMOTE_ENABLED_API_KEY: '${REMOTE_ENABLED_API_KEY}' },
+              enabled: true,
             },
           },
         },
@@ -137,7 +142,9 @@ describe('MCP scaffold and compile', () => {
     })
 
     const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled'])
+    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
+    expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+    expect(mcpJson.mcpServers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
 
     const opencodeMcp = JSON.parse(readFile(path.join(targetDir, '.opencode', 'mcp-servers.json')))
     expect(opencodeMcp.stdioEnabled.type).toBe('local')
@@ -147,7 +154,7 @@ describe('MCP scaffold and compile', () => {
     expect(opencodeMcp.remoteDisabled.headers.REMOTE_API_KEY).toBe('{env:REMOTE_API_KEY}')
   })
 
-  it('compileMcp generates .vscode/mcp.json for copilot with stdio type', async () => {
+  it('compileMcp generates .vscode/mcp.json for copilot with stdio and remote types', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -165,11 +172,16 @@ describe('MCP scaffold and compile', () => {
 
     const copilot = JSON.parse(readFile(path.join(targetDir, '.vscode', 'mcp.json')))
     expect(copilot.servers.stdioEnabled.type).toBe('stdio')
+    expect(copilot.servers.remoteEnabled.type).toBe('sse')
+    expect(copilot.servers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+    expect(copilot.servers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
     expect(copilot.servers.remoteDisabled).toBeUndefined()
     expect(copilot.servers.stdioDisabled).toBeUndefined()
   })
 
-  it('compileMcp generates .gemini/settings.json with $VAR env syntax and includeTools', async () => {
+  it('compileMcp generates .gemini/settings.json with $VAR env syntax and warns on remote servers', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -187,8 +199,11 @@ describe('MCP scaffold and compile', () => {
 
     const gemini = JSON.parse(readFile(path.join(targetDir, '.gemini', 'settings.json')))
     expect(gemini.mcpServers.stdioEnabled.env.API_KEY).toBe('$API_KEY')
-    expect(gemini.mcpServers.stdioEnabled.includeTools).toEqual(['alpha', 'beta'])
+    expect(gemini.mcpServers.stdioEnabled.includeTools).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledWith('⚠️  Skipping remote server "remoteEnabled" for gemini (not supported)')
+    warnSpy.mockRestore()
     expect(gemini.mcpServers.remoteDisabled).toBeUndefined()
+    expect(gemini.mcpServers.remoteEnabled).toBeUndefined()
   })
 
   it('compileMcp generates .mcp.json for claude-code', async () => {
@@ -208,6 +223,7 @@ describe('MCP scaffold and compile', () => {
     })
 
     const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled'])
+    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
+    expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
   })
 })

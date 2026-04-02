@@ -54,7 +54,7 @@ export type AgentId = 'builder' | 'documenter' | 'planner' | 'red-team' | 'revie
 export type SkillId = 'anti-speculation' | 'implement' | 'iterate' | 'lessons-learned' | 'memory-write' | 'parallel-execution' | 'plan' | 'research' | 'tdd-loop'
 export type PromptId = 'compact' | 'implement' | 'local-example' | 'plan' | 'research'
 export type TemplateId = 'adr' | 'bugfix-rca-template' | 'code-review-template' | 'postmortem-template' | 'prd-template' | 'progress' | 'standard' | 'task' | 'tasks-template' | 'tech-debt-template' | 'techspec-template'
-export type RuleId = 'access' | 'code-style' | 'cost' | 'review' | 'security' | 'testing' | 'workflow'
+export type RuleId = 'access' | 'agent-security' | 'code-style' | 'cost' | 'review' | 'security' | 'testing' | 'workflow'
 export type ToolAgentId = 'agents-dir' | 'root-dir' | 'skills-dir' | 'templates-dir'
 export type InfraId = 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP'
 
@@ -62,7 +62,7 @@ export const ALL_AGENTS: AgentId[] = ['builder', 'documenter', 'planner', 'red-t
 export const ALL_SKILLS: SkillId[] = ['anti-speculation', 'implement', 'iterate', 'lessons-learned', 'memory-write', 'parallel-execution', 'plan', 'research', 'tdd-loop']
 export const ALL_PROMPTS: PromptId[] = ['compact', 'implement', 'local-example', 'plan', 'research']
 export const ALL_TEMPLATES: TemplateId[] = ['adr', 'bugfix-rca-template', 'code-review-template', 'postmortem-template', 'prd-template', 'progress', 'standard', 'task', 'tasks-template', 'tech-debt-template', 'techspec-template']
-export const ALL_RULES: RuleId[] = ['access', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow']
+export const ALL_RULES: RuleId[] = ['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow']
 export const ALL_INFRA: InfraId[] = ['pre-commit', 'compliance', 'KNOWLEDGE_MAP']
 export const ALL_DOCS_DIRS: string[] = ['features', 'bugfixes', 'refactors', 'tech-debt', 'adrs', 'memory', 'prompts', 'standards', 'templates', 'rules']
 

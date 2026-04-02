@@ -41,6 +41,11 @@ function toMcpJson(servers: Record<string, McpServer>): Record<string, unknown> 
   const mcpServers: Record<string, unknown> = {}
   for (const [name, server] of Object.entries(servers)) {
     if (server.url) {
+      const entry: Record<string, unknown> = {
+        url: server.url,
+      }
+      if (server.headers) entry.headers = server.headers
+      mcpServers[name] = entry
       continue
     }
     const entry: Record<string, unknown> = {
@@ -80,7 +85,15 @@ function toOpenCodeJsonc(allServers: Record<string, McpServer>): Record<string, 
 function toCopilotMcp(servers: Record<string, McpServer>): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   for (const [name, server] of Object.entries(servers)) {
-    if (server.url) continue
+    if (server.url) {
+      const entry: Record<string, unknown> = {
+        type: 'sse',
+        url: server.url,
+      }
+      if (server.headers) entry.headers = server.headers
+      result[name] = entry
+      continue
+    }
     const entry: Record<string, unknown> = {
       type: 'stdio',
       command: server.command,
@@ -95,13 +108,15 @@ function toCopilotMcp(servers: Record<string, McpServer>): Record<string, unknow
 function toGeminiSettings(servers: Record<string, McpServer>): Record<string, unknown> {
   const mcpServers: Record<string, unknown> = {}
   for (const [name, server] of Object.entries(servers)) {
-    if (server.url) continue
+    if (server.url) {
+      console.warn(`⚠️  Skipping remote server "${name}" for gemini (not supported)`)
+      continue
+    }
     const entry: Record<string, unknown> = {
       command: server.command,
       args: server.args,
     }
     if (server.env) entry.env = transformEnvSyntax(server.env, '$$$1')
-    if (server.tools) entry.includeTools = server.tools
     mcpServers[name] = entry
   }
   return { mcpServers }

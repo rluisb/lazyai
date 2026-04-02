@@ -5,6 +5,13 @@
 - [ ] All public APIs must have tests
 - [ ] No breaking changes without deprecation cycle
 
+<!-- Example hard constraints:
+- [ ] All database queries must be parameterized (no string concatenation)
+- [ ] Authentication changes require security review
+- [ ] No direct DOM manipulation outside React components
+- [ ] API response schemas must be validated with zod/joi
+-->
+
 ## Soft Constraints (Prefer Unless Justified)
 - [ ] Prefer composition over inheritance
 - [ ] Keep functions under 50 lines
@@ -21,3 +28,6 @@
 3. **Style Rail**: Enforce via linter rules
 4. **Safety Net**: Required test coverage thresholds
 5. **Review Gate**: Human approval for certain changes
+
+<!-- These techniques from Spec-Driven Development help LLMs stay within bounds.
+Use them in specifications and task descriptions to prevent scope drift. -->

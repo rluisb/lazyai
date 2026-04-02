@@ -5,6 +5,14 @@
 - [ ] Type check passes
 - [ ] Unit tests pass
 
+<!-- Example commands:
+```bash
+npm run lint        # or: bundle exec rubocop
+npm run typecheck   # or: tsc --noEmit
+npm run test        # or: bundle exec rspec
+```
+-->
+
 ## Gate 2: Pre-Merge
 - [ ] All CI checks green
 - [ ] Code review approved
@@ -21,3 +29,8 @@
 | Line coverage | 90% | 80% |
 | Branch coverage | 85% | 75% |
 | Build time | <5min | <10min |
+
+<!-- Customize thresholds for your stack. These are starting points.
+For Teachable repos: fedora (Rails) uses rubocop + rspec,
+creator-checkout (Next.js) targets client 85%/server 90%,
+school-plan-service (Go) uses go test + go vet. -->

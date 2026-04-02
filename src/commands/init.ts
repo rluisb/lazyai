@@ -19,6 +19,7 @@ interface InitOptions {
   migrate?: boolean
   from?: string
   absorb?: boolean
+  dryRun?: boolean
 }
 
 export function registerInit(program: Command): void {
@@ -37,6 +38,7 @@ export function registerInit(program: Command): void {
     .option('--migrate', 'Migrate existing AI setup (detects and imports)')
     .option('--from <path>', 'Path to existing setup for migration (defaults to current directory)')
     .option('--absorb', 'Absorb existing tool configs into .ai/ during init')
+    .option('--dry-run', 'Preview changes without writing files')
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
         ? (opts.tools.split(',').map((t) => t.trim()).filter(Boolean) as ToolId[])
@@ -121,6 +123,7 @@ export function registerInit(program: Command): void {
         targetDir: process.cwd(),
         ...(opts.absorb !== undefined ? { absorb: opts.absorb } : {}),
         ...(opts.force !== undefined ? { force: opts.force } : {}),
+        ...(opts.dryRun ? { dryRun: true } : {}),
       }
 
       await runWizard(wizardOpts)

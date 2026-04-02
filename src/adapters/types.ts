@@ -6,6 +6,7 @@ export interface AdapterContext {
   libraryDir: string
   fileRecords: FileRecord[]
   force?: boolean | undefined
+  dryRun?: boolean
   strategy?: ConflictStrategy
   perFileOverrides?: Map<string, ConflictStrategy>
   selections?: {

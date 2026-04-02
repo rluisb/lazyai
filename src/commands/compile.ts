@@ -18,6 +18,7 @@ interface CompileOptions {
   scope?: SetupScope
   tools?: string
   force?: boolean
+  dryRun?: boolean
 }
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
@@ -57,6 +58,7 @@ export function registerCompile(program: Command): void {
     .option('--scope <scope>', 'Scope: global | workspace | project')
     .option('--tools <tools>', 'Comma-separated tool list to compile')
     .option('--force', 'Overwrite existing files')
+    .option('--dry-run', 'Preview changes without writing files')
     .action(async (opts: CompileOptions) => {
       const cwd = process.cwd()
       const userHomeDir = homedir()
@@ -99,6 +101,23 @@ export function registerCompile(program: Command): void {
         prompts: store.selections.prompts,
       }
       const strategy = opts.force ? 'backup-and-replace' : 'skip'
+
+      if (opts.dryRun) {
+        console.log('[dry-run] Compile preview:')
+        for (const tool of installableTools) {
+          const adapterTargetDir =
+            effectiveScope === 'global'
+              ? resolveGlobalToolTargetDir(tool, userHomeDir)
+              : store.config.targetDir
+
+          if (!adapterTargetDir) continue
+
+          console.log(`[dry-run] Would compile tool: ${tool} -> ${adapterTargetDir}`)
+        }
+
+        console.log(`Dry run complete. Would compile ${installableTools.length} tool(s): ${installableTools.join(', ')}`)
+        return
+      }
 
       for (const tool of installableTools) {
         const adapter = registry.get(tool)

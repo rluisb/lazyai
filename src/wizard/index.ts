@@ -10,6 +10,7 @@ import { scaffoldMcp } from '../scaffold/mcp.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
+import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import type {
   FileRecord,
   SetupScope,
@@ -73,6 +74,7 @@ export async function runWizard(opts: {
   interactive: boolean
   force?: boolean
   absorb?: boolean
+  dryRun?: boolean
   homeDir?: string
   cliOverrides: {
     scope?: SetupScope
@@ -234,6 +236,16 @@ export async function runWizard(opts: {
     const phase8Opts = { interactive: opts.interactive, plan, config }
     const confirmed = await runPhase8(phase8Opts)
     if (!confirmed) return
+
+    if (opts.dryRun) {
+      let plannedCount = 0
+      for (const file of plan) {
+        console.log(`[dry-run] Would create: ${file.destPath}`)
+        plannedCount += 1
+      }
+      console.log(`Dry run complete. Would create ${plannedCount} files.`)
+      return
+    }
 
     const installFiles = async (): Promise<void> => {
       await scaffoldDocs({
@@ -408,6 +420,7 @@ export async function runWizard(opts: {
 
     await writeStore(effectiveTargetDir, storeData)
     await appendOperation(effectiveTargetDir, tracker.toOperation())
+    checkGitignoreGuidance(effectiveTargetDir)
     outroSuccess(config)
   } catch (error) {
     if (p.isCancel(error)) {

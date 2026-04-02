@@ -9,6 +9,7 @@ interface CopyWithRecordOptions {
   src: string
   dest: string
   ctx: AdapterContext
+  dryRun?: boolean
   warnOnSkip?: boolean
   transform?: (content: string) => string
 }
@@ -18,6 +19,7 @@ interface CopyLibraryDirectoryOptions {
   sourceSubdir: SelectionKey
   selectionKey: SelectionKey
   toDestPath: (file: string) => string
+  dryRun?: boolean
   warnOnSkip?: boolean
   transform?: (content: string) => string
 }
@@ -46,6 +48,7 @@ function getSelectionSet(ctx: AdapterContext, key: SelectionKey): Set<string> | 
 
 export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void> {
   const relPath = path.relative(opts.ctx.targetDir, opts.dest)
+  const dryRun = opts.dryRun ?? opts.ctx.dryRun === true
   const effectiveStrategy = opts.ctx.perFileOverrides?.get(opts.dest) ?? opts.ctx.strategy
   const resolution = await resolveConflict(opts.dest, relPath, {
     force: opts.ctx.force,
@@ -60,7 +63,27 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
   }
 
   if (resolution === 'backup-and-overwrite') {
+    if (dryRun) {
+      console.log(`[dry-run] Would create: ${relPath}`)
+      opts.ctx.fileRecords.push({
+        path: relPath,
+        hash: 'dry-run',
+        source: path.relative(opts.ctx.libraryDir, opts.src),
+      })
+      return
+    }
+
     files.backupFile(opts.dest, opts.ctx.targetDir)
+  }
+
+  if (dryRun) {
+    console.log(`[dry-run] Would create: ${relPath}`)
+    opts.ctx.fileRecords.push({
+      path: relPath,
+      hash: 'dry-run',
+      source: path.relative(opts.ctx.libraryDir, opts.src),
+    })
+    return
   }
 
   if (opts.transform) {
@@ -92,6 +115,7 @@ export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): P
       src: srcPath,
       dest: opts.toDestPath(file),
       ctx: opts.ctx,
+      ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
     }
     if (opts.warnOnSkip !== undefined) {
       copyOpts.warnOnSkip = opts.warnOnSkip

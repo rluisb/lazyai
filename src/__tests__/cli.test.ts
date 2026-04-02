@@ -152,6 +152,34 @@ describe('cli init integration', () => {
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
   })
 
+  it('init --dry-run shows plan output and writes no files', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'dry-run-test',
+      '--no-interactive',
+      '--dry-run',
+    ])
+
+    const logOutput = logSpy.mock.calls.map((call) => call.map((value) => String(value)).join(' ')).join('\n')
+    expect(logOutput).toContain('[dry-run] Would create:')
+    expect(logOutput).toContain('Dry run complete. Would create')
+
+    expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, '.opencode'))).toBe(false)
+
+    logSpy.mockRestore()
+  })
+
   it('compile restores tool files from store without modifying store file', async () => {
     const tempDir = makeTempRepo()
     process.chdir(tempDir)
@@ -225,6 +253,36 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     await expect(runCompile()).rejects.toThrow(/Setup manifest not found/)
+  })
+
+  it('compile --dry-run shows preview and performs no writes', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'compile-dry-run-test',
+      '--no-interactive',
+    ])
+
+    const opencodeAgent = path.join(tempDir, '.opencode/agents/builder.md')
+    fs.rmSync(opencodeAgent)
+    expect(fs.existsSync(opencodeAgent)).toBe(false)
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runCompile(['--tools', 'opencode', '--dry-run'])
+
+    const logOutput = logSpy.mock.calls.map((call) => call.map((value) => String(value)).join(' ')).join('\n')
+    expect(logOutput).toContain('[dry-run] Compile preview:')
+    expect(logOutput).toContain('[dry-run] Would compile tool: opencode')
+    expect(logOutput).toContain('Dry run complete. Would compile 1 tool(s): opencode')
+
+    expect(fs.existsSync(opencodeAgent)).toBe(false)
+    logSpy.mockRestore()
   })
 
   it('compile global uses native global target paths and logs unsupported tools', async () => {

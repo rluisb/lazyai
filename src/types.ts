@@ -23,6 +23,7 @@ export interface SetupConfig {
   repos?: Array<{ name: string; path: string; type?: string }>
   globalRef?: string
   force?: boolean | undefined
+  dryRun?: boolean
 }
 
 export interface FileRecord {

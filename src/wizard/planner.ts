@@ -30,6 +30,10 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
     destPath: 'KNOWLEDGE_MAP.md',
     srcPath: 'infra/KNOWLEDGE_MAP.template.md',
   },
+  codeowners: {
+    destPath: 'CODEOWNERS',
+    srcPath: 'infra/CODEOWNERS.template',
+  },
 }
 
 const ADAPTER_PATHS: Record<ToolId, { agentDir: string; skillDir: string; promptDir: string }> = {

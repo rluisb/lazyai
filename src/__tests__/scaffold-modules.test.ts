@@ -153,6 +153,21 @@ describe('scaffoldInfra', () => {
     expect(fileRecords).toHaveLength(0)
   })
 
+  it('copies CODEOWNERS when codeowners infra is selected', async () => {
+    await scaffoldInfra({
+      targetDir: tempDir,
+      libraryDir,
+      infra: ['codeowners'],
+      projectName: 'demo-project',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    expect(existsSync(path.join(tempDir, 'CODEOWNERS'))).toBe(true)
+    expect(fileRecords.some((record) => record.path === 'CODEOWNERS')).toBe(true)
+  })
+
 })
 
 describe('scaffoldRootFiles', () => {

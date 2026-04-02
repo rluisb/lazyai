@@ -90,6 +90,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   const infra = ALL_INFRA.filter(i =>
     files.some(f => {
       const name = f.split('/').pop() || ''
+      if (i === 'codeowners') return name === 'CODEOWNERS'
       return name.startsWith(i)
     }),
   )

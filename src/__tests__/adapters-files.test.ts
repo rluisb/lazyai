@@ -15,6 +15,8 @@ import {
 import { PiAdapter } from '../adapters/pi.js'
 import { OpenCodeAdapter } from '../adapters/opencode.js'
 import { CopilotAdapter } from '../adapters/copilot.js'
+import { GeminiAdapter } from '../adapters/gemini.js'
+import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
 import type { FileRecord } from '../types.js'
 
 function makeTempDir(prefix: string): string {
@@ -86,6 +88,7 @@ describe('tool adapters', () => {
     targetDir = makeTempDir('ai-setup-target-')
     fileRecords = []
 
+    ensureDir(path.join(libraryDir, 'root'))
     ensureDir(path.join(libraryDir, 'agents'))
     ensureDir(path.join(libraryDir, 'prompts'))
     ensureDir(path.join(libraryDir, 'tool-agents'))
@@ -96,6 +99,8 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'tool-agents/skills-dir.md'), '# skills context')
     writeFile(path.join(libraryDir, 'tool-agents/templates-dir.md'), '# templates context')
     writeFile(path.join(libraryDir, 'tool-agents/root-dir.md'), '# root context')
+    writeFile(path.join(libraryDir, 'root/GEMINI.template.md'), '# GEMINI root')
+    writeFile(path.join(libraryDir, 'root/CLAUDE.template.md'), '# CLAUDE root')
   })
 
   it('Pi adapter installs agents/templates and records metadata', async () => {
@@ -197,5 +202,62 @@ describe('tool adapters', () => {
 
     expect(fileRecords.some((f) => f.path === '.github/agents/builder.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.github/ai-templates/plan.md')).toBe(true)
+  })
+
+  it('Gemini adapter installs .gemini agents/skills/templates and root GEMINI.md', async () => {
+    const adapter = new GeminiAdapter()
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+
+    await adapter.install({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        agents: ['builder'],
+        skills: ['implement'],
+        prompts: ['plan'],
+      },
+    })
+
+    expect(fileExists(path.join(targetDir, '.gemini/agents/builder.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.gemini/skills/implement.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.gemini/templates/plan.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
+
+    expect(fileRecords.some((f) => f.path === '.gemini/agents/builder.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.gemini/skills/implement.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.gemini/templates/plan.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'GEMINI.md')).toBe(true)
+  })
+
+  it('Claude Code adapter installs .claude layout and root CLAUDE.md', async () => {
+    const adapter = new ClaudeCodeAdapter()
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+
+    await adapter.install({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        agents: ['builder'],
+        skills: ['implement'],
+        prompts: ['plan'],
+      },
+    })
+
+    expect(fileExists(path.join(targetDir, '.claude/agents/builder.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.claude/commands/implement.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.claude/rules'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
+
+    expect(fileRecords.some((f) => f.path === '.claude/agents/builder.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.claude/commands/implement.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
   })
 })

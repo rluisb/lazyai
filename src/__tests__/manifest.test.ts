@@ -113,6 +113,14 @@ describe('extractSelections', () => {
     expect(result.infra).toEqual(['pre-commit', 'compliance'])
   })
 
+  it('infers codeowners infra from CODEOWNERS file', () => {
+    const manifest = buildManifest(['CODEOWNERS'])
+
+    const result = extractSelections(manifest)
+
+    expect(result.infra).toEqual(['codeowners'])
+  })
+
   it('returns empty partial when manifest has empty files array', () => {
     const manifest = buildManifest([])
 

@@ -26,6 +26,11 @@ Output (shape):
 - Open Questions: should retries be capped per tenant?
 ```
 
+## Common Mistakes to Avoid
+- ❌ Listing findings without evidence (file paths, line numbers)
+- ❌ Making assumptions instead of reading actual code
+- ❌ Ignoring edge cases or error handling patterns
+
 ## Output Format
 
 ```

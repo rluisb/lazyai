@@ -1,3 +1,10 @@
+---
+name: implement
+description: Execute one approved plan phase with TDD discipline.
+trigger: /implement
+phase: implement
+---
+
 # Implement Skill
 
 **Command:** `/implement [plan-file] [phase]`

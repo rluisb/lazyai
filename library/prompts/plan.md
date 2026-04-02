@@ -27,6 +27,11 @@ Output (shape):
 - Phase 3 (Sequential): integration tests + rollout checks
 ```
 
+## Common Mistakes to Avoid
+- ❌ Planning implementation details before understanding requirements
+- ❌ Skipping the "risks" or "unknowns" section
+- ❌ Creating plans that modify files outside the stated scope
+
 ## Output Format
 
 ```

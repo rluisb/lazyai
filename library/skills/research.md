@@ -1,3 +1,10 @@
+---
+name: research
+description: Evidence-based codebase investigation.
+trigger: /research
+phase: research
+---
+
 # Research Skill
 
 **Command:** `/research [topic]`

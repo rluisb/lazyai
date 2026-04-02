@@ -1,3 +1,10 @@
+---
+name: anti-speculation
+description: Prevent scope creep and speculative implementation.
+trigger: /anti-speculation
+phase: implement
+---
+
 # Anti-Speculation
 
 ## Purpose

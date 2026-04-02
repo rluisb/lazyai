@@ -184,8 +184,8 @@ describe('wizard integration (non-interactive)', () => {
     expect(manifest.config.workspaceName).toBe('teachable-workspace')
     expect(manifest.config.projectName).toBe('planning-repo')
     expect(manifest.config.repos).toEqual([
-      { name: 'fedora', path: '../fedora' },
-      { name: 'creator-checkout', path: '../creator-checkout' },
+      { name: 'fedora', path: '../fedora', type: 'unknown' },
+      { name: 'creator-checkout', path: '../creator-checkout', type: 'unknown' },
     ])
 
     const fedoraEntries = readdirSync(fedoraRepoDir)

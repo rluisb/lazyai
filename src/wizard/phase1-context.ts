@@ -5,6 +5,7 @@ import { readdirSync } from 'node:fs'
 import { readManifest } from '../utils/manifest.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
 import { fileExists, isDirectory } from '../utils/files.js'
+import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
 import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
 
 export interface Phase1Result {
@@ -13,23 +14,23 @@ export interface Phase1Result {
   projectName: string
   workspaceName?: string
   planningRepoPath?: string
-  repos?: Array<{ name: string; path: string }>
+  repos?: Array<{ name: string; path: string; type?: string }>
 }
 
-function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string }> {
+function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string; type?: string }> {
   if (!raw) return []
 
   const planningRepoAbsolute = path.resolve(planningRepoPath)
   const trimmed = raw.trim()
   if (!trimmed) return []
 
-  const toRepoRef = (repoPathInput: string): { name: string; path: string } => {
+  const toRepoRef = (repoPathInput: string): { name: string; path: string; type?: string } => {
     const resolved = path.resolve(planningRepoAbsolute, repoPathInput)
-    const relativePath = path.relative(planningRepoAbsolute, resolved) || '.'
-    const normalizedPath = relativePath.replaceAll('\\', '/')
+    const detected = detectRepoInfo(resolved, planningRepoAbsolute)
     return {
-      name: path.basename(resolved),
-      path: normalizedPath,
+      name: detected.name,
+      path: detected.path || '.',
+      type: detected.type,
     }
   }
 
@@ -47,17 +48,27 @@ function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string):
   }
 
   try {
-    const entries = readdirSync(parentDirCandidate, { withFileTypes: true })
-    return entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => {
-        const repoAbsolute = path.join(parentDirCandidate, entry.name)
-        return {
-          name: entry.name,
-          path: path.relative(planningRepoAbsolute, repoAbsolute).replaceAll('\\', '/'),
-        }
-      })
-      .filter(repo => repo.path !== '.')
+    const scannedRepos = scanWorkspaceRepos(parentDirCandidate, planningRepoAbsolute)
+    const parentEntries = readdirSync(parentDirCandidate, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(parentDirCandidate, entry.name))
+      .filter((entryPath) => path.resolve(entryPath) !== planningRepoAbsolute)
+      .map((entryPath) => detectRepoInfo(entryPath, planningRepoAbsolute))
+      .filter((repo) => repo.path !== '.')
+    const scannedRepoPaths = new Set(scannedRepos.map((repo) => repo.path))
+
+    const nonGitRepos = parentEntries.filter((repo) => !scannedRepoPaths.has(repo.path))
+    if (nonGitRepos.length > 0) {
+      p.note(`Skipped non-git directories: ${nonGitRepos.map((repo) => repo.name).join(', ')}`)
+    }
+
+    return scannedRepos
+      .map((repo) => ({
+        name: repo.name,
+        path: repo.path,
+        type: repo.type,
+      }))
+      .filter((repo) => repo.path !== '.')
   } catch {
     return [toRepoRef(trimmed)]
   }
@@ -101,13 +112,7 @@ export async function runPhase1(opts: {
       : undefined
     const parsedRepos =
       setupScope === 'workspace'
-        ? (opts.cliOverrides.repos ?? []).map((repoPath) => {
-            const resolved = path.resolve(planningRepoPath ?? opts.targetDir, repoPath)
-            return {
-              name: path.basename(resolved),
-              path: path.relative(path.resolve(planningRepoPath ?? opts.targetDir), resolved).replaceAll('\\', '/'),
-            }
-          })
+        ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
 
     if (!setupScope) {
@@ -147,7 +152,7 @@ export async function runPhase1(opts: {
   let projectName: string
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined
-  let repos: Array<{ name: string; path: string }> = []
+  let repos: Array<{ name: string; path: string; type?: string }> = []
 
   // Prompt 1: Setup scope
   const setupScopeResult =

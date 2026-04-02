@@ -49,9 +49,9 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir: string; skillDir: string; prompt
     promptDir: '.gemini/templates',
   },
   copilot: {
-    agentDir: '.github',
+    agentDir: '.github/agents',
     skillDir: '.github/prompts',
-    promptDir: '.github/templates',
+    promptDir: '.github/ai-templates',
   },
   pi: {
     agentDir: '.pi/agents',

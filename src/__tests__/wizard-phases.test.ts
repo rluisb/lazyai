@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -99,6 +99,72 @@ describe('wizard phases 1 and 7', () => {
         targetDir: '/tmp',
       }),
     ).rejects.toThrow('--planning-repo is required in non-interactive mode when --scope=workspace')
+  })
+
+  it('Phase 1: workspace parent-directory scan detects repo types', async () => {
+    const workspaceRoot = makeTempDir('ai-setup-phase1-workspace-')
+    const planningRepoDir = path.join(workspaceRoot, 'planning-repo')
+    const railsRepoDir = path.join(workspaceRoot, 'fedora')
+    const nextRepoDir = path.join(workspaceRoot, 'creator-checkout')
+
+    mkdirSync(path.join(planningRepoDir, '.git'), { recursive: true })
+    mkdirSync(path.join(railsRepoDir, '.git'), { recursive: true })
+    mkdirSync(path.join(nextRepoDir, '.git'), { recursive: true })
+
+    writeFileSync(path.join(railsRepoDir, 'Gemfile'), 'source "https://rubygems.org"')
+    mkdirSync(path.join(railsRepoDir, 'config'), { recursive: true })
+    writeFileSync(path.join(railsRepoDir, 'config', 'routes.rb'), 'Rails.application.routes.draw do end')
+
+    writeFileSync(path.join(nextRepoDir, 'package.json'), JSON.stringify({ dependencies: { next: '14.0.0' } }))
+
+    const result = await runPhase1({
+      interactive: false,
+      prior: {},
+      cliOverrides: {
+        scope: 'workspace',
+        tools: ['pi'],
+        name: 'workspace-name',
+        planningRepo: planningRepoDir,
+        repos: ['..'],
+      },
+      targetDir: workspaceRoot,
+    })
+
+    expect(result.repos).toEqual([
+      { name: 'creator-checkout', path: '../creator-checkout', type: 'nextjs-typescript' },
+      { name: 'fedora', path: '../fedora', type: 'ruby-rails' },
+    ])
+
+    rmSync(workspaceRoot, { recursive: true, force: true })
+  })
+
+  it('Phase 1: workspace scan filters non-git directories and warns', async () => {
+    const workspaceRoot = makeTempDir('ai-setup-phase1-filter-')
+    const planningRepoDir = path.join(workspaceRoot, 'planning-repo')
+    const gitRepoDir = path.join(workspaceRoot, 'git-repo')
+    const nonGitDir = path.join(workspaceRoot, 'not-a-repo')
+
+    mkdirSync(path.join(planningRepoDir, '.git'), { recursive: true })
+    mkdirSync(path.join(gitRepoDir, '.git'), { recursive: true })
+    mkdirSync(nonGitDir, { recursive: true })
+
+    const result = await runPhase1({
+      interactive: false,
+      prior: {},
+      cliOverrides: {
+        scope: 'workspace',
+        tools: ['pi'],
+        name: 'workspace-name',
+        planningRepo: planningRepoDir,
+        repos: ['..'],
+      },
+      targetDir: workspaceRoot,
+    })
+
+    expect(result.repos).toEqual([{ name: 'git-repo', path: '../git-repo', type: 'unknown' }])
+    expect(p.note).toHaveBeenCalledWith('Skipped non-git directories: not-a-repo')
+
+    rmSync(workspaceRoot, { recursive: true, force: true })
   })
 
   it('Phase 1: non-interactive missing --scope throws required in non-interactive mode', async () => {

@@ -54,6 +54,7 @@ export const configSchema = z.object({
       z.object({
         name: z.string(),
         path: z.string(),
+        type: z.string().optional(),
       }),
     )
     .optional(),

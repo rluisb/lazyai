@@ -262,8 +262,8 @@ describe('cli init integration', () => {
     expect(config.config.setupScope).toBe('workspace')
     expect(config.config.workspaceName).toBe('teachable-workspace')
     expect(config.config.repos).toEqual([
-      { name: 'fedora', path: '../fedora' },
-      { name: 'creator-checkout', path: '../creator-checkout' },
+      { name: 'fedora', path: '../fedora', type: 'unknown' },
+      { name: 'creator-checkout', path: '../creator-checkout', type: 'unknown' },
     ])
   })
 })

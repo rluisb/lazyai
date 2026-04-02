@@ -20,7 +20,7 @@ export class CopilotAdapter implements ToolAdapter {
     files.ensureDir(agentsContextDir)
     const promptsDir = path.join(githubDir, 'prompts')
     files.ensureDir(promptsDir)
-    const templatesDir = path.join(githubDir, 'templates')
+    const templatesDir = path.join(githubDir, 'ai-templates')
     files.ensureDir(templatesDir)
 
     console.log('🤖  Installing GitHub Copilot tools...')
@@ -29,7 +29,7 @@ export class CopilotAdapter implements ToolAdapter {
     const selectedSkills = ctx.selections?.skills ? new Set(ctx.selections.skills) : undefined
     const selectedPrompts = ctx.selections?.prompts ? new Set(ctx.selections.prompts) : undefined
 
-    // Copy agent files to .github/
+    // Copy agent files to .github/agents/
     const agentsDir = path.join(ctx.libraryDir, 'agents')
     for (const file of files.listDir(agentsDir)) {
       const src = path.join(agentsDir, file)
@@ -38,7 +38,7 @@ export class CopilotAdapter implements ToolAdapter {
       if (selectedAgents && !selectedAgents.has(fileId)) continue
       await this.copyAgentFileWithRecord(
         src,
-        path.join(githubDir, file),
+        path.join(agentsContextDir, file),
         ctx,
       )
     }

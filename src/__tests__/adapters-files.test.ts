@@ -14,6 +14,7 @@ import {
 } from '../utils/files.js'
 import { PiAdapter } from '../adapters/pi.js'
 import { OpenCodeAdapter } from '../adapters/opencode.js'
+import { CopilotAdapter } from '../adapters/copilot.js'
 import type { FileRecord } from '../types.js'
 
 function makeTempDir(prefix: string): string {
@@ -168,5 +169,33 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'command'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skill'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(false)
+  })
+
+  it('Copilot adapter writes agents and templates to nested .github directories', async () => {
+    const adapter = new CopilotAdapter()
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+
+    await adapter.install({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        agents: ['builder'],
+        prompts: ['plan'],
+        skills: ['implement'],
+      },
+    })
+
+    expect(fileExists(path.join(targetDir, '.github/agents/builder.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/ai-templates/plan.md'))).toBe(true)
+
+    expect(fileExists(path.join(targetDir, '.github/builder.md'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.github/templates/plan.md'))).toBe(false)
+
+    expect(fileRecords.some((f) => f.path === '.github/agents/builder.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/ai-templates/plan.md')).toBe(true)
   })
 })

@@ -182,6 +182,51 @@ describe('cli init integration', () => {
     expect(fs.existsSync(claudeAgent)).toBe(false)
   })
 
+  it('compile with --scope global reads manifest from ~/.ai and restores global tool paths', async () => {
+    const tempDir = makeTempRepo()
+    const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-global-compile-'))
+    const originalHome = process.env.HOME
+    process.env.HOME = tempHome
+    process.chdir(tempDir)
+
+    try {
+      await runInit([
+        '--scope',
+        'global',
+        '--tools',
+        'opencode,claude-code',
+        '--no-interactive',
+      ])
+
+      const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+
+      fs.rmSync(opencodeAgent)
+      fs.rmSync(claudeAgent, { recursive: true, force: true })
+
+      await runCompile(['--scope', 'global'])
+
+      expect(fs.existsSync(opencodeAgent)).toBe(true)
+      expect(fs.existsSync(claudeAgent)).toBe(true)
+      expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
+      expect(fs.existsSync(path.join(tempHome, '.ai/.ai-setup.json'))).toBe(true)
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env.HOME
+      } else {
+        process.env.HOME = originalHome
+      }
+      fs.rmSync(tempHome, { recursive: true, force: true })
+    }
+  })
+
+  it('compile fails when setup manifest does not exist', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await expect(runCompile()).rejects.toThrow(/Setup manifest not found/)
+  })
+
   it('compile global uses native global target paths and logs unsupported tools', async () => {
     const tempDir = makeTempRepo()
     const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))

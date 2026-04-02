@@ -51,6 +51,16 @@ describe('repo detection utilities', () => {
     rmSync(root, { recursive: true, force: true })
   })
 
+  it('detectRepoType prioritizes package-based detection before go markers', () => {
+    const root = makeTempDir('ai-setup-repo-type-priority-')
+    writeFileSync(path.join(root, 'package.json'), JSON.stringify({ dependencies: { react: '^18.0.0' } }))
+    writeFileSync(path.join(root, 'go.mod'), 'module example.com/mixed')
+
+    expect(detectRepoType(root)).toBe('react-typescript')
+
+    rmSync(root, { recursive: true, force: true })
+  })
+
   it('scanWorkspaceRepos filters non-git and planning repo, sorted by name', () => {
     const workspaceRoot = makeTempDir('ai-setup-repo-scan-')
     const planningRepo = path.join(workspaceRoot, 'planning-repo')

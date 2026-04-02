@@ -57,6 +57,17 @@ describe('wizard phases 1 and 7', () => {
     expect(result.setupScope).toBe('global')
   })
 
+  it('Phase 1: non-interactive with scope=global defaults projectName=global', async () => {
+    const result = await runPhase1({
+      interactive: false,
+      prior: {},
+      cliOverrides: { scope: 'global', tools: ['opencode'] },
+      targetDir: '/tmp',
+    })
+
+    expect(result.projectName).toBe('global')
+  })
+
   it('Phase 1: non-interactive with scope=workspace returns setupScope=workspace', async () => {
     const result = await runPhase1({
       interactive: false,

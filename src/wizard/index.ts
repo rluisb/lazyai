@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts'
+import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { outroSuccess } from '../prompts.js'
@@ -34,6 +35,7 @@ import { runPhase1 } from './phase1-context.js'
 import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { planFiles } from './planner.js'
+import { AdapterRegistry } from '../adapters/registry.js'
 
 function buildDefaultSelections(targetDir: string): WizardSelections {
   const hasGitDir = fileExists(path.join(targetDir, '.git'))
@@ -48,9 +50,47 @@ function buildDefaultSelections(targetDir: string): WizardSelections {
   }
 }
 
+function resolveTargetDirForScope(scope: SetupScope, targetDir: string, homeDir: string): string {
+  if (scope === 'global') {
+    return path.join(homeDir, '.ai')
+  }
+
+  return targetDir
+}
+
+function resolveGlobalToolTargetDir(tool: ToolId, homeDir: string): string | null {
+  if (tool === 'opencode') {
+    return path.join(homeDir, '.config', 'opencode')
+  }
+
+  if (tool === 'claude-code') {
+    return path.join(homeDir, '.claude')
+  }
+
+  return null
+}
+
+function logUnsupportedGlobalTool(tool: ToolId): void {
+  const messages: Partial<Record<ToolId, string>> = {
+    copilot: "Copilot doesn't support file-based global config. Use project scope instead.",
+    gemini: "Gemini doesn't support file-based global config. Use project scope instead.",
+    pi: "Pi doesn't support file-based global config. Use project scope instead.",
+  }
+
+  const message = messages[tool]
+  if (message) {
+    console.info(message)
+  }
+}
+
+function isGlobalSupportedTool(tool: ToolId): boolean {
+  return tool === 'opencode' || tool === 'claude-code'
+}
+
 export async function runWizard(opts: {
   interactive: boolean
   force?: boolean
+  homeDir?: string
   cliOverrides: {
     scope?: SetupScope
     type?: SetupType
@@ -93,24 +133,37 @@ export async function runWizard(opts: {
       targetDir: opts.targetDir,
     })
 
-    const selections = buildDefaultSelections(opts.targetDir)
+    const userHomeDir = opts.homeDir ?? homedir()
+    const effectiveTargetDir = resolveTargetDirForScope(setupScope, opts.targetDir, userHomeDir)
+    const effectiveProjectName = projectName || (setupScope === 'global' ? 'global' : path.basename(effectiveTargetDir))
+    const installableTools = setupScope === 'global' ? tools.filter(isGlobalSupportedTool) : tools
+
+    if (setupScope === 'global') {
+      for (const tool of tools) {
+        if (!isGlobalSupportedTool(tool)) {
+          logUnsupportedGlobalTool(tool)
+        }
+      }
+    }
+
+    const selections = buildDefaultSelections(effectiveTargetDir)
 
     const config: WizardConfig = {
       setupScope,
       setupType: setupScope,
-      tools,
-      projectName,
-      targetDir: opts.targetDir,
+      tools: installableTools,
+      projectName: effectiveProjectName,
+      targetDir: effectiveTargetDir,
       ...(planningRepoPath ? { planningRepoPath } : {}),
       selections,
       interactive: opts.interactive,
       force: opts.force,
     }
 
-    const plan = planFiles({ targetDir: opts.targetDir, libraryDir, config })
+    const plan = planFiles({ targetDir: effectiveTargetDir, libraryDir, config })
 
     const plannedFiles = plan.map(file => {
-      const destPath = path.join(opts.targetDir, file.destPath)
+        const destPath = path.join(effectiveTargetDir, file.destPath)
 
       let srcContent = ''
       if (!file.isNew && file.srcPath) {
@@ -125,7 +178,7 @@ export async function runWizard(opts: {
 
     const phase7Opts = {
       interactive: opts.interactive,
-      targetDir: opts.targetDir,
+      targetDir: effectiveTargetDir,
       plannedFiles,
       ...(opts.force !== undefined ? { force: opts.force } : {}),
     }
@@ -140,9 +193,9 @@ export async function runWizard(opts: {
 
     const installFiles = async (): Promise<void> => {
       await scaffoldDocs({
-        targetDir: opts.targetDir,
-        libraryDir,
-        docsDirs: ALL_DOCS_DIRS,
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          docsDirs: ALL_DOCS_DIRS,
         docsAgents: ALL_DOCS_DIRS,
         fileRecords,
         strategy,
@@ -151,8 +204,8 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:docs')
 
       await scaffoldTemplatesRules({
-        targetDir: opts.targetDir,
-        libraryDir,
+          targetDir: effectiveTargetDir,
+          libraryDir,
         templates: selections.templates,
         rules: selections.rules,
         fileRecords,
@@ -162,10 +215,10 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:templates-rules')
 
       await scaffoldInfra({
-        targetDir: opts.targetDir,
-        libraryDir,
+          targetDir: effectiveTargetDir,
+          libraryDir,
         infra: selections.infra,
-        projectName,
+          projectName: effectiveProjectName,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -173,10 +226,10 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:infra')
 
       await scaffoldRootFiles({
-        targetDir: opts.targetDir,
-        libraryDir,
-        tools,
-        projectName,
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          tools: installableTools,
+          projectName: effectiveProjectName,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -184,9 +237,9 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:root-files')
 
       await scaffoldAgentsSkillsPrompts({
-        targetDir: opts.targetDir,
-        libraryDir,
-        tools,
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          tools: installableTools,
         agents: selections.agents,
         skills: selections.skills,
         prompts: selections.prompts,
@@ -204,13 +257,37 @@ export async function runWizard(opts: {
       }
     }
 
+    const installGlobalAdapters = async (): Promise<void> => {
+      if (setupScope !== 'global') return
+
+      const registry = new AdapterRegistry()
+      for (const tool of installableTools) {
+        const globalToolTargetDir = resolveGlobalToolTargetDir(tool, userHomeDir)
+        if (!globalToolTargetDir) continue
+
+        const adapter = registry.get(tool)
+        if (!adapter) continue
+
+        await adapter.install({
+          targetDir: globalToolTargetDir,
+          setupScope,
+          libraryDir,
+          fileRecords: [],
+          force: opts.force,
+          strategy,
+        })
+      }
+    }
+
     if (opts.interactive) {
       const s = p.spinner()
       s.start('Installing files...')
       await installFiles()
+      await installGlobalAdapters()
       s.stop('Files installed successfully!')
     } else {
       await installFiles()
+      await installGlobalAdapters()
     }
 
     const now = new Date().toISOString()
@@ -224,9 +301,9 @@ export async function runWizard(opts: {
       config: {
         setupScope,
         setupType: setupScope === 'global' ? 'project' : setupScope,
-        tools,
-        projectName,
-        targetDir: opts.targetDir,
+        tools: installableTools,
+        projectName: effectiveProjectName,
+        targetDir: effectiveTargetDir,
         ...(planningRepoPath ? { planningRepoPath } : {}),
       },
       selections,
@@ -243,8 +320,8 @@ export async function runWizard(opts: {
       operations: [],
     }
 
-    await writeStore(opts.targetDir, storeData)
-    await appendOperation(opts.targetDir, tracker.toOperation())
+    await writeStore(effectiveTargetDir, storeData)
+    await appendOperation(effectiveTargetDir, tracker.toOperation())
     outroSuccess(config)
   } catch (error) {
     if (p.isCancel(error)) {

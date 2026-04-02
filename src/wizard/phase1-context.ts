@@ -39,7 +39,7 @@ export async function runPhase1(opts: {
   if (!opts.interactive) {
     const setupScope = opts.cliOverrides.scope ?? opts.cliOverrides.type
     const tools = opts.cliOverrides.tools
-    const projectName = opts.cliOverrides.name
+    const projectName = opts.cliOverrides.name ?? (setupScope === 'global' ? 'global' : undefined)
     const planningRepoPath = opts.cliOverrides.planningRepo
 
     if (!setupScope) {
@@ -98,7 +98,7 @@ export async function runPhase1(opts: {
   if (setupScope === 'project' || setupScope === 'workspace') {
     const globalAiExists = fileExists(path.join(homedir(), '.ai'))
     if (globalAiExists) {
-      p.note('Detected existing ~/.ai/. Project/workspace setup will layer on top of global defaults.')
+      p.note('Global AI setup detected at ~/.ai/. Project-level artifacts will layer on top of global ones.')
     }
   }
 
@@ -125,7 +125,7 @@ export async function runPhase1(opts: {
   tools = toolsResult as ToolId[]
 
   // Prompt 3: Project name
-  const defaultName = path.basename(opts.targetDir)
+  const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
   const projectNameResult =
     opts.cliOverrides.name ||
     opts.prior.projectName ||

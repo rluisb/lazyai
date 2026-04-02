@@ -1,7 +1,8 @@
-import type { FileRecord, AgentId, SkillId, PromptId, ConflictStrategy } from '../types.js'
+import type { FileRecord, AgentId, SkillId, PromptId, ConflictStrategy, SetupScope } from '../types.js'
 
 export interface AdapterContext {
   targetDir: string
+  setupScope?: SetupScope
   libraryDir: string
   fileRecords: FileRecord[]
   force?: boolean | undefined

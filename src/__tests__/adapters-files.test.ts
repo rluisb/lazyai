@@ -150,4 +150,23 @@ describe('tool adapters', () => {
       '.opencode/templates/plan.md',
     ])
   })
+
+  it('OpenCode adapter uses singular global directories for global scope', async () => {
+    const adapter = new OpenCodeAdapter()
+    const globalTargetDir = path.join(targetDir, '.config', 'opencode')
+
+    await adapter.install({
+      targetDir: globalTargetDir,
+      setupScope: 'global',
+      libraryDir,
+      fileRecords,
+      force: true,
+    })
+
+    expect(fileExists(path.join(globalTargetDir, 'agents', 'builder.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'command', 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'command'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'skill'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(false)
+  })
 })

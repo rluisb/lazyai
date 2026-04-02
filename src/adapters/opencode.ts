@@ -57,6 +57,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       templatesDestDir: 'templates',
       warnOnSkip: true,
     })
+
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

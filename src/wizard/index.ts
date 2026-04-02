@@ -6,6 +6,7 @@ import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldDocs } from '../scaffold/docs.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
+import { scaffoldMcp } from '../scaffold/mcp.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
@@ -37,6 +38,7 @@ import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { planFiles } from './planner.js'
 import { AdapterRegistry } from '../adapters/registry.js'
+import { compileMcp } from '../adapters/mcp-compiler.js'
 import { detectExistingSetup } from '../migration/detector.js'
 import { getAllParsers } from '../migration/registry/discovery.js'
 import { writeToCanonical } from '../migration/canonical-writer.js'
@@ -76,6 +78,7 @@ export async function runWizard(opts: {
     scope?: SetupScope
     type?: SetupType
     tools?: ToolId[]
+    cliTools?: string[]
     name?: string
     planningRepo?: string
     repos?: string[]
@@ -109,7 +112,7 @@ export async function runWizard(opts: {
         }
       : {}
 
-    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos } = await runPhase1({
+    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos, cliTools } = await runPhase1({
       interactive: opts.interactive,
       prior,
       cliOverrides: opts.cliOverrides,
@@ -255,6 +258,16 @@ export async function runWizard(opts: {
       })
       tracker.trackSuccess('scaffold:constitution')
 
+      await scaffoldMcp({
+        targetDir: effectiveTargetDir,
+        libraryDir,
+        fileRecords,
+        strategy,
+        perFileOverrides,
+        ...(cliTools ? { cliTools } : {}),
+      })
+      tracker.trackSuccess('scaffold:mcp')
+
       await scaffoldTemplatesRules({
           targetDir: effectiveTargetDir,
           libraryDir,
@@ -302,6 +315,16 @@ export async function runWizard(opts: {
       })
       tracker.trackSuccess('scaffold:agents-skills-prompts')
 
+      for (const tool of installableTools) {
+        await compileMcp({
+          canonicalDir: effectiveTargetDir,
+          toolTargetDir: effectiveTargetDir,
+          toolId: tool,
+          fileRecords,
+        })
+      }
+      tracker.trackSuccess('compile:mcp')
+
       for (const [sourcePath, strategyOverride] of perFileOverrides.entries()) {
         if (strategyOverride === 'backup-and-replace' || strategyOverride === 'align') {
           tracker.registerBackup(sourcePath, `${sourcePath}.backup`)
@@ -327,6 +350,13 @@ export async function runWizard(opts: {
           fileRecords: [],
           force: opts.force,
           strategy,
+        })
+
+        await compileMcp({
+          canonicalDir: effectiveTargetDir,
+          toolTargetDir: globalToolTargetDir,
+          toolId: tool,
+          fileRecords: [],
         })
       }
     }
@@ -354,6 +384,7 @@ export async function runWizard(opts: {
         setupScope,
         setupType: setupScope === 'global' ? 'project' : setupScope,
         tools: installableTools,
+        ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
         projectName: effectiveProjectName,
         ...(workspaceName ? { workspaceName } : {}),
         targetDir: effectiveTargetDir,

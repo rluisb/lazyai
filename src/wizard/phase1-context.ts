@@ -2,11 +2,26 @@ import * as p from '@clack/prompts'
 import path from 'node:path'
 import { homedir } from 'node:os'
 import { readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { readManifest } from '../utils/manifest.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
-import { fileExists, isDirectory } from '../utils/files.js'
+import { fileExists, isDirectory, readFile, resolveLibraryDir } from '../utils/files.js'
 import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
 import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
+
+interface McpServerConfig {
+  requiresInstall?: boolean
+  installHint?: string
+}
+
+interface McpCliToolConfig {
+  installHint?: string
+}
+
+interface McpCatalog {
+  servers: Record<string, McpServerConfig>
+  cliTools?: Record<string, McpCliToolConfig>
+}
 
 export interface Phase1Result {
   setupScope: SetupScope
@@ -15,6 +30,35 @@ export interface Phase1Result {
   workspaceName?: string
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string }>
+  cliTools?: string[]
+}
+
+function getCliToolOptions(targetDir: string): Array<{ value: string; label: string; hint: string }> {
+  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
+  const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
+  if (!fileExists(catalogPath)) return []
+
+  try {
+    const catalog = JSON.parse(readFile(catalogPath)) as McpCatalog
+    const options: Array<{ value: string; label: string; hint: string }> = []
+
+    for (const [name, server] of Object.entries(catalog.servers)) {
+      if (!server.requiresInstall) continue
+      const label = name.charAt(0).toUpperCase() + name.slice(1)
+      const hint = server.installHint ? `MCP server (${server.installHint})` : 'MCP server requiring local install'
+      options.push({ value: name, label, hint })
+    }
+
+    for (const [name, tool] of Object.entries(catalog.cliTools ?? {})) {
+      const label = name.toUpperCase()
+      const hint = tool.installHint ? `CLI tool (${tool.installHint})` : 'CLI tool requiring local install'
+      options.push({ value: name, label, hint })
+    }
+
+    return options
+  } catch {
+    return []
+  }
 }
 
 function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string; type?: string }> {
@@ -92,6 +136,7 @@ export async function runPhase1(opts: {
     scope?: SetupScope
     type?: SetupType
     tools?: ToolId[]
+    cliTools?: string[]
     name?: string
     planningRepo?: string
     repos?: string[]
@@ -114,6 +159,7 @@ export async function runPhase1(opts: {
       setupScope === 'workspace'
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
+    const cliTools = opts.cliOverrides.cliTools
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
@@ -135,6 +181,7 @@ export async function runPhase1(opts: {
       ...(workspaceName ? { workspaceName } : {}),
       ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
       ...(setupScope === 'workspace' && parsedRepos.length > 0 ? { repos: parsedRepos } : {}),
+      ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
     }
   }
 
@@ -153,6 +200,7 @@ export async function runPhase1(opts: {
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined
   let repos: Array<{ name: string; path: string; type?: string }> = []
+  let cliTools: string[] = opts.cliOverrides.cliTools ?? []
 
   // Prompt 1: Setup scope
   const setupScopeResult =
@@ -203,6 +251,24 @@ export async function runPhase1(opts: {
     process.exit(0)
   }
   tools = toolsResult as ToolId[]
+
+  if (!opts.cliOverrides.cliTools) {
+    const cliToolOptions = getCliToolOptions(opts.targetDir)
+    if (cliToolOptions.length > 0) {
+      const cliToolsResult = await p.multiselect({
+        message: 'Which CLI tools do you have installed? (optional, press Enter to skip)',
+        options: cliToolOptions,
+        required: false,
+      })
+
+      if (p.isCancel(cliToolsResult)) {
+        p.cancel('Setup cancelled.')
+        process.exit(0)
+      }
+
+      cliTools = (cliToolsResult as string[]) || []
+    }
+  }
 
   if (setupScope === 'workspace') {
     const defaultPlanningRepoPath = opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir
@@ -282,5 +348,6 @@ export async function runPhase1(opts: {
     ...(workspaceName ? { workspaceName } : {}),
     ...(planningRepoPath ? { planningRepoPath } : {}),
     ...(repos.length > 0 ? { repos } : {}),
+    ...(cliTools.length > 0 ? { cliTools } : {}),
   }
 }

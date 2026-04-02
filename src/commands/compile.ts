@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import type { SetupScope, ToolId } from '../types.js'
 import { AdapterRegistry } from '../adapters/registry.js'
+import { compileMcp } from '../adapters/mcp-compiler.js'
 import { Errors } from '../errors/index.js'
 import { fileExists, resolveLibraryDir } from '../utils/files.js'
 import { readStoreReadonly } from '../store/index.js'
@@ -118,6 +119,13 @@ export function registerCompile(program: Command): void {
           force: opts.force,
           strategy,
           selections,
+        })
+
+        await compileMcp({
+          canonicalDir: storeDir,
+          toolTargetDir: adapterTargetDir ?? storeDir,
+          toolId: tool,
+          fileRecords: [],
         })
       }
 

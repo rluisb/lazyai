@@ -15,6 +15,7 @@ export interface SetupConfig {
   /** @deprecated Use setupScope */
   setupType?: SetupType
   tools: ToolId[]
+  cliTools?: string[]
   projectName: string
   workspaceName?: string
   targetDir: string

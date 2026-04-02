@@ -57,6 +57,11 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'constitution'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'mcp.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.mcp.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.opencode', 'mcp-servers.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.vscode', 'mcp.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.gemini', 'settings.json'))).toBe(true)
 
     expect(existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(true)
 

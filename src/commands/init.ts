@@ -12,6 +12,7 @@ interface InitOptions {
   planningRepo?: string
   repos?: string
   tools?: string
+  cliTools?: string
   name?: string
   force?: boolean
   interactive: boolean
@@ -29,6 +30,7 @@ export function registerInit(program: Command): void {
     .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
     .option('--repos <paths>', 'Workspace repo references as comma-separated relative paths')
     .option('--tools <tools>', 'Comma-separated tool list: pi,opencode')
+    .option('--cli-tools <tools>', 'Comma-separated CLI tools available (codegraph,qmd,rtk)')
     .option('--name <name>', 'Project name (defaults to directory name)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')
     .option('--no-interactive', 'Non-interactive mode — requires all flags')
@@ -42,6 +44,9 @@ export function registerInit(program: Command): void {
       const repos = opts.repos
         ? opts.repos.split(',').map((repoPath) => repoPath.trim()).filter(Boolean)
         : undefined
+      const cliTools = opts.cliTools
+        ? opts.cliTools.split(',').map((tool) => tool.trim()).filter(Boolean)
+        : undefined
 
       const cliOverrides: {
         scope?: SetupScope
@@ -49,6 +54,7 @@ export function registerInit(program: Command): void {
         planningRepo?: string
         repos?: string[]
         tools?: ToolId[]
+        cliTools?: string[]
         name?: string
       } = {}
 
@@ -57,6 +63,7 @@ export function registerInit(program: Command): void {
       if (opts.planningRepo) cliOverrides.planningRepo = opts.planningRepo
       if (repos) cliOverrides.repos = repos
       if (tools) cliOverrides.tools = tools
+      if (cliTools) cliOverrides.cliTools = cliTools
       if (opts.name) cliOverrides.name = opts.name
 
       // Check if we should migrate

@@ -1,5 +1,5 @@
 import type { Command } from 'commander'
-import type { SetupType, ToolId } from '../types.js'
+import type { SetupScope, SetupType, ToolId } from '../types.js'
 import { runWizard } from '../wizard/index.js'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
@@ -7,7 +7,9 @@ import { detectAdapters, importSetup } from '../migration/index.js'
 import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
 interface InitOptions {
+  scope?: SetupScope
   type?: SetupType
+  planningRepo?: string
   tools?: string
   name?: string
   force?: boolean
@@ -20,7 +22,9 @@ export function registerInit(program: Command): void {
   program
     .command('init')
     .description('Scaffold AI development environment in the current directory')
-    .option('--type <type>', 'Setup type: project | workspace')
+    .option('--scope <scope>', 'Setup scope: global | workspace | project')
+    .option('--type <type>', 'Deprecated alias for --scope')
+    .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
     .option('--tools <tools>', 'Comma-separated tool list: pi,opencode')
     .option('--name <name>', 'Project name (defaults to directory name)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')
@@ -33,12 +37,16 @@ export function registerInit(program: Command): void {
         : undefined
 
       const cliOverrides: {
+        scope?: SetupScope
         type?: SetupType
+        planningRepo?: string
         tools?: ToolId[]
         name?: string
       } = {}
 
+      if (opts.scope) cliOverrides.scope = opts.scope
       if (opts.type) cliOverrides.type = opts.type
+      if (opts.planningRepo) cliOverrides.planningRepo = opts.planningRepo
       if (tools) cliOverrides.tools = tools
       if (opts.name) cliOverrides.name = opts.name
 

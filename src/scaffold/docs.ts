@@ -1,13 +1,13 @@
 import path from 'node:path'
 import { ensureDir, copyFile, fileExists, fileHash } from '../utils/files.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { DocsDirId, FileRecord, ConflictStrategy } from '../types.js'
+import type { FileRecord, ConflictStrategy } from '../types.js'
 
 export interface ScaffoldDocsOptions {
   targetDir: string
   libraryDir: string
-  docsDirs: DocsDirId[]
-  docsAgents: DocsDirId[]
+  docsDirs: string[]
+  docsAgents: string[]
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>

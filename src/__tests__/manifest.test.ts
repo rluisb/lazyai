@@ -8,6 +8,7 @@ import type { AiSetupConfig, WizardSelections } from '../types.js'
 function buildManifest(files: string[], selections?: WizardSelections): AiSetupConfig {
   return {
     version: '1.0.0',
+    setupScope: 'project',
     setupType: 'project',
     tools: ['opencode'],
     projectName: 'test-project',
@@ -47,7 +48,7 @@ describe('readManifest', () => {
 
     const result = await readManifest(tempDir)
     expect(result?.version).toBe('1.0.0')
-    expect(result?.setupType).toBe('project')
+    expect(result?.setupScope).toBe('project')
     expect(result?.tools).toEqual(['opencode'])
     expect(result?.projectName).toBe('test-project')
     expect(result?.files).toHaveLength(1)
@@ -58,8 +59,6 @@ describe('readManifest', () => {
 describe('extractSelections', () => {
   it('returns manifest.selections directly when present', () => {
     const selections: WizardSelections = {
-      docsDirs: ['features'],
-      docsAgents: ['features'],
       templates: ['adr'],
       rules: ['cost'],
       agents: ['builder'],
@@ -72,22 +71,6 @@ describe('extractSelections', () => {
     const result = extractSelections(manifest)
 
     expect(result).toBe(selections)
-  })
-
-  it('infers docsDirs from docs directory file paths', () => {
-    const manifest = buildManifest(['docs/features/some-file.txt'])
-
-    const result = extractSelections(manifest)
-
-    expect(result.docsDirs).toEqual(['features'])
-  })
-
-  it('infers docsAgents from docs/*/AGENTS.md file paths', () => {
-    const manifest = buildManifest(['docs/features/AGENTS.md'])
-
-    const result = extractSelections(manifest)
-
-    expect(result.docsAgents).toEqual(['features'])
   })
 
   it('infers templates from docs/templates/*.md paths', () => {

@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const CURRENT_SCHEMA_VERSION = 1
 
+export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
 export const toolIdSchema = z.enum(['pi', 'opencode', 'claude-code', 'gemini', 'copilot'])
 export const agentIdSchema = z.enum(['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout'])
@@ -32,18 +33,6 @@ export const templateIdSchema = z.enum([
 ])
 export const ruleIdSchema = z.enum(['access', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow'])
 export const infraIdSchema = z.enum(['pre-commit', 'compliance', 'KNOWLEDGE_MAP'])
-export const docsDirIdSchema = z.enum([
-  'features',
-  'bugfixes',
-  'refactors',
-  'tech-debt',
-  'adrs',
-  'memory',
-  'prompts',
-  'standards',
-  'templates',
-  'rules',
-])
 
 export const metaSchema = z.object({
   schemaVersion: z.number(),
@@ -53,15 +42,15 @@ export const metaSchema = z.object({
 })
 
 export const configSchema = z.object({
-  setupType: setupTypeSchema,
+  setupScope: setupScopeSchema,
+  setupType: setupTypeSchema.optional(),
   tools: toolIdSchema.array(),
   projectName: z.string(),
   targetDir: z.string(),
+  planningRepoPath: z.string().optional(),
 })
 
 export const wizardSelectionsSchema = z.object({
-  docsDirs: docsDirIdSchema.array(),
-  docsAgents: docsDirIdSchema.array(),
   templates: templateIdSchema.array(),
   rules: ruleIdSchema.array(),
   agents: agentIdSchema.array(),
@@ -122,14 +111,12 @@ export function defaultStore(): StoreData {
       lastUpdatedAt: now,
     },
     config: {
-      setupType: 'project',
+      setupScope: 'project',
       tools: [],
       projectName: '',
       targetDir: '',
     },
     selections: {
-      docsDirs: [],
-      docsAgents: [],
       templates: [],
       rules: [],
       agents: [],

@@ -34,7 +34,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     await runInit([
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'pi,opencode',
@@ -80,7 +80,7 @@ describe('cli init integration', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
     expect(config.config.projectName).toBe('integration-test')
-    expect(config.config.setupType).toBe('project')
+    expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(config.files.length).toBeGreaterThan(20)
     expect(config.files.some((f: { path: string }) => f.path === '.pi/agents/builder.md')).toBe(true)
@@ -97,7 +97,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     const args = [
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'pi,opencode',
@@ -111,7 +111,7 @@ describe('cli init integration', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
     expect(config.config.projectName).toBe('rerun-test')
-    expect(config.config.setupType).toBe('project')
+    expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
@@ -122,7 +122,7 @@ describe('cli init integration', () => {
     process.chdir(tempDir)
 
     await runInit([
-      '--type',
+      '--scope',
       'project',
       '--tools',
       'opencode',

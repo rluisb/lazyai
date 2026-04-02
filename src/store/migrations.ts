@@ -31,8 +31,6 @@ function normalizeSelections(
   selections: Partial<StoreData['selections']> | undefined,
 ): StoreData['selections'] {
   return {
-    docsDirs: selections?.docsDirs ?? [],
-    docsAgents: selections?.docsAgents ?? [],
     templates: selections?.templates ?? [],
     rules: selections?.rules ?? [],
     agents: selections?.agents ?? [],
@@ -61,8 +59,12 @@ export function migrateV0toV1(data: Record<string, unknown>, targetDir: string =
 
   const legacyFiles = Array.isArray(data.files) ? data.files.filter(isLegacyFileRecord) : []
 
+  const rawSetupType = asString(data.setupType, 'project')
+  const setupScope = rawSetupType === 'workspace' ? 'workspace' : 'project'
+
   const config = {
-    setupType: asString(data.setupType, 'project'),
+    setupScope,
+    setupType: rawSetupType,
     tools: asStringArray(data.tools),
     projectName: asString(data.projectName, ''),
     targetDir,
@@ -70,6 +72,7 @@ export function migrateV0toV1(data: Record<string, unknown>, targetDir: string =
 
   const legacyManifest = {
     version: asString(data.version, '0.0.0'),
+    setupScope: config.setupScope,
     setupType: config.setupType,
     tools: config.tools,
     projectName: config.projectName,
@@ -92,6 +95,7 @@ export function migrateV0toV1(data: Record<string, unknown>, targetDir: string =
       lastUpdatedAt: now,
     },
     config: {
+      setupScope: config.setupScope as StoreData['config']['setupScope'],
       setupType: config.setupType as StoreData['config']['setupType'],
       tools: config.tools as StoreData['config']['tools'],
       projectName: config.projectName,

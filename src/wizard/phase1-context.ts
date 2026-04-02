@@ -1,33 +1,49 @@
 import * as p from '@clack/prompts'
 import path from 'node:path'
+import { homedir } from 'node:os'
 import { readManifest } from '../utils/manifest.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
-import type { SetupType, ToolId, WizardSelections } from '../types.js'
+import { fileExists } from '../utils/files.js'
+import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
 
 export interface Phase1Result {
-  setupType: SetupType
+  setupScope: SetupScope
   tools: ToolId[]
   projectName: string
+  planningRepoPath?: string
 }
 
 /**
- * Run Phase 1 of the interactive wizard: gather setupType, tools, and projectName.
+ * Run Phase 1 of the interactive wizard: gather setupScope, tools, and projectName.
  * Behavior depends on interactive mode and CLI overrides.
  */
 export async function runPhase1(opts: {
   interactive: boolean
-  prior: Partial<WizardSelections> & { setupType?: SetupType; tools?: ToolId[]; projectName?: string }
-  cliOverrides: { type?: SetupType; tools?: ToolId[]; name?: string }
+  prior: Partial<WizardSelections> & {
+    setupScope?: SetupScope
+    setupType?: SetupType
+    tools?: ToolId[]
+    projectName?: string
+    planningRepoPath?: string
+  }
+  cliOverrides: {
+    scope?: SetupScope
+    type?: SetupType
+    tools?: ToolId[]
+    name?: string
+    planningRepo?: string
+  }
   targetDir: string
 }): Promise<Phase1Result> {
   // Non-interactive mode: use cliOverrides or throw
   if (!opts.interactive) {
-    const setupType = opts.cliOverrides.type
+    const setupScope = opts.cliOverrides.scope ?? opts.cliOverrides.type
     const tools = opts.cliOverrides.tools
     const projectName = opts.cliOverrides.name
+    const planningRepoPath = opts.cliOverrides.planningRepo
 
-    if (!setupType) {
-      throw new Error('--type is required in non-interactive mode (project | workspace)')
+    if (!setupScope) {
+      throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
     }
     if (!tools || tools.length === 0) {
       throw new Error('--tools is required in non-interactive mode (pi, opencode, claude-code, gemini, copilot)')
@@ -37,9 +53,10 @@ export async function runPhase1(opts: {
     }
 
     return {
-      setupType,
+      setupScope,
       tools,
       projectName,
+      ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
     }
   }
 
@@ -52,27 +69,38 @@ export async function runPhase1(opts: {
     p.note('Re-running setup — previous selections will be pre-filled')
   }
 
-  let setupType: SetupType
+  let setupScope: SetupScope
   let tools: ToolId[]
   let projectName: string
+  let planningRepoPath: string | undefined
 
-  // Prompt 1: Setup type
-  const setupTypeResult =
+  // Prompt 1: Setup scope
+  const setupScopeResult =
+    opts.cliOverrides.scope ||
     opts.cliOverrides.type ||
+    opts.prior.setupScope ||
     opts.prior.setupType ||
     (await p.select({
-      message: 'What are you setting up?',
+      message: 'Setup scope:',
       options: [
-        { value: 'project', label: 'Project', hint: 'For a single repository' },
-        { value: 'workspace', label: 'Workspace', hint: 'For a multi-repo organization' },
+        { value: 'global', label: 'Global', hint: 'Install to ~/.ai/ + native tool global paths' },
+        { value: 'workspace', label: 'Workspace', hint: 'Planning repo with multi-project management' },
+        { value: 'project', label: 'Project', hint: 'Self-contained single repository' },
       ],
     }))
 
-  if (p.isCancel(setupTypeResult)) {
+  if (p.isCancel(setupScopeResult)) {
     p.cancel('Setup cancelled.')
     process.exit(0)
   }
-  setupType = setupTypeResult as SetupType
+  setupScope = setupScopeResult as SetupScope
+
+  if (setupScope === 'project' || setupScope === 'workspace') {
+    const globalAiExists = fileExists(path.join(homedir(), '.ai'))
+    if (globalAiExists) {
+      p.note('Detected existing ~/.ai/. Project/workspace setup will layer on top of global defaults.')
+    }
+  }
 
   // Prompt 2: Tools selection
   const toolsResult =
@@ -114,9 +142,29 @@ export async function runPhase1(opts: {
   }
   projectName = projectNameResult
 
+  if (setupScope === 'workspace') {
+    const defaultPlanningRepoPath = opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir
+    const planningRepoPathResult =
+      opts.cliOverrides.planningRepo ||
+      opts.prior.planningRepoPath ||
+      (await p.text({
+        message: 'Planning repo location?',
+        placeholder: defaultPlanningRepoPath,
+        defaultValue: defaultPlanningRepoPath,
+      }))
+
+    if (p.isCancel(planningRepoPathResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+
+    planningRepoPath = planningRepoPathResult
+  }
+
   return {
-    setupType: setupType as SetupType,
+    setupScope,
     tools: tools as ToolId[],
     projectName,
+    ...(planningRepoPath ? { planningRepoPath } : {}),
   }
 }

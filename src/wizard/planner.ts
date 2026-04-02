@@ -5,7 +5,7 @@ import { fileExists } from '../utils/files.js'
 export interface PlannedFile {
   destPath: string
   srcPath: string | null
-  category: 'docs' | 'docs-agent' | 'template' | 'rule' | 'agent' | 'skill' | 'prompt' | 'infra' | 'root'
+  category: 'template' | 'rule' | 'agent' | 'skill' | 'prompt' | 'infra' | 'root'
   isNew: boolean
 }
 
@@ -83,24 +83,7 @@ export function planFiles(opts: {
   const { selections } = config
   const planned: PlannedFile[] = []
 
-  // 1) docs directories
-  for (const dir of selections.docsDirs) {
-    planned.push(makePlannedFile(targetDir, `docs/${dir}/`, null, 'docs'))
-  }
-
-  // 2) docs agents
-  for (const dir of selections.docsAgents) {
-    planned.push(
-      makePlannedFile(
-        targetDir,
-        `docs/${dir}/AGENTS.md`,
-        `docs-agents/${dir}.md`,
-        'docs-agent',
-      ),
-    )
-  }
-
-  // 3) templates
+  // 1) templates
   for (const templateId of selections.templates) {
     planned.push(
       makePlannedFile(
@@ -112,20 +95,20 @@ export function planFiles(opts: {
     )
   }
 
-  // 4) rules
+  // 2) rules
   for (const ruleId of selections.rules) {
     planned.push(
       makePlannedFile(targetDir, `docs/rules/${ruleId}.md`, `rules/${ruleId}.md`, 'rule'),
     )
   }
 
-  // 5) infra
+  // 3) infra
   for (const infraId of selections.infra) {
     const infra = INFRA_FILE_MAP[infraId]
     planned.push(makePlannedFile(targetDir, infra.destPath, infra.srcPath, 'infra'))
   }
 
-  // 6) root files (deduplicated by destination path)
+  // 4) root files (deduplicated by destination path)
   const seenRootDestPaths = new Set<string>()
   for (const tool of config.tools) {
     const destPath = ROOT_FILE_BY_TOOL[tool]
@@ -134,7 +117,7 @@ export function planFiles(opts: {
     planned.push(makePlannedFile(targetDir, destPath, null, 'root'))
   }
 
-  // 7) adapter files (agents, skills, prompts)
+  // 5) adapter files (agents, skills, prompts)
   for (const tool of config.tools) {
     const paths = ADAPTER_PATHS[tool]
 

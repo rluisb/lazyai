@@ -42,7 +42,7 @@ describe('wizard integration (non-interactive)', () => {
     await runWizard({
       interactive: false,
       cliOverrides: {
-        type: 'project',
+        scope: 'project',
         tools: ['pi', 'opencode', 'claude-code', 'gemini', 'copilot'],
         name: 'test-project',
       },
@@ -60,14 +60,14 @@ describe('wizard integration (non-interactive)', () => {
 
     const manifest = JSON.parse(readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.selections).toBeDefined()
-    expect(manifest.selections.docsDirs).toHaveLength(10)
+    expect(manifest.config.setupScope).toBe('project')
   })
 
   it('creates only opencode files when only opencode selected', async () => {
     await runWizard({
       interactive: false,
       cliOverrides: {
-        type: 'project',
+        scope: 'project',
         tools: ['opencode'],
         name: 'test-project',
       },
@@ -83,7 +83,7 @@ describe('wizard integration (non-interactive)', () => {
     await runWizard({
       interactive: false,
       cliOverrides: {
-        type: 'project',
+        scope: 'project',
         tools: ['opencode'],
         name: 'test-project',
       },
@@ -93,7 +93,7 @@ describe('wizard integration (non-interactive)', () => {
     await runWizard({
       interactive: false,
       cliOverrides: {
-        type: 'project',
+        scope: 'project',
         tools: ['opencode'],
         name: 'test-project',
       },

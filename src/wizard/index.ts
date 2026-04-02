@@ -9,31 +9,55 @@ import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import type {
   FileRecord,
+  SetupScope,
   SetupType,
   ToolId,
   WizardConfig,
   WizardSelections,
 } from '../types.js'
+import {
+  ALL_AGENTS,
+  ALL_DOCS_DIRS,
+  ALL_INFRA,
+  ALL_PROMPTS,
+  ALL_RULES,
+  ALL_SKILLS,
+  ALL_TEMPLATES,
+} from '../types.js'
 import type { StoreData } from '../store/schema.js'
-import { readFile, resolveLibraryDir } from '../utils/files.js'
+import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
 import { appendOperation, writeStore } from '../store/index.js'
 import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
-import { runPhase2 } from './phase2-docs.js'
-import { runPhase3 } from './phase3-templates.js'
-import { runPhase4 } from './phase4-agents.js'
-import { runPhase5 } from './phase5-infra.js'
-import { runPhase6 } from './phase6-root.js'
 import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { planFiles } from './planner.js'
 
+function buildDefaultSelections(targetDir: string): WizardSelections {
+  const hasGitDir = fileExists(path.join(targetDir, '.git'))
+
+  return {
+    templates: ALL_TEMPLATES,
+    rules: ALL_RULES,
+    agents: ALL_AGENTS,
+    skills: ALL_SKILLS,
+    prompts: ALL_PROMPTS,
+    infra: hasGitDir ? ALL_INFRA : ALL_INFRA.filter((item) => item !== 'pre-commit'),
+  }
+}
+
 export async function runWizard(opts: {
   interactive: boolean
   force?: boolean
-  cliOverrides: { type?: SetupType; tools?: ToolId[]; name?: string }
+  cliOverrides: {
+    scope?: SetupScope
+    type?: SetupType
+    tools?: ToolId[]
+    name?: string
+    planningRepo?: string
+  }
   targetDir: string
 }): Promise<void> {
   const tracker = new OperationTracker('init')
@@ -47,69 +71,37 @@ export async function runWizard(opts: {
 
     const manifest = await readManifest(opts.targetDir)
     const prior: Partial<WizardSelections> & {
+      setupScope?: SetupScope
       setupType?: SetupType
       tools?: ToolId[]
       projectName?: string
+      planningRepoPath?: string
     } = manifest
       ? {
           ...extractSelections(manifest),
-          setupType: manifest.setupType,
+          setupScope: manifest.setupScope,
+          ...(manifest.setupType ? { setupType: manifest.setupType } : {}),
           tools: manifest.tools,
           projectName: manifest.projectName,
         }
       : {}
 
-    const { setupType, tools, projectName } = await runPhase1({
+    const { setupScope, tools, projectName, planningRepoPath } = await runPhase1({
       interactive: opts.interactive,
       prior,
       cliOverrides: opts.cliOverrides,
       targetDir: opts.targetDir,
     })
 
-    const { docsDirs, docsAgents } = await runPhase2({
-      interactive: opts.interactive,
-      prior,
-    })
-
-    const { templates, rules } = await runPhase3({
-      interactive: opts.interactive,
-      prior,
-    })
-
-    const { agents, skills, prompts } = await runPhase4({
-      interactive: opts.interactive,
-      prior,
-    })
-
-    const { infra } = await runPhase5({
-      interactive: opts.interactive,
-      prior,
-      targetDir: opts.targetDir,
-    })
-
-    const { rootFiles } = await runPhase6({
-      interactive: opts.interactive,
-      tools,
-      projectName,
-    })
-    void rootFiles
-
-    const selections: WizardSelections = {
-      docsDirs,
-      docsAgents,
-      templates,
-      rules,
-      agents,
-      skills,
-      prompts,
-      infra,
-    }
+    const selections = buildDefaultSelections(opts.targetDir)
 
     const config: WizardConfig = {
-      setupType,
+      setupScope,
+      setupType: setupScope,
       tools,
       projectName,
       targetDir: opts.targetDir,
+      ...(planningRepoPath ? { planningRepoPath } : {}),
       selections,
       interactive: opts.interactive,
       force: opts.force,
@@ -150,8 +142,8 @@ export async function runWizard(opts: {
       await scaffoldDocs({
         targetDir: opts.targetDir,
         libraryDir,
-        docsDirs,
-        docsAgents,
+        docsDirs: ALL_DOCS_DIRS,
+        docsAgents: ALL_DOCS_DIRS,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -161,8 +153,8 @@ export async function runWizard(opts: {
       await scaffoldTemplatesRules({
         targetDir: opts.targetDir,
         libraryDir,
-        templates,
-        rules,
+        templates: selections.templates,
+        rules: selections.rules,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -172,7 +164,7 @@ export async function runWizard(opts: {
       await scaffoldInfra({
         targetDir: opts.targetDir,
         libraryDir,
-        infra,
+        infra: selections.infra,
         projectName,
         fileRecords,
         strategy,
@@ -195,9 +187,9 @@ export async function runWizard(opts: {
         targetDir: opts.targetDir,
         libraryDir,
         tools,
-        agents,
-        skills,
-        prompts,
+        agents: selections.agents,
+        skills: selections.skills,
+        prompts: selections.prompts,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -230,10 +222,12 @@ export async function runWizard(opts: {
         lastUpdatedAt: now,
       },
       config: {
-        setupType,
+        setupScope,
+        setupType: setupScope === 'global' ? 'project' : setupScope,
         tools,
         projectName,
         targetDir: opts.targetDir,
+        ...(planningRepoPath ? { planningRepoPath } : {}),
       },
       selections,
       files: fileRecords.map((file) => ({

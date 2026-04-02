@@ -1,4 +1,14 @@
 import { z } from 'zod'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const pkg = (() => {
+  try {
+    return require('../package.json') as { version: string }
+  } catch {
+    return require('../../package.json') as { version: string }
+  }
+})()
 
 export const CURRENT_SCHEMA_VERSION = 1
 
@@ -31,7 +41,7 @@ export const templateIdSchema = z.enum([
   'tech-debt-template',
   'techspec-template',
 ])
-export const ruleIdSchema = z.enum(['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'workflow'])
+export const ruleIdSchema = z.enum(['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'tool-use', 'workflow'])
 export const infraIdSchema = z.enum(['pre-commit', 'compliance', 'KNOWLEDGE_MAP', 'codeowners'])
 
 export const metaSchema = z.object({
@@ -118,7 +128,7 @@ export function defaultStore(): StoreData {
   return {
     meta: {
       schemaVersion: CURRENT_SCHEMA_VERSION,
-      cliVersion: '0.1.0',
+      cliVersion: pkg.version,
       installedAt: now,
       lastUpdatedAt: now,
     },

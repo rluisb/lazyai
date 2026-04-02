@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import { intro, outro, confirm, log } from '@clack/prompts';
-import { readManifest } from '../utils/manifest.js';
 import { Errors, AiSetupError } from '../errors/index.js'
+import { fileExists } from '../utils/files.js'
+import { readStoreReadonly } from '../store/index.js'
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -20,17 +21,16 @@ interface EjectCommandOptions {
 
 export async function ejectCommand(targetDir: string, opts?: EjectCommandOptions) {
   intro('Ejecting from @ricardoborges-teachable/ai-setup');
-  
-  const manifest = await readManifest(targetDir);
-  
-  if (!manifest) {
-    log.info('No .ai-setup.json manifest found. Project is not managed by ai-setup.');
-    outro('Eject complete');
-    return;
+
+  const manifestPath = path.join(targetDir, '.ai-setup.json')
+  if (!fileExists(manifestPath)) {
+    throw Errors.manifestNotFound(targetDir)
   }
 
-  const numFiles = Object.keys(manifest.files || {}).length;
-  
+  const store = await readStoreReadonly(targetDir)
+
+  const numFiles = store.files.length;
+
   log.warn(`This will remove the .ai-setup.json manifest.`);
   log.warn(`Your ${numFiles} managed files will be kept, but ai-setup will no longer update them.`);
   
@@ -47,7 +47,6 @@ export async function ejectCommand(targetDir: string, opts?: EjectCommandOptions
   }
 
   try {
-    const manifestPath = path.join(targetDir, '.ai-setup.json');
     await fs.unlink(manifestPath);
     log.success('Successfully removed .ai-setup.json');
     outro('Eject complete. You now fully own all files.');

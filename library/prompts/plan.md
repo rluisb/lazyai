@@ -27,6 +27,22 @@ Output (shape):
 - Phase 3 (Sequential): integration tests + rollout checks
 ```
 
+```
+Input (summary): Add team-level audit log export feature.
+Output (shape):
+- Phase 1 (Sequential): export schema + access control
+- Phase 2 (Parallel): backend job + download UI
+- Phase 3 (Sequential): observability + retention policy checks
+```
+
+```
+Input (summary): Refactor shared date utils used by 6 services.
+Output (shape):
+- Phase 1 (Sequential): inventory call sites + contract tests
+- Phase 2 (Parallel): extract module + migrate low-risk consumers
+- Phase 3 (Sequential): migrate remaining consumers + remove legacy utils
+```
+
 ## Common Mistakes to Avoid
 - ❌ Planning implementation details before understanding requirements
 - ❌ Skipping the "risks" or "unknowns" section

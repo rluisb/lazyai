@@ -29,7 +29,7 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       ctx,
       sourceSubdir: 'agents',
       selectionKey: 'agents',
-      toDestPath: (file) => path.join(claudeDir, isGlobal ? file : 'agents', file),
+      toDestPath: (file) => isGlobal ? path.join(claudeDir, file) : path.join(claudeDir, 'agents', file),
     })
 
     await copyLibraryDirectory({

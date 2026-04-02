@@ -353,15 +353,15 @@ describe('cli init integration', () => {
       '--no-interactive',
     ])
 
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
     await runStatus()
 
-    const output = logSpy.mock.calls.map((call) => call.map((value) => String(value)).join(' ')).join('\n')
-    expect(output).toContain('Setup scope: project')
+    const output = writeSpy.mock.calls.map((call) => String(call[0])).join('')
+    expect(output).toContain('Scope: project')
     expect(output).toContain('Tools: opencode, claude-code')
     expect(output).not.toContain('coming soon')
 
-    logSpy.mockRestore()
+    writeSpy.mockRestore()
   })
 
   it('eject removes .ai-setup.json after confirmation', async () => {
@@ -469,5 +469,51 @@ describe('migration command options', () => {
 
   it('exposes --interactive on migrate command', () => {
     expect(createMigrateCommand().helpInformation()).toContain('--interactive')
+  })
+})
+
+describe('basic command smoke tests', () => {
+  let originalCwd: string
+
+  const makeTempRepo = (): string => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-cli-smoke-'))
+    fs.mkdirSync(path.join(tempDir, '.git'), { recursive: true })
+    return tempDir
+  }
+
+  beforeEach(() => {
+    originalCwd = process.cwd()
+  })
+
+  afterEach(() => {
+    process.chdir(originalCwd)
+  })
+
+  it('add without prior init throws manifest-not-found error', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    const program = createProgram()
+    await expect(program.parseAsync(['node', 'ai-setup', 'add', 'opencode'])).rejects.toThrow(/Setup manifest not found/)
+  })
+
+  it('create --help lists available subcommands', () => {
+    const program = createProgram()
+    const createCommand = program.commands.find((command) => command.name() === 'create')
+
+    expect(createCommand?.helpInformation()).toContain('agent [options] [name]')
+    expect(createCommand?.helpInformation()).toContain('skill [options] [name]')
+    expect(createCommand?.helpInformation()).toContain('command [options] [name]')
+    expect(createCommand?.helpInformation()).toContain('prompt [options] [name]')
+    expect(createCommand?.helpInformation()).toContain('template [options] [name]')
+    expect(createCommand?.helpInformation()).toContain('workflow [options] [name]')
+  })
+
+  it('eject without prior init throws manifest-not-found error', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    const program = createProgram()
+    await expect(program.parseAsync(['node', 'ai-setup', 'eject'])).rejects.toThrow(/Setup manifest not found/)
   })
 })

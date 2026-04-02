@@ -5,7 +5,7 @@ import { fileExists } from '../utils/files.js'
 export interface PlannedFile {
   destPath: string
   srcPath: string | null
-  category: 'template' | 'rule' | 'agent' | 'skill' | 'prompt' | 'infra' | 'root'
+  category: 'template' | 'rule' | 'agent' | 'skill' | 'prompt' | 'infra' | 'root' | 'constitution'
   isNew: boolean
 }
 
@@ -82,6 +82,19 @@ export function planFiles(opts: {
   const { targetDir, config } = opts
   const { selections } = config
   const planned: PlannedFile[] = []
+
+  // 0) constitution
+  const CONSTITUTION_FILES = ['constitution', 'constraints', 'quality-gates', 'uncertainty']
+  for (const file of CONSTITUTION_FILES) {
+    planned.push(
+      makePlannedFile(
+        targetDir,
+        `.ai/constitution/${file}.md`,
+        `constitution/${file}.template.md`,
+        'constitution',
+      ),
+    )
+  }
 
   // 1) templates
   for (const templateId of selections.templates) {

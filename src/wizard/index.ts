@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldDocs } from '../scaffold/docs.js'
+import { scaffoldConstitution } from '../scaffold/constitution.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
@@ -193,6 +194,16 @@ export async function runWizard(opts: {
         perFileOverrides,
       })
       tracker.trackSuccess('scaffold:docs')
+
+      await scaffoldConstitution({
+        targetDir: effectiveTargetDir,
+        libraryDir,
+        projectName: effectiveProjectName,
+        fileRecords,
+        strategy,
+        perFileOverrides,
+      })
+      tracker.trackSuccess('scaffold:constitution')
 
       await scaffoldTemplatesRules({
           targetDir: effectiveTargetDir,

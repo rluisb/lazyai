@@ -55,6 +55,8 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
 
     expect(existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(true)
 

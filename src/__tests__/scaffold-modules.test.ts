@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { tmpdir } from 'node:os'
 import type { FileRecord, ConflictStrategy } from '../types.js'
@@ -9,6 +9,7 @@ import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
+import { scaffoldConstitution } from '../scaffold/constitution.js'
 
 const libraryDir = path.resolve(process.cwd(), 'library')
 
@@ -247,5 +248,88 @@ describe('scaffoldAgentsSkillsPrompts', () => {
 
     expect(existsSync(path.join(tempDir, '.opencode'))).toBe(false)
     expect(fileRecords).toHaveLength(0)
+  })
+})
+
+describe('scaffoldConstitution', () => {
+  let tempDir: string
+  let fileRecords: FileRecord[]
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(tmpdir(), 'scaffold-constitution-'))
+    fileRecords = []
+  })
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('creates .ai/constitution with all 4 files', async () => {
+    await scaffoldConstitution({
+      targetDir: tempDir,
+      libraryDir,
+      projectName: 'my-project',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constraints.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'quality-gates.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'uncertainty.md'))).toBe(true)
+  })
+
+  it('replaces [YOUR_PROJECT_NAME] placeholder', async () => {
+    await scaffoldConstitution({
+      targetDir: tempDir,
+      libraryDir,
+      projectName: 'placeholder-check',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const constitution = readFileSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'), 'utf-8')
+    expect(constitution).toContain('# placeholder-check Constitution')
+    expect(constitution).not.toContain('[YOUR_PROJECT_NAME]')
+  })
+
+  it('skips existing files with skip strategy', async () => {
+    const existingPath = path.join(tempDir, '.ai', 'constitution', 'constitution.md')
+    mkdirSync(path.dirname(existingPath), { recursive: true })
+    const existingContent = '# Existing Constitution\n'
+    writeFileSync(existingPath, existingContent, 'utf-8')
+
+    await scaffoldConstitution({
+      targetDir: tempDir,
+      libraryDir,
+      projectName: 'ignored-name',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const currentContent = readFileSync(existingPath, 'utf-8')
+    expect(currentContent).toBe(existingContent)
+  })
+
+  it('records scaffolded files in fileRecords', async () => {
+    await scaffoldConstitution({
+      targetDir: tempDir,
+      libraryDir,
+      projectName: 'records-check',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    expect(fileRecords).toHaveLength(4)
+    expect(fileRecords.map((r) => r.path).sort()).toEqual([
+      '.ai/constitution/constitution.md',
+      '.ai/constitution/constraints.md',
+      '.ai/constitution/quality-gates.md',
+      '.ai/constitution/uncertainty.md',
+    ])
   })
 })

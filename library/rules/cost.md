@@ -38,6 +38,8 @@ Manage AI model token consumption and API costs throughout development workflows
 - ❌ Ignoring compaction warnings until context window is full
 
 ## Enforcement
+> **Design Note:** This rule is intentionally advisory (not blocking) because cost thresholds vary significantly by project, team budget, and model pricing. Use it as guidance for reviews, not as a CI gate.
+
 - Agents should log model selection rationale in task journals
 - Reviewers should flag unnecessary premium model usage
 - Cost rule violations are advisory, not blocking

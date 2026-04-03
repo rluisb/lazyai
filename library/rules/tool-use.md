@@ -45,3 +45,31 @@ Guide AI agents in selecting, invoking, and handling tools/functions correctly.
 - Reviewers should check tool invocation patterns in agent traces
 - Anti-speculation skill should flag speculative tool usage
 - Tool errors in task journals should trigger review of invocation discipline
+
+## Defining Tools for Agent Use
+
+When authoring tool/function definitions that LLMs will consume:
+
+### Schema Quality
+- **Names:** Use descriptive verb-noun pairs (`search_repositories`, not `search`)
+- **Descriptions:** Explain *when* to call, not just *what* it does ("Use when you need to find files matching a pattern" > "Searches for files")
+- **Parameters:** Include type, constraints, and examples in descriptions
+- **Required vs optional:** Mark clearly; provide sensible defaults for optional params
+
+### Error Responses
+- Return structured error objects, not raw strings
+- Include actionable guidance: "File not found at X. Did you mean Y?"
+- Distinguish retriable errors (timeout) from permanent errors (not found)
+
+### Example Schema Pattern
+```json
+{
+  "name": "search_code",
+  "description": "Search repository code for a pattern. Use when you need to find where a function is defined or where a pattern is used across the codebase.",
+  "parameters": {
+    "pattern": { "type": "string", "description": "Regex pattern to search for (e.g., 'function handleAuth')" },
+    "path": { "type": "string", "description": "Directory to search in. Defaults to repo root.", "default": "." },
+    "maxResults": { "type": "number", "description": "Max results to return (1-100)", "default": 20 }
+  }
+}
+```

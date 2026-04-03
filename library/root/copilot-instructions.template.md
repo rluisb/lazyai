@@ -184,18 +184,22 @@ Example references:
   5. Apply minimal fix targeting only the root cause
   6. Run tests again to verify the fix doesn't introduce new failures
 - If build breaks:
-  1. `git stash` to save current changes
-  2. `git checkout -- <file>` to restore last known good state
-  3. Re-read the failing test/error output carefully
-  4. Identify the root cause before attempting a fix
-  5. Apply minimal fix targeting only the root cause
-  6. Run tests again to verify the fix doesn't introduce new failures
+  1. Read the full error output — identify whether it's a type error, missing import, or config issue
+  2. Check recent changes with `git diff HEAD~1` to identify the breaking change
+  3. For type errors: fix the type definition, don't suppress with `any`
+  4. For missing imports: trace the import chain, ensure the module exists
+  5. For config issues: compare with a known-good config state
+  6. Run `git stash` to verify the build passes without your changes, then `git stash pop`
 
 ## Memory & Context
 
-<!-- GitHub Copilot supports .github/prompts/*.prompt.md for reusable prompt files -->
-<!-- Use .github/instructions/ for path-specific instructions with YAML applyTo frontmatter -->
-<!-- AGENTS.md files in directories provide agent-specific instructions -->
+<!-- Copilot supports @workspace file references and #file references -->
+
+When starting a task, load relevant context:
+- Review [docs/rules/](docs/rules/) for coding standards
+- Review [docs/standards/](docs/standards/) for project conventions
+- Check [docs/memory/](docs/memory/) for prior decisions and handoffs
+- Reference [docs/templates/](docs/templates/) for document structures
 
 ## Session Management & Compaction
 

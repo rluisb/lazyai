@@ -129,6 +129,16 @@ Wave 2 (Depends on C):
 - Multiple agents working in the same worktree
 - Agents pushing or merging without user approval
 
+## Output Format
+
+```markdown
+## Parallel Execution Report
+- **Waves completed:** N/N
+- **Files touched:** [list]
+- **Conflicts detected:** [none | list]
+- **Merge status:** [clean | required manual resolution]
+```
+
 ## Integration
 
 - **Planner agent**: Creates file touch-map and wave assignments during planning

@@ -481,6 +481,11 @@ describe('basic command smoke tests', () => {
     return tempDir
   }
 
+  const runCreate = async (args: string[]): Promise<void> => {
+    const program = createProgram()
+    await program.parseAsync(['node', 'ai-setup', 'create', ...args])
+  }
+
   beforeEach(() => {
     originalCwd = process.cwd()
   })
@@ -507,6 +512,33 @@ describe('basic command smoke tests', () => {
     expect(createCommand?.helpInformation()).toContain('prompt [options] [name]')
     expect(createCommand?.helpInformation()).toContain('template [options] [name]')
     expect(createCommand?.helpInformation()).toContain('workflow [options] [name]')
+  })
+
+  it('create agent writes agent file to library/agents', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runCreate(['agent', 'my-agent', '--model', 'gpt-4o', '--mode', 'interactive', '--tools', 'fs', '--no-interactive'])
+
+    expect(fs.existsSync(path.join(tempDir, 'library/agents/my-agent.md'))).toBe(true)
+  })
+
+  it('create skill writes skill file to library/skills', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runCreate(['skill', 'my-skill', '--command', 'my-skill', '--steps', 'Clarify scope', '--no-interactive'])
+
+    expect(fs.existsSync(path.join(tempDir, 'library/skills/my-skill.md'))).toBe(true)
+  })
+
+  it('create prompt writes prompt file to library/prompts', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runCreate(['prompt', 'my-prompt', '--task-context', 'test task', '--output-format', 'markdown', '--no-interactive'])
+
+    expect(fs.existsSync(path.join(tempDir, 'library/prompts/my-prompt.md'))).toBe(true)
   })
 
   it('eject without prior init throws manifest-not-found error', async () => {

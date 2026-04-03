@@ -66,6 +66,7 @@ export const configSchema = z.object({
         name: z.string(),
         path: z.string(),
         type: z.string().optional(),
+        description: z.string().optional(),
       }),
     )
     .optional(),

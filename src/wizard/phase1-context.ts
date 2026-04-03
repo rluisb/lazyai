@@ -29,7 +29,7 @@ export interface Phase1Result {
   projectName: string
   workspaceName?: string
   planningRepoPath?: string
-  repos?: Array<{ name: string; path: string; type?: string }>
+  repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   cliTools?: string[]
 }
 
@@ -72,20 +72,21 @@ function listSubdirectories(parentDir: string): string[] {
   }
 }
 
-function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string; type?: string }> {
+function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string; type?: string; description?: string }> {
   if (!raw) return []
 
   const planningRepoAbsolute = path.resolve(planningRepoPath)
   const trimmed = raw.trim()
   if (!trimmed) return []
 
-  const toRepoRef = (repoPathInput: string): { name: string; path: string; type?: string } => {
+  const toRepoRef = (repoPathInput: string): { name: string; path: string; type?: string; description?: string } => {
     const resolved = path.resolve(planningRepoAbsolute, repoPathInput)
     const detected = detectRepoInfo(resolved, planningRepoAbsolute)
     return {
       name: detected.name,
       path: detected.path || '.',
       type: detected.type,
+      ...(detected.description ? { description: detected.description } : {}),
     }
   }
 
@@ -122,6 +123,7 @@ function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string):
         name: repo.name,
         path: repo.path,
         type: repo.type,
+        ...(repo.description ? { description: repo.description } : {}),
       }))
       .filter((repo) => repo.path !== '.')
   } catch {
@@ -210,7 +212,7 @@ export async function runPhase1(opts: {
   let projectName: string
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined
-  let repos: Array<{ name: string; path: string; type?: string }> = []
+  let repos: Array<{ name: string; path: string; type?: string; description?: string }> = []
   let cliTools: string[] = opts.cliOverrides.cliTools ?? []
 
   // Prompt 1: Setup scope
@@ -313,10 +315,15 @@ export async function runPhase1(opts: {
       for (const dir of subdirs) {
         const name = path.basename(dir)
         const hasGit = fileExists(path.join(dir, '.git'))
+        const info = detectRepoInfo(dir, opts.targetDir)
+        const parts: string[] = []
+        if (hasGit) parts.push('git repo')
+        if (info.type !== 'unknown') parts.push(info.type)
+        if (info.description) parts.push(info.description)
         dirOptions.push({
           value: dir,
           label: name,
-          hint: hasGit ? 'git repo' : 'directory',
+          hint: parts.join(' · ') || 'directory',
         })
       }
 
@@ -360,41 +367,137 @@ export async function runPhase1(opts: {
       const siblingDirs = listSubdirectories(parentDir)
         .filter((dir) => path.resolve(dir) !== path.resolve(planningRepoPathResolved))
 
-      if (siblingDirs.length > 0) {
-        const repoOptions: Array<{ value: string; label: string; hint?: string }> = []
+      const repoOptions: Array<{ value: string; label: string; hint?: string }> = []
 
-        for (const dir of siblingDirs) {
-          const info = detectRepoInfo(dir, planningRepoPathResolved)
-          if (!info.isGitRepo) continue
+      for (const dir of siblingDirs) {
+        const info = detectRepoInfo(dir, planningRepoPathResolved)
+        if (!info.isGitRepo) continue
 
-          const typeLabel = info.type !== 'unknown' ? info.type : 'unknown stack'
-          repoOptions.push({
-            value: dir,
-            label: info.name,
-            hint: typeLabel,
-          })
+        const parts: string[] = []
+        if (info.type !== 'unknown') parts.push(info.type)
+        if (info.description) parts.push(info.description)
+        repoOptions.push({
+          value: dir,
+          label: info.name,
+          hint: parts.join(' · ') || 'git repo',
+        })
+      }
+
+      if (repoOptions.length > 0) {
+        repoOptions.push({ value: '__custom__', label: 'Add custom path…', hint: 'enter a repo path not listed above' })
+
+        const reposResult = await p.multiselect({
+          message: 'Which repos should this workspace reference?',
+          options: repoOptions,
+          required: false,
+        })
+
+        if (p.isCancel(reposResult)) {
+          p.cancel('Setup cancelled.')
+          process.exit(0)
         }
 
-        if (repoOptions.length > 0) {
-          const reposResult = await p.multiselect({
-            message: 'Which repos should this workspace reference?',
-            options: repoOptions,
-            required: false,
-          })
+        const selectedDirs = (reposResult as string[]).filter((v) => v !== '__custom__')
+        const wantsCustom = (reposResult as string[]).includes('__custom__')
 
-          if (p.isCancel(reposResult)) {
-            p.cancel('Setup cancelled.')
-            process.exit(0)
+        repos = selectedDirs
+          .map((dir) => detectRepoInfo(dir, planningRepoPath!))
+          .map((info) => ({
+            name: info.name,
+            path: info.path,
+            type: info.type,
+            ...(info.description ? { description: info.description } : {}),
+          }))
+
+        if (wantsCustom) {
+          let addMore = true
+          while (addMore) {
+            const customPath = await p.text({
+              message: 'Custom repo path (absolute or relative to planning repo):',
+              placeholder: '../my-other-repo',
+            })
+
+            if (p.isCancel(customPath)) {
+              p.cancel('Setup cancelled.')
+              process.exit(0)
+            }
+
+            if (customPath) {
+              const resolved = path.resolve(planningRepoPath!, customPath)
+              const info = detectRepoInfo(resolved, planningRepoPath!)
+              repos.push({
+                name: info.name,
+                path: info.path,
+                type: info.type,
+                ...(info.description ? { description: info.description } : {}),
+              })
+              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ' · ' + info.description : ''})`)
+            }
+
+            const another = await p.confirm({
+              message: 'Add another custom repo?',
+              initialValue: false,
+            })
+
+            if (p.isCancel(another)) {
+              p.cancel('Setup cancelled.')
+              process.exit(0)
+            }
+
+            addMore = another
           }
-
-          repos = (reposResult as string[])
-            .map((dir) => detectRepoInfo(dir, planningRepoPath!))
-            .map((info) => ({ name: info.name, path: info.path, type: info.type }))
-        } else {
-          p.note('No git repos found in sibling directories. You can add repos later in .ai/config.yml.')
         }
       } else {
-        p.note('No sibling directories found. You can add repos later in .ai/config.yml.')
+        const addManual = await p.confirm({
+          message: 'No git repos found nearby. Add a repo path manually?',
+          initialValue: false,
+        })
+
+        if (p.isCancel(addManual)) {
+          p.cancel('Setup cancelled.')
+          process.exit(0)
+        }
+
+        if (addManual) {
+          let addMore = true
+          while (addMore) {
+            const customPath = await p.text({
+              message: 'Repo path (absolute or relative to planning repo):',
+              placeholder: '../my-repo',
+            })
+
+            if (p.isCancel(customPath)) {
+              p.cancel('Setup cancelled.')
+              process.exit(0)
+            }
+
+            if (customPath) {
+              const resolved = path.resolve(planningRepoPath!, customPath)
+              const info = detectRepoInfo(resolved, planningRepoPath!)
+              repos.push({
+                name: info.name,
+                path: info.path,
+                type: info.type,
+                ...(info.description ? { description: info.description } : {}),
+              })
+              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ' · ' + info.description : ''})`)
+            }
+
+            const another = await p.confirm({
+              message: 'Add another repo?',
+              initialValue: false,
+            })
+
+            if (p.isCancel(another)) {
+              p.cancel('Setup cancelled.')
+              process.exit(0)
+            }
+
+            addMore = another
+          }
+        } else {
+          p.note('You can add repos later in .ai/config.yml.')
+        }
       }
     }
   } else {

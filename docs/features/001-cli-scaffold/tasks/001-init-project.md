@@ -35,6 +35,6 @@ Create a buildable TypeScript project with the right package structure for an np
 
 ## Done When
 
-- [ ] `pnpm build` produces `dist/cli.js`
+- [ ] `pnpm build` produces `dist/index.js`
 - [ ] `node bin/ai-setup.js --version` prints version
 - [ ] `node bin/ai-setup.js --help` shows help text

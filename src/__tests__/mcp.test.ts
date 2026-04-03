@@ -125,7 +125,7 @@ describe('MCP scaffold and compile', () => {
     expect(catalog.servers.memory.enabled).toBe(true)
   })
 
-  it('compileMcp generates .mcp.json and .opencode/mcp-servers.json for opencode', async () => {
+  it('compileMcp generates opencode.jsonc with mcp config for opencode', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -141,17 +141,55 @@ describe('MCP scaffold and compile', () => {
       fileRecords,
     })
 
-    const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
-    expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
-    expect(mcpJson.mcpServers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
+    expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
+    expect(opencodeConfig.mcp.stdioEnabled.environment.API_KEY).toBe('{env:API_KEY}')
+    expect(opencodeConfig.mcp.stdioDisabled.enabled).toBe(false)
+    expect(opencodeConfig.mcp.remoteDisabled.type).toBe('remote')
+    expect(opencodeConfig.mcp.remoteDisabled.headers.REMOTE_API_KEY).toBe('{env:REMOTE_API_KEY}')
+  })
 
-    const opencodeMcp = JSON.parse(readFile(path.join(targetDir, '.opencode', 'mcp-servers.json')))
-    expect(opencodeMcp.stdioEnabled.type).toBe('local')
-    expect(opencodeMcp.stdioEnabled.environment.API_KEY).toBe('{env:API_KEY}')
-    expect(opencodeMcp.stdioDisabled.enabled).toBe(false)
-    expect(opencodeMcp.remoteDisabled.type).toBe('remote')
-    expect(opencodeMcp.remoteDisabled.headers.REMOTE_API_KEY).toBe('{env:REMOTE_API_KEY}')
+  it('compileMcp merges existing opencode.jsonc and preserves non-mcp keys', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    writeFile(
+      path.join(targetDir, 'opencode.jsonc'),
+      JSON.stringify(
+        {
+          plugin: ['foo-plugin'],
+          permission: { default: 'allow' },
+          mcp: {
+            legacy: {
+              type: 'local',
+              command: ['legacy-cmd'],
+            },
+          },
+        },
+        null,
+        2,
+      ) + '\n',
+    )
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'opencode',
+      fileRecords,
+    })
+
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    expect(opencodeConfig.plugin).toEqual(['foo-plugin'])
+    expect(opencodeConfig.permission).toEqual({ default: 'allow' })
+    expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
+    expect(opencodeConfig.mcp.legacy).toBeUndefined()
+    expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
   })
 
   it('compileMcp generates .vscode/mcp.json for copilot with stdio and remote types', async () => {

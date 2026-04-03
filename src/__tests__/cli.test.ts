@@ -91,8 +91,7 @@ describe('cli init integration', () => {
       '.pi/templates',
       '.pi/skills',
       '.opencode/agents',
-      '.opencode/commands',
-      '.opencode/templates',
+      '.opencode/skills',
       '.ai-setup.json',
     ]
 
@@ -108,8 +107,7 @@ describe('cli init integration', () => {
     expect(config.files.some((f: { path: string }) => f.path === '.pi/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.pi/skills/research.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === '.opencode/commands/research.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === '.opencode/templates/research.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.opencode/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === 'docs/templates/task.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })
@@ -155,8 +153,9 @@ describe('cli init integration', () => {
 
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.opencode/templates'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/skills'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/templates'))).toBe(false)
 
     expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
     expect(fs.existsSync(path.join(tempDir, '.pi/agents'))).toBe(false)
@@ -405,7 +404,7 @@ describe('cli init integration', () => {
 
     await runAdd('claude-code')
 
-    expect(fs.existsSync(path.join(tempDir, '.claude', 'commands'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.claude', 'skills'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.claude', 'rules'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
 

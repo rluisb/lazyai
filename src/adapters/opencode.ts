@@ -12,12 +12,11 @@ export class OpenCodeAdapter implements ToolAdapter {
   async install(ctx: AdapterContext): Promise<void> {
     const isGlobal = ctx.setupScope === 'global'
     const ocDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.opencode')
-    const commandsDir = isGlobal ? 'command' : 'commands'
+    const skillsDir = 'skills'
 
     files.ensureDir(ocDir)
     files.ensureDir(path.join(ocDir, 'agents'))
-    files.ensureDir(path.join(ocDir, commandsDir))
-    files.ensureDir(path.join(ocDir, 'templates'))
+    files.ensureDir(path.join(ocDir, skillsDir))
 
     console.log('🤖  Installing OpenCode tools...')
 
@@ -32,17 +31,12 @@ export class OpenCodeAdapter implements ToolAdapter {
 
     await copyLibraryDirectory({
       ctx,
-      sourceSubdir: 'prompts',
-      selectionKey: 'prompts',
-      toDestPath: (file) => path.join(ocDir, 'templates', file),
-      warnOnSkip: true,
-    })
-
-    await copyLibraryDirectory({
-      ctx,
       sourceSubdir: 'skills',
       selectionKey: 'skills',
-      toDestPath: (file) => path.join(ocDir, commandsDir, file),
+      toDestPath: (file) => {
+        const name = path.parse(file).name
+        return path.join(ocDir, skillsDir, name, 'SKILL.md')
+      },
       warnOnSkip: true,
     })
 
@@ -51,8 +45,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       toolDir: ocDir,
       contextFileName: 'AGENTS.md',
       agentsDestDir: 'agents',
-      skillsDestDir: commandsDir,
-      templatesDestDir: 'templates',
+      skillsDestDir: skillsDir,
       warnOnSkip: true,
     })
 

@@ -78,7 +78,9 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
 
   // Skills
   const skills = ALL_SKILLS.filter(s =>
-    files.some(f => f.endsWith(`/${s}.md`) && (f.includes('commands/') || f.includes('skills/') || f.includes('prompts/'))),
+    files.some(f =>
+      f.endsWith(`/${s}.md`) || f.endsWith(`/skills/${s}/SKILL.md`) || f.endsWith(`/prompts/${s}.prompt.md`),
+    ),
   )
   if (skills.length > 0) selections.skills = skills
 

@@ -19,6 +19,7 @@ interface CompileOptions {
   tools?: string
   force?: boolean
   dryRun?: boolean
+  planningRepo?: string
 }
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
@@ -43,9 +44,20 @@ function parseTools(tools: string | undefined, registry: AdapterRegistry): ToolI
   return parsed as ToolId[]
 }
 
-function resolveStoreDir(scope: SetupScope | undefined, cwd: string, userHomeDir: string): string {
+function resolveStoreDir(
+  scope: SetupScope | undefined,
+  cwd: string,
+  userHomeDir: string,
+  planningRepo: string | undefined,
+  storePlanningRepoPath: string | undefined,
+): string {
   if (scope === 'global') {
     return join(userHomeDir, '.ai')
+  }
+
+  if (scope === 'workspace') {
+    if (planningRepo) return planningRepo
+    if (storePlanningRepoPath) return storePlanningRepoPath
   }
 
   return cwd
@@ -58,12 +70,31 @@ export function registerCompile(program: Command): void {
     .option('--scope <scope>', 'Scope: global | workspace | project')
     .option('--tools <tools>', 'Comma-separated tool list to compile')
     .option('--force', 'Overwrite existing files')
-    .option('--dry-run', 'Preview changes without writing files')
+     .option('--dry-run', 'Preview changes without writing files')
+    .option('--planning-repo <path>', 'Planning repo path (for workspace scope)')
     .action(async (opts: CompileOptions) => {
       const cwd = process.cwd()
       const userHomeDir = homedir()
       const registry = new AdapterRegistry()
-      const storeDir = resolveStoreDir(opts.scope, cwd, userHomeDir)
+
+      let workspaceStorePlanningRepoPath: string | undefined
+      let workspaceStoreFromCwd: Awaited<ReturnType<typeof readStoreReadonly>> | undefined
+
+      if (opts.scope === 'workspace' && !opts.planningRepo) {
+        const cwdManifestPath = join(cwd, '.ai-setup.json')
+        if (fileExists(cwdManifestPath)) {
+          workspaceStoreFromCwd = await readStoreReadonly(cwd)
+          workspaceStorePlanningRepoPath = workspaceStoreFromCwd.config.planningRepoPath
+        }
+      }
+
+      const storeDir = resolveStoreDir(
+        opts.scope,
+        cwd,
+        userHomeDir,
+        opts.planningRepo,
+        workspaceStorePlanningRepoPath,
+      )
       const manifestPath = join(storeDir, '.ai-setup.json')
 
       if (!fileExists(manifestPath)) {
@@ -75,7 +106,7 @@ export function registerCompile(program: Command): void {
         throw Errors.manifestNotFound(storeDir)
       }
 
-      const store = await readStoreReadonly(storeDir)
+      const store = workspaceStoreFromCwd && storeDir === cwd ? workspaceStoreFromCwd : await readStoreReadonly(storeDir)
       const effectiveScope = opts.scope ?? store.config.setupScope
 
       const overrideTools = parseTools(opts.tools, registry)

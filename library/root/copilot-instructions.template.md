@@ -279,6 +279,22 @@ Output format:
 
 The human decides whether to update now or create a follow-up task.
 
+### Session End Protocol (Multi-Session Handoff)
+
+When work spans sessions or leaves unresolved items, create/update a handoff note in:
+`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+
+Minimum handoff content:
+1. Current objective and status (done/in-progress/blocked)
+2. Decisions made (with rationale)
+3. Open assumptions/questions
+4. Next 1–2 concrete actions
+5. Risks/watchouts for the next agent
+
+Example references:
+- Handoff structure: `docs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `docs/prompts/local-examples/commit-message-pattern.md`
+
 ### Severity of Updates
 
 | Severity | When | Action |
@@ -301,17 +317,3 @@ The human decides whether to update now or create a follow-up task.
 | Bug revealed missing rule | [docs/rules/](docs/rules/) + [docs/memory/](docs/memory/) |
 | Refactor changed structure | Root copilot-instructions.md + [docs/standards/](docs/standards/) + [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
 
-## Session End Protocol (Multi-Session Handoff)
-
-If work is ongoing or leaves unresolved decisions, write/update:
-`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
-
-Include:
-1. Objective + current status
-2. Decisions made + rationale
-3. Open questions/assumptions
-4. Next 1–2 concrete actions
-5. Risks/watchouts
-
-Example reference:
-- `docs/prompts/local-examples/commit-message-pattern.md`

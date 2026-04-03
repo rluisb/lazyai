@@ -70,8 +70,7 @@ Skip this for straightforward lookups.
 ```
 
 ## Integration
-- **Primary agent:** Scout (research phase)
-- **Triggered by:** `/research` command or workflow rule step 1
-- **Depends on:** Task description or PRD from user
-- **Feeds into:** plan.md (Planner reads research output)
-- **Related skills:** anti-speculation (prevents scope creep during research)
+- **Primary agent:** Researcher (discovery phase)
+- **Triggered by:** `/research` command at workflow start
+- **Depends on:** User objective, repository evidence, and relevant documentation
+- **Feeds into:** `plan` with validated findings, risks, and open questions

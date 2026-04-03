@@ -38,7 +38,7 @@ import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
-import { planFiles } from './planner.js'
+import { computePlan } from './planner.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { compileMcp } from '../adapters/mcp-compiler.js'
 import { detectExistingSetup } from '../migration/detector.js'
@@ -79,6 +79,7 @@ function buildDefaultSelections(targetDir: string): WizardSelections {
     skills: ALL_SKILLS,
     prompts: ALL_PROMPTS,
     infra: hasGitDir ? ALL_INFRA : ALL_INFRA.filter((item) => item !== 'pre-commit'),
+    constitution: [] as string[],
   }
 }
 
@@ -228,7 +229,7 @@ export async function runWizard(opts: {
       force: opts.force,
     }
 
-    const plan = planFiles({ targetDir: effectiveTargetDir, libraryDir, config })
+    const plan = await computePlan(config, effectiveTargetDir, selections)
 
     const plannedFiles = plan.map(file => {
         const destPath = path.join(effectiveTargetDir, file.destPath)

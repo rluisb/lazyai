@@ -64,7 +64,8 @@ describe('extractSelections', () => {
       agents: ['builder'],
       skills: ['implement'],
       prompts: ['plan'],
-      infra: ['pre-commit'],
+      infra: ["pre-commit"],
+      constitution: [],
     }
     const manifest = buildManifest(['docs/features/example.md'], selections)
 
@@ -98,7 +99,7 @@ describe('extractSelections', () => {
   })
 
   it('infers skills from commands/skills/prompts paths', () => {
-    const manifest = buildManifest(['.claude/commands/implement.md'])
+    const manifest = buildManifest(['.claude/skills/implement/SKILL.md'])
 
     const result = extractSelections(manifest)
 

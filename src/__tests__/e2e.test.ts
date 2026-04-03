@@ -43,7 +43,7 @@ describe('e2e project workflows', () => {
     expect(fs.existsSync(path.join(tempDir, '.ai'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.ai', 'constitution'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode', 'agents', 'builder.md'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.opencode', 'commands', 'research.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode', 'skills', 'research', 'SKILL.md'))).toBe(true)
 
     fs.rmSync(path.join(tempDir, '.opencode', 'agents', 'builder.md'))
     expect(fs.existsSync(path.join(tempDir, '.opencode', 'agents', 'builder.md'))).toBe(false)

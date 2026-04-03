@@ -29,8 +29,8 @@ interface ToolContextFilesOptions {
   toolDir: string
   contextFileName: string
   agentsDestDir: string
-  skillsDestDir: string
-  templatesDestDir: string
+  skillsDestDir?: string
+  templatesDestDir?: string
   warnOnSkip?: boolean
 }
 
@@ -50,6 +50,7 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
   const relPath = path.relative(opts.ctx.targetDir, opts.dest)
   const dryRun = opts.dryRun ?? opts.ctx.dryRun === true
   const effectiveStrategy = opts.ctx.perFileOverrides?.get(opts.dest) ?? opts.ctx.strategy
+
   const resolution = await resolveConflict(opts.dest, relPath, {
     force: opts.ctx.force,
     ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
@@ -85,6 +86,8 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
     })
     return
   }
+
+  files.ensureDir(path.dirname(opts.dest))
 
   if (opts.transform) {
     const transformed = opts.transform(files.readFile(opts.src))
@@ -139,19 +142,23 @@ export async function installToolContextFiles(opts: ToolContextFilesOptions): Pr
     ...withWarn,
   })
 
-  await copyWithRecord({
-    src: path.join(toolAgentsDir, 'skills-dir.md'),
-    dest: path.join(opts.toolDir, opts.skillsDestDir, opts.contextFileName),
-    ctx: opts.ctx,
-    ...withWarn,
-  })
+  if (opts.skillsDestDir) {
+    await copyWithRecord({
+      src: path.join(toolAgentsDir, 'skills-dir.md'),
+      dest: path.join(opts.toolDir, opts.skillsDestDir, opts.contextFileName),
+      ctx: opts.ctx,
+      ...withWarn,
+    })
+  }
 
-  await copyWithRecord({
-    src: path.join(toolAgentsDir, 'templates-dir.md'),
-    dest: path.join(opts.toolDir, opts.templatesDestDir, opts.contextFileName),
-    ctx: opts.ctx,
-    ...withWarn,
-  })
+  if (opts.templatesDestDir) {
+    await copyWithRecord({
+      src: path.join(toolAgentsDir, 'templates-dir.md'),
+      dest: path.join(opts.toolDir, opts.templatesDestDir, opts.contextFileName),
+      ctx: opts.ctx,
+      ...withWarn,
+    })
+  }
 
   await copyWithRecord({
     src: path.join(toolAgentsDir, 'root-dir.md'),

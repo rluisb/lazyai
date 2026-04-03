@@ -71,8 +71,7 @@ When a loop iteration fails:
 ```
 
 ## Integration
-- **Primary agent:** Builder (fix/retry loops)
-- **Triggered by:** `/iterate` command or test failures during implementation
-- **Depends on:** Test output and error messages from current task
-- **Feeds into:** memory-write.md on resolution; escalates to Reviewer after 2 failed reflections
-- **Related skills:** implement (initial pass), lessons-learned (captures retry insights)
+- **Primary agent:** Implementor (debug loop)
+- **Triggered by:** `/iterate` command or failing tests during implementation
+- **Depends on:** Latest failing test output, error context, and task scope
+- **Feeds into:** Continued implementation when green, then `memory-write` for captured learnings

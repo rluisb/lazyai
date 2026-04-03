@@ -244,8 +244,9 @@ describe('scaffoldAgentsSkillsPrompts', () => {
     })
 
     expect(existsSync(path.join(tempDir, '.opencode', 'agents', 'builder.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.opencode', 'commands', 'implement.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.opencode', 'templates', 'plan.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.opencode', 'commands'))).toBe(false)
+    expect(existsSync(path.join(tempDir, '.opencode', 'templates'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
 

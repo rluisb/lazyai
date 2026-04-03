@@ -80,6 +80,7 @@ export const wizardSelectionsSchema = z.object({
   skills: skillIdSchema.array(),
   prompts: promptIdSchema.array(),
   infra: infraIdSchema.array(),
+  constitution: z.array(z.string()),
 })
 
 export const trackedFileSchema = z.object({
@@ -146,6 +147,7 @@ export function defaultStore(): StoreData {
       skills: [],
       prompts: [],
       infra: [],
+      constitution: [],
     },
     files: [],
     sync: {

@@ -11,7 +11,7 @@ export interface PlannedFile {
 
 const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
   opencode: 'AGENTS.md',
-  pi: 'CLAUDE.md',
+  pi: 'INSTRUCTIONS.md',
   'claude-code': 'CLAUDE.md',
   gemini: 'GEMINI.md',
   copilot: '.github/copilot-instructions.md',
@@ -59,11 +59,12 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
   copilot: {
     agentDir: '.github/agents',
     skillDir: '.github/prompts',
-    promptDir: '.github/ai-templates',
+    promptDir: '.github/prompts',
   },
   pi: {
     agentDir: '.pi/agents',
     skillDir: '.pi/skills',
+    promptDir: '.pi/templates',
   },
   codex: {
     // Codex agents are inline in AGENTS.md, no separate directory
@@ -152,7 +153,7 @@ export async function computePlan(
     for (const skillId of selections.skills) {
       const skillDestPath = tool === 'copilot'
         ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex'
+        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini'
           ? `${skillId}/SKILL.md`
           : `${skillId}.md`
       planned.push(

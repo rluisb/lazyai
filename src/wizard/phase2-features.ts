@@ -69,6 +69,11 @@ export async function runPhase2Features(opts: {
     const planningDir = opts.cliOverrides?.planningDir ?? opts.prior?.planningDir ?? '.planning'
     const features = { ...DEFAULT_FEATURES }
 
+    // Apply prior feature overrides (baseline from last run)
+    if (opts.prior?.features) {
+      Object.assign(features, opts.prior.features)
+    }
+
     // Apply CLI feature enables
     if (opts.cliOverrides?.features) {
       for (const flag of opts.cliOverrides.features) {
@@ -80,16 +85,18 @@ export async function runPhase2Features(opts: {
 
     // Apply CLI feature disables
     if (opts.cliOverrides?.disableFeatures) {
-      for (const flag of opts.cliOverrides.disableFeatures) {
-        if (flag in features) {
-          features[flag as keyof FeatureFlags] = false
+      const disableFeatures = opts.cliOverrides.disableFeatures
+      if (disableFeatures.includes('all')) {
+        for (const key of Object.keys(features) as Array<keyof FeatureFlags>) {
+          features[key] = false
+        }
+      } else {
+        for (const flag of disableFeatures) {
+          if (flag in features) {
+            features[flag as keyof FeatureFlags] = false
+          }
         }
       }
-    }
-
-    // Apply prior feature overrides
-    if (opts.prior?.features) {
-      Object.assign(features, opts.prior.features)
     }
 
     // Git conventions

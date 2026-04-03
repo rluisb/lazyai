@@ -370,6 +370,7 @@ export async function runWizard(opts: {
           projectName: effectiveProjectName,
           planningDir,
           features,
+          gitConventions,
           fileRecords,
           strategy,
           perFileOverrides,

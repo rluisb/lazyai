@@ -2,7 +2,7 @@ import path from 'node:path'
 import { ensureDir, writeFile, fileHash } from '../utils/files.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
 import type { ToolId, FileRecord, ConflictStrategy } from '../types.js'
-import type { FeatureFlags } from '../store/schema.js'
+import type { FeatureFlags, GitConventions } from '../store/schema.js'
 import { TemplateCompiler, type FragmentContext } from '../compiler/index.js'
 
 // Root file mapping per tool - maps template output to tool-native filename
@@ -22,6 +22,7 @@ export interface ScaffoldCompiledRootOptions {
   projectName: string
   planningDir: string
   features?: FeatureFlags
+  gitConventions?: GitConventions
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
@@ -59,6 +60,7 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     projectName,
     planningDir,
     features,
+    gitConventions,
     fileRecords,
     strategy,
     perFileOverrides,
@@ -76,11 +78,24 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     ...(framework != null ? { framework } : {}),
     ...(workspaceType != null ? { workspaceType } : {}),
     ...(projectInstructions != null ? { projectInstructions } : {}),
-    ...(features ? {
+    ...(features || gitConventions ? {
       features: {
-        tree_of_thoughts: features.treeOfThoughts,
-        agent_harness: features.agentHarness,
-        bug_resolution: features.bugResolution,
+        ...(features ? {
+          contextEngineering: features.contextEngineering,
+          rpiWorkflow: features.rpiWorkflow,
+          chainOfThought: features.chainOfThought,
+          treeOfThoughts: features.treeOfThoughts,
+          adrEnforcement: features.adrEnforcement,
+          qualityGates: features.qualityGates,
+          agentHarness: features.agentHarness,
+          bugResolution: features.bugResolution,
+          pivotHandling: features.pivotHandling,
+          // Legacy aliases for existing snake_case template conditionals
+          tree_of_thoughts: features.treeOfThoughts,
+          agent_harness: features.agentHarness,
+          bug_resolution: features.bugResolution,
+        } : {}),
+        ...(gitConventions ? { gitConventions: true } : {}),
       },
     } : {}),
   }

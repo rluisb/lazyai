@@ -20,7 +20,7 @@ export interface ScaffoldRootFilesOptions {
  * - For each tool in `tools`, reads template from `library/root/` and writes substituted content
  * - `opencode` → reads AGENTS.template.md, writes AGENTS.md
  * - `codex` → reads AGENTS.template.md, writes AGENTS.md
- * - `pi` → reads AGENTS.template.md, writes CLAUDE.md
+ * - `pi` → reads AGENTS.template.md, writes INSTRUCTIONS.md
  * - `claude-code` → reads CLAUDE.template.md (if exists), writes CLAUDE.md
  * - `gemini` → reads GEMINI.template.md (if exists), writes GEMINI.md
  * - `copilot` → reads copilot-instructions.template.md (if exists), ensures .github/, writes .github/copilot-instructions.md
@@ -78,7 +78,7 @@ export async function scaffoldRootFiles(opts: ScaffoldRootFilesOptions): Promise
         const template = readFile(templatePath)
         const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
         writeRootFile(
-          path.join(targetDir, 'CLAUDE.md'),
+          path.join(targetDir, 'INSTRUCTIONS.md'),
           content,
           fileRecords,
           targetDir,

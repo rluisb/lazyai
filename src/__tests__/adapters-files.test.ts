@@ -17,6 +17,7 @@ import { OpenCodeAdapter } from '../adapters/opencode.js'
 import { CopilotAdapter } from '../adapters/copilot.js'
 import { GeminiAdapter } from '../adapters/gemini.js'
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
+import { CodexAdapter } from '../adapters/codex.js'
 import type { FileRecord } from '../types.js'
 
 function makeTempDir(prefix: string): string {
@@ -266,5 +267,60 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === '.claude/agents/builder.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/skills/implement/SKILL.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
+  })
+
+  it('Codex adapter installs .codex skills directory-per-skill and root AGENTS.md', async () => {
+    const adapter = new CodexAdapter()
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+    ensureDir(path.join(libraryDir, 'root'))
+    writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
+
+    await adapter.install({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        skills: ['implement'],
+      },
+    })
+
+    // Codex uses directory-per-skill format: .codex/skills/<name>/SKILL.md
+    expect(fileExists(path.join(targetDir, '.codex/skills/implement/SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
+
+    // Codex has NO agents or templates directories (agents inline in AGENTS.md)
+    expect(fileExists(path.join(targetDir, '.codex/agents'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.codex/templates'))).toBe(false)
+
+    expect(fileRecords.some((f) => f.path === '.codex/skills/implement/SKILL.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
+  })
+
+  it('Codex adapter uses global scope for .codex directory', async () => {
+    const adapter = new CodexAdapter()
+    const globalTargetDir = path.join(targetDir, '.config', 'codex')
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+    ensureDir(path.join(libraryDir, 'root'))
+    writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
+
+    await adapter.install({
+      targetDir: globalTargetDir,
+      setupScope: 'global',
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        skills: ['implement'],
+      },
+    })
+
+    // Global scope: no nested .codex directory, skills go directly in targetDir
+    expect(fileExists(path.join(globalTargetDir, 'skills', 'implement', 'SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(true)
   })
 })

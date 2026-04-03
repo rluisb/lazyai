@@ -20,7 +20,7 @@ export interface SetupConfig {
   workspaceName?: string
   targetDir: string
   planningRepoPath?: string
-  repos?: Array<{ name: string; path: string; type?: string }>
+  repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   globalRef?: string
   force?: boolean | undefined
   dryRun?: boolean

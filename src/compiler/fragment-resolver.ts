@@ -23,9 +23,16 @@ export interface FeatureFlags {
   pivotHandling?: boolean
   gitConventions?: boolean
   // Legacy aliases kept for backwards compatibility with older templates
+  context_engineering?: boolean
+  rpi_workflow?: boolean
+  chain_of_thought?: boolean
   tree_of_thoughts?: boolean
+  adr_enforcement?: boolean
+  quality_gates?: boolean
   agent_harness?: boolean
   bug_resolution?: boolean
+  pivot_handling?: boolean
+  git_conventions?: boolean
 }
 
 /**
@@ -71,15 +78,54 @@ export class FragmentResolver {
     const parts = condition.split('.')
     let value: unknown = context
     
-    for (const part of parts) {
+    for (let index = 0; index < parts.length; index += 1) {
+      const part = parts[index]!
+
       if (value && typeof value === 'object' && part in value) {
         value = (value as Record<string, unknown>)[part]
-      } else {
-        return false
+        continue
       }
+
+      // Feature flags support both camelCase and snake_case condition names
+      if (parts[0] === 'features' && index === 1 && value && typeof value === 'object') {
+        const alias = this.getFeatureAlias(part)
+        if (alias && alias in (value as Record<string, unknown>)) {
+          value = (value as Record<string, unknown>)[alias]
+          continue
+        }
+      }
+
+      return false
     }
     
     return Boolean(value)
+  }
+
+  private getFeatureAlias(name: string): string | undefined {
+    const aliases: Record<string, string> = {
+      contextEngineering: 'context_engineering',
+      context_engineering: 'contextEngineering',
+      rpiWorkflow: 'rpi_workflow',
+      rpi_workflow: 'rpiWorkflow',
+      chainOfThought: 'chain_of_thought',
+      chain_of_thought: 'chainOfThought',
+      treeOfThoughts: 'tree_of_thoughts',
+      tree_of_thoughts: 'treeOfThoughts',
+      adrEnforcement: 'adr_enforcement',
+      adr_enforcement: 'adrEnforcement',
+      qualityGates: 'quality_gates',
+      quality_gates: 'qualityGates',
+      agentHarness: 'agent_harness',
+      agent_harness: 'agentHarness',
+      bugResolution: 'bug_resolution',
+      bug_resolution: 'bugResolution',
+      pivotHandling: 'pivot_handling',
+      pivot_handling: 'pivotHandling',
+      gitConventions: 'git_conventions',
+      git_conventions: 'gitConventions',
+    }
+
+    return aliases[name]
   }
 
   private resolveIncludes(content: string): string {

@@ -6,25 +6,35 @@
 
 This project uses OpenCode with ai-setup integration.
 
+{{#if features.contextEngineering}}
 {{#include fragments/context-engineering.xml}}
+{{/if}}
 
+{{#if features.rpiWorkflow}}
 {{#include fragments/rpi-workflow.xml}}
+{{/if}}
 
+{{#if features.chainOfThought}}
 {{#include fragments/chain-of-thought.xml}}
+{{/if}}
 
-{{#if features.tree_of_thoughts}}
+{{#if features.treeOfThoughts}}
 {{#include fragments/tree-of-thoughts.xml}}
 {{/if}}
 
+{{#if features.adrEnforcement}}
 {{#include fragments/adr-enforcement.xml}}
+{{/if}}
 
+{{#if features.qualityGates}}
 {{#include fragments/quality-gates.xml}}
+{{/if}}
 
 {{#if features.gitConventions}}
 {{#include fragments/git-conventions.xml}}
 {{/if}}
 
-{{#if features.agent_harness}}
+{{#if features.agentHarness}}
 {{#include fragments/agent-harness.xml}}
 {{/if}}
 

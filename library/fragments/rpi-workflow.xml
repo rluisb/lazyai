@@ -1,0 +1,42 @@
+<rpi-workflow>
+  <description>Research-Plan-Implement workflow for structured task execution</description>
+  
+  <phase name="research">
+    <objective>Understand the problem space before proposing solutions</objective>
+    <steps>
+      <step>Identify affected files and components</step>
+      <step>Review existing patterns in the codebase</step>
+      <step>Check for related ADRs or documentation</step>
+      <step>Understand dependencies and potential impacts</step>
+    </steps>
+    <output>Research findings documented in {{PLANNING_DIR}}/specs/research/</output>
+  </phase>
+  
+  <phase name="plan">
+    <objective>Create actionable implementation plan</objective>
+    <steps>
+      <step>Define clear acceptance criteria</step>
+      <step>Break work into incremental steps</step>
+      <step>Identify risks and mitigations</step>
+      <step>Estimate complexity and effort</step>
+    </steps>
+    <output>Implementation plan in {{PLANNING_DIR}}/specs/plans/</output>
+  </phase>
+  
+  <phase name="implement">
+    <objective>Execute plan with continuous validation</objective>
+    <steps>
+      <step>Implement one step at a time</step>
+      <step>Run tests after each change</step>
+      <step>Commit frequently with clear messages</step>
+      <step>Update documentation as needed</step>
+    </steps>
+    <validation>All tests pass, code review approved</validation>
+  </phase>
+  
+  <pivot-handling>
+    <trigger>When implementation reveals plan is incorrect</trigger>
+    <action>Create ADR documenting the pivot rationale</action>
+    <output>{{PLANNING_DIR}}/specs/adr/</output>
+  </pivot-handling>
+</rpi-workflow>

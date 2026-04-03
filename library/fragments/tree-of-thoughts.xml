@@ -1,0 +1,32 @@
+<tree-of-thoughts>
+  <description>Parallel exploration of solution paths for complex decisions</description>
+  
+  <exploration-strategy>
+    <branching>
+      <max-branches>3</max-branches>
+      <branch-criteria>Distinct approaches with different trade-offs</branch-criteria>
+    </branching>
+    
+    <evaluation>
+      <criteria>
+        <criterion weight="high">Correctness and completeness</criterion>
+        <criterion weight="high">Maintainability and readability</criterion>
+        <criterion weight="medium">Performance implications</criterion>
+        <criterion weight="medium">Alignment with existing patterns</criterion>
+        <criterion weight="low">Implementation effort</criterion>
+      </criteria>
+    </evaluation>
+    
+    <selection>
+      <method>Score each branch against criteria</method>
+      <output>Selected branch with justification</output>
+      <fallback>If no clear winner, present top 2 with trade-offs</fallback>
+    </selection>
+  </exploration-strategy>
+  
+  <use-cases>
+    <case>Architecture decisions with multiple valid approaches</case>
+    <case>Complex refactoring with unclear best path</case>
+    <case>Performance optimization trade-offs</case>
+  </use-cases>
+</tree-of-thoughts>

@@ -1,0 +1,35 @@
+<chain-of-thought>
+  <description>Structured reasoning for complex problem solving</description>
+  
+  <thinking-framework>
+    <step name="understand">
+      <action>Restate the problem in your own words</action>
+      <action>Identify constraints and requirements</action>
+      <action>Clarify any ambiguities</action>
+    </step>
+    
+    <step name="analyze">
+      <action>Break down into sub-problems</action>
+      <action>Identify relevant patterns and precedents</action>
+      <action>Consider edge cases</action>
+    </step>
+    
+    <step name="synthesize">
+      <action>Generate potential solutions</action>
+      <action>Evaluate trade-offs</action>
+      <action>Select best approach with justification</action>
+    </step>
+    
+    <step name="verify">
+      <action>Validate solution against requirements</action>
+      <action>Check for unintended consequences</action>
+      <action>Confirm completeness</action>
+    </step>
+  </thinking-framework>
+  
+  <output-format>
+    <show-reasoning>true</show-reasoning>
+    <structure>step-by-step</structure>
+    <confidence-level>explicit</confidence-level>
+  </output-format>
+</chain-of-thought>

@@ -10,6 +10,7 @@ import { scaffoldConstitution } from '../scaffold/constitution.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
+import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import type {
@@ -29,13 +30,14 @@ import {
   ALL_SKILLS,
   ALL_TEMPLATES,
 } from '../types.js'
-import type { StoreData } from '../store/schema.js'
+import type { StoreData, FeatureFlags, GitConventions } from '../store/schema.js'
 import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
 import { appendOperation, writeStore } from '../store/index.js'
 import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
+import { runPhase2Features } from './phase2-features.js'
 import { runPhase7 } from './phase7-conflicts.js'
 import { runPhase8 } from './phase8-confirm.js'
 import { computePlan } from './planner.js'
@@ -105,6 +107,12 @@ export async function runWizard(opts: {
     name?: string
     planningRepo?: string
     repos?: string[]
+    planningDir?: string
+    features?: string[]
+    disableFeatures?: string[]
+    branchPattern?: string
+    commitPattern?: string
+    useCompiledRoot?: boolean
   }
   targetDir: string
 }): Promise<void> {
@@ -118,6 +126,10 @@ export async function runWizard(opts: {
     }
 
     const manifest = await readManifest(opts.targetDir)
+    // Destructure to exclude features/gitConventions from spread (exactOptionalPropertyTypes)
+    const { features: _ef, gitConventions: _eg, ...restSelections } = manifest
+      ? extractSelections(manifest)
+      : {}
     const prior: Partial<WizardSelections> & {
       setupScope?: SetupScope
       setupType?: SetupType
@@ -125,13 +137,19 @@ export async function runWizard(opts: {
       projectName?: string
       workspaceName?: string
       planningRepoPath?: string
+      planningDir?: string
+      features?: Partial<FeatureFlags>
+      gitConventions?: Partial<GitConventions>
     } = manifest
       ? {
-          ...extractSelections(manifest),
+          ...restSelections,
           setupScope: manifest.setupScope,
           ...(manifest.setupType ? { setupType: manifest.setupType } : {}),
           tools: manifest.tools,
           projectName: manifest.projectName,
+          ...(manifest.planningDir != null ? { planningDir: manifest.planningDir } : {}),
+          ...(manifest.features != null ? { features: manifest.features } : {}),
+          ...(manifest.gitConventions != null ? { gitConventions: manifest.gitConventions } : {}),
         }
       : {}
 
@@ -141,6 +159,26 @@ export async function runWizard(opts: {
       cliOverrides: opts.cliOverrides,
       targetDir: opts.targetDir,
     })
+
+    // Phase 2: Planning directory, feature flags, and git conventions
+    const { planningDir, features, gitConventions } = await runPhase2Features({
+      interactive: opts.interactive,
+      prior: {
+        ...(prior.planningDir != null ? { planningDir: prior.planningDir } : {}),
+        ...(prior.features != null ? { features: prior.features } : {}),
+        ...(prior.gitConventions != null ? { gitConventions: prior.gitConventions } : {}),
+      },
+      cliOverrides: {
+        ...(opts.cliOverrides.planningDir != null ? { planningDir: opts.cliOverrides.planningDir } : {}),
+        ...(opts.cliOverrides.features != null ? { features: opts.cliOverrides.features } : {}),
+        ...(opts.cliOverrides.disableFeatures != null ? { disableFeatures: opts.cliOverrides.disableFeatures } : {}),
+        ...(opts.cliOverrides.branchPattern != null ? { branchPattern: opts.cliOverrides.branchPattern } : {}),
+        ...(opts.cliOverrides.commitPattern != null ? { commitPattern: opts.cliOverrides.commitPattern } : {}),
+      },
+    })
+
+    // Determine whether to use compiled root files (with XML tags)
+    const useCompiledRoot = opts.cliOverrides.useCompiledRoot ?? true
 
     const userHomeDir = opts.homeDir ?? homedir()
     const effectiveTargetDir =
@@ -323,16 +361,32 @@ export async function runWizard(opts: {
       })
       tracker.trackSuccess('scaffold:infra')
 
-      await scaffoldRootFiles({
+      // Use compiled root files (with XML tags) or simple templates
+      if (useCompiledRoot) {
+        await scaffoldCompiledRoot({
           targetDir: effectiveTargetDir,
           libraryDir,
           tools: installableTools,
           projectName: effectiveProjectName,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:root-files')
+          planningDir,
+          features,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:compiled-root')
+      } else {
+        await scaffoldRootFiles({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          tools: installableTools,
+          projectName: effectiveProjectName,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:root-files')
+      }
 
       await scaffoldAgentsSkillsPrompts({
           targetDir: effectiveTargetDir,
@@ -424,8 +478,13 @@ export async function runWizard(opts: {
         ...(planningRepoPath ? { planningRepoPath } : {}),
         ...(repos && repos.length > 0 ? { repos } : {}),
         ...(globalRef ? { globalRef } : {}),
+        planningDir,
       },
-      selections,
+      selections: {
+        ...selections,
+        features,
+        gitConventions,
+      },
       files: fileRecords.map((file) => ({
         ...file,
         status: 'installed',

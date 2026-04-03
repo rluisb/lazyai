@@ -8,7 +8,7 @@ export { CURRENT_SCHEMA_VERSION } from './store/schema.js'
 export type SetupScope = 'global' | 'workspace' | 'project'
 /** @deprecated Use SetupScope */
 export type SetupType = SetupScope
-export type ToolId = 'pi' | 'opencode' | 'claude-code' | 'gemini' | 'copilot'
+export type ToolId = 'pi' | 'opencode' | 'claude-code' | 'gemini' | 'copilot' | 'codex'
 
 export interface SetupConfig {
   setupScope: SetupScope

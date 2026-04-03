@@ -6,6 +6,15 @@ import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import type { FileRecord, ConflictStrategy } from '../types.js'
 
+const DEFAULT_FEATURE_FRAGMENT_MARKERS = [
+  '<context-engineering>',
+  '<rpi-workflow>',
+  '<chain-of-thought>',
+  '<tree-of-thoughts>',
+  '<adr-enforcement>',
+  '<quality-gates>',
+] as const
+
 function makeTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 }
@@ -97,6 +106,85 @@ describe('scaffoldCompiledRoot', () => {
 
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
     expect(fileRecords.length).toBeGreaterThan(0)
+  })
+
+  it('renders default-enabled feature fragments when features are omitted', async () => {
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: ['opencode'],
+      projectName: 'default-features-test',
+      planningDir: '.ai/planning',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const agentsContent = readFile(path.join(targetDir, 'AGENTS.md'))
+
+    for (const marker of DEFAULT_FEATURE_FRAGMENT_MARKERS) {
+      expect(agentsContent).toContain(marker)
+    }
+  })
+
+  it('removes disabled feature fragments while keeping others enabled', async () => {
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: ['opencode'],
+      projectName: 'disabled-features-test',
+      planningDir: '.ai/planning',
+      features: {
+        contextEngineering: false,
+        rpiWorkflow: false,
+        chainOfThought: true,
+        treeOfThoughts: true,
+        adrEnforcement: true,
+        qualityGates: true,
+        agentHarness: true,
+        bugResolution: true,
+        pivotHandling: true,
+      },
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const agentsContent = readFile(path.join(targetDir, 'AGENTS.md'))
+
+    expect(agentsContent).not.toContain('<context-engineering>')
+    expect(agentsContent).not.toContain('<rpi-workflow>')
+    expect(agentsContent).toContain('<chain-of-thought>')
+    expect(agentsContent).toContain('<tree-of-thoughts>')
+  })
+
+  it('compiles all six root templates with camelCase feature conditions', async () => {
+    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini'] as const
+
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: [...tools],
+      projectName: 'all-tools-camelcase-test',
+      planningDir: '.ai/planning',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const rootFiles = [
+      'CLAUDE.md',
+      'AGENTS.md',
+      '.github/copilot-instructions.md',
+      'INSTRUCTIONS.md',
+      'GEMINI.md',
+    ]
+
+    for (const rootFile of rootFiles) {
+      const content = readFile(path.join(targetDir, rootFile))
+      expect(content).toContain('<context-engineering>')
+      expect(content).toContain('<quality-gates>')
+    }
   })
 
   it('interpolates planningDir variable in output', async () => {

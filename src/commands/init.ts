@@ -46,7 +46,7 @@ interface InitOptions {
   disableFeatures?: string
   branchPattern?: string
   commitPattern?: string
-  useCompiledRoot?: boolean
+  compiledRoot?: boolean
 }
 
 export function registerInit(program: Command): void {
@@ -137,7 +137,7 @@ export function registerInit(program: Command): void {
       if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern
       if (opts.commitPattern) cliOverrides.commitPattern = opts.commitPattern
       // useCompiledRoot defaults to true, --no-compiled-root sets it to false
-      if (opts.useCompiledRoot !== undefined) cliOverrides.useCompiledRoot = opts.useCompiledRoot
+      if (opts.compiledRoot !== undefined) cliOverrides.useCompiledRoot = opts.compiledRoot
 
       // Check if we should migrate
       if (opts.migrate) {

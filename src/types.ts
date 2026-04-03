@@ -19,6 +19,7 @@ export interface SetupConfig {
   projectName: string
   workspaceName?: string
   targetDir: string
+  useCompiledRoot?: boolean
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   globalRef?: string

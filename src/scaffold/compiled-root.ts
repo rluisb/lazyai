@@ -5,6 +5,18 @@ import type { ToolId, FileRecord, ConflictStrategy } from '../types.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
 import { TemplateCompiler, type FragmentContext } from '../compiler/index.js'
 
+const DEFAULT_ENABLED_FEATURES: FeatureFlags = {
+  contextEngineering: true,
+  rpiWorkflow: true,
+  chainOfThought: true,
+  treeOfThoughts: true,
+  adrEnforcement: true,
+  qualityGates: true,
+  agentHarness: true,
+  bugResolution: true,
+  pivotHandling: true,
+}
+
 // Root file mapping per tool - maps template output to tool-native filename
 const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
   'claude-code': 'CLAUDE.md',
@@ -39,18 +51,10 @@ export interface ScaffoldCompiledRootOptions {
  * This is an alternative to scaffoldRootFiles that uses the fragment/template
  * compilation system to embed XML-tagged prompt engineering blocks.
  * 
- * Features enabled by default:
- * - context-engineering
- * - rpi-workflow  
- * - chain-of-thought
- * - adr-enforcement
- * - quality-gates
- * - pivot-handling
- * 
- * Optional features (off by default):
- * - tree-of-thoughts
- * - agent-harness
- * - bug-resolution
+ * Default behavior:
+ * - When features are omitted, schema/wizard defaults are used (all feature flags enabled)
+ * - Callers can pass explicit features to disable specific blocks
+ * - Git-conventions blocks are included when gitConventions context is provided
  */
 export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): Promise<void> {
   const {
@@ -70,6 +74,11 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     projectInstructions,
   } = opts
 
+  const effectiveFeatures: FeatureFlags = {
+    ...DEFAULT_ENABLED_FEATURES,
+    ...(features ?? {}),
+  }
+
   // Build fragment context from options
   const context: FragmentContext = {
     projectName,
@@ -78,26 +87,29 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     ...(framework != null ? { framework } : {}),
     ...(workspaceType != null ? { workspaceType } : {}),
     ...(projectInstructions != null ? { projectInstructions } : {}),
-    ...(features || gitConventions ? {
-      features: {
-        ...(features ? {
-          contextEngineering: features.contextEngineering,
-          rpiWorkflow: features.rpiWorkflow,
-          chainOfThought: features.chainOfThought,
-          treeOfThoughts: features.treeOfThoughts,
-          adrEnforcement: features.adrEnforcement,
-          qualityGates: features.qualityGates,
-          agentHarness: features.agentHarness,
-          bugResolution: features.bugResolution,
-          pivotHandling: features.pivotHandling,
-          // Legacy aliases for existing snake_case template conditionals
-          tree_of_thoughts: features.treeOfThoughts,
-          agent_harness: features.agentHarness,
-          bug_resolution: features.bugResolution,
-        } : {}),
-        ...(gitConventions ? { gitConventions: true } : {}),
-      },
-    } : {}),
+    features: {
+      contextEngineering: effectiveFeatures.contextEngineering,
+      rpiWorkflow: effectiveFeatures.rpiWorkflow,
+      chainOfThought: effectiveFeatures.chainOfThought,
+      treeOfThoughts: effectiveFeatures.treeOfThoughts,
+      adrEnforcement: effectiveFeatures.adrEnforcement,
+      qualityGates: effectiveFeatures.qualityGates,
+      agentHarness: effectiveFeatures.agentHarness,
+      bugResolution: effectiveFeatures.bugResolution,
+      pivotHandling: effectiveFeatures.pivotHandling,
+      gitConventions: Boolean(gitConventions),
+      // Legacy aliases for existing snake_case template conditionals
+      context_engineering: effectiveFeatures.contextEngineering,
+      rpi_workflow: effectiveFeatures.rpiWorkflow,
+      chain_of_thought: effectiveFeatures.chainOfThought,
+      tree_of_thoughts: effectiveFeatures.treeOfThoughts,
+      adr_enforcement: effectiveFeatures.adrEnforcement,
+      quality_gates: effectiveFeatures.qualityGates,
+      agent_harness: effectiveFeatures.agentHarness,
+      bug_resolution: effectiveFeatures.bugResolution,
+      pivot_handling: effectiveFeatures.pivotHandling,
+      git_conventions: Boolean(gitConventions),
+    },
   }
 
   // Compile for each tool

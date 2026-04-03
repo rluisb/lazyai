@@ -99,6 +99,34 @@ describe('FragmentResolver', () => {
   })
 
   describe('conditional resolution', () => {
+    it('supports camelCase condition names against snake_case feature context', () => {
+      const template = '{{#if features.treeOfThoughts}}CAMELCASE_MATCH{{/if}}'
+      const context: FragmentContext = {
+        projectName: 'Test',
+        planningDir: 'planning',
+        features: {
+          tree_of_thoughts: true,
+        },
+      }
+
+      const result = resolver.resolve(template, context)
+      expect(result).toContain('CAMELCASE_MATCH')
+    })
+
+    it('supports snake_case condition names against camelCase feature context', () => {
+      const template = '{{#if features.agent_harness}}SNAKECASE_MATCH{{/if}}'
+      const context: FragmentContext = {
+        projectName: 'Test',
+        planningDir: 'planning',
+        features: {
+          agentHarness: true,
+        },
+      }
+
+      const result = resolver.resolve(template, context)
+      expect(result).toContain('SNAKECASE_MATCH')
+    })
+
     it('includes block when feature flag is true', () => {
       const template = '{{#if features.tree_of_thoughts}}<tree-of-thoughts>Enabled</tree-of-thoughts>{{/if}}'
       const context: FragmentContext = {

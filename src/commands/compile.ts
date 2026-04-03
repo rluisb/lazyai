@@ -5,6 +5,8 @@ import { homedir } from 'node:os'
 import type { SetupScope, ToolId } from '../types.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { compileMcp } from '../adapters/mcp-compiler.js'
+import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
+import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { Errors } from '../errors/index.js'
 import { fileExists, resolveLibraryDir } from '../utils/files.js'
 import { readStoreReadonly } from '../store/index.js'
@@ -137,9 +139,12 @@ export function registerCompile(program: Command): void {
         prompts: store.selections.prompts,
       }
       const strategy = opts.force ? 'backup-and-replace' : 'skip'
+      const planningDir = store.config.planningDir ?? '.planning'
+      const useCompiledRoot = store.config.useCompiledRoot ?? true
 
       if (opts.dryRun) {
         console.log('[dry-run] Compile preview:')
+        console.log(`[dry-run] Root strategy: ${useCompiledRoot ? 'compiled' : 'simple'} (planningDir=${planningDir})`)
         for (const tool of installableTools) {
           const adapterTargetDir =
             effectiveScope === 'global'
@@ -153,6 +158,31 @@ export function registerCompile(program: Command): void {
 
         console.log(`Dry run complete. Would compile ${installableTools.length} tool(s): ${installableTools.join(', ')}`)
         return
+      }
+
+      if (useCompiledRoot) {
+        await scaffoldCompiledRoot({
+          targetDir: store.config.targetDir,
+          libraryDir,
+          tools: installableTools,
+          projectName: store.config.projectName,
+          planningDir,
+          ...(store.selections.features != null ? { features: store.selections.features } : {}),
+          ...(store.selections.gitConventions != null ? { gitConventions: store.selections.gitConventions } : {}),
+          fileRecords: [],
+          strategy,
+          perFileOverrides: new Map(),
+        })
+      } else {
+        await scaffoldRootFiles({
+          targetDir: store.config.targetDir,
+          libraryDir,
+          tools: installableTools,
+          projectName: store.config.projectName,
+          fileRecords: [],
+          strategy,
+          perFileOverrides: new Map(),
+        })
       }
 
       for (const tool of installableTools) {

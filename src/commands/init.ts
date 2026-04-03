@@ -6,6 +6,27 @@ import pc from 'picocolors'
 import { detectAdapters, importSetup } from '../migration/index.js'
 import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
+// Help text for features - detailed descriptions
+const FEATURES_HELP = `
+Prompt Engineering Features (all ON by default):
+  contextEngineering  - Principles for optimal context selection (relevance, recency, locality)
+  rpiWorkflow         - Research → Plan → Implement structured execution
+  chainOfThought      - Step-by-step reasoning: understand → analyze → synthesize → verify
+  treeOfThoughts      - Parallel exploration of multiple solution approaches
+  adrEnforcement      - Architecture Decision Records for significant changes
+  qualityGates        - Lint, typecheck, test, build verification requirements
+  agentHarness        - Multi-agent coordination (planner, builder, reviewer, scout, documenter)
+  bugResolution       - Structured debugging: reproduce → diagnose → fix → verify
+  pivotHandling       - Detection and ADR process when implementation plans change
+
+Use --features to enable specific features (if using --disable-features first)
+Use --disable-features to disable specific features (all are ON by default)
+
+Examples:
+  --disable-features treeOfThoughts,agentHarness    # Disable advanced features
+  --disable-features all --features rpiWorkflow     # Minimal: only RPI workflow
+`
+
 interface InitOptions {
   scope?: SetupScope
   type?: SetupType
@@ -20,6 +41,12 @@ interface InitOptions {
   from?: string
   absorb?: boolean
   dryRun?: boolean
+  planningDir?: string
+  features?: string
+  disableFeatures?: string
+  branchPattern?: string
+  commitPattern?: string
+  useCompiledRoot?: boolean
 }
 
 export function registerInit(program: Command): void {
@@ -30,7 +57,7 @@ export function registerInit(program: Command): void {
     .option('--type <type>', 'Deprecated alias for --scope')
     .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
     .option('--repos <paths>', 'Workspace repo references as comma-separated relative paths')
-    .option('--tools <tools>', 'Comma-separated tool list: pi,opencode')
+    .option('--tools <tools>', 'Comma-separated tool list: pi,opencode,claude-code,codex,copilot,gemini')
     .option('--cli-tools <tools>', 'Comma-separated CLI tools available (codegraph,qmd,rtk)')
     .option('--name <name>', 'Project name (defaults to directory name)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')
@@ -39,6 +66,31 @@ export function registerInit(program: Command): void {
     .option('--from <path>', 'Path to existing setup for migration (defaults to current directory)')
     .option('--absorb', 'Absorb existing tool configs into .ai/ during init')
     .option('--dry-run', 'Preview changes without writing files')
+    .option('--planning-dir <dir>', 'Planning directory for specs/ADRs (default: .planning)')
+    .option(
+      '--features <features>',
+      'Enable specific features (comma-separated). Use with --disable-features all for minimal setup.\n' +
+      'Available: contextEngineering,rpiWorkflow,chainOfThought,treeOfThoughts,adrEnforcement,qualityGates,agentHarness,bugResolution,pivotHandling'
+    )
+    .option(
+      '--disable-features <features>',
+      'Disable specific features (comma-separated). Use "all" to disable all, then --features to enable specific ones.\n' +
+      'Example: --disable-features treeOfThoughts,agentHarness'
+    )
+    .option(
+      '--branch-pattern <pattern>',
+      'Branch naming pattern. Placeholders: {type}, {ticket}, {description}\n' +
+      'Default: {type}/{ticket}-{description}  →  feat/PROJ-123-add-login\n' +
+      'Options: {type}/{description}, {ticket}/{description}, {description}'
+    )
+    .option(
+      '--commit-pattern <pattern>',
+      'Commit message pattern. Placeholders: {type}, {scope}, {ticket}, {description}\n' +
+      'Default: {type}({scope}): {description}  →  feat(auth): add login\n' +
+      'Options: {type}: {description}, [{ticket}] {description}, {description}'
+    )
+    .option('--no-compiled-root', 'Use simple templates instead of compiled XML-tagged root files')
+    .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
         ? (opts.tools.split(',').map((t) => t.trim()).filter(Boolean) as ToolId[])
@@ -49,6 +101,12 @@ export function registerInit(program: Command): void {
       const cliTools = opts.cliTools
         ? opts.cliTools.split(',').map((tool) => tool.trim()).filter(Boolean)
         : undefined
+      const features = opts.features
+        ? opts.features.split(',').map((f) => f.trim()).filter(Boolean)
+        : undefined
+      const disableFeatures = opts.disableFeatures
+        ? opts.disableFeatures.split(',').map((f) => f.trim()).filter(Boolean)
+        : undefined
 
       const cliOverrides: {
         scope?: SetupScope
@@ -58,6 +116,12 @@ export function registerInit(program: Command): void {
         tools?: ToolId[]
         cliTools?: string[]
         name?: string
+        planningDir?: string
+        features?: string[]
+        disableFeatures?: string[]
+        branchPattern?: string
+        commitPattern?: string
+        useCompiledRoot?: boolean
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
@@ -67,6 +131,13 @@ export function registerInit(program: Command): void {
       if (tools) cliOverrides.tools = tools
       if (cliTools) cliOverrides.cliTools = cliTools
       if (opts.name) cliOverrides.name = opts.name
+      if (opts.planningDir) cliOverrides.planningDir = opts.planningDir
+      if (features) cliOverrides.features = features
+      if (disableFeatures) cliOverrides.disableFeatures = disableFeatures
+      if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern
+      if (opts.commitPattern) cliOverrides.commitPattern = opts.commitPattern
+      // useCompiledRoot defaults to true, --no-compiled-root sets it to false
+      if (opts.useCompiledRoot !== undefined) cliOverrides.useCompiledRoot = opts.useCompiledRoot
 
       // Check if we should migrate
       if (opts.migrate) {

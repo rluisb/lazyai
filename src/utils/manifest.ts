@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import type { AiSetupConfig, WizardSelections } from '../types.js'
+import type { FeatureFlags, GitConventions } from '../store/schema.js'
 import {
   ALL_AGENTS,
   ALL_INFRA,
@@ -14,10 +15,19 @@ import { readStore } from '../store/index.js'
 const MANIFEST_FILE = '.ai-setup.json'
 
 /**
+ * Extended manifest type with new fields
+ */
+export interface ManifestWithFeatures extends AiSetupConfig {
+  planningDir?: string
+  features?: FeatureFlags
+  gitConventions?: GitConventions
+}
+
+/**
  * @deprecated Use readStore() from src/store/index.ts directly.
  * This wrapper remains only for backward compatibility and will be removed in a future version.
  */
-export async function readManifest(targetDir: string): Promise<AiSetupConfig | null> {
+export async function readManifest(targetDir: string): Promise<ManifestWithFeatures | null> {
   const manifestPath = join(targetDir, MANIFEST_FILE)
   if (!fileExists(manifestPath)) return null
 
@@ -36,6 +46,9 @@ export async function readManifest(targetDir: string): Promise<AiSetupConfig | n
         source: file.source,
       })),
       selections: data.selections,
+      ...(data.config.planningDir != null ? { planningDir: data.config.planningDir } : {}),
+      ...(data.selections.features != null ? { features: data.selections.features } : {}),
+      ...(data.selections.gitConventions != null ? { gitConventions: data.selections.gitConventions } : {}),
     }
   } catch {
     return null
@@ -46,7 +59,7 @@ export async function readManifest(targetDir: string): Promise<AiSetupConfig | n
  * Extract wizard selections from an existing manifest by mapping
  * file paths back to selection IDs.
  */
-export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelections> {
+export function extractSelections(manifest: ManifestWithFeatures): Partial<WizardSelections> {
   // If manifest already has selections field (written by wizard), return it
   if (manifest.selections) return manifest.selections
 
@@ -71,6 +84,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
           f.includes('.opencode/') ||
           f.includes('.gemini/') ||
           f.includes('.pi/') ||
+          f.includes('.codex/') ||
           f.includes('.github/')),
     ),
   )
@@ -85,7 +99,7 @@ export function extractSelections(manifest: AiSetupConfig): Partial<WizardSelect
   if (skills.length > 0) selections.skills = skills
 
   // Prompts
-  const prompts = ALL_PROMPTS.filter(p => files.some(f => f.endsWith(`/${p}.md`) && f.includes('templates/')))
+  const prompts = ALL_PROMPTS.filter(pr => files.some(f => f.endsWith(`/${pr}.md`) && f.includes('templates/')))
   if (prompts.length > 0) selections.prompts = prompts
 
   // Infra

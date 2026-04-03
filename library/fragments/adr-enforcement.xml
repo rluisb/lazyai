@@ -1,0 +1,30 @@
+<adr-enforcement>
+  <description>Architecture Decision Records for significant decisions and pivots</description>
+  
+  <triggers>
+    <trigger>New architectural pattern introduced</trigger>
+    <trigger>Significant deviation from existing patterns</trigger>
+    <trigger>Technology choice or dependency addition</trigger>
+    <trigger>Implementation pivot from original plan</trigger>
+    <trigger>Breaking change to public API</trigger>
+  </triggers>
+  
+  <template>
+    <section name="title">ADR-NNN: [Decision Title]</section>
+    <section name="status">Proposed | Accepted | Deprecated | Superseded</section>
+    <section name="context">What is the issue we are seeing that motivates this decision?</section>
+    <section name="decision">What is the change we are proposing and/or doing?</section>
+    <section name="consequences">What becomes easier or harder because of this change?</section>
+    <section name="alternatives">What other options were considered?</section>
+  </template>
+  
+  <storage>
+    <path>{{PLANNING_DIR}}/specs/adr/</path>
+    <naming>ADR-{NNN}-{slug}.md</naming>
+  </storage>
+  
+  <enforcement>
+    <require-adr>When trigger conditions are met</require-adr>
+    <review-process>ADR must be approved before implementation</review-process>
+  </enforcement>
+</adr-enforcement>

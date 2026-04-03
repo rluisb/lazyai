@@ -15,6 +15,7 @@ const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
   'claude-code': 'CLAUDE.md',
   gemini: 'GEMINI.md',
   copilot: '.github/copilot-instructions.md',
+  codex: 'AGENTS.md',
 }
 
 const ROOT_FILE_MAP: Record<string, string> = {
@@ -63,6 +64,10 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
   pi: {
     agentDir: '.pi/agents',
     skillDir: '.pi/skills',
+  },
+  codex: {
+    // Codex agents are inline in AGENTS.md, no separate directory
+    skillDir: '.codex/skills',
   },
 }
 
@@ -130,7 +135,7 @@ export async function computePlan(
   for (const tool of config.tools) {
     const paths = ADAPTER_PATHS[tool]
 
-    // Only add agents if tool supports them
+    // Only add agents if tool supports them (Codex has inline agents)
     if (paths.agentDir) {
       for (const agentId of selections.agents) {
         planned.push(
@@ -147,7 +152,7 @@ export async function computePlan(
     for (const skillId of selections.skills) {
       const skillDestPath = tool === 'copilot'
         ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode'
+        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex'
           ? `${skillId}/SKILL.md`
           : `${skillId}.md`
       planned.push(
@@ -160,7 +165,7 @@ export async function computePlan(
       )
     }
 
-    if (tool === 'claude-code' || tool === 'opencode') {
+    if (tool === 'claude-code' || tool === 'opencode' || tool === 'codex') {
       continue
     }
 

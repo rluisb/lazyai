@@ -14,7 +14,7 @@ export const CURRENT_SCHEMA_VERSION = 1
 
 export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
-export const toolIdSchema = z.enum(['pi', 'opencode', 'claude-code', 'gemini', 'copilot'])
+export const toolIdSchema = z.enum(['pi', 'opencode', 'claude-code', 'gemini', 'copilot', 'codex'])
 export const agentIdSchema = z.enum(['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout'])
 export const skillIdSchema = z.enum([
   'anti-speculation',
@@ -51,6 +51,28 @@ export const metaSchema = z.object({
   lastUpdatedAt: z.string(),
 })
 
+// Feature flags for compilation - ALL ON by default
+export const featureFlagsSchema = z.object({
+  contextEngineering: z.boolean().default(true),
+  rpiWorkflow: z.boolean().default(true),
+  chainOfThought: z.boolean().default(true),
+  treeOfThoughts: z.boolean().default(true),
+  adrEnforcement: z.boolean().default(true),
+  qualityGates: z.boolean().default(true),
+  agentHarness: z.boolean().default(true),
+  bugResolution: z.boolean().default(true),
+  pivotHandling: z.boolean().default(true),
+})
+
+// Git conventions for branch/commit patterns
+export const gitConventionsSchema = z.object({
+  branchPattern: z.string().default('{type}/{ticket}-{description}'),
+  commitPattern: z.string().default('{type}({scope}): {description}'),
+  types: z.array(z.string()).default(['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert']),
+  requireTicket: z.boolean().default(false),
+  ticketPattern: z.string().default('[A-Z]+-[0-9]+'),
+})
+
 export const configSchema = z.object({
   setupScope: setupScopeSchema,
   setupType: setupTypeSchema.optional(),
@@ -59,6 +81,7 @@ export const configSchema = z.object({
   projectName: z.string(),
   workspaceName: z.string().optional(),
   targetDir: z.string(),
+  planningDir: z.string().optional(),
   planningRepoPath: z.string().optional(),
   repos: z
     .array(
@@ -81,6 +104,8 @@ export const wizardSelectionsSchema = z.object({
   prompts: promptIdSchema.array(),
   infra: infraIdSchema.array(),
   constitution: z.array(z.string()),
+  features: featureFlagsSchema.optional(),
+  gitConventions: gitConventionsSchema.optional(),
 })
 
 export const trackedFileSchema = z.object({
@@ -123,6 +148,8 @@ export type WizardSelections = z.infer<typeof wizardSelectionsSchema>
 export type Meta = z.infer<typeof metaSchema>
 export type Config = z.infer<typeof configSchema>
 export type Sync = z.infer<typeof syncSchema>
+export type FeatureFlags = z.infer<typeof featureFlagsSchema>
+export type GitConventions = z.infer<typeof gitConventionsSchema>
 
 export function defaultStore(): StoreData {
   const now = new Date().toISOString()

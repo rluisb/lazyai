@@ -19,6 +19,7 @@ export interface ScaffoldRootFilesOptions {
  * Behavior:
  * - For each tool in `tools`, reads template from `library/root/` and writes substituted content
  * - `opencode` → reads AGENTS.template.md, writes AGENTS.md
+ * - `codex` → reads AGENTS.template.md, writes AGENTS.md
  * - `pi` → reads AGENTS.template.md, writes CLAUDE.md
  * - `claude-code` → reads CLAUDE.template.md (if exists), writes CLAUDE.md
  * - `gemini` → reads GEMINI.template.md (if exists), writes GEMINI.md
@@ -37,6 +38,24 @@ export async function scaffoldRootFiles(opts: ScaffoldRootFilesOptions): Promise
 
   for (const tool of tools) {
     if (tool === 'opencode') {
+      const templatePath = path.join(rootDir, 'AGENTS.template.md')
+      if (fileExists(templatePath)) {
+        const template = readFile(templatePath)
+        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
+        writeRootFile(
+          path.join(targetDir, 'AGENTS.md'),
+          content,
+          fileRecords,
+          targetDir,
+          'root/AGENTS.template.md',
+          strategy,
+          perFileOverrides
+        )
+      }
+    }
+
+    if (tool === 'codex') {
+      // Codex uses AGENTS.md like opencode
       const templatePath = path.join(rootDir, 'AGENTS.template.md')
       if (fileExists(templatePath)) {
         const template = readFile(templatePath)

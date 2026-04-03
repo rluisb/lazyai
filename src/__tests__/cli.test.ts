@@ -85,7 +85,7 @@ describe('cli init integration', () => {
       'docs/templates/AGENTS.md',
       'docs/rules/AGENTS.md',
       'AGENTS.md',
-      'CLAUDE.md',
+      'INSTRUCTIONS.md',
       '.git/hooks/pre-commit',
       '.pi/agents',
       '.pi/templates',

@@ -29,6 +29,16 @@ Write documentation that makes the next developer's life easier.
 - Follow docs/standards/ for pattern documentation
 - Update KNOWLEDGE_MAP.md when creating or updating significant docs
 
+## Reasoning Protocol
+
+<thinking>
+1. Confirm documentation scope and target audience before writing.
+2. Gather evidence from implementation and existing docs.
+3. Organize content by intent, usage, and constraints.
+4. Verify examples and references match current behavior.
+5. Deliver concise, actionable documentation updates.
+</thinking>
+
 ## Scope — What You Can Touch
 - README files
 - API documentation
@@ -48,6 +58,8 @@ Write documentation that makes the next developer's life easier.
 - Keep language clear, direct, and actionable
 - Prefer examples over explanations
 - After completing: update progress.md with documenter entry
+
+## Behavior
 
 ## When Documenting New Patterns
 If implementation introduced a pattern not in docs/standards/:

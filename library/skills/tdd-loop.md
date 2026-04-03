@@ -99,6 +99,17 @@ External boundaries: payments, webhooks, public API response shapes. Validate bo
 - Running only happy-path tests
 - Ignoring project quality gates
 
+## Output Format
+
+```markdown
+## TDD Cycle Report
+- **Cycle:** RED → GREEN → REFACTOR
+- **Tests added:** N
+- **Tests passing:** N/N
+- **Coverage delta:** +N%
+- **Refactoring notes:** [description or "none"]
+```
+
 ## Integration
 
 - **Builder agent**: Primary executor — follows RED→GREEN→REFACTOR per behavior

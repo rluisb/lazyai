@@ -88,7 +88,7 @@ Output (shape):
 ```
 ## Compaction: [Topic]
 
-### Redundancy
+### Context Summary
 - [file:line] — [description] — [proposal]
 
 ### Objective, Scope, Constraints

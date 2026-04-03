@@ -26,9 +26,9 @@ npm run test        # or: bundle exec rspec
 ## Thresholds
 | Metric | Target | Minimum |
 |--------|--------|---------|
-| Line coverage | 90% | 80% |
-| Branch coverage | 85% | 75% |
-| Build time | <5min | <10min |
+| Line coverage | [YOUR_LINE_COVERAGE_TARGET] | [YOUR_LINE_COVERAGE_MINIMUM] |
+| Branch coverage | [YOUR_BRANCH_COVERAGE_TARGET] | [YOUR_BRANCH_COVERAGE_MINIMUM] |
+| Build time | [YOUR_BUILD_TIME_TARGET] | [YOUR_BUILD_TIME_MAXIMUM] |
 
 <!-- Customize thresholds for your stack. These are starting points.
 For Teachable repos: fedora (Rails) uses rubocop + rspec,

@@ -61,6 +61,17 @@ function getCliToolOptions(targetDir: string): Array<{ value: string; label: str
   }
 }
 
+function listSubdirectories(parentDir: string): string[] {
+  try {
+    return readdirSync(parentDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+      .map((entry) => path.join(parentDir, entry.name))
+      .sort()
+  } catch {
+    return []
+  }
+}
+
 function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string): Array<{ name: string; path: string; type?: string }> {
   if (!raw) return []
 
@@ -289,38 +300,103 @@ export async function runPhase1(opts: {
     }
     workspaceName = workspaceNameResult
 
-    const planningRepoPathResult =
-      opts.cliOverrides.planningRepo ||
-      opts.prior.planningRepoPath ||
-      (await p.text({
-        message: 'Planning repo location?',
-        placeholder: defaultPlanningRepoPath,
-        defaultValue: defaultPlanningRepoPath,
-      }))
+    let planningRepoPathResolved: string
 
-    if (p.isCancel(planningRepoPathResult)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+    if (opts.cliOverrides.planningRepo || opts.prior.planningRepoPath) {
+      planningRepoPathResolved = path.resolve(opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir)
+    } else {
+      const subdirs = listSubdirectories(opts.targetDir)
+      const dirOptions: Array<{ value: string; label: string; hint?: string }> = [
+        { value: opts.targetDir, label: path.basename(opts.targetDir) + ' (current directory)', hint: opts.targetDir },
+      ]
+
+      for (const dir of subdirs) {
+        const name = path.basename(dir)
+        const hasGit = fileExists(path.join(dir, '.git'))
+        dirOptions.push({
+          value: dir,
+          label: name,
+          hint: hasGit ? 'git repo' : 'directory',
+        })
+      }
+
+      dirOptions.push({ value: '__manual__', label: 'Enter path manually…' })
+
+      const planningRepoPick = await p.select({
+        message: 'Which directory is the planning repo?',
+        options: dirOptions,
+      })
+
+      if (p.isCancel(planningRepoPick)) {
+        p.cancel('Setup cancelled.')
+        process.exit(0)
+      }
+
+      if (planningRepoPick === '__manual__') {
+        const manualPath = await p.text({
+          message: 'Planning repo path:',
+          placeholder: defaultPlanningRepoPath,
+          defaultValue: defaultPlanningRepoPath,
+        })
+
+        if (p.isCancel(manualPath)) {
+          p.cancel('Setup cancelled.')
+          process.exit(0)
+        }
+        planningRepoPathResolved = path.resolve(manualPath)
+      } else {
+        planningRepoPathResolved = path.resolve(planningRepoPick as string)
+      }
     }
 
-    planningRepoPath = path.resolve(planningRepoPathResult)
+    planningRepoPath = planningRepoPathResolved
     projectName = path.basename(planningRepoPath)
 
-    const reposPromptDefault = opts.cliOverrides.repos?.join(', ') ?? ''
-    const reposInputResult =
-      opts.cliOverrides.repos?.join(',') ||
-      (await p.text({
-        message: 'Referenced repos (comma-separated paths or parent directory)?',
-        placeholder: '../fedora, ../creator-checkout or ..',
-        defaultValue: reposPromptDefault,
-      }))
+    // Referenced repos: scan sibling directories and show as multiselect
+    if (opts.cliOverrides.repos) {
+      repos = parseWorkspaceRepos(opts.cliOverrides.repos.join(','), planningRepoPath)
+    } else {
+      const parentDir = path.dirname(planningRepoPath)
+      const siblingDirs = listSubdirectories(parentDir)
+        .filter((dir) => path.resolve(dir) !== path.resolve(planningRepoPathResolved))
 
-    if (p.isCancel(reposInputResult)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      if (siblingDirs.length > 0) {
+        const repoOptions: Array<{ value: string; label: string; hint?: string }> = []
+
+        for (const dir of siblingDirs) {
+          const info = detectRepoInfo(dir, planningRepoPathResolved)
+          if (!info.isGitRepo) continue
+
+          const typeLabel = info.type !== 'unknown' ? info.type : 'unknown stack'
+          repoOptions.push({
+            value: dir,
+            label: info.name,
+            hint: typeLabel,
+          })
+        }
+
+        if (repoOptions.length > 0) {
+          const reposResult = await p.multiselect({
+            message: 'Which repos should this workspace reference?',
+            options: repoOptions,
+            required: false,
+          })
+
+          if (p.isCancel(reposResult)) {
+            p.cancel('Setup cancelled.')
+            process.exit(0)
+          }
+
+          repos = (reposResult as string[])
+            .map((dir) => detectRepoInfo(dir, planningRepoPath!))
+            .map((info) => ({ name: info.name, path: info.path, type: info.type }))
+        } else {
+          p.note('No git repos found in sibling directories. You can add repos later in .ai/config.yml.')
+        }
+      } else {
+        p.note('No sibling directories found. You can add repos later in .ai/config.yml.')
+      }
     }
-
-    repos = parseWorkspaceRepos(reposInputResult, planningRepoPath)
   } else {
     // Prompt 3: Project name
     const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)

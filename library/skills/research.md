@@ -68,3 +68,10 @@ Skip this for straightforward lookups.
 ### Open Questions
 - [question needing human decision]
 ```
+
+## Integration
+- **Primary agent:** Scout (research phase)
+- **Triggered by:** `/research` command or workflow rule step 1
+- **Depends on:** Task description or PRD from user
+- **Feeds into:** plan.md (Planner reads research output)
+- **Related skills:** anti-speculation (prevents scope creep during research)

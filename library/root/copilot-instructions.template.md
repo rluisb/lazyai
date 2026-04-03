@@ -244,10 +244,58 @@ Key guides for task execution:
 
 ## Self-Improvement Protocol
 
-After completing a task:
-1. Update documentation if any interfaces or behaviors changed
-2. Add lessons learned to `docs/memory/`
-3. [YOUR_SELF_IMPROVEMENT_STEP]
+### After Every Task — Impact Check
+
+Before ending any session, ask yourself:
+
+```
+Did my work change any of the following?
+├── Project structure (new modules, moved files)     → update Codebase Map above
+├── API contracts (new/changed endpoints)             → update [docs/standards/coding/](docs/standards/coding/)
+├── Architecture decisions                            → create ADR in [docs/adrs/](docs/adrs/)
+├── Testing patterns (new test type, new fixture)     → update [docs/standards/testing/](docs/standards/testing/)
+├── Dependencies (added/removed/upgraded)             → update Stack section above
+├── Build/test/lint commands                          → update Key Commands above
+├── Security patterns (auth, validation)              → update [docs/standards/security/](docs/standards/security/)
+├── Error handling approach                           → update [docs/standards/coding/](docs/standards/coding/)
+├── New code pattern not in standards                 → create new standard
+├── Existing standard's reference file changed        → update the standard
+├── Feature completed/status changed                  → update [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md)
+└── Workflow process changed                          → update [docs/rules/workflow.md](docs/rules/workflow.md)
+```
+
+If YES to any: **flag it before ending the session.**
+
+Output format:
+```
+## 📋 Knowledge Updates Needed
+- [ ] [file to update] — [what changed and why]
+- [ ] [file to update] — [what changed and why]
+```
+
+The human decides whether to update now or create a follow-up task.
+
+### Severity of Updates
+
+| Severity | When | Action |
+|----------|------|--------|
+| **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
+| **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
+| **Note** | Minor improvement opportunity spotted | Write to [docs/memory/](docs/memory/) for future consideration |
+
+### What Gets Updated Where
+
+| Change Type | Update Target |
+|-------------|--------------|
+| New module or directory | Root copilot-instructions.md (codebase map) + [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
+| New API pattern | [docs/standards/coding/api-patterns.md](docs/standards/coding/api-patterns.md) |
+| New architecture pattern | [docs/standards/architecture/](docs/standards/architecture/) + ADR if non-obvious |
+| New test pattern | [docs/standards/testing/](docs/standards/testing/) |
+| Changed conventions | [docs/rules/](docs/rules/) relevant file |
+| New feature started/completed | [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
+| Architecture decision made | [docs/adrs/NNN-*.md](docs/adrs/) |
+| Bug revealed missing rule | [docs/rules/](docs/rules/) + [docs/memory/](docs/memory/) |
+| Refactor changed structure | Root copilot-instructions.md + [docs/standards/](docs/standards/) + [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
 
 ## Session End Protocol (Multi-Session Handoff)
 
@@ -263,14 +311,3 @@ Include:
 
 Example reference:
 - `docs/prompts/local-examples/commit-message-pattern.md`
-
-### Impact Assessment
-
-Before proposing process changes, assess severity:
-
-| Severity | Examples | Action |
-|----------|----------|--------|
-| Critical | Wrong architecture, security flaw | Stop and escalate immediately |
-| High | Missing tests, broken conventions | Fix before continuing |
-| Medium | Suboptimal pattern, minor inconsistency | Note and fix if time permits |
-| Low | Style preference, minor naming | Record for future reference |

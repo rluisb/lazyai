@@ -86,3 +86,10 @@ research → plan → implement → iterate → memory-write → lessons-learned
 ```
 
 Memory-write runs during and after implementation. Lessons-learned runs ONLY after memory-write completes.
+
+## Integration
+- **Primary agent:** Builder (post-task capture)
+- **Triggered by:** `/memory-write` command or task completion in skill chain
+- **Depends on:** Task journal entries from implementation/iteration phases
+- **Feeds into:** lessons-learned.md (final skill in chain)
+- **Related skills:** lessons-learned (downstream), iterate (captures retry context)

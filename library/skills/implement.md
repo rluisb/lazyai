@@ -63,3 +63,10 @@ Skip this for trivial, direct edits.
 ### Notes
 - [risks, follow-ups, or handoff items]
 ```
+
+## Integration
+- **Primary agent:** Builder (implementation phase)
+- **Triggered by:** `/implement` command or workflow rule step 3
+- **Depends on:** Plan output from Planner phase (techspec.md, tasks.md)
+- **Feeds into:** iterate.md if tests fail; memory-write.md on completion
+- **Related skills:** tdd-loop (test-first enforcement), anti-speculation (scope guard)

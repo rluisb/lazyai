@@ -51,3 +51,10 @@ phase: plan
 ### Risks and Mitigations
 - [risk] — [mitigation]
 ```
+
+## Integration
+- **Primary agent:** Planner (planning phase)
+- **Triggered by:** `/plan` command or workflow rule step 2
+- **Depends on:** Research output from Scout phase (research.md)
+- **Feeds into:** implement.md (Builder reads plan output); parallel-execution.md (for multi-file tasks)
+- **Related skills:** research (prior phase), anti-speculation (scope guard during planning)

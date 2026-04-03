@@ -67,6 +67,11 @@ export function registerCompile(program: Command): void {
       const manifestPath = join(storeDir, '.ai-setup.json')
 
       if (!fileExists(manifestPath)) {
+        if (opts.scope === 'workspace') {
+          throw Errors.invalidInput(
+            `Setup manifest not found in ${storeDir}. For workspace scope, run compile from the planning repo directory.`,
+          )
+        }
         throw Errors.manifestNotFound(storeDir)
       }
 

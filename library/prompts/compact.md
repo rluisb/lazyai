@@ -28,6 +28,56 @@ Output (shape):
 - Dropped Context: unrelated UI brainstorming
 ```
 
+**Example 2: Mid-task compaction**
+- Input: 40 exchanges covering auth research + partial plan draft
+- Output:
+  ```
+  ## Objective
+  Implement OAuth2 PKCE flow for mobile app
+
+  ## Decisions & Rationale
+  - Chose PKCE over implicit grant (security, RFC 7636 compliance)
+  - Using passport.js with custom strategy (team familiarity)
+
+  ## Key Findings (Research Phase — Complete)
+  - Current auth: session-based, 3 files (auth.ts, session.ts, middleware.ts)
+  - No existing OAuth support; passport.js already in deps
+  - Mobile team expects /auth/callback endpoint
+
+  ## In Progress (Planning Phase — 60%)
+  - TechSpec drafted through Phase 1 (auth routes)
+  - Phase 2 (token refresh) needs edge case analysis
+  - Blocked: confirm token storage approach with mobile team
+
+  ## Next Action
+  Complete TechSpec Phase 2, then proceed to implementation
+  ```
+
+**Example 3: Session handoff (end of day)**
+- Input: Full implementation session with 3 completed tasks
+- Output:
+  ```
+  ## Objective
+  Migrate payment webhooks from v1 to v2 API
+
+  ## Completed
+  - [x] Task 1: Created v2 webhook handler (src/webhooks/v2.ts)
+  - [x] Task 2: Added signature verification (HMAC-SHA256)
+  - [x] Task 3: Updated 12 tests, all passing
+
+  ## Remaining
+  - [ ] Task 4: Add retry logic for failed deliveries
+  - [ ] Task 5: Update API docs + changelog
+
+  ## Decisions
+  - Kept v1 handler as fallback (delete after 30-day migration window)
+  - Used crypto.timingSafeEqual for signature comparison (timing attack prevention)
+
+  ## Risks & Unknowns
+  - [CONFIDENCE: MEDIUM] v2 payload format change may affect 2 downstream consumers
+  - Need to verify staging webhook URL with DevOps before Task 5
+  ```
+
 ## Common Mistakes to Avoid
 - ❌ Losing critical file paths or decision rationale during compaction
 - ❌ Summarizing too aggressively — preserve exact values and specifics

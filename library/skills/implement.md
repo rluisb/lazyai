@@ -65,8 +65,7 @@ Skip this for trivial, direct edits.
 ```
 
 ## Integration
-- **Primary agent:** Builder (implementation phase)
-- **Triggered by:** `/implement` command or workflow rule step 3
-- **Depends on:** Plan output from Planner phase (techspec.md, tasks.md)
-- **Feeds into:** iterate.md if tests fail; memory-write.md on completion
-- **Related skills:** tdd-loop (test-first enforcement), anti-speculation (scope guard)
+- **Primary agent:** Implementor (execution phase)
+- **Triggered by:** `/implement` command after an approved plan phase
+- **Depends on:** Phase tasks, acceptance criteria, and current code/test state
+- **Feeds into:** `iterate` for failures or `memory-write` after a green run

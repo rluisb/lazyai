@@ -105,29 +105,21 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
 
     if (tool === 'opencode') {
       for (const name of ALL_SKILLS) {
-        addSkill(name, `.opencode/commands/${name}.md`)
-      }
-      for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.opencode/templates/${name}.md`)
+        addSkill(name, `.opencode/skills/${name}/SKILL.md`)
       }
     }
 
     if (tool === 'claude-code') {
       for (const name of ALL_SKILLS) {
-        addSkill(name, `.claude/commands/${name}.md`)
-      }
-      for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.claude/templates/${name}.md`)
+        addSkill(name, `.claude/skills/${name}/SKILL.md`)
       }
     }
 
     if (tool === 'gemini') {
       for (const name of ALL_SKILLS) {
-        addSkill(name, `.gemini/skills/${name}.md`)
+        addSkill(name, `.gemini/skills/${name}/SKILL.md`)
       }
-      for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.gemini/templates/${name}.md`)
-      }
+      // Gemini has no templates/ concept — skip prompts
     }
 
     if (tool === 'copilot') {
@@ -140,7 +132,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
         }
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.github/ai-templates/${name}.md`)
+        addPrompt(name, `.github/prompts/${name}.md`)
       }
     }
   }
@@ -202,7 +194,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   }
 
   for (const tool of data.config.tools) {
-    addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude' : tool === 'gemini' ? '.gemini' : '.github/agents')
+    if (tool !== 'gemini') { addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude/agents' : '.github/agents') }
     addSkillsAndPromptsForTool(tool)
   }
 

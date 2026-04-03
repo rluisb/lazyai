@@ -17,11 +17,10 @@ export class ClaudeCodeAdapter implements ToolAdapter {
     const claudeDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.claude')
     files.ensureDir(claudeDir)
     files.ensureDir(path.join(claudeDir, 'rules'))
+    files.ensureDir(path.join(claudeDir, 'skills'))
     if (!isGlobal) {
       files.ensureDir(path.join(claudeDir, 'agents'))
     }
-    files.ensureDir(path.join(claudeDir, 'commands'))
-    files.ensureDir(path.join(claudeDir, 'templates'))
 
     console.log('🤖  Installing Claude Code tools...')
 
@@ -36,14 +35,10 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       ctx,
       sourceSubdir: 'skills',
       selectionKey: 'skills',
-      toDestPath: (file) => path.join(claudeDir, 'commands', file),
-    })
-
-    await copyLibraryDirectory({
-      ctx,
-      sourceSubdir: 'prompts',
-      selectionKey: 'prompts',
-      toDestPath: (file) => path.join(claudeDir, 'templates', file),
+      toDestPath: (file) => {
+        const name = path.parse(file).name
+        return path.join(claudeDir, 'skills', name, 'SKILL.md')
+      },
     })
 
     await installToolContextFiles({
@@ -51,8 +46,7 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       toolDir: claudeDir,
       contextFileName: 'CLAUDE.md',
       agentsDestDir: isGlobal ? '.' : 'agents',
-      skillsDestDir: 'commands',
-      templatesDestDir: 'templates',
+      skillsDestDir: 'skills',
     })
 
     await installRootTemplateIfMissing({

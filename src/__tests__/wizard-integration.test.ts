@@ -58,8 +58,7 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, '.ai', 'constitution'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'mcp.json'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.mcp.json'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.opencode', 'mcp-servers.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'opencode.jsonc'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.vscode', 'mcp.json'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.gemini', 'settings.json'))).toBe(true)
 
@@ -153,8 +152,9 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(canonicalDir, 'docs', 'templates', 'task.md'))).toBe(true)
 
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'agents', 'builder.md'))).toBe(true)
-    expect(existsSync(path.join(homeDir, '.config', 'opencode', 'command', 'implement.md'))).toBe(true)
+    expect(existsSync(path.join(homeDir, '.config', 'opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'commands'))).toBe(false)
+    expect(existsSync(path.join(homeDir, '.config', 'opencode', 'templates'))).toBe(false)
     expect(existsSync(path.join(homeDir, '.claude', 'builder.md'))).toBe(true)
 
     const manifest = JSON.parse(readFileSync(path.join(canonicalDir, '.ai-setup.json'), 'utf-8'))

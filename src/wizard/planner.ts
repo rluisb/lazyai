@@ -17,6 +17,13 @@ const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
   copilot: '.github/copilot-instructions.md',
 }
 
+const ROOT_FILE_MAP: Record<string, string> = {
+  'AGENTS.md': 'root/AGENTS.template.md',
+  'CLAUDE.md': 'root/CLAUDE.template.md',
+  'GEMINI.md': 'root/GEMINI.template.md',
+  '.github/copilot-instructions.md': 'root/copilot-instructions.template.md',
+}
+
 const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { destPath: string; srcPath: string }> = {
   'pre-commit': {
     destPath: '.git/hooks/pre-commit',
@@ -36,21 +43,17 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
   },
 }
 
-const ADAPTER_PATHS: Record<ToolId, { agentDir: string; skillDir: string; promptDir: string }> = {
+const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string }> = {
   'claude-code': {
-    agentDir: '.claude',
-    skillDir: '.claude/commands',
-    promptDir: '.claude/templates',
+    agentDir: '.claude/agents',
+    skillDir: '.claude/skills',
   },
   opencode: {
     agentDir: '.opencode/agents',
-    skillDir: '.opencode/commands',
-    promptDir: '.opencode/templates',
+    skillDir: '.opencode/skills',
   },
   gemini: {
-    agentDir: '.gemini',
     skillDir: '.gemini/skills',
-    promptDir: '.gemini/templates',
   },
   copilot: {
     agentDir: '.github/agents',
@@ -60,7 +63,6 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir: string; skillDir: string; prompt
   pi: {
     agentDir: '.pi/agents',
     skillDir: '.pi/skills',
-    promptDir: '.pi/templates',
   },
 }
 
@@ -78,98 +80,102 @@ function makePlannedFile(
   }
 }
 
-export function planFiles(opts: {
-  targetDir: string
-  libraryDir: string
-  config: WizardConfig
-}): PlannedFile[] {
-  const { targetDir, config } = opts
-  const { selections } = config
+export async function computePlan(
+  config: WizardConfig,
+  targetDir: string,
+  selections: WizardConfig['selections'],
+): Promise<PlannedFile[]> {
   const planned: PlannedFile[] = []
 
-  // 0) constitution
-  const CONSTITUTION_FILES = ['constitution', 'constraints', 'quality-gates', 'uncertainty']
-  for (const file of CONSTITUTION_FILES) {
+  // 1) constitution files
+  for (const fileName of selections.constitution) {
     planned.push(
-      makePlannedFile(
-        targetDir,
-        `.ai/constitution/${file}.md`,
-        `constitution/${file}.template.md`,
-        'constitution',
-      ),
+      makePlannedFile(targetDir, fileName, `constitution/${fileName}`, 'constitution'),
     )
   }
 
-  // 1) templates
-  for (const templateId of selections.templates) {
-    planned.push(
-      makePlannedFile(
-        targetDir,
-        `docs/templates/${templateId}.md`,
-        `templates/${templateId}.md`,
-        'template',
-      ),
-    )
-  }
-
-  // 2) rules
-  for (const ruleId of selections.rules) {
-    planned.push(
-      makePlannedFile(targetDir, `docs/rules/${ruleId}.md`, `rules/${ruleId}.md`, 'rule'),
-    )
-  }
-
-  // 3) infra
-  for (const infraId of selections.infra) {
-    const infra = INFRA_FILE_MAP[infraId]
-    planned.push(makePlannedFile(targetDir, infra.destPath, infra.srcPath, 'infra'))
-  }
-
-  // 4) root files (deduplicated by destination path)
-  const seenRootDestPaths = new Set<string>()
+  // 2) root constitution (e.g., AGENTS.md or CLAUDE.md)
+  const rootFiles = new Set<string>()
   for (const tool of config.tools) {
-    const destPath = ROOT_FILE_BY_TOOL[tool]
-    if (seenRootDestPaths.has(destPath)) continue
-    seenRootDestPaths.add(destPath)
-    planned.push(makePlannedFile(targetDir, destPath, null, 'root'))
+    const rootFile = ROOT_FILE_BY_TOOL[tool]
+    if (rootFile) {
+      if (!rootFiles.has(rootFile)) {
+        rootFiles.add(rootFile)
+        const srcPath = ROOT_FILE_MAP[rootFile] || null
+        planned.push(
+          makePlannedFile(targetDir, rootFile, srcPath, 'root'),
+        )
+      }
+    }
+  }
+
+  // 3) rule files
+  for (const fileName of selections.rules) {
+    planned.push(
+      makePlannedFile(targetDir, fileName, `rules/${fileName}.md`, 'rule'),
+    )
+  }
+
+  // 4) infra files
+  for (const key of selections.infra) {
+    const mapped = INFRA_FILE_MAP[key]
+    if (mapped) {
+      planned.push(
+        makePlannedFile(targetDir, mapped.destPath, mapped.srcPath, 'infra'),
+      )
+    }
   }
 
   // 5) adapter files (agents, skills, prompts)
   for (const tool of config.tools) {
     const paths = ADAPTER_PATHS[tool]
 
-    for (const agentId of selections.agents) {
-      planned.push(
-        makePlannedFile(
-          targetDir,
-          path.posix.join(paths.agentDir, `${agentId}.md`),
-          `agents/${agentId}.md`,
-          'agent',
-        ),
-      )
+    // Only add agents if tool supports them
+    if (paths.agentDir) {
+      for (const agentId of selections.agents) {
+        planned.push(
+          makePlannedFile(
+            targetDir,
+            path.posix.join(paths.agentDir, `${agentId}.md`),
+            `agents/${agentId}.md`,
+            'agent',
+          ),
+        )
+      }
     }
 
     for (const skillId of selections.skills) {
-      const skillDestName = tool === 'copilot' ? `${skillId}.prompt.md` : `${skillId}.md`
+      const skillDestPath = tool === 'copilot'
+        ? `${skillId}.prompt.md`
+        : tool === 'claude-code' || tool === 'opencode'
+          ? `${skillId}/SKILL.md`
+          : `${skillId}.md`
       planned.push(
         makePlannedFile(
           targetDir,
-          path.posix.join(paths.skillDir, skillDestName),
+          path.posix.join(paths.skillDir, skillDestPath),
           `skills/${skillId}.md`,
           'skill',
         ),
       )
     }
 
-    for (const promptId of selections.prompts) {
-      planned.push(
-        makePlannedFile(
-          targetDir,
-          path.posix.join(paths.promptDir, `${promptId}.md`),
-          `prompts/${promptId}.md`,
-          'prompt',
-        ),
-      )
+    if (tool === 'claude-code' || tool === 'opencode') {
+      continue
+    }
+
+    // Only add prompts if tool supports them
+    if (paths.promptDir) {
+      for (const promptId of selections.prompts) {
+        planned.push(
+          makePlannedFile(
+            targetDir,
+            path.posix.join(paths.promptDir, `${promptId}.md`),
+            `prompts/${promptId}.md`,
+            'prompt',
+          ),
+        )
+      }
     }
   }
 

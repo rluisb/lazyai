@@ -37,6 +37,7 @@ function normalizeSelections(
     skills: selections?.skills ?? [],
     prompts: selections?.prompts ?? [],
     infra: selections?.infra ?? [],
+    constitution: selections?.constitution ?? [],
   }
 }
 

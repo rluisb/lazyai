@@ -146,22 +146,30 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
 
   switch (opts.toolId) {
     case 'opencode': {
-      const mcpJsonPath = path.join(opts.toolTargetDir, '.mcp.json')
-      const mcpJsonContent = toMcpJson(enabledServers)
-      writeFile(mcpJsonPath, JSON.stringify(mcpJsonContent, null, 2) + '\n')
-      opts.fileRecords.push({
-        path: '.mcp.json',
-        hash: fileHash(mcpJsonPath),
-        source: 'compiled:mcp',
-      })
-
-      const ocMcpPath = path.join(opts.toolTargetDir, '.opencode', 'mcp-servers.json')
-      ensureDir(path.join(opts.toolTargetDir, '.opencode'))
+      const configPath = path.join(opts.toolTargetDir, 'opencode.jsonc')
       const ocMcpContent = toOpenCodeJsonc(catalog.servers)
-      writeFile(ocMcpPath, JSON.stringify(ocMcpContent, null, 2) + '\n')
+
+      let existingConfig: Record<string, unknown> = {}
+      if (fileExists(configPath)) {
+        try {
+          const raw = readFile(configPath)
+          const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+          existingConfig = JSON.parse(stripped) as Record<string, unknown>
+        } catch {
+          // If parse fails, start fresh
+        }
+      }
+
+      const merged = {
+        ...existingConfig,
+        $schema: 'https://opencode.ai/config.json',
+        mcp: ocMcpContent,
+      }
+
+      writeFile(configPath, JSON.stringify(merged, null, 2) + '\n')
       opts.fileRecords.push({
-        path: '.opencode/mcp-servers.json',
-        hash: fileHash(ocMcpPath),
+        path: 'opencode.jsonc',
+        hash: fileHash(configPath),
         source: 'compiled:mcp:opencode',
       })
       break

@@ -60,60 +60,57 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
  * file paths back to selection IDs.
  */
 export function extractSelections(manifest: ManifestWithFeatures): Partial<WizardSelections> {
-  const files = manifest.files || []
-  const paths = files.map((f) => f.path)
+  // If manifest already has selections field (written by wizard), return it
+  if (manifest.selections) return manifest.selections
 
-  const templates = ALL_TEMPLATES.filter((t) =>
-    paths.some((p) => p.includes(`templates/${t}`) || p.includes(`.ai/templates/${t}`)),
-  )
-  const rules = ALL_RULES.filter((r) =>
-    paths.some((p) => p.includes(`rules/${r}`) || p.includes(`.ai/rules/${r}`)),
-  )
-  const agents = ALL_AGENTS.filter((a) =>
-    paths.some(
-      (p) =>
-        p.includes(`agents/${a}`) ||
-        p.includes(`.ai/agents/${a}`) ||
-        p.includes(`.claude/agents/${a}`) ||
-        p.includes(`.opencode/agents/${a}`) ||
-        p.includes(`.pi/agents/${a}`) ||
-        p.includes(`.codex/agents/${a}`) ||
-        p.includes(`.github/agents/${a}`),
-    ),
-  )
-  const skills = ALL_SKILLS.filter((s) =>
-    paths.some(
-      (p) =>
-        p.includes(`skills/${s}`) ||
-        p.includes(`.ai/skills/${s}`) ||
-        p.includes(`.claude/skills/${s}`) ||
-        p.includes(`.opencode/skills/${s}`) ||
-        p.includes(`.pi/skills/${s}`) ||
-        p.includes(`.codex/skills/${s}`) ||
-        p.includes(`.gemini/skills/${s}`),
-    ),
-  )
-  const prompts = ALL_PROMPTS.filter((pr) =>
-    paths.some(
-      (p) =>
-        p.includes(`prompts/${pr}`) ||
-        p.includes(`.ai/prompts/${pr}`) ||
-        p.includes(`.github/prompts/${pr}`),
-    ),
-  )
-  const infra = ALL_INFRA.filter((i) =>
-    paths.some((p) => p.includes(`infra/${i}`) || p.includes(`.ai/infra/${i}`)),
-  )
+  // Otherwise, infer selections from file paths
+  const selections: Partial<WizardSelections> = {}
+  const files = manifest.files.map(f => f.path)
 
-  return {
-    ...(templates.length > 0 ? { templates } : {}),
-    ...(rules.length > 0 ? { rules } : {}),
-    ...(agents.length > 0 ? { agents } : {}),
-    ...(skills.length > 0 ? { skills } : {}),
-    ...(prompts.length > 0 ? { prompts } : {}),
-    ...(infra.length > 0 ? { infra } : {}),
-    ...(manifest.selections?.constitution != null ? { constitution: manifest.selections.constitution } : {}),
-    ...(manifest.features != null ? { features: manifest.features } : {}),
-    ...(manifest.gitConventions != null ? { gitConventions: manifest.gitConventions } : {}),
-  }
+  // Templates: look for docs/templates/<name>.md
+  const templates = ALL_TEMPLATES.filter(t => files.some(f => f === `docs/templates/${t}.md`))
+  if (templates.length > 0) selections.templates = templates
+
+  // Rules: look for docs/rules/<name>.md
+  const rules = ALL_RULES.filter(r => files.some(f => f === `docs/rules/${r}.md`))
+  if (rules.length > 0) selections.rules = rules
+
+  // Agents: look for agent files in any adapter dir pattern
+  const agents = ALL_AGENTS.filter(a =>
+    files.some(
+      f =>
+        f.endsWith(`/${a}.md`) &&
+        (f.includes('.claude/') ||
+          f.includes('.opencode/') ||
+          f.includes('.gemini/') ||
+          f.includes('.pi/') ||
+          f.includes('.codex/') ||
+          f.includes('.github/')),
+    ),
+  )
+  if (agents.length > 0) selections.agents = agents
+
+  // Skills
+  const skills = ALL_SKILLS.filter(s =>
+    files.some(f =>
+      f.endsWith(`/${s}.md`) || f.endsWith(`/skills/${s}/SKILL.md`) || f.endsWith(`/prompts/${s}.prompt.md`),
+    ),
+  )
+  if (skills.length > 0) selections.skills = skills
+
+  // Prompts
+  const prompts = ALL_PROMPTS.filter(pr => files.some(f => f.endsWith(`/${pr}.md`) && f.includes('templates/')))
+  if (prompts.length > 0) selections.prompts = prompts
+
+  // Infra
+  const infra = ALL_INFRA.filter(i =>
+    files.some(f => {
+      const name = f.split('/').pop() || ''
+      if (i === 'codeowners') return name === 'CODEOWNERS'
+      return name.startsWith(i)
+    }),
+  )
+  if (infra.length > 0) selections.infra = infra
+
+  return selections
 }

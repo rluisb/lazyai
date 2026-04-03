@@ -69,3 +69,10 @@ When a loop iteration fails:
 ### Next Step
 - [continue loop | ready for review]
 ```
+
+## Integration
+- **Primary agent:** Builder (fix/retry loops)
+- **Triggered by:** `/iterate` command or test failures during implementation
+- **Depends on:** Test output and error messages from current task
+- **Feeds into:** memory-write.md on resolution; escalates to Reviewer after 2 failed reflections
+- **Related skills:** implement (initial pass), lessons-learned (captures retry insights)

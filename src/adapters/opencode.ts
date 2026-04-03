@@ -13,12 +13,10 @@ export class OpenCodeAdapter implements ToolAdapter {
     const isGlobal = ctx.setupScope === 'global'
     const ocDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.opencode')
     const commandsDir = isGlobal ? 'command' : 'commands'
-    const skillsDir = isGlobal ? 'skill' : 'skills'
 
     files.ensureDir(ocDir)
     files.ensureDir(path.join(ocDir, 'agents'))
     files.ensureDir(path.join(ocDir, commandsDir))
-    files.ensureDir(path.join(ocDir, skillsDir))
     files.ensureDir(path.join(ocDir, 'templates'))
 
     console.log('🤖  Installing OpenCode tools...')

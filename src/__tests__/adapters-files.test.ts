@@ -172,7 +172,6 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'agents', 'builder.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'command', 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'command'))).toBe(true)
-    expect(fileExists(path.join(globalTargetDir, 'skill'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(false)
   })
 

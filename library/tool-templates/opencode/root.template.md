@@ -20,8 +20,20 @@ This project uses OpenCode with ai-setup integration.
 
 {{#include fragments/quality-gates.xml}}
 
+{{#if features.gitConventions}}
+{{#include fragments/git-conventions.xml}}
+{{/if}}
+
 {{#if features.agent_harness}}
 {{#include fragments/agent-harness.xml}}
+{{/if}}
+
+{{#if features.pivotHandling}}
+{{#include fragments/pivot-handling.xml}}
+{{/if}}
+
+{{#if features.bugResolution}}
+{{#include fragments/bug-resolution.xml}}
 {{/if}}
 
 ## Project-Specific Instructions

@@ -8,11 +8,24 @@ export interface FragmentContext {
   framework?: string
   workspaceType?: string
   projectInstructions?: string
-  features?: {
-    tree_of_thoughts?: boolean
-    agent_harness?: boolean
-    bug_resolution?: boolean
-  }
+  features?: FeatureFlags
+}
+
+export interface FeatureFlags {
+  contextEngineering?: boolean
+  rpiWorkflow?: boolean
+  chainOfThought?: boolean
+  treeOfThoughts?: boolean
+  adrEnforcement?: boolean
+  qualityGates?: boolean
+  agentHarness?: boolean
+  bugResolution?: boolean
+  pivotHandling?: boolean
+  gitConventions?: boolean
+  // Legacy aliases kept for backwards compatibility with older templates
+  tree_of_thoughts?: boolean
+  agent_harness?: boolean
+  bug_resolution?: boolean
 }
 
 /**

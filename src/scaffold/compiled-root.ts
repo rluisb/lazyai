@@ -39,18 +39,10 @@ export interface ScaffoldCompiledRootOptions {
  * This is an alternative to scaffoldRootFiles that uses the fragment/template
  * compilation system to embed XML-tagged prompt engineering blocks.
  * 
- * Features enabled by default:
- * - context-engineering
- * - rpi-workflow  
- * - chain-of-thought
- * - adr-enforcement
- * - quality-gates
- * - pivot-handling
- * 
- * Optional features (off by default):
- * - tree-of-thoughts
- * - agent-harness
- * - bug-resolution
+ * Default behavior:
+ * - When features are omitted, schema/wizard defaults are used (all feature flags enabled)
+ * - Callers can pass explicit features to disable specific blocks
+ * - Git-conventions blocks are included when gitConventions context is provided
  */
 export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): Promise<void> {
   const {

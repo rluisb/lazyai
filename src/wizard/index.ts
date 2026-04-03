@@ -262,6 +262,7 @@ export async function runWizard(opts: {
       ...(planningRepoPath ? { planningRepoPath } : {}),
       ...(repos && repos.length > 0 ? { repos } : {}),
       ...(globalRef ? { globalRef } : {}),
+      useCompiledRoot,
       selections,
       interactive: opts.interactive,
       force: opts.force,
@@ -480,6 +481,7 @@ export async function runWizard(opts: {
         ...(repos && repos.length > 0 ? { repos } : {}),
         ...(globalRef ? { globalRef } : {}),
         planningDir,
+        useCompiledRoot,
       },
       selections: {
         ...selections,

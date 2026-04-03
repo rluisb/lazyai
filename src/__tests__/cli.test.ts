@@ -225,6 +225,69 @@ describe('cli init integration', () => {
     expect(fs.existsSync(claudeAgent)).toBe(false)
   })
 
+  it('compile uses stored phase-2 settings for compiled root regeneration', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'compile-phase2-test',
+      '--planning-dir',
+      '.specs',
+      '--disable-features',
+      'treeOfThoughts',
+      '--no-interactive',
+    ])
+
+    const rootFile = path.join(tempDir, 'AGENTS.md')
+    fs.rmSync(rootFile)
+    expect(fs.existsSync(rootFile)).toBe(false)
+
+    await runCompile(['--tools', 'opencode'])
+
+    expect(fs.existsSync(rootFile)).toBe(true)
+    const content = fs.readFileSync(rootFile, 'utf-8')
+    expect(content).toContain('<planning-dir>.specs</planning-dir>')
+    expect(content).not.toContain('<tree-of-thoughts>')
+    expect(content).toContain('<git-conventions>')
+  })
+
+  it('persists useCompiledRoot=false and compile keeps simple root behavior', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'compile-simple-root-test',
+      '--planning-dir',
+      '.work-items',
+      '--no-compiled-root',
+      '--no-interactive',
+    ])
+
+    const store = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    expect(store.config.useCompiledRoot).toBe(false)
+    expect(store.config.planningDir).toBe('.work-items')
+
+    const rootFile = path.join(tempDir, 'AGENTS.md')
+    fs.rmSync(rootFile)
+    expect(fs.existsSync(rootFile)).toBe(false)
+
+    await runCompile(['--tools', 'opencode'])
+
+    const content = fs.readFileSync(rootFile, 'utf-8')
+    expect(content).not.toContain('<system-context>')
+    expect(content).toContain('AI Agent Rules')
+  })
+
   it('compile with --scope global reads manifest from ~/.ai and restores global tool paths', async () => {
     const tempDir = makeTempRepo()
     const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-global-compile-'))
@@ -358,6 +421,10 @@ describe('cli init integration', () => {
     const output = writeSpy.mock.calls.map((call) => String(call[0])).join('')
     expect(output).toContain('Scope: project')
     expect(output).toContain('Tools: opencode, claude-code')
+    expect(output).toContain('Planning dir: .planning')
+    expect(output).toContain('Use compiled root: true')
+    expect(output).toContain('Active features:')
+    expect(output).toContain('Git conventions: branch=')
     expect(output).not.toContain('coming soon')
 
     writeSpy.mockRestore()
@@ -407,10 +474,34 @@ describe('cli init integration', () => {
     expect(fs.existsSync(path.join(tempDir, '.claude', 'skills'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.claude', 'rules'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
+    const compiledRootContent = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8')
+    expect(compiledRootContent).toContain('<system-context>')
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
     expect(config.config.tools).toContain('claude-code')
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.claude/'))).toBe(true)
+  })
+
+  it('add keeps simple root behavior when useCompiledRoot is disabled', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'add-simple-root-test',
+      '--no-compiled-root',
+      '--no-interactive',
+    ])
+
+    await runAdd('claude-code')
+
+    const content = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8')
+    expect(content).not.toContain('<system-context>')
+    expect(content).toContain('# CLAUDE.md')
   })
 
   it('supports workspace init + workspace compile from planning repo', async () => {

@@ -1,7 +1,7 @@
 import { dirname } from 'node:path'
+import { Errors } from '../errors/index.js'
 import type { AiSetupConfig } from '../types.js'
 import { extractSelections } from '../utils/manifest.js'
-import { Errors } from '../errors/index.js'
 import { CURRENT_SCHEMA_VERSION, type StoreData, storeDataSchema } from './schema.js'
 
 function asRecord(data: unknown): Record<string, unknown> | null {

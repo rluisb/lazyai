@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import type { PlannedFile } from './planner.js'
 
-export async function runPhase8(opts: {
+export async function runPhase4(opts: {
   interactive: boolean
   plan: PlannedFile[]
 }): Promise<boolean> {

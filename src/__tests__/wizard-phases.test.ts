@@ -19,13 +19,13 @@ vi.mock('@clack/prompts', () => ({
 
 import * as p from '@clack/prompts'
 import { runPhase1 } from '../wizard/phase1-context.js'
-import { runPhase7 } from '../wizard/phase7-conflicts.js'
+import { runPhase3 } from '../wizard/phase3-conflicts.js'
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
 }
 
-describe('wizard phases 1 and 7', () => {
+describe('wizard phases 1 and 3', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(p.isCancel).mockReturnValue(false)
@@ -189,8 +189,8 @@ describe('wizard phases 1 and 7', () => {
     ).rejects.toThrow('required in non-interactive mode')
   })
 
-  it("Phase 7: non-interactive + force returns strategy 'backup-and-replace'", async () => {
-    const result = await runPhase7({
+  it("Phase 3: non-interactive + force returns strategy 'backup-and-replace'", async () => {
+    const result = await runPhase3({
       interactive: false,
       force: true,
       targetDir: '/tmp',
@@ -201,8 +201,8 @@ describe('wizard phases 1 and 7', () => {
     expect(result.perFileOverrides.size).toBe(0)
   })
 
-  it("Phase 7: non-interactive without force returns strategy 'skip'", async () => {
-    const result = await runPhase7({
+  it("Phase 3: non-interactive without force returns strategy 'skip'", async () => {
+    const result = await runPhase3({
       interactive: false,
       targetDir: '/tmp',
       plannedFiles: [],

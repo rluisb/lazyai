@@ -18,7 +18,7 @@ function cancelAndExit(): never {
   process.exit(0)
 }
 
-export async function runPhase7(opts: {
+export async function runPhase3(opts: {
   interactive: boolean
   force?: boolean
   targetDir: string

@@ -13,7 +13,6 @@ ai-setup uses a **canonical source → compile** model:
 
 ```text
 .ai/
-├── config.yml          # Scope, tools, repos, quality gates
 ├── constitution/       # Project principles, constraints, quality gates
 │   ├── constitution.md
 │   ├── constraints.md
@@ -26,6 +25,8 @@ ai-setup uses a **canonical source → compile** model:
 │   └── projects/       # (workspace only)
 └── [agents, skills, prompts, templates, rules — coming soon]
 ```
+
+`.ai-setup.json` is the manifest file created in the project root that tracks managed files, hashes, and setup metadata.
 
 ## Scopes
 
@@ -56,11 +57,12 @@ ai-setup uses a **canonical source → compile** model:
 
 | Tool | Config Dir | Skills Dir | Root File | Global Support |
 |------|-----------|------------|-----------|----------------|
-| opencode | `.opencode/` | `commands/` (project) / `command/` (global) | `AGENTS.md` | ✅ |
-| claude-code | `.claude/` | `commands/` | `CLAUDE.md` | ✅ |
-| copilot | `.github/` | `prompts/*.prompt.md` | `copilot-instructions.md` | ❌ |
-| gemini | `.gemini/` | `skills/` | `GEMINI.md` | ❌ |
-| pi | `.pi/` | `skills/` | (none) | ❌ |
+| opencode | `.opencode/` | `.opencode/skills/<name>/SKILL.md` | `AGENTS.md` | ✅ |
+| claude-code | `.claude/` | `.claude/skills/<name>/SKILL.md` | `CLAUDE.md` | ✅ |
+| codex | `.codex/` | `.codex/skills/<name>/SKILL.md` | `AGENTS.md` | ❌ |
+| copilot | `.github/` | `.github/prompts/<name>.prompt.md` | `copilot-instructions.md` | ❌ |
+| gemini | `.gemini/` | `.gemini/skills/<name>/SKILL.md` | `GEMINI.md` | ❌ |
+| pi | `.pi/` | `.pi/skills/` | `INSTRUCTIONS.md` | ❌ |
 
 ## Usage
 

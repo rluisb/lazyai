@@ -38,8 +38,8 @@ import { OperationTracker } from '../errors/operation.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
-import { runPhase7 } from './phase7-conflicts.js'
-import { runPhase8 } from './phase8-confirm.js'
+import { runPhase3 } from './phase3-conflicts.js'
+import { runPhase4 } from './phase4-confirm.js'
 import { computePlan } from './planner.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { compileMcp } from '../adapters/mcp-compiler.js'
@@ -284,17 +284,17 @@ export async function runWizard(opts: {
       }
     })
 
-    const phase7Opts = {
+    const phase3Opts = {
       interactive: opts.interactive,
       targetDir: effectiveTargetDir,
       plannedFiles,
       ...(opts.force !== undefined ? { force: opts.force } : {}),
     }
 
-    const { strategy, perFileOverrides } = await runPhase7(phase7Opts)
+    const { strategy, perFileOverrides } = await runPhase3(phase3Opts)
 
-    const phase8Opts = { interactive: opts.interactive, plan, config }
-    const confirmed = await runPhase8(phase8Opts)
+    const phase4Opts = { interactive: opts.interactive, plan, config }
+    const confirmed = await runPhase4(phase4Opts)
     if (!confirmed) return
 
     if (opts.dryRun) {

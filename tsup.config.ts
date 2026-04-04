@@ -9,6 +9,6 @@ export default defineConfig({
   sourcemap: true,
   minify: false,
   shims: true,
-  dts: true,
+  dts: false,
   external: ['glob'],
 })

@@ -1,30 +1,37 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { Low, Memory } from 'lowdb'
 import { JSONFile } from 'lowdb/node'
-import { join } from 'path'
-import { existsSync, readFileSync } from 'node:fs'
-import { defaultStore, type StoreData, type Operation } from './schema.js'
-import { migrate } from './migrations.js'
 import { Errors } from '../errors/index.js'
+import { migrate } from './migrations.js'
+import { defaultStore, type Operation, type StoreData } from './schema.js'
 
 const STORE_FILE_NAME = '.ai-setup.json'
 
 export async function createStore(targetDir: string): Promise<Low<StoreData>> {
   const file = new JSONFile<StoreData>(join(targetDir, STORE_FILE_NAME))
-  const adapter = file
-  const db = new Low(adapter, defaultStore())
+  const db = new Low(file, defaultStore())
 
   await db.read()
 
-  if (db.data === null) {
+  const wasNew = db.data === null
+  if (wasNew) {
     db.data = defaultStore()
     await db.write()
   }
 
-  db.data = migrate(targetDir, db.data)
-  db.data.meta.lastUpdatedAt = new Date().toISOString()
-  db.data.sync.dirty = true
+  const beforeMigrate = db.data
+  const migrated = migrate(targetDir, db.data)
+  const needsMigration = migrated !== beforeMigrate
 
-  await db.write()
+  db.data = migrated
+
+  if (wasNew || needsMigration) {
+    db.data.meta.lastUpdatedAt = new Date().toISOString()
+    db.data.sync.dirty = true
+    await db.write()
+  }
+
   return db
 }
 

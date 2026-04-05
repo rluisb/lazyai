@@ -4,20 +4,94 @@
  * Executes migration plans with proper backup, file operations, and rollback support.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import * as p from '@clack/prompts';
-import {
+import { toolIdSchema, trackedFileSchema } from '../store/schema.js';
+import type { FileRecord } from '../types.js';
+import { writeToCanonical } from './canonical-writer.js';
+import type {
+  MergeConflict,
+  MigrationAction,
   MigrationContext,
   MigrationPlan,
   MigrationResult,
-  MigrationAction,
   MigrationStats,
-  MergeConflict,
   ParsedSetup,
 } from './types.js';
-import type { FileRecord } from '../types.js';
-import { writeToCanonical } from './canonical-writer.js';
+
+type ManifestFile = Pick<FileRecord, 'path' | 'hash' | 'source'>;
+
+interface ManifestShape {
+  version: string;
+  setupScope: 'project' | 'workspace' | 'global';
+  setupType: 'project' | 'workspace';
+  tools: string[];
+  projectName: string;
+  installedAt: string;
+  files: ManifestFile[];
+}
+
+function isManifestFile(value: unknown): value is ManifestFile {
+  const parsed = trackedFileSchema.safeParse(value);
+  return parsed.success;
+}
+
+function normalizeManifest(raw: unknown): ManifestShape {
+  const now = new Date().toISOString();
+  const fallback: ManifestShape = {
+    version: '0.1.0',
+    setupScope: 'project',
+    setupType: 'project',
+    tools: [],
+    projectName: 'Migrated Project',
+    installedAt: now,
+    files: [],
+  };
+
+  if (!raw || typeof raw !== 'object') return fallback;
+  const data = raw as Record<string, unknown>;
+
+  const setupScope = data.setupScope;
+  const normalizedScope: ManifestShape['setupScope'] =
+    setupScope === 'global' || setupScope === 'workspace' || setupScope === 'project'
+      ? setupScope
+      : 'project';
+
+  const setupType = data.setupType;
+  const normalizedSetupType: ManifestShape['setupType'] =
+    setupType === 'workspace' || setupType === 'project'
+      ? setupType
+      : normalizedScope === 'workspace'
+        ? 'workspace'
+        : 'project';
+
+  const tools = Array.isArray(data.tools)
+    ? data.tools.filter((tool): tool is string => typeof tool === 'string')
+    : [];
+
+  const files = Array.isArray(data.files)
+    ? data.files.filter(isManifestFile).map((file) => ({ path: file.path, hash: file.hash, source: file.source }))
+    : [];
+
+  return {
+    version: typeof data.version === 'string' ? data.version : fallback.version,
+    setupScope: normalizedScope,
+    setupType: normalizedSetupType,
+    tools,
+    projectName: typeof data.projectName === 'string' ? data.projectName : fallback.projectName,
+    installedAt: typeof data.installedAt === 'string' ? data.installedAt : fallback.installedAt,
+    files,
+  };
+}
+
+function toManifestFile(record: FileRecord): ManifestFile {
+  return {
+    path: record.path,
+    hash: record.hash,
+    source: record.source,
+  };
+}
 
 export async function executeMigrationPlan(
   context: MigrationContext,
@@ -422,25 +496,22 @@ async function createAiSetupManifest(
 ): Promise<void> {
   const manifestPath = path.join(context.targetPath, '.ai-setup.json');
   
-  let existingManifest: any = {
-    version: '0.1.0',
-    setupType: 'project',
-    tools: [],
-    projectName: 'Migrated Project',
-    installedAt: new Date().toISOString(),
-    files: [],
-  };
+  let existingManifest = normalizeManifest(null);
   
   // Try to read existing manifest
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    existingManifest = JSON.parse(content);
+    existingManifest = normalizeManifest(JSON.parse(content));
   } catch {
     // No existing manifest
   }
   
   // Update tools
   for (const adapter of plan.adapters) {
+    if (!toolIdSchema.safeParse(adapter).success) {
+      continue;
+    }
+
     if (!existingManifest.tools.includes(adapter)) {
       existingManifest.tools.push(adapter);
     }
@@ -448,19 +519,19 @@ async function createAiSetupManifest(
   
   if (fileRecords && fileRecords.length > 0) {
     for (const record of fileRecords) {
-      const existingFile = existingManifest.files.find((f: any) => f.path === record.path);
+      const existingFile = existingManifest.files.find((f) => f.path === record.path);
       if (existingFile) {
         existingFile.hash = record.hash;
         existingFile.source = record.source;
       } else {
-        existingManifest.files.push(record);
+        existingManifest.files.push(toManifestFile(record));
       }
     }
   } else {
     // Track migrated files
     for (const action of executedActions) {
       if (action.type === 'create' || action.type === 'modify') {
-        const existingFile = existingManifest.files.find((f: any) => f.path === action.targetPath);
+        const existingFile = existingManifest.files.find((f) => f.path === action.targetPath);
         if (!existingFile) {
           existingManifest.files.push({
             path: action.targetPath,
@@ -477,8 +548,8 @@ async function createAiSetupManifest(
 }
 
 export async function rollbackMigration(
-  context: MigrationContext,
-  backupPath: string
+  _context: MigrationContext,
+  _backupPath: string
 ): Promise<void> {
   // Restore files from backup
   // This is a safety feature for failed migrations

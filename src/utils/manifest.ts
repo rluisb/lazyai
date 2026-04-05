@@ -1,6 +1,7 @@
 import { join } from 'node:path'
-import type { AiSetupConfig, WizardSelections } from '../types.js'
+import { readStore } from '../store/index.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
+import type { AiSetupConfig, WizardSelections } from '../types.js'
 import {
   ALL_AGENTS,
   ALL_INFRA,
@@ -10,7 +11,6 @@ import {
   ALL_TEMPLATES,
 } from '../types.js'
 import { fileExists } from './files.js'
-import { readStore } from '../store/index.js'
 
 const MANIFEST_FILE = '.ai-setup.json'
 

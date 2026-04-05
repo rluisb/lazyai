@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { applyStrategy } from '../utils/conflict-strategy.js'
-import { mkdtempSync, writeFileSync, rmSync, existsSync } from 'node:fs'
-import path from 'node:path'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ConflictStrategy } from '../types.js'
+import { applyStrategy } from '../utils/conflict-strategy.js'
 
 describe('applyStrategy', () => {
   let tempDir: string

@@ -6,14 +6,20 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/store/**/*.ts"]
+    "includes": ["src/**/*.ts"]
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
+      "style": {
+        "noNonNullAssertion": "warn"
+      },
       "suspicious": {
         "noExplicitAny": "warn"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "warn"
       }
     }
   },

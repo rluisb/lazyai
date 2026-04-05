@@ -5,25 +5,24 @@
  * with intelligent merging and conflict resolution.
  */
 
-export * from './types.js';
-export * from './parsers/base-parser.js';
 export * from './detector.js';
+export * from './parsers/base-parser.js';
 export * from './registry/discovery.js';
+export * from './types.js';
 
-import {
+import { detectExistingSetup, hasAdapter } from './detector.js';
+import { checkDrift } from './doctor.js';
+import { executeMigrationPlan, executeMigrationToCanonical } from './executor.js';
+import { generateMigrationPlan } from './plan.js';
+import { getAllParsers } from './registry/discovery.js';
+import type {
+  DriftCheckResult,
+  MergeStrategy,
   MigrationContext,
-  MigrationOptions,
   MigrationPlan,
   MigrationResult,
-  MergeStrategy,
-  DriftCheckResult,
   ParsedSetup,
 } from './types.js';
-import { detectExistingSetup, hasAdapter } from './detector.js';
-import { getAllParsers } from './registry/discovery.js';
-import { generateMigrationPlan } from './plan.js';
-import { executeMigrationPlan, executeMigrationToCanonical } from './executor.js';
-import { checkDrift } from './doctor.js';
 
 export interface ImportOptions {
   path?: string;
@@ -62,9 +61,9 @@ export async function importSetup(options: ImportOptions = {}): Promise<Migratio
     if (detections.length === 0) {
       return {
         success: false,
-        plan: null as any,
+        plan: null,
         executedActions: [],
-        errors: ['No existing AI setup detected in ' + sourcePath],
+        errors: [`No existing AI setup detected in ${sourcePath}`],
         warnings: [],
         stats: {
           filesCreated: 0,
@@ -144,7 +143,7 @@ export async function importSetup(options: ImportOptions = {}): Promise<Migratio
   } catch (error) {
     return {
       success: false,
-      plan: null as any,
+      plan: null,
       executedActions: [],
       errors: [error instanceof Error ? error.message : String(error)],
       warnings: [],
@@ -196,6 +195,6 @@ export async function detectAdapters(path?: string): Promise<string[]> {
   return adapters;
 }
 
-export { detectExistingSetup, getAllParsers, generateMigrationPlan };
-export type { MigrationPlan, MigrationResult, DriftCheckResult };
 export { formatPlan } from "./plan.js";
+export type { DriftCheckResult, MigrationPlan, MigrationResult };
+export { detectExistingSetup, generateMigrationPlan, getAllParsers };

@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
+import type { ConflictStrategy, FileRecord } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { FileRecord, ConflictStrategy } from '../types.js'
+import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 
 interface McpServer {
   enabled?: boolean

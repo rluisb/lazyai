@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { writeToCanonical } from '../migration/canonical-writer.js'
-import type { FileRecord } from '../types.js'
 import type { ParsedSetup } from '../migration/types.js'
+import type { FileRecord } from '../types.js'
 
 function createParsedSetup(): ParsedSetup {
   return {

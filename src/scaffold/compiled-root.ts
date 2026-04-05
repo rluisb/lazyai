@@ -1,9 +1,10 @@
 import path from 'node:path'
-import { ensureDir, writeFile, fileHash } from '../utils/files.js'
-import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { ToolId, FileRecord, ConflictStrategy } from '../types.js'
+import { type FragmentContext, TemplateCompiler } from '../compiler/index.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
-import { TemplateCompiler, type FragmentContext } from '../compiler/index.js'
+import type { ConflictStrategy, FileRecord, ToolId } from '../types.js'
+import { applyStrategy } from '../utils/conflict-strategy.js'
+import { ensureDir, fileHash, writeFile } from '../utils/files.js'
+import { ROOT_FILE_BY_TOOL } from './root-file-map.js'
 
 const DEFAULT_ENABLED_FEATURES: FeatureFlags = {
   contextEngineering: true,
@@ -15,16 +16,6 @@ const DEFAULT_ENABLED_FEATURES: FeatureFlags = {
   agentHarness: true,
   bugResolution: true,
   pivotHandling: true,
-}
-
-// Root file mapping per tool - maps template output to tool-native filename
-const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
-  'claude-code': 'CLAUDE.md',
-  'opencode': 'AGENTS.md',
-  'codex': 'AGENTS.md',
-  'copilot': '.github/copilot-instructions.md',
-  'pi': 'INSTRUCTIONS.md',
-  'gemini': 'GEMINI.md',
 }
 
 export interface ScaffoldCompiledRootOptions {

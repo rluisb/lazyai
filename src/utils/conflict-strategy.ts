@@ -1,5 +1,5 @@
 import type { ConflictStrategy } from '../types.js'
-import { fileExists, backupFile } from './files.js'
+import { backupFile, fileExists } from './files.js'
 
 /**
  * Deterministic conflict resolution — no interactive prompts.

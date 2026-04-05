@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { extractSelections, readManifest } from '../utils/manifest.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AiSetupConfig, WizardSelections } from '../types.js'
+import { extractSelections, readManifest } from '../utils/manifest.js'
 
 function buildManifest(files: string[], selections?: WizardSelections): AiSetupConfig {
   return {

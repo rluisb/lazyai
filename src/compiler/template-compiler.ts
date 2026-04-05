@@ -1,8 +1,7 @@
-import path from 'node:path'
 import * as fs from 'node:fs'
-import { FragmentResolver, type FragmentContext } from './fragment-resolver.js'
-
-export type ToolId = 'claude-code' | 'opencode' | 'codex' | 'copilot' | 'pi' | 'gemini'
+import path from 'node:path'
+import type { ToolId } from '../types.js'
+import { type FragmentContext, FragmentResolver } from './fragment-resolver.js'
 
 export interface CompilerConfig {
   libraryDir: string

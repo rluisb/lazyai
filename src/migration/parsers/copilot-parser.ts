@@ -4,25 +4,28 @@
  * Detects, parses, and merges GitHub Copilot AI setups.
  */
 
-import { BaseParser } from './base-parser.js';
-import {
-  MigrationContext,
-  DetectionResult,
-  ParsedSetup,
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { glob } from 'glob';
+import { resolveLibraryDir } from '../../utils/files.js';
+import { diff3 } from '../diff/diff3.js';
+import type { 
+  AgentDefinition,
+  CommandDefinition,CustomSection, 
+  DetectedFile,
+  DetectionResult,MergeConflict, 
   MergeResult,
   MergeStrategy,
+  MigrationContext,
   MigrationOptions,
-  DetectedFile,
-  AgentDefinition,
-  RuleDefinition,
-  CommandDefinition,
-  TemplateDefinition,
   ParsedFile,
-} from '../types.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { glob } from 'glob';
-import { diff3 } from '../diff/diff3.js';
+  ParsedSetup,
+  RuleDefinition,
+  TemplateDefinition,} from '../types.js';
+import { BaseParser } from './base-parser.js';
+
+const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)));
 
 export class CopilotParser extends BaseParser {
   readonly id = 'copilot';
@@ -141,7 +144,7 @@ export class CopilotParser extends BaseParser {
     const rules: RuleDefinition[] = [];
     const commands: CommandDefinition[] = [];
     const templates: TemplateDefinition[] = [];
-    const customSections: any[] = [];
+    const customSections: CustomSection[] = [];
     const files: ParsedFile[] = [];
     let projectName: string | undefined;
     let description: string | undefined;
@@ -287,15 +290,15 @@ export class CopilotParser extends BaseParser {
   async merge(
     existing: ParsedSetup,
     strategy: MergeStrategy,
-    options: MigrationOptions
+    _options: MigrationOptions
   ): Promise<MergeResult> {
     const newFiles: string[] = [];
     const modifiedFiles: string[] = [];
     const backupPaths: string[] = [];
     const warnings: string[] = [];
-    const conflicts: any[] = [];
+    const conflicts: MergeConflict[] = [];
 
-    const templateDir = new URL('../../../library', import.meta.url).pathname;
+    const templateDir = libraryDir;
 
     // Merge copilot-instructions.md
     try {
@@ -303,9 +306,9 @@ export class CopilotParser extends BaseParser {
       const templateContent = await fs.readFile(templatePath, 'utf-8');
       
       if (existing.files.find(f => f.path === '.github/copilot-instructions.md')) {
-        const existingContent = existing.files.find(f => f.path === '.github/copilot-instructions.md')!.content;
+        const existingContent = existing.files.find(f => f.path === '.github/copilot-instructions.md')?.content;
         const lines = templateContent.split('\n');
-        const existingLines = existingContent.split('\n');
+        const existingLines = (existingContent ?? '').split('\n');
         
         const diff3Result = diff3(lines, existingLines, lines);
         
@@ -378,18 +381,6 @@ export class CopilotParser extends BaseParser {
     if (normalized.includes('copilot-instructions')) return 'config';
     
     return 'other';
-  }
-
-  private calculatePriority(filePath: string): number {
-    let priority = 0;
-    const normalized = filePath.toLowerCase();
-    
-    if (normalized.includes('copilot-instructions.md')) priority += 100;
-    if (normalized.includes('/prompts/')) priority += 50;
-    if (normalized.includes('/instructions/')) priority += 40;
-    if (normalized.includes('/copilot/')) priority += 30;
-    
-    return priority;
   }
 
   private extractDescription(content: string): string {

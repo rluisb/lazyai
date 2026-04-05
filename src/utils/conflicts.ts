@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
-import { fileExists, fileHash } from './files.js'
-import type { ConflictStrategy } from '../types.js'
 import { Errors } from '../errors/index.js'
+import type { ConflictStrategy } from '../types.js'
+import { fileExists, fileHash } from './files.js'
 
 export type ConflictResolution = 'overwrite' | 'skip' | 'backup-and-overwrite'
 

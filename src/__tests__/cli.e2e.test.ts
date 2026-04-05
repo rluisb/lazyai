@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
 
 const binPath = join(__dirname, '../../bin/ai-setup.js')
 
@@ -10,8 +10,9 @@ function getFailureOutput(command: string, cwd?: string): string {
   try {
     execSync(command, { stdio: 'pipe', cwd })
     throw new Error('Expected command to fail')
-  } catch (err: any) {
-    return `${err.stdout?.toString() ?? ''}${err.stderr?.toString() ?? ''}`
+  } catch (err) {
+    const error = err as Error & { stdout?: Buffer; stderr?: Buffer }
+    return `${error.stdout?.toString() ?? ''}${error.stderr?.toString() ?? ''}`
   }
 }
 
@@ -40,9 +41,10 @@ describe('CLI End-to-End', () => {
     try {
       execSync(`node ${binPath} potato`, { stdio: 'pipe' })
       expect.fail('Should have thrown an error')
-    } catch (err: any) {
-      expect(err.status).toBe(1)
-      expect(err.stderr.toString()).toContain("error: unknown command 'potato'")
+    } catch (err) {
+      const error = err as Error & { status?: number; stderr?: Buffer }
+      expect(error.status).toBe(1)
+      expect(error.stderr?.toString()).toContain("error: unknown command 'potato'")
     }
   })
 

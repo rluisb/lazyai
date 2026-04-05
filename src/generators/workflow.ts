@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { ensureDir, fileExists, listDir } from '../utils/files.js'
-import type { Generator, GeneratorConfig, GeneratedFile, PromptQuestion } from './types.js'
+import type { GeneratedFile, Generator, GeneratorConfig, PromptQuestion } from './types.js'
 
 type WorkflowRefType = 'agent' | 'skill' | 'prompt' | 'template'
 

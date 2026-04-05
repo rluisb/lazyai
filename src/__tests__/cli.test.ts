@@ -1,13 +1,12 @@
-import { beforeEach, afterEach, describe, expect, it } from 'vitest'
-import { vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createProgram } from '../cli.js'
+import { ejectCommand } from '../commands/eject.js'
 import { createImportCommand } from '../commands/import.js'
 import { createMigrateCommand } from '../commands/migrate.js'
-import type { AiSetupConfig } from '../types.js'
-import { ejectCommand } from '../commands/eject.js'
+import type { StoreData } from '../store/schema.js'
 
 describe('cli init integration', () => {
   let originalCwd: string
@@ -33,7 +32,7 @@ describe('cli init integration', () => {
     await program.parseAsync(['node', 'ai-setup', 'status'])
   }
 
-  const runEject = async (): Promise<void> => {
+  const _runEject = async (): Promise<void> => {
     const program = createProgram()
     await program.parseAsync(['node', 'ai-setup', 'eject'])
   }
@@ -99,7 +98,7 @@ describe('cli init integration', () => {
       expect(fs.existsSync(path.join(tempDir, rel)), `${rel} should exist`).toBe(true)
     }
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('integration-test')
     expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
@@ -129,7 +128,7 @@ describe('cli init integration', () => {
     await runInit(args)
     await runInit([...args, '--force'])
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('rerun-test')
     expect(config.config.setupScope).toBe('project')
     expect(config.config.tools).toEqual(['pi', 'opencode'])
@@ -161,7 +160,7 @@ describe('cli init integration', () => {
     expect(fs.existsSync(path.join(tempDir, '.pi/agents'))).toBe(false)
     expect(fs.existsSync(path.join(tempDir, '.pi/skills'))).toBe(false)
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
@@ -273,7 +272,7 @@ describe('cli init integration', () => {
       '--no-interactive',
     ])
 
-    const store = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    const store = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(store.config.useCompiledRoot).toBe(false)
     expect(store.config.planningDir).toBe('.work-items')
 
@@ -477,7 +476,7 @@ describe('cli init integration', () => {
     const compiledRootContent = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8')
     expect(compiledRootContent).toContain('<system-context>')
 
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as any
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.tools).toContain('claude-code')
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.claude/'))).toBe(true)
   })
@@ -542,7 +541,7 @@ describe('cli init integration', () => {
 
     expect(fs.existsSync(opencodeAgent)).toBe(true)
 
-    const config = JSON.parse(fs.readFileSync(path.join(planningRepoDir, '.ai-setup.json'), 'utf-8')) as any
+    const config = JSON.parse(fs.readFileSync(path.join(planningRepoDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.setupScope).toBe('workspace')
     expect(config.config.workspaceName).toBe('teachable-workspace')
     expect(config.config.repos).toEqual([

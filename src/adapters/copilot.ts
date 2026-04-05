@@ -1,9 +1,9 @@
 import path from 'node:path'
-import * as files from '../utils/files.js'
-import type { ToolAdapter, AdapterContext } from './types.js'
-import type { AgentId, SkillId, PromptId } from '../types.js'
+import type { AgentId, PromptId, SkillId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import * as files from '../utils/files.js'
 import { ensureModeAgentFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
+import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class CopilotAdapter implements ToolAdapter {
   getToolId(): string {
@@ -121,7 +121,7 @@ export class CopilotAdapter implements ToolAdapter {
   }
 
   async remove(ctx: AdapterContext): Promise<void> {
-    const githubDir = path.join(ctx.targetDir, '.github')
+    const _githubDir = path.join(ctx.targetDir, '.github')
     console.log('🗑️  Removing GitHub Copilot tools...')
     // Basic remove implementation
   }

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { runMigrationCommand, type MigrationCommandOptions } from './migration-shared.js';
+import { type MigrationCommandOptions, runMigrationCommand } from './migration-shared.js';
 
 type MigrateOptions = MigrationCommandOptions
 

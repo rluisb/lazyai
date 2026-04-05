@@ -1,4 +1,4 @@
-import type { Generator, GeneratorConfig, GeneratedFile, PromptQuestion } from './types.js'
+import type { GeneratedFile, Generator, GeneratorConfig, PromptQuestion } from './types.js'
 
 function toSlug(value: string): string {
   return value

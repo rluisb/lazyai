@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
-import type { FileRecord, ConflictStrategy } from '../types.js'
+import type { ConflictStrategy, FileRecord } from '../types.js'
+import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
 
 const DEFAULT_FEATURE_FRAGMENT_MARKERS = [
   '<context-engineering>',
@@ -268,7 +268,6 @@ describe('scaffoldCompiledRoot', () => {
     })
 
     // Both opencode and codex write AGENTS.md, but they have different source origins
-    const agentsRecords = fileRecords.filter((r) => r.path === 'AGENTS.md')
     // There may be one AGENTS.md file with the last tool's source, or multiple records
     // This is a behavior test: verify that both tools processed
     expect(fileRecords.length).toBeGreaterThan(0)

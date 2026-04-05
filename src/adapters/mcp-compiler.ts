@@ -1,6 +1,6 @@
 import path from 'node:path'
-import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 import type { FileRecord, ToolId } from '../types.js'
+import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 
 interface McpServer {
   description?: string
@@ -166,7 +166,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         mcp: ocMcpContent,
       }
 
-      writeFile(configPath, JSON.stringify(merged, null, 2) + '\n')
+      writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`)
       opts.fileRecords.push({
         path: 'opencode.jsonc',
         hash: fileHash(configPath),
@@ -178,7 +178,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
     case 'claude-code': {
       const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
       const content = toMcpJson(enabledServers)
-      writeFile(mcpPath, JSON.stringify(content, null, 2) + '\n')
+      writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
       opts.fileRecords.push({
         path: '.mcp.json',
         hash: fileHash(mcpPath),
@@ -191,7 +191,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       const vscodeMcpPath = path.join(opts.toolTargetDir, '.vscode', 'mcp.json')
       ensureDir(path.join(opts.toolTargetDir, '.vscode'))
       const content = toCopilotMcp(enabledServers)
-      writeFile(vscodeMcpPath, JSON.stringify(content, null, 2) + '\n')
+      writeFile(vscodeMcpPath, `${JSON.stringify(content, null, 2)}\n`)
       opts.fileRecords.push({
         path: '.vscode/mcp.json',
         hash: fileHash(vscodeMcpPath),
@@ -204,7 +204,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       const settingsPath = path.join(opts.toolTargetDir, '.gemini', 'settings.json')
       ensureDir(path.join(opts.toolTargetDir, '.gemini'))
       const content = toGeminiSettings(enabledServers)
-      writeFile(settingsPath, JSON.stringify(content, null, 2) + '\n')
+      writeFile(settingsPath, `${JSON.stringify(content, null, 2)}\n`)
       opts.fileRecords.push({
         path: '.gemini/settings.json',
         hash: fileHash(settingsPath),
@@ -216,7 +216,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
     case 'pi': {
       const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
       const content = toMcpJson(enabledServers)
-      writeFile(mcpPath, JSON.stringify(content, null, 2) + '\n')
+      writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
       opts.fileRecords.push({
         path: '.mcp.json',
         hash: fileHash(mcpPath),

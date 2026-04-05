@@ -1,14 +1,13 @@
-import type { Command } from 'commander'
+
 import { join } from 'node:path'
-import { readFileSync } from 'node:fs'
 import * as p from '@clack/prompts'
+import type { Command } from 'commander'
 import pc from 'picocolors'
-import type { AiSetupConfig } from '../types.js'
-import { fileExists, fileHash } from '../utils/files.js'
-import { readStore, writeStore } from '../store/index.js'
 import { Errors } from '../errors/index.js'
 import { migrationCheck } from '../migration/index.js'
 import type { DriftCheckResult } from '../migration/types.js'
+import { readStore, writeStore } from '../store/index.js'
+import { fileExists, fileHash } from '../utils/files.js'
 
 export function registerDoctor(program: Command): void {
   program

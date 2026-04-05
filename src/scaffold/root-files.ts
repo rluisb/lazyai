@@ -1,7 +1,8 @@
 import path from 'node:path'
-import { ensureDir, writeFile, fileHash, readFile, fileExists } from '../utils/files.js'
+import type { ConflictStrategy, FileRecord, ToolId } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { ToolId, FileRecord, ConflictStrategy } from '../types.js'
+import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
+import { ROOT_FILE_BY_TOOL, ROOT_TEMPLATE_BY_FILE } from './root-file-map.js'
 
 export interface ScaffoldRootFilesOptions {
   targetDir: string
@@ -33,115 +34,30 @@ export async function scaffoldRootFiles(opts: ScaffoldRootFilesOptions): Promise
   const { targetDir, libraryDir, tools, projectName, fileRecords, strategy, perFileOverrides } = opts
   const rootDir = path.join(libraryDir, 'root')
 
-  // Track if CLAUDE.md has been written (pi writes AGENTS.template, claude-code writes CLAUDE.template)
-  let claudeWritten = false
-
   for (const tool of tools) {
-    if (tool === 'opencode') {
-      const templatePath = path.join(rootDir, 'AGENTS.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        writeRootFile(
-          path.join(targetDir, 'AGENTS.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/AGENTS.template.md',
-          strategy,
-          perFileOverrides
-        )
-      }
+    const outputName = ROOT_FILE_BY_TOOL[tool]
+    const templateSource = ROOT_TEMPLATE_BY_FILE[outputName]
+    if (!templateSource) continue
+
+    const templatePath = path.join(rootDir, path.basename(templateSource))
+    if (!fileExists(templatePath)) continue
+
+    const template = readFile(templatePath)
+    const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
+    const destPath = path.join(targetDir, outputName)
+    if (outputName.startsWith('.github/')) {
+      ensureDir(path.dirname(destPath))
     }
 
-    if (tool === 'codex') {
-      // Codex uses AGENTS.md like opencode
-      const templatePath = path.join(rootDir, 'AGENTS.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        writeRootFile(
-          path.join(targetDir, 'AGENTS.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/AGENTS.template.md',
-          strategy,
-          perFileOverrides
-        )
-      }
-    }
-
-    if (tool === 'pi') {
-      const templatePath = path.join(rootDir, 'AGENTS.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        writeRootFile(
-          path.join(targetDir, 'INSTRUCTIONS.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/AGENTS.template.md',
-          strategy,
-          perFileOverrides
-        )
-        claudeWritten = true
-      }
-    }
-
-    if (tool === 'claude-code') {
-      const templatePath = path.join(rootDir, 'CLAUDE.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        writeRootFile(
-          path.join(targetDir, 'CLAUDE.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/CLAUDE.template.md',
-          strategy,
-          perFileOverrides
-        )
-        claudeWritten = true
-      }
-    }
-
-    if (tool === 'gemini') {
-      const templatePath = path.join(rootDir, 'GEMINI.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        writeRootFile(
-          path.join(targetDir, 'GEMINI.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/GEMINI.template.md',
-          strategy,
-          perFileOverrides
-        )
-      }
-    }
-
-    if (tool === 'copilot') {
-      const templatePath = path.join(rootDir, 'copilot-instructions.template.md')
-      if (fileExists(templatePath)) {
-        const template = readFile(templatePath)
-        const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-        ensureDir(path.join(targetDir, '.github'))
-        writeRootFile(
-          path.join(targetDir, '.github', 'copilot-instructions.md'),
-          content,
-          fileRecords,
-          targetDir,
-          'root/copilot-instructions.template.md',
-          strategy,
-          perFileOverrides
-        )
-      }
-    }
+    writeRootFile(
+      destPath,
+      content,
+      fileRecords,
+      targetDir,
+      templateSource,
+      strategy,
+      perFileOverrides,
+    )
   }
 }
 

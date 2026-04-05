@@ -1,14 +1,14 @@
-import type { Command } from 'commander'
-import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
-import type { ToolId, FileRecord } from '../types.js'
+import type { Command } from 'commander'
 import { AdapterRegistry } from '../adapters/registry.js'
+import { Errors } from '../errors/index.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
-import { fileExists, resolveLibraryDir } from '../utils/files.js'
 import { createStore, writeStore } from '../store/index.js'
-import { Errors } from '../errors/index.js'
+import type { FileRecord, ToolId } from '../types.js'
+import { fileExists, resolveLibraryDir } from '../utils/files.js'
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { describe, expect, it } from 'vitest'
 import { detectRepoInfo, detectRepoType, scanWorkspaceRepos } from '../utils/repo-detection.js'
 
 function makeTempDir(prefix: string): string {

@@ -1,7 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
+import { CodexAdapter } from '../adapters/codex.js'
+import { CopilotAdapter } from '../adapters/copilot.js'
+import { GeminiAdapter } from '../adapters/gemini.js'
+import { OpenCodeAdapter } from '../adapters/opencode.js'
+import { PiAdapter } from '../adapters/pi.js'
+import type { FileRecord } from '../types.js'
 import {
   copyDir,
   copyFile,
@@ -12,13 +19,6 @@ import {
   readFile,
   writeFile,
 } from '../utils/files.js'
-import { PiAdapter } from '../adapters/pi.js'
-import { OpenCodeAdapter } from '../adapters/opencode.js'
-import { CopilotAdapter } from '../adapters/copilot.js'
-import { GeminiAdapter } from '../adapters/gemini.js'
-import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
-import { CodexAdapter } from '../adapters/codex.js'
-import type { FileRecord } from '../types.js'
 
 function makeTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))

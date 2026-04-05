@@ -5,13 +5,13 @@
  * and determines which parser(s) should handle them.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { glob } from 'glob';
-import {
-  MigrationContext,
-  DetectionResult,
+import type {
   DetectedFile,
+  DetectionResult,
+  MigrationContext,
 } from './types.js';
 
 /**
@@ -178,7 +178,7 @@ function categorizeFile(filePath: string): DetectedFile['type'] {
 /**
  * Calculate priority for a detected file
  */
-function calculatePriority(filePath: string, adapterId: string): number {
+function calculatePriority(filePath: string, _adapterId: string): number {
   let priority = 0;
   const normalized = filePath.toLowerCase();
 
@@ -218,7 +218,7 @@ function calculatePriority(filePath: string, adapterId: string): number {
 /**
  * Calculate detection confidence
  */
-function calculateConfidence(files: DetectedFile[], adapterId: string): number {
+function calculateConfidence(files: DetectedFile[], _adapterId: string): number {
   if (files.length === 0) return 0;
 
   // Base confidence on number of files

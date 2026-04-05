@@ -13,14 +13,17 @@ export function computeLineDiff(existing: string, incoming: string): DiffLine[] 
   const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0))
 
   for (let i = 1; i <= n; i++) {
+    const currentRow = dp[i]!
+    const previousRow = dp[i - 1]!
+
     for (let j = 1; j <= m; j++) {
       const existingLine = existingLines[i - 1]!
       const incomingLine = incomingLines[j - 1]!
 
       if (existingLine === incomingLine) {
-        dp[i]![j] = dp[i - 1]![j - 1]! + 1
+        currentRow[j] = previousRow[j - 1]! + 1
       } else {
-        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!)
+        currentRow[j] = Math.max(previousRow[j]!, currentRow[j - 1]!)
       }
     }
   }
@@ -40,7 +43,10 @@ export function computeLineDiff(existing: string, incoming: string): DiffLine[] 
       continue
     }
 
-    if (dp[i - 1]![j]! >= dp[i]![j - 1]!) {
+    const previousRow = dp[i - 1]!
+    const currentRow = dp[i]!
+
+    if (previousRow[j]! >= currentRow[j - 1]!) {
       reversed.push({ type: 'remove', content: existingLine })
       i -= 1
     } else {

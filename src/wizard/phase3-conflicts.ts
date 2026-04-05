@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts'
+import { Errors } from '../errors/index.js'
 import type { ConflictStrategy } from '../types.js'
 import { computeLineDiff, renderDiffPreview } from '../utils/diff.js'
 import { fileExists, readFile } from '../utils/files.js'
@@ -15,7 +16,7 @@ export interface Phase7Result {
 
 function cancelAndExit(): never {
   p.cancel('Setup cancelled.')
-  process.exit(0)
+  throw Errors.userCancelled()
 }
 
 export async function runPhase3(opts: {

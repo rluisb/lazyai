@@ -1,5 +1,5 @@
 import { AdapterRegistry } from '../adapters/registry.js'
-import type { ToolId, AgentId, SkillId, PromptId, FileRecord, ConflictStrategy, SetupScope } from '../types.js'
+import type { AgentId, ConflictStrategy, FileRecord, PromptId, SetupScope, SkillId, ToolId } from '../types.js'
 
 export interface ScaffoldAgentsSkillsPromptsOptions {
   targetDir: string

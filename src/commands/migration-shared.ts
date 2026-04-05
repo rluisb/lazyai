@@ -1,6 +1,6 @@
+import path from 'node:path'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import path from 'path'
 import { detectAdapters, formatPlan, importSetup } from '../migration/index.js'
 import type { MergeStrategy, MigrationResult } from '../migration/types.js'
 

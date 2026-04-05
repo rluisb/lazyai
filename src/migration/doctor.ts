@@ -4,14 +4,52 @@
  * Checks for drift between current setup and clean ai-setup state.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { glob } from 'glob';
-import { DriftCheckResult, DriftItem, ModifiedFile } from './types.js';
+import { storeDataSchema, type TrackedFile } from '../store/schema.js';
+import { fileHash } from '../utils/files.js';
+import type { DriftCheckResult, DriftItem, ModifiedFile } from './types.js';
+
+interface ManifestLike {
+  files?: TrackedFile[];
+}
+
+function parseManifest(content: string): ManifestLike {
+  const raw = JSON.parse(content) as unknown;
+  const parsedStore = storeDataSchema.safeParse(raw);
+  if (parsedStore.success) {
+    return { files: parsedStore.data.files };
+  }
+
+  if (raw && typeof raw === 'object') {
+    const record = raw as Record<string, unknown>;
+    const files = Array.isArray(record.files) ? record.files : [];
+    const normalized = files
+      .filter((item): item is { path: string; hash: string; source: string } => {
+        return Boolean(
+          item &&
+            typeof item === 'object' &&
+            typeof (item as Record<string, unknown>).path === 'string' &&
+            typeof (item as Record<string, unknown>).hash === 'string' &&
+            typeof (item as Record<string, unknown>).source === 'string',
+        );
+      })
+      .map((item) => ({
+        path: item.path,
+        hash: item.hash,
+        source: item.source,
+      }));
+
+    return { files: normalized };
+  }
+
+  return { files: [] };
+}
 
 export async function checkDrift(
   targetPath: string,
-  verbose?: boolean
+  _verbose?: boolean
 ): Promise<DriftCheckResult> {
   const drifts: DriftItem[] = [];
   const missingFiles: string[] = [];
@@ -34,11 +72,11 @@ export async function checkDrift(
   ];
 
   // Load current .ai-setup.json
-  let currentConfig: any = null;
+  let currentConfig: ManifestLike | null = null;
   try {
     const configPath = path.join(targetPath, '.ai-setup.json');
     const configContent = await fs.readFile(configPath, 'utf-8');
-    currentConfig = JSON.parse(configContent);
+    currentConfig = parseManifest(configContent);
   } catch {
     // No config file - treat discovered AI setup files as extra drift
     for (const pattern of aiSetupPatterns) {
@@ -81,9 +119,7 @@ export async function checkDrift(
         await fs.access(filePath);
 
         // File exists - check if modified
-        const content = await fs.readFile(filePath, 'utf-8');
-        // Simple hash check (in real implementation, use proper hash)
-        const currentHash = Buffer.from(content).toString('base64').slice(0, 16);
+        const currentHash = fileHash(filePath);
 
         if (currentHash !== file.hash && file.hash !== 'migrated') {
           modifiedFiles.push({
@@ -109,7 +145,7 @@ export async function checkDrift(
       });
 
       for (const file of files) {
-        const isTracked = currentConfig.files?.some((f: any) => f.path === file);
+        const isTracked = currentConfig.files?.some((f) => f.path === file);
         if (!isTracked && !extraFiles.includes(file)) {
           extraFiles.push(file);
         }

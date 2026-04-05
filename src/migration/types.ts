@@ -150,7 +150,7 @@ export interface MigrationAction {
 
 export interface MigrationResult {
   success: boolean;
-  plan: MigrationPlan;
+  plan: MigrationPlan | null;
   executedActions: MigrationAction[];
   backupPath?: string;
   errors: string[];

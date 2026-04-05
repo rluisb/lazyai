@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock @clack/prompts before importing phases
 vi.mock('@clack/prompts', () => ({

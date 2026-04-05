@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { ensureDir, fileExists, fileHash, writeFile } from '../utils/files.js';
 import type { FileRecord } from '../types.js';
+import { ensureDir, fileExists, fileHash, writeFile } from '../utils/files.js';
 import type { ParsedSetup } from './types.js';
 
 export interface CanonicalWriterOptions {

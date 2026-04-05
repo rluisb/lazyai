@@ -1,9 +1,9 @@
-import type { Command } from 'commander'
-import type { SetupScope, SetupType, ToolId } from '../types.js'
-import { runWizard } from '../wizard/index.js'
 import * as p from '@clack/prompts'
+import type { Command } from 'commander'
 import pc from 'picocolors'
 import { detectAdapters, importSetup } from '../migration/index.js'
+import type { SetupScope, SetupType, ToolId } from '../types.js'
+import { runWizard } from '../wizard/index.js'
 import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
 // Help text for features - detailed descriptions
@@ -182,7 +182,7 @@ export function registerInit(program: Command): void {
           } else {
             console.log(pc.yellow('\n⚠️  Migration had issues, continuing with fresh init...'))
             if (result.errors.length > 0) {
-              console.log(pc.gray('Errors: ' + result.errors.join(', ')))
+              console.log(pc.gray(`Errors: ${result.errors.join(', ')}`))
             }
           }
         }

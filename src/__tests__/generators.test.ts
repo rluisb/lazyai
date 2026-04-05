@@ -1,14 +1,14 @@
-import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { describe, expect, it } from 'vitest'
 import { AgentGenerator } from '../generators/agent.js'
-import { SkillGenerator } from '../generators/skill.js'
 import { CommandGenerator } from '../generators/command.js'
 import { PromptGenerator } from '../generators/prompt.js'
+import { GeneratorRegistry } from '../generators/registry.js'
+import { SkillGenerator } from '../generators/skill.js'
 import { TemplateGenerator } from '../generators/template.js'
 import { WorkflowGenerator } from '../generators/workflow.js'
-import { GeneratorRegistry } from '../generators/registry.js'
 
 function makeTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))

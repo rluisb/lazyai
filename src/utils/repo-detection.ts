@@ -1,5 +1,5 @@
-import path from 'node:path'
 import { readdirSync } from 'node:fs'
+import path from 'node:path'
 import { fileExists, isDirectory, readFile } from './files.js'
 
 export type RepoType =

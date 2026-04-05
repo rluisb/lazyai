@@ -1,5 +1,6 @@
 import path from 'node:path'
-import type { WizardConfig, ToolId } from '../types.js'
+import { ROOT_FILE_BY_TOOL, ROOT_TEMPLATE_BY_FILE } from '../scaffold/root-file-map.js'
+import type { ToolId, WizardConfig } from '../types.js'
 import { fileExists } from '../utils/files.js'
 
 export interface PlannedFile {
@@ -7,22 +8,6 @@ export interface PlannedFile {
   srcPath: string | null
   category: 'template' | 'rule' | 'agent' | 'skill' | 'prompt' | 'infra' | 'root' | 'constitution'
   isNew: boolean
-}
-
-const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
-  opencode: 'AGENTS.md',
-  pi: 'INSTRUCTIONS.md',
-  'claude-code': 'CLAUDE.md',
-  gemini: 'GEMINI.md',
-  copilot: '.github/copilot-instructions.md',
-  codex: 'AGENTS.md',
-}
-
-const ROOT_FILE_MAP: Record<string, string> = {
-  'AGENTS.md': 'root/AGENTS.template.md',
-  'CLAUDE.md': 'root/CLAUDE.template.md',
-  'GEMINI.md': 'root/GEMINI.template.md',
-  '.github/copilot-instructions.md': 'root/copilot-instructions.template.md',
 }
 
 const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { destPath: string; srcPath: string }> = {
@@ -107,7 +92,7 @@ export async function computePlan(
     if (rootFile) {
       if (!rootFiles.has(rootFile)) {
         rootFiles.add(rootFile)
-        const srcPath = ROOT_FILE_MAP[rootFile] || null
+        const srcPath = ROOT_TEMPLATE_BY_FILE[rootFile] ?? null
         planned.push(
           makePlannedFile(targetDir, rootFile, srcPath, 'root'),
         )

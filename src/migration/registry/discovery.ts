@@ -5,14 +5,10 @@
 // 3. NPM packages: @ai-setup/parsers-*
 // 4. Built-in: src/migration/parsers/*.ts (fallback)
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import os from 'os';
-import { createRequire } from 'module';
-import { glob } from 'glob';
-import { BaseParser, ParserFactory } from '../parsers/base-parser.js';
-
-const require = createRequire(import.meta.url);
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { BaseParser, } from '../parsers/base-parser.js';
 
 export interface ParserSource {
   id: string;
@@ -139,7 +135,7 @@ async function discoverNpmParsers(projectPath?: string): Promise<ParserSource[]>
     }
     
     try {
-      const { execSync } = await import('child_process');
+      const { execSync } = await import('node:child_process');
       const globalPath = execSync('npm root -g', { encoding: 'utf-8' }).trim();
       searchPaths.push(globalPath);
     } catch {

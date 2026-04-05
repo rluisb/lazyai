@@ -1,10 +1,10 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
-import type { ToolAdapter, AdapterContext } from './types.js'
 import {
   copyLibraryDirectory,
   installRootTemplateIfMissing,
 } from './shared.js'
+import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class GeminiAdapter implements ToolAdapter {
   getToolId(): string {

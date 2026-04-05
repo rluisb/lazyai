@@ -1,7 +1,13 @@
-import * as p from '@clack/prompts'
 import path from 'node:path'
+import * as p from '@clack/prompts'
+import { Errors } from './errors/index.js'
 import type { SetupConfig, SetupScope, SetupType, ToolId } from './types.js'
 import { validateFilesystemSafeName } from './utils/validation.js'
+
+function cancelPrompt(): never {
+  p.cancel('Setup cancelled.')
+  throw Errors.userCancelled()
+}
 
 export interface PromptOptions {
   scope?: SetupScope
@@ -35,8 +41,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
       ],
     })
     if (p.isCancel(setupScope)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      cancelPrompt()
     }
     config.setupScope = setupScope as SetupScope
     config.setupType = setupScope as SetupScope
@@ -60,8 +65,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
       required: true,
     })
     if (p.isCancel(tools)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      cancelPrompt()
     }
     config.tools = tools as ToolId[]
   }
@@ -80,8 +84,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
       validate: (value) => validateFilesystemSafeName(value, 'Project name'),
     })
     if (p.isCancel(projectName)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      cancelPrompt()
     }
     config.projectName = projectName
   }

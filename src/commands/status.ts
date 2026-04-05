@@ -1,8 +1,8 @@
-import type { Command } from 'commander'
 import { join } from 'node:path'
 import * as p from '@clack/prompts'
-import { readStoreReadonly } from '../store/index.js'
+import type { Command } from 'commander'
 import { Errors } from '../errors/index.js'
+import { readStoreReadonly } from '../store/index.js'
 import { fileExists, fileHash } from '../utils/files.js'
 
 function summarizeFeatures(features?: Record<string, boolean>): string {

@@ -42,13 +42,11 @@ export function myersDiff(oldLines: string[], newLines: string[]): DiffResult {
   }
 
   if (oldLines.length === 0) {
-    newLines.forEach((line, i) => added.push({ line, index: i }));
-    return { added, removed, unchanged };
+    return { added: newLines.map((line, index) => ({ line, index })), removed, unchanged };
   }
 
   if (newLines.length === 0) {
-    oldLines.forEach((line, i) => removed.push({ line, index: i }));
-    return { added, removed, unchanged };
+    return { added, removed: oldLines.map((line, index) => ({ line, index })), unchanged };
   }
 
   // Build edit graph and find shortest path
@@ -101,7 +99,7 @@ interface Edit {
 }
 
 function computeEdits(oldLines: string[], newLines: string[]): { edits: Edit[] } {
-  const edits: Edit[] = [];
+  const _edits: Edit[] = [];
   
   // Simple LCS implementation
   const oldLen = oldLines.length;

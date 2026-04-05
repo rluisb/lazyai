@@ -1,10 +1,10 @@
 import type { ArtifactType } from '../types.js'
-import type { Generator } from './types.js'
 import { AgentGenerator } from './agent.js'
-import { SkillGenerator } from './skill.js'
 import { CommandGenerator } from './command.js'
 import { PromptGenerator } from './prompt.js'
+import { SkillGenerator } from './skill.js'
 import { TemplateGenerator } from './template.js'
+import type { Generator } from './types.js'
 import { WorkflowGenerator } from './workflow.js'
 
 export class GeneratorRegistry {

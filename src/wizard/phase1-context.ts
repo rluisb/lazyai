@@ -1,13 +1,13 @@
-import * as p from '@clack/prompts'
-import path from 'node:path'
-import { homedir } from 'node:os'
 import { readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readManifest } from '../utils/manifest.js'
-import { validateFilesystemSafeName } from '../utils/validation.js'
-import { fileExists, isDirectory, readFile, resolveLibraryDir } from '../utils/files.js'
-import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
+import * as p from '@clack/prompts'
 import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
+import { fileExists, isDirectory, readFile, resolveLibraryDir } from '../utils/files.js'
+import { readManifest } from '../utils/manifest.js'
+import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
+import { validateFilesystemSafeName } from '../utils/validation.js'
 
 interface McpServerConfig {
   requiresInstall?: boolean
@@ -33,7 +33,7 @@ export interface Phase1Result {
   cliTools?: string[]
 }
 
-function getCliToolOptions(targetDir: string): Array<{ value: string; label: string; hint: string }> {
+function getCliToolOptions(_targetDir: string): Array<{ value: string; label: string; hint: string }> {
   const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
   const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
   if (!fileExists(catalogPath)) return []
@@ -207,6 +207,7 @@ export async function runPhase1(opts: {
     p.note('Re-running setup — previous selections will be pre-filled')
   }
 
+  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let setupScope: SetupScope
   let tools: ToolId[]
   let projectName: string
@@ -310,7 +311,7 @@ export async function runPhase1(opts: {
     } else {
       const subdirs = listSubdirectories(opts.targetDir)
       const dirOptions: Array<{ value: string; label: string; hint?: string }> = [
-        { value: opts.targetDir, label: path.basename(opts.targetDir) + ' (current directory)', hint: opts.targetDir },
+        { value: opts.targetDir, label: `${path.basename(opts.targetDir)} (current directory)`, hint: opts.targetDir },
       ]
 
       for (const dir of subdirs) {
@@ -432,7 +433,7 @@ export async function runPhase1(opts: {
                 type: info.type,
                 ...(info.description ? { description: info.description } : {}),
               })
-              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ' · ' + info.description : ''})`)
+              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ` · ${info.description}` : ''})`)
             }
 
             const another = await p.confirm({
@@ -481,7 +482,7 @@ export async function runPhase1(opts: {
                 type: info.type,
                 ...(info.description ? { description: info.description } : {}),
               })
-              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ' · ' + info.description : ''})`)
+              p.log.success(`Added: ${info.name} (${info.type}${info.description ? ` · ${info.description}` : ''})`)
             }
 
             const another = await p.confirm({

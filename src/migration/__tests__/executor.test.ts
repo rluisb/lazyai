@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@clack/prompts', () => ({
   select: vi.fn(),
@@ -32,6 +32,7 @@ describe('executeMigrationPlan interactive conflicts', () => {
 
     const result = await executeMigrationPlan(createContext(tempDir, true), createPlan(tempDir));
 
+    assert(result.plan !== null);
     expect(p.note).toHaveBeenCalledWith(
       expect.stringContaining('--- Existing\ncurrent guidance'),
       'Conflict in AGENTS.md:10-12',
@@ -50,6 +51,7 @@ describe('executeMigrationPlan interactive conflicts', () => {
 
     const result = await executeMigrationPlan(createContext(tempDir, true), createPlan(tempDir));
 
+    assert(result.plan !== null);
     expect(p.text).toHaveBeenCalled();
     expect(result.plan.conflicts[0]?.resolution).toBe('manual-edit');
     expect(result.plan.conflicts[0]?.resolvedContent).toBe('merged guidance');

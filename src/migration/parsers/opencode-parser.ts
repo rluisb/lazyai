@@ -4,26 +4,29 @@
  * Detects, parses, and merges OpenCode AI setups.
  */
 
-import { BaseParser } from './base-parser.js';
-import {
-  MigrationContext,
-  DetectionResult,
-  ParsedSetup,
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { glob } from 'glob';
+import { resolveLibraryDir } from '../../utils/files.js';
+import { diff3, } from '../diff/diff3.js';
+import type { 
+  AgentDefinition,
+  CommandDefinition,
+  CustomSection,
+  DetectedFile,
+  DetectionResult,MergeConflict, 
   MergeResult,
   MergeStrategy,
+  MigrationContext,
   MigrationOptions,
-  DetectedFile,
-  AgentDefinition,
-  RuleDefinition,
-  CommandDefinition,
-  TemplateDefinition,
-  CustomSection,
   ParsedFile,
-} from '../types.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { glob } from 'glob';
-import { diff3, resolveConflicts } from '../diff/diff3.js';
+  ParsedSetup,
+  RuleDefinition,
+  TemplateDefinition,} from '../types.js';
+import { BaseParser } from './base-parser.js';
+
+const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)));
 
 export class OpenCodeParser extends BaseParser {
   readonly id = 'opencode';
@@ -256,16 +259,16 @@ export class OpenCodeParser extends BaseParser {
   async merge(
     existing: ParsedSetup,
     strategy: MergeStrategy,
-    options: MigrationOptions
+    _options: MigrationOptions
   ): Promise<MergeResult> {
     const newFiles: string[] = [];
     const modifiedFiles: string[] = [];
     const backupPaths: string[] = [];
     const warnings: string[] = [];
-    const conflicts: any[] = [];
+    const conflicts: MergeConflict[] = [];
 
     // Load ai-setup templates
-    const templateDir = new URL('../../../library', import.meta.url).pathname;
+    const templateDir = libraryDir;
 
     // Merge AGENTS.md
     try {
@@ -274,9 +277,9 @@ export class OpenCodeParser extends BaseParser {
       
       if (existing.files.find(f => f.path === 'AGENTS.md')) {
         // File exists - merge it
-        const existingContent = existing.files.find(f => f.path === 'AGENTS.md')!.content;
+        const existingContent = existing.files.find(f => f.path === 'AGENTS.md')?.content;
         const lines = templateContent.split('\n');
-        const existingLines = existingContent.split('\n');
+        const existingLines = (existingContent ?? '').split('\n');
         
         // Use diff3 for merge
         const diff3Result = diff3(lines, existingLines, lines);

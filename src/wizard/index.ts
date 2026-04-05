@@ -1,18 +1,27 @@
-import * as p from '@clack/prompts'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as p from '@clack/prompts'
+import { compileMcp } from '../adapters/mcp-compiler.js'
+import { AdapterRegistry } from '../adapters/registry.js'
+import { Errors } from '../errors/index.js'
+import { OperationTracker } from '../errors/operation.js'
+import { writeToCanonical } from '../migration/canonical-writer.js'
+import { detectExistingSetup } from '../migration/detector.js'
+import { getAllParsers } from '../migration/registry/discovery.js'
 import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
-import { scaffoldDocs } from '../scaffold/docs.js'
-import { scaffoldConstitution } from '../scaffold/constitution.js'
-import { scaffoldMcp } from '../scaffold/mcp.js'
-import { scaffoldInfra } from '../scaffold/infra.js'
-import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
-import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
+import { scaffoldConstitution } from '../scaffold/constitution.js'
+import { scaffoldDocs } from '../scaffold/docs.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
+import { scaffoldInfra } from '../scaffold/infra.js'
+import { scaffoldMcp } from '../scaffold/mcp.js'
+import { scaffoldRootFiles } from '../scaffold/root-files.js'
+import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
+import { appendOperation, writeStore } from '../store/index.js'
+import type { FeatureFlags, GitConventions, StoreData } from '../store/schema.js'
 import type {
   FileRecord,
   SetupScope,
@@ -30,27 +39,18 @@ import {
   ALL_SKILLS,
   ALL_TEMPLATES,
 } from '../types.js'
-import type { StoreData, FeatureFlags, GitConventions } from '../store/schema.js'
 import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
-import { appendOperation, writeStore } from '../store/index.js'
-import { Errors } from '../errors/index.js'
-import { OperationTracker } from '../errors/operation.js'
+import {
+  isGlobalSupportedTool,
+  logUnsupportedGlobalTool,
+  resolveGlobalToolTargetDir,
+} from '../utils/global-paths.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
 import { runPhase3 } from './phase3-conflicts.js'
 import { runPhase4 } from './phase4-confirm.js'
 import { computePlan } from './planner.js'
-import { AdapterRegistry } from '../adapters/registry.js'
-import { compileMcp } from '../adapters/mcp-compiler.js'
-import { detectExistingSetup } from '../migration/detector.js'
-import { getAllParsers } from '../migration/registry/discovery.js'
-import { writeToCanonical } from '../migration/canonical-writer.js'
-import {
-  isGlobalSupportedTool,
-  logUnsupportedGlobalTool,
-  resolveGlobalToolTargetDir,
-} from '../utils/global-paths.js'
 
 const _require = createRequire(import.meta.url)
 

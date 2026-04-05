@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { ensureDir, readFile, writeFile } from '../utils/files.js'
-import type { FileRecord } from '../types.js'
-import { scaffoldMcp } from '../scaffold/mcp.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { compileMcp } from '../adapters/mcp-compiler.js'
+import { scaffoldMcp } from '../scaffold/mcp.js'
+import type { FileRecord } from '../types.js'
+import { ensureDir, readFile, writeFile } from '../utils/files.js'
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
@@ -30,6 +30,7 @@ describe('MCP scaffold and compile', () => {
             stdioEnabled: {
               command: 'npx',
               args: ['-y', 'mcp-stdio-enabled'],
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional catalog template syntax
               env: { API_KEY: '${API_KEY}' },
               tools: ['alpha', 'beta'],
               enabled: true,
@@ -45,11 +46,13 @@ describe('MCP scaffold and compile', () => {
             },
             remoteDisabled: {
               url: 'https://example.com/mcp',
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional catalog template syntax
               headers: { REMOTE_API_KEY: '${REMOTE_API_KEY}' },
               enabled: false,
             },
             remoteEnabled: {
               url: 'https://example.com/remote-enabled',
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional catalog template syntax
               headers: { REMOTE_ENABLED_API_KEY: '${REMOTE_ENABLED_API_KEY}' },
               enabled: true,
             },
@@ -161,7 +164,7 @@ describe('MCP scaffold and compile', () => {
 
     writeFile(
       path.join(targetDir, 'opencode.jsonc'),
-      JSON.stringify(
+      `${JSON.stringify(
         {
           plugin: ['foo-plugin'],
           permission: { default: 'allow' },
@@ -174,7 +177,7 @@ describe('MCP scaffold and compile', () => {
         },
         null,
         2,
-      ) + '\n',
+      )}\n`
     )
 
     await compileMcp({
@@ -212,6 +215,7 @@ describe('MCP scaffold and compile', () => {
     expect(copilot.servers.stdioEnabled.type).toBe('stdio')
     expect(copilot.servers.remoteEnabled.type).toBe('sse')
     expect(copilot.servers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
     expect(copilot.servers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
     expect(copilot.servers.remoteDisabled).toBeUndefined()
     expect(copilot.servers.stdioDisabled).toBeUndefined()

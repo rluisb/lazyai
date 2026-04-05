@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts'
+import { Errors } from '../errors/index.js'
 import type { PlannedFile } from './planner.js'
 
 export async function runPhase4(opts: {
@@ -63,7 +64,7 @@ export async function runPhase4(opts: {
 
   if (p.isCancel(confirmed)) {
     p.cancel('Setup cancelled.')
-    process.exit(0)
+    throw Errors.userCancelled()
   }
 
   return confirmed as boolean

@@ -1,10 +1,10 @@
-import { Command } from 'commander';
-import { intro, outro, confirm, log } from '@clack/prompts';
-import { Errors, AiSetupError } from '../errors/index.js'
-import { fileExists } from '../utils/files.js'
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { confirm, intro, log, outro } from '@clack/prompts';
+import type { Command } from 'commander';
+import { AiSetupError, Errors } from '../errors/index.js'
 import { readStoreReadonly } from '../store/index.js'
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { fileExists } from '../utils/files.js'
 
 export function registerEject(program: Command) {
   program

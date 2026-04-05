@@ -1,4 +1,4 @@
-import type { FileRecord, AgentId, SkillId, PromptId, ConflictStrategy, SetupScope } from '../types.js'
+import type { AgentId, ConflictStrategy, FileRecord, PromptId, SetupScope, SkillId } from '../types.js'
 
 export interface AdapterContext {
   targetDir: string

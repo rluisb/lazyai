@@ -1,8 +1,8 @@
-import path from 'node:path'
 import { existsSync } from 'node:fs'
-import { ensureDir, copyFile, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
+import path from 'node:path'
+import type { ConflictStrategy, FileRecord, InfraId } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { InfraId, FileRecord, ConflictStrategy } from '../types.js'
+import { copyFile, ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 
 export interface ScaffoldInfraOptions {
   targetDir: string

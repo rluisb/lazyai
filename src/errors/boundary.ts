@@ -6,7 +6,9 @@
 import { cancel } from '@clack/prompts'
 import { AiSetupError, ErrorCodeEnum } from './types.js'
 
-const DEBUG = process.env.AI_SETUP_DEBUG === '1' || process.argv.includes('--verbose')
+function isDebugEnabled(): boolean {
+  return process.env.AI_SETUP_DEBUG === '1' || process.argv.includes('--verbose')
+}
 
 /**
  * Central error handler - this is the ONLY place where process.exit() is called
@@ -17,6 +19,8 @@ const DEBUG = process.env.AI_SETUP_DEBUG === '1' || process.argv.includes('--ver
  * - 1: errors (file not found, permissions, validation, etc)
  */
 export function handleError(err: unknown): never {
+  const debug = isDebugEnabled()
+
   // Handle @clack/prompts cancel symbol
   if (typeof err === 'symbol') {
     cancel('Operation cancelled')
@@ -37,7 +41,7 @@ export function handleError(err: unknown): never {
   // User-facing errors: show message, no stack
   if (isAiSetupError && err.isUserError) {
     console.error(`\n❌  ${message}\n`)
-    if (DEBUG) {
+    if (debug) {
       console.error('Debug context:', err.context)
     }
     process.exit(1)
@@ -47,7 +51,7 @@ export function handleError(err: unknown): never {
   console.error(`\n❌  ${message}\n`)
 
   // Debug mode: show full context and cause chain
-  if (DEBUG) {
+  if (debug) {
     if (isAiSetupError) {
       console.error('Error code:', errorCode)
       console.error('Context:', err.context)

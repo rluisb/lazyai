@@ -1,5 +1,11 @@
 import * as p from '@clack/prompts'
+import { Errors } from '../errors/index.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
+
+function cancelWizard(): never {
+  p.cancel('Setup cancelled.')
+  throw Errors.userCancelled()
+}
 
 export interface Phase2Result {
   planningDir: string
@@ -131,8 +137,7 @@ export async function runPhase2Features(opts: {
   })
 
   if (p.isCancel(planningDirResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+    cancelWizard()
   }
 
   const planningDir = planningDirResult
@@ -167,8 +172,7 @@ export async function runPhase2Features(opts: {
   })
 
   if (p.isCancel(featuresResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+    cancelWizard()
   }
 
   const selectedFeatures = featuresResult as string[]
@@ -195,8 +199,7 @@ export async function runPhase2Features(opts: {
   })
 
   if (p.isCancel(branchPatternResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+    cancelWizard()
   }
 
   let branchPattern = branchPatternResult as string
@@ -207,8 +210,7 @@ export async function runPhase2Features(opts: {
       defaultValue: '{type}/{ticket}-{description}',
     })
     if (p.isCancel(customBranch)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      cancelWizard()
     }
     branchPattern = customBranch
   }
@@ -222,8 +224,7 @@ export async function runPhase2Features(opts: {
   })
 
   if (p.isCancel(commitPatternResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+    cancelWizard()
   }
 
   let commitPattern = commitPatternResult as string
@@ -234,8 +235,7 @@ export async function runPhase2Features(opts: {
       defaultValue: '{type}({scope}): {description}',
     })
     if (p.isCancel(customCommit)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
+      cancelWizard()
     }
     commitPattern = customCommit
   }
@@ -247,8 +247,7 @@ export async function runPhase2Features(opts: {
   })
 
   if (p.isCancel(requireTicketResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+    cancelWizard()
   }
 
   const gitConventions: GitConventions = {

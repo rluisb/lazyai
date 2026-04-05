@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noControlCharactersInRegex: we intentionally reject ASCII control characters in filenames
 const INVALID_FILESYSTEM_CHARS = /[<>:"/\\|?*\x00-\x1F]/
 
 export function validateRequiredText(value: string, fieldLabel = 'Value'): string | undefined {

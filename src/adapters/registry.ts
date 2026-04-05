@@ -1,11 +1,11 @@
-import type { ToolAdapter } from './types.js'
-import { PiAdapter } from './pi.js'
-import { OpenCodeAdapter } from './opencode.js'
-import { ClaudeCodeAdapter } from './claude-code.js'
-import { GeminiAdapter } from './gemini.js'
-import { CopilotAdapter } from './copilot.js'
-import { CodexAdapter } from './codex.js'
 import type { ToolId } from '../types.js'
+import { ClaudeCodeAdapter } from './claude-code.js'
+import { CodexAdapter } from './codex.js'
+import { CopilotAdapter } from './copilot.js'
+import { GeminiAdapter } from './gemini.js'
+import { OpenCodeAdapter } from './opencode.js'
+import { PiAdapter } from './pi.js'
+import type { ToolAdapter } from './types.js'
 
 export class AdapterRegistry {
   private adapters: Map<string, ToolAdapter> = new Map()

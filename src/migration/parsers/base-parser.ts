@@ -5,13 +5,13 @@
  * They follow a consistent interface for extensibility.
  */
 
-import {
-  MigrationContext,
+import type {
   DetectionResult,
-  ParsedSetup,
   MergeResult,
   MergeStrategy,
+  MigrationContext,
   MigrationOptions,
+  ParsedSetup,
 } from '../types.js';
 
 export abstract class BaseParser {

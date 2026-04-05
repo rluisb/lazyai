@@ -1,15 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import path from 'node:path'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import type { FileRecord, ConflictStrategy } from '../types.js'
-
-import { scaffoldDocs } from '../scaffold/docs.js'
-import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
-import { scaffoldInfra } from '../scaffold/infra.js'
-import { scaffoldRootFiles } from '../scaffold/root-files.js'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
+import { scaffoldDocs } from '../scaffold/docs.js'
+import { scaffoldInfra } from '../scaffold/infra.js'
+import { scaffoldRootFiles } from '../scaffold/root-files.js'
+import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
+import type { ConflictStrategy, FileRecord } from '../types.js'
 
 const libraryDir = path.resolve(process.cwd(), 'library')
 

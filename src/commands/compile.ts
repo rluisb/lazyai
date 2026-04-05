@@ -1,15 +1,15 @@
-import type { Command } from 'commander'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
-import type { SetupScope, ToolId } from '../types.js'
-import { AdapterRegistry } from '../adapters/registry.js'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { Command } from 'commander'
 import { compileMcp } from '../adapters/mcp-compiler.js'
+import { AdapterRegistry } from '../adapters/registry.js'
+import { Errors } from '../errors/index.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
-import { Errors } from '../errors/index.js'
-import { fileExists, resolveLibraryDir } from '../utils/files.js'
 import { readStoreReadonly } from '../store/index.js'
+import type { SetupScope, ToolId } from '../types.js'
+import { fileExists, resolveLibraryDir } from '../utils/files.js'
 import {
   isGlobalSupportedTool,
   logUnsupportedGlobalTool,

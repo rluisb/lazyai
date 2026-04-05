@@ -4,25 +4,28 @@
  * Detects, parses, and merges Claude Code AI setups.
  */
 
-import { BaseParser } from './base-parser.js';
-import {
-  MigrationContext,
-  DetectionResult,
-  ParsedSetup,
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { glob } from 'glob';
+import { resolveLibraryDir } from '../../utils/files.js';
+import { diff3 } from '../diff/diff3.js';
+import type { 
+  AgentDefinition,
+  CommandDefinition,CustomSection, 
+  DetectedFile,
+  DetectionResult,MergeConflict, 
   MergeResult,
   MergeStrategy,
+  MigrationContext,
   MigrationOptions,
-  DetectedFile,
-  AgentDefinition,
-  RuleDefinition,
-  CommandDefinition,
-  TemplateDefinition,
   ParsedFile,
-} from '../types.js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { glob } from 'glob';
-import { diff3 } from '../diff/diff3.js';
+  ParsedSetup,
+  RuleDefinition,
+  TemplateDefinition,} from '../types.js';
+import { BaseParser } from './base-parser.js';
+
+const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)));
 
 export class ClaudeCodeParser extends BaseParser {
   readonly id = 'claude-code';
@@ -106,7 +109,7 @@ export class ClaudeCodeParser extends BaseParser {
     const rules: RuleDefinition[] = [];
     const commands: CommandDefinition[] = [];
     const templates: TemplateDefinition[] = [];
-    const customSections: any[] = [];
+    const customSections: CustomSection[] = [];
     const files: ParsedFile[] = [];
     let projectName: string | undefined;
     let description: string | undefined;
@@ -243,16 +246,16 @@ export class ClaudeCodeParser extends BaseParser {
   async merge(
     existing: ParsedSetup,
     strategy: MergeStrategy,
-    options: MigrationOptions
+    _options: MigrationOptions
   ): Promise<MergeResult> {
     const newFiles: string[] = [];
     const modifiedFiles: string[] = [];
     const backupPaths: string[] = [];
     const warnings: string[] = [];
-    const conflicts: any[] = [];
+    const conflicts: MergeConflict[] = [];
 
     // Load ai-setup templates
-    const templateDir = new URL('../../../library', import.meta.url).pathname;
+    const templateDir = libraryDir;
 
     // Merge CLAUDE.md
     try {
@@ -260,9 +263,9 @@ export class ClaudeCodeParser extends BaseParser {
       const templateContent = await fs.readFile(templatePath, 'utf-8');
       
       if (existing.files.find(f => f.path === 'CLAUDE.md')) {
-        const existingContent = existing.files.find(f => f.path === 'CLAUDE.md')!.content;
+        const existingContent = existing.files.find(f => f.path === 'CLAUDE.md')?.content;
         const lines = templateContent.split('\n');
-        const existingLines = existingContent.split('\n');
+        const existingLines = (existingContent ?? '').split('\n');
         
         const diff3Result = diff3(lines, existingLines, lines);
         

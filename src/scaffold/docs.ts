@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { ensureDir, copyFile, fileExists, fileHash } from '../utils/files.js'
+import type { ConflictStrategy, FileRecord, SetupScope } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { FileRecord, ConflictStrategy, SetupScope } from '../types.js'
+import { copyFile, ensureDir, fileExists, fileHash } from '../utils/files.js'
 
 export interface ScaffoldDocsOptions {
   targetDir: string

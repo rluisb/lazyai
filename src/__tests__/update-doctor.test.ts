@@ -1,10 +1,10 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, } from 'vitest'
 import { createProgram } from '../cli.js'
-import { runWizard } from '../wizard/index.js'
 import type { AiSetupConfig, SetupConfig } from '../types.js'
+import { runWizard } from '../wizard/index.js'
 
 describe('update and doctor commands', () => {
   let originalCwd: string

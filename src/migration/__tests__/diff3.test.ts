@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { myersDiff, diff3, merge2Way, hasConflicts, resolveConflicts } from '../diff/diff3.js';
+import { describe, expect, it } from 'vitest';
+import { diff3, hasConflicts, myersDiff, } from '../diff/diff3.js';
 
 describe('Myers Diff', () => {
   it('should detect no changes when files are identical', () => {

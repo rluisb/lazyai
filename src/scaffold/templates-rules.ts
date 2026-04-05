@@ -1,7 +1,7 @@
 import path from 'node:path'
-import * as files from '../utils/files.js'
+import type { ConflictStrategy, FileRecord, RuleId, TemplateId } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import type { TemplateId, RuleId, FileRecord, ConflictStrategy } from '../types.js'
+import * as files from '../utils/files.js'
 
 export interface ScaffoldTemplatesRulesOptions {
   targetDir: string

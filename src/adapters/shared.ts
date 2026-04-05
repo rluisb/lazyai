@@ -1,6 +1,6 @@
 import path from 'node:path'
-import * as files from '../utils/files.js'
 import { resolveConflict } from '../utils/conflicts.js'
+import * as files from '../utils/files.js'
 import type { AdapterContext } from './types.js'
 
 type SelectionKey = 'agents' | 'skills' | 'prompts'

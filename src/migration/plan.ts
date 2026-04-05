@@ -5,17 +5,16 @@
  * Includes conflict detection and resolution strategies.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import {
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import type { BaseParser } from './parsers/base-parser.js';
+import type {
+  DetectionResult,
+  MergeConflict,
+  MigrationAction,
   MigrationContext,
   MigrationPlan,
-  MigrationAction,
-  MergeConflict,
-  DetectionResult,
-  ParsedSetup,
 } from './types.js';
-import { BaseParser } from './parsers/base-parser.js';
 
 export async function generateMigrationPlan(
   context: MigrationContext,

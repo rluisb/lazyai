@@ -34,6 +34,22 @@ export interface FileRecord {
   owner?: 'library' | 'user' | 'migrated'
 }
 
+export interface RepoPermissions {
+  read: boolean
+  write: boolean
+  runCommands: boolean
+  runDestructive: boolean
+  gitOperations: boolean
+}
+
+export const DEFAULT_REPO_PERMISSIONS: RepoPermissions = {
+  read: true,
+  write: true,
+  runCommands: true,
+  runDestructive: false,
+  gitOperations: false,
+}
+
 /**
  * @deprecated Use StoreData from ./store/schema.js.
  * This legacy manifest shape is kept for backward compatibility only.

@@ -109,6 +109,7 @@ async function copyLibraryFile(
     path: relPath,
     hash: fileHash(dest),
     source: path.relative(targetDir, src),
+    owner: 'library',
   })
 }
 
@@ -137,5 +138,6 @@ async function writeRootFile(
     path: relPath,
     hash: fileHash(dest),
     source,
+    owner: 'library',
   })
 }

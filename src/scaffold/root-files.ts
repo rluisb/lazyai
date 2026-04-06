@@ -92,5 +92,6 @@ function writeRootFile(
     path: relPath,
     hash: fileHash(dest),
     source,
+    owner: 'library',
   })
 }

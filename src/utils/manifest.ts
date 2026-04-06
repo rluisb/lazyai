@@ -44,6 +44,7 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
         path: file.path,
         hash: file.hash,
         source: file.source,
+        owner: file.owner ?? 'library',
       })),
       selections: data.selections,
       ...(data.config.planningDir != null ? { planningDir: data.config.planningDir } : {}),

@@ -171,6 +171,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         path: 'opencode.jsonc',
         hash: fileHash(configPath),
         source: 'compiled:mcp:opencode',
+        owner: 'library',
       })
       break
     }
@@ -183,6 +184,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         path: '.mcp.json',
         hash: fileHash(mcpPath),
         source: 'compiled:mcp',
+        owner: 'library',
       })
       break
     }
@@ -196,6 +198,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         path: '.vscode/mcp.json',
         hash: fileHash(vscodeMcpPath),
         source: 'compiled:mcp:copilot',
+        owner: 'library',
       })
       break
     }
@@ -209,6 +212,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         path: '.gemini/settings.json',
         hash: fileHash(settingsPath),
         source: 'compiled:mcp:gemini',
+        owner: 'library',
       })
       break
     }
@@ -221,6 +225,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         path: '.mcp.json',
         hash: fileHash(mcpPath),
         source: 'compiled:mcp',
+        owner: 'library',
       })
       break
     }

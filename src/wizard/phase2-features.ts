@@ -13,6 +13,7 @@ export interface Phase2Result {
   planningDir: string
   features: FeatureFlags
   gitConventions: GitConventions
+  preset: PresetLevel
 }
 
 const FEATURE_KEYS: Array<keyof FeatureFlags> = [
@@ -124,11 +125,15 @@ export async function runPhase2Features(opts: {
     const planningDir = opts.cliOverrides?.planningDir ?? opts.prior?.planningDir ?? '.planning'
 
     let features: FeatureFlags
+    let preset: PresetLevel
     if (opts.cliOverrides?.preset) {
+      preset = opts.cliOverrides.preset
       const resolved = resolvePreset(opts.cliOverrides.preset)
       features = resolved ?? { ...DEFAULT_FEATURES }
     } else {
       features = { ...DEFAULT_FEATURES }
+      // Preset will be inferred after feature overrides are applied
+      preset = 'full' // placeholder — recalculated below
     }
 
     // Apply prior feature overrides (baseline from last run)
@@ -161,6 +166,11 @@ export async function runPhase2Features(opts: {
       }
     }
 
+    // Infer preset from final resolved features (when no explicit --preset)
+    if (!opts.cliOverrides?.preset) {
+      preset = inferPresetFromFeatures(features) ?? defaultPresetForScope(opts.setupScope ?? 'project')
+    }
+
     // Git conventions
     const gitConventions: GitConventions = {
       ...DEFAULT_GIT_CONVENTIONS,
@@ -173,7 +183,7 @@ export async function runPhase2Features(opts: {
       gitConventions.commitPattern = opts.cliOverrides.commitPattern
     }
 
-    return { planningDir, features, gitConventions }
+    return { planningDir, features, gitConventions, preset }
   }
 
   // Interactive mode
@@ -351,5 +361,5 @@ export async function runPhase2Features(opts: {
     ticketPattern: DEFAULT_GIT_CONVENTIONS.ticketPattern,
   }
 
-  return { planningDir, features, gitConventions }
+  return { planningDir, features, gitConventions, preset }
 }

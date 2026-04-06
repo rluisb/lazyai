@@ -10,6 +10,7 @@ import { OperationTracker } from '../errors/operation.js'
 import { writeToCanonical } from '../migration/canonical-writer.js'
 import { detectExistingSetup } from '../migration/detector.js'
 import { getAllParsers } from '../migration/registry/discovery.js'
+import { rulesForPreset, specsDirsForPreset, templatesForPreset } from '../presets.js'
 import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
@@ -34,10 +35,7 @@ import {
   ALL_AGENTS,
   ALL_INFRA,
   ALL_PROMPTS,
-  ALL_RULES,
   ALL_SKILLS,
-  ALL_SPECS_DIRS,
-  ALL_TEMPLATES,
 } from '../types.js'
 import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
 import {
@@ -75,8 +73,8 @@ function buildDefaultSelections(targetDir: string): WizardSelections {
   const hasGitDir = fileExists(path.join(targetDir, '.git'))
 
   return {
-    templates: ALL_TEMPLATES,
-    rules: ALL_RULES,
+    templates: [],
+    rules: [],
     agents: ALL_AGENTS,
     skills: ALL_SKILLS,
     prompts: ALL_PROMPTS,
@@ -161,7 +159,7 @@ export async function runWizard(opts: {
     })
 
     // Phase 2: Planning directory, feature flags, and git conventions
-    const { planningDir, features, gitConventions } = await runPhase2Features({
+    const { planningDir, features, gitConventions, preset } = await runPhase2Features({
       interactive: opts.interactive,
       setupScope,
       prior: {
@@ -192,6 +190,9 @@ export async function runWizard(opts: {
     const effectiveProjectName = projectName || (setupScope === 'global' ? 'global' : path.basename(effectiveTargetDir))
     const globalRef = setupScope === 'workspace' && fileExists(path.join(userHomeDir, '.ai')) ? '~/.ai/' : undefined
     const installableTools = setupScope === 'global' ? tools.filter(isGlobalSupportedTool) : tools
+    const specsDirs = specsDirsForPreset(preset)
+    const templateIds = templatesForPreset(preset)
+    const ruleIds = rulesForPreset(preset)
 
     if (setupScope === 'global') {
       for (const tool of tools) {
@@ -201,7 +202,11 @@ export async function runWizard(opts: {
       }
     }
 
-    const selections = buildDefaultSelections(effectiveTargetDir)
+    const selections = {
+      ...buildDefaultSelections(effectiveTargetDir),
+      templates: templateIds,
+      rules: ruleIds,
+    }
     const fileRecords: FileRecord[] = []
 
     const migrationContext = {
@@ -310,8 +315,8 @@ export async function runWizard(opts: {
         targetDir: effectiveTargetDir,
         setupScope,
         libraryDir,
-        specsDirs: ALL_SPECS_DIRS,
-        specsAgents: ALL_SPECS_DIRS,
+        specsDirs,
+        specsAgents: specsDirs,
         fileRecords,
         strategy,
         perFileOverrides,
@@ -366,6 +371,7 @@ export async function runWizard(opts: {
         tools: installableTools,
         projectName: effectiveProjectName,
         planningDir,
+        setupScope,
         features,
         gitConventions,
         fileRecords,
@@ -473,6 +479,7 @@ export async function runWizard(opts: {
       },
       files: fileRecords.map((file) => ({
         ...file,
+        owner: file.owner ?? 'library',
         status: 'installed',
         installedAt: now,
         lastCheckedAt: now,

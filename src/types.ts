@@ -31,6 +31,7 @@ export interface FileRecord {
   path: string
   hash: string
   source: string
+  owner?: 'library' | 'user' | 'migrated'
 }
 
 /**

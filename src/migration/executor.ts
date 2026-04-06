@@ -20,7 +20,7 @@ import type {
   ParsedSetup,
 } from './types.js';
 
-type ManifestFile = Pick<FileRecord, 'path' | 'hash' | 'source'>;
+type ManifestFile = Pick<FileRecord, 'path' | 'hash' | 'source' | 'owner'>;
 
 interface ManifestShape {
   version: string;
@@ -71,7 +71,15 @@ function normalizeManifest(raw: unknown): ManifestShape {
     : [];
 
   const files = Array.isArray(data.files)
-    ? data.files.filter(isManifestFile).map((file) => ({ path: file.path, hash: file.hash, source: file.source }))
+    ? data.files
+        .map((value) => trackedFileSchema.safeParse(value))
+        .filter((result): result is { success: true; data: typeof trackedFileSchema._type } => result.success)
+        .map((result) => ({
+          path: result.data.path,
+          hash: result.data.hash,
+          source: result.data.source,
+          owner: result.data.owner,
+        }))
     : [];
 
   return {
@@ -90,6 +98,7 @@ function toManifestFile(record: FileRecord): ManifestFile {
     path: record.path,
     hash: record.hash,
     source: record.source,
+    owner: record.owner ?? 'library',
   };
 }
 

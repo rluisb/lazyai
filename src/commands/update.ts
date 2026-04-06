@@ -273,6 +273,7 @@ export function registerUpdate(program: Command): void {
           path: entry.path,
           hash: fileHash(absPath),
           source: entry.source,
+          owner: tracked?.owner ?? 'library',
           status: 'installed',
           installedAt: tracked?.installedAt ?? now,
           lastCheckedAt: now,

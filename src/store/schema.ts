@@ -111,6 +111,7 @@ export const trackedFileSchema = z.object({
   path: z.string(),
   hash: z.string(),
   source: z.string(),
+  owner: z.enum(['library', 'user', 'migrated']).default('library'),
   status: z.enum(['installed', 'modified', 'missing', 'conflict']).optional(),
   installedAt: z.string().optional(),
   lastCheckedAt: z.string().optional(),

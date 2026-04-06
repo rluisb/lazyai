@@ -1,5 +1,5 @@
 import type { FeatureFlags } from './store/schema.js'
-import type { SetupScope } from './types.js'
+import type { RuleId, SetupScope, TemplateId } from './types.js'
 
 export type PresetLevel = 'minimal' | 'standard' | 'full' | 'custom'
 
@@ -56,4 +56,54 @@ export function defaultPresetForScope(scope: SetupScope): PresetLevel {
 export function resolvePreset(preset: PresetLevel): FeatureFlags | undefined {
   if (preset === 'custom') return undefined
   return { ...PRESET_FEATURES[preset] }
+}
+
+/** Returns the specs directories to create for a given preset level */
+export function specsDirsForPreset(preset: PresetLevel): string[] {
+  switch (preset) {
+    case 'minimal':
+      return ['standards', 'memory']
+    case 'standard':
+      return ['features', 'bugfixes', 'rules', 'adrs', 'standards', 'templates', 'memory']
+    case 'full':
+    case 'custom':
+      return ['features', 'bugfixes', 'refactors', 'tech-debt', 'adrs', 'memory', 'prompts', 'standards', 'templates', 'rules']
+  }
+}
+
+/** Returns the templates to install for a given preset */
+export function templatesForPreset(preset: PresetLevel): TemplateId[] {
+  switch (preset) {
+    case 'minimal':
+      return []
+    case 'standard':
+      return ['plan-template', 'spec-template', 'task', 'adr', 'bugfix-rca-template', 'standard', 'checklist-template']
+    case 'full':
+    case 'custom':
+      return [
+        'plan-template',
+        'spec-template',
+        'task',
+        'adr',
+        'bugfix-rca-template',
+        'standard',
+        'checklist-template',
+        'code-review-template',
+        'postmortem-template',
+        'tech-debt-template',
+      ]
+  }
+}
+
+/** Returns the rules to install for a given preset */
+export function rulesForPreset(preset: PresetLevel): RuleId[] {
+  switch (preset) {
+    case 'minimal':
+      return []
+    case 'standard':
+      return ['code-style', 'testing', 'security', 'workflow', 'access']
+    case 'full':
+    case 'custom':
+      return ['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'tool-use', 'workflow']
+  }
 }

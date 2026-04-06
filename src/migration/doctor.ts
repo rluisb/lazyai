@@ -39,6 +39,7 @@ function parseManifest(content: string): ManifestLike {
         path: item.path,
         hash: item.hash,
         source: item.source,
+        owner: 'library' as const,
       }));
 
     return { files: normalized };

@@ -1,3 +1,4 @@
+import path from 'node:path'
 import * as p from '@clack/prompts'
 import { Errors } from '../errors/index.js'
 import type { ConflictStrategy } from '../types.js'
@@ -75,9 +76,18 @@ export async function runPhase3(opts: {
   for (const file of conflictingFiles) {
     const existingContent = readFile(file.destPath)
     const diff = computeLineDiff(existingContent, file.srcContent)
-    const preview = renderDiffPreview(diff)
+    const fileName = path.basename(file.destPath)
+    const preview = renderDiffPreview(diff, {
+      filePath: fileName,
+      contextLines: 3,
+      colors: true,
+      lineNumbers: true,
+      wordDiff: true,
+    })
 
-    p.note(preview || '  (no visible changes)', `Diff preview: ${file.destPath}`)
+    // Use console.log for colored output (p.note strips ANSI)
+    console.log('')
+    console.log(preview || '  (no visible changes)')
 
     const fileStrategy = await p.select({
       message: `Conflict strategy for ${file.destPath}?`,

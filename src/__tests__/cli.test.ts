@@ -386,11 +386,15 @@ describe('cli init integration', () => {
     await runStatus()
 
     const output = writeSpy.mock.calls.map((call) => String(call[0])).join('')
-    expect(output).toContain('Scope: project')
-    expect(output).toContain('Tools: opencode, claude-code')
-    expect(output).toContain('Planning dir: .planning')
-    expect(output).toContain('Active features:')
-    expect(output).toContain('Git conventions: branch=')
+    // New summary box format
+    expect(output).toContain('Scope')
+    expect(output).toContain('project')
+    expect(output).toContain('opencode, claude-code')
+    expect(output).toContain('Planning dir')
+    expect(output).toContain('.planning')
+    expect(output).toContain('Features')
+    expect(output).toContain('Git Conventions')
+    expect(output).toContain('File Health')
     expect(output).not.toContain('coming soon')
 
     writeSpy.mockRestore()

@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url'
 import { Command } from 'commander'
 import { registerAdd } from './commands/add.js'
 import { registerCompile } from './commands/compile.js'
+import { registerCompletions } from './commands/completions.js'
 import { registerCreate } from './commands/create.js'
 import { registerDoctor } from './commands/doctor.js'
 import { registerEject } from './commands/eject.js'
 import { createImportCommand } from './commands/import.js'
+import { registerInfo } from './commands/info.js'
 import { registerInit } from './commands/init.js'
 import { registerList } from './commands/list.js'
 import { createMigrateCommand } from './commands/migrate.js'
@@ -49,6 +51,8 @@ export function createProgram(): Command {
   registerEject(program)
   registerCompile(program)
   registerList(program)
+  registerInfo(program)
+  registerCompletions(program)
 
   // Add migration commands
   program.addCommand(createImportCommand())

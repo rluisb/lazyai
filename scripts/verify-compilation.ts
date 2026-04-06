@@ -22,15 +22,13 @@ async function main() {
   console.log('1️⃣ Checking fragment library...')
   const expectedFragments = [
     'system-context.xml',
-    'context-engineering.xml', 
-    'rpi-workflow.xml',
-    'chain-of-thought.xml',
-    'tree-of-thoughts.xml',
-    'adr-enforcement.xml',
+    'context-discipline.md',
+    'rpi-workflow.md',
+    'reasoning-protocol.md',
+    'decision-protocol.md',
     'quality-gates.xml',
-    'agent-harness.xml',
+    'agent-harness.md',
     'bug-resolution.xml',
-    'pivot-handling.xml',
   ]
   
   const fragmentsExist = expectedFragments.every(f => {
@@ -84,11 +82,11 @@ async function main() {
   
   // Check 6: Test fragment content
   console.log('\n6️⃣ Validating fragment content...')
-  const rpiContent = fs.readFileSync(path.join(FRAGMENTS_DIR, 'rpi-workflow.xml'), 'utf-8')
+  const rpiContent = fs.readFileSync(path.join(FRAGMENTS_DIR, 'rpi-workflow.md'), 'utf-8')
   const hasRpiTag = rpiContent.includes('<rpi-workflow>')
-  const hasPlanningDirVar = rpiContent.includes('{{PLANNING_DIR}}')
-  console.log(`   ${hasRpiTag ? '✅' : '❌'} rpi-workflow.xml has proper XML tag`)
-  console.log(`   ${hasPlanningDirVar ? '✅' : '❌'} Uses {{PLANNING_DIR}} variable`)
+  const hasPivotHandling = rpiContent.includes('**Pivot handling**')
+  console.log(`   ${hasRpiTag ? '✅' : '❌'} rpi-workflow.md has proper wrapper tag`)
+  console.log(`   ${hasPivotHandling ? '✅' : '❌'} Includes merged pivot handling guidance`)
   
   // Check 7: Test template content  
   console.log('\n7️⃣ Validating template content...')
@@ -105,7 +103,7 @@ async function main() {
   if (allPassed) {
     console.log('✅ All verification checks passed!')
     console.log('\n📋 Summary:')
-    console.log(`   • ${expectedFragments.length} XML fragments ready`)
+    console.log(`   • ${expectedFragments.length} fragments ready`)
     console.log(`   • ${expectedTools.length} tool templates ready`)
     console.log(`   • Compiler infrastructure complete`)
     console.log(`   • Schema updated with Codex + features`)

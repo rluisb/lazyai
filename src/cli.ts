@@ -9,6 +9,7 @@ import { registerDoctor } from './commands/doctor.js'
 import { registerEject } from './commands/eject.js'
 import { createImportCommand } from './commands/import.js'
 import { registerInit } from './commands/init.js'
+import { registerList } from './commands/list.js'
 import { createMigrateCommand } from './commands/migrate.js'
 import { registerStatus } from './commands/status.js'
 import { registerUpdate } from './commands/update.js'
@@ -47,6 +48,7 @@ export function createProgram(): Command {
   registerCreate(program)
   registerEject(program)
   registerCompile(program)
+  registerList(program)
 
   // Add migration commands
   program.addCommand(createImportCommand())

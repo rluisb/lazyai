@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -18,6 +19,7 @@ import { scaffoldConstitution } from '../scaffold/constitution.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
+import { scaffoldRepoLedgers, scaffoldRepoRoots } from '../scaffold/repo-roots.js'
 import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { appendOperation, writeStore } from '../store/index.js'
@@ -37,7 +39,7 @@ import {
   ALL_PROMPTS,
   ALL_SKILLS,
 } from '../types.js'
-import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
+import { fileExists, isDirectory, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
 import {
   isGlobalSupportedTool,
   logUnsupportedGlobalTool,
@@ -193,6 +195,30 @@ export async function runWizard(opts: {
     const specsDirs = specsDirsForPreset(preset)
     const templateIds = templatesForPreset(preset)
     const ruleIds = rulesForPreset(preset)
+
+    if (setupScope === 'workspace' && repos && repos.length > 0) {
+      for (const repo of repos) {
+        const absPath = path.resolve(effectiveTargetDir, repo.path)
+
+        if (!fileExists(absPath)) {
+          p.log.warn(`⚠️  Repo path not found: ${absPath} (${repo.name})`)
+          continue
+        }
+
+        if (!isDirectory(absPath)) {
+          p.log.warn(`⚠️  Path is not a directory: ${absPath} (${repo.name})`)
+          continue
+        }
+
+        try {
+          const testPath = path.join(absPath, '.ai-setup-write-test')
+          writeFile(testPath, '')
+          fs.unlinkSync(testPath)
+        } catch {
+          p.log.warn(`⚠️  No write permission: ${absPath} (${repo.name}) — AI tools may not be able to modify files`)
+        }
+      }
+    }
 
     if (setupScope === 'global') {
       for (const tool of tools) {
@@ -403,6 +429,30 @@ export async function runWizard(opts: {
         })
       }
       tracker.trackSuccess('compile:mcp')
+
+      if (setupScope === 'workspace' && repos && repos.length > 0) {
+        const repoResults = await scaffoldRepoRoots({
+          repos,
+          planningRepoPath: effectiveTargetDir,
+          tools: installableTools,
+          strategy,
+          perFileOverrides,
+        })
+
+        for (const records of repoResults.values()) {
+          fileRecords.push(...records)
+        }
+        tracker.trackSuccess('scaffold:repo-roots')
+
+        await scaffoldRepoLedgers({
+          planningRepoPath: effectiveTargetDir,
+          repos,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:repo-ledgers')
+      }
 
       for (const [sourcePath, strategyOverride] of perFileOverrides.entries()) {
         if (strategyOverride === 'backup-and-replace' || strategyOverride === 'align') {

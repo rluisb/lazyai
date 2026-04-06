@@ -171,7 +171,7 @@ describe('wizard integration (non-interactive)', () => {
     infoSpy.mockRestore()
   })
 
-  it('workspace scope scaffolds only planning repo and stores repo references', async () => {
+  it('workspace scope scaffolds planning repo, lightweight repo roots, and ledgers', async () => {
     const workspaceRoot = mkdtempSync(path.join(tmpdir(), 'ai-setup-workspace-'))
     const planningRepoDir = path.join(workspaceRoot, 'planning-repo')
     const fedoraRepoDir = path.join(workspaceRoot, 'fedora')
@@ -200,11 +200,18 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'handoffs'))).toBe(true)
     expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'patterns'))).toBe(true)
     expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'projects'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'repos', 'fedora', 'ledger.md'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'repos', 'fedora', 'last-known-state.md'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'repos', 'creator-checkout', 'ledger.md'))).toBe(true)
 
     expect(existsSync(path.join(fedoraRepoDir, '.ai-setup.json'))).toBe(false)
     expect(existsSync(path.join(checkoutRepoDir, '.ai-setup.json'))).toBe(false)
-    expect(existsSync(path.join(fedoraRepoDir, '.opencode'))).toBe(false)
-    expect(existsSync(path.join(checkoutRepoDir, '.claude'))).toBe(false)
+    expect(existsSync(path.join(fedoraRepoDir, 'AGENTS.md'))).toBe(true)
+    expect(existsSync(path.join(fedoraRepoDir, 'CLAUDE.md'))).toBe(true)
+    expect(existsSync(path.join(fedoraRepoDir, '.claude', 'settings.json'))).toBe(true)
+    expect(existsSync(path.join(checkoutRepoDir, 'AGENTS.md'))).toBe(true)
+    expect(existsSync(path.join(checkoutRepoDir, 'CLAUDE.md'))).toBe(true)
+    expect(existsSync(path.join(checkoutRepoDir, '.claude', 'settings.json'))).toBe(true)
 
     const manifest = JSON.parse(readFileSync(path.join(planningRepoDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.config.setupScope).toBe('workspace')
@@ -217,10 +224,10 @@ describe('wizard integration (non-interactive)', () => {
       { name: 'creator-checkout', path: '../creator-checkout', type: 'unknown' },
     ])
 
-    const fedoraEntries = readdirSync(fedoraRepoDir)
-    const checkoutEntries = readdirSync(checkoutRepoDir)
-    expect(fedoraEntries).toEqual([])
-    expect(checkoutEntries).toEqual([])
+    const fedoraEntries = readdirSync(fedoraRepoDir).sort()
+    const checkoutEntries = readdirSync(checkoutRepoDir).sort()
+    expect(fedoraEntries).toEqual(['.claude', 'AGENTS.md', 'CLAUDE.md'])
+    expect(checkoutEntries).toEqual(['.claude', 'AGENTS.md', 'CLAUDE.md'])
 
     rmSync(workspaceRoot, { recursive: true, force: true })
   })

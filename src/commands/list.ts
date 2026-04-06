@@ -99,7 +99,8 @@ export function registerList(program: Command): void {
       if (selectedCategory === 'mcp') selectedCategory = 'servers'
       if (selectedCategory === 'cli') selectedCategory = 'tools'
 
-      const results: Record<string, string[] | Record<string, unknown>> = {}
+      // biome-ignore lint/suspicious/noExplicitAny: flexible result structure for JSON output
+      const results: Record<string, any> = {}
 
       // Load data based on category
       const showAgents = selectedCategory === 'all' || selectedCategory === 'agents'

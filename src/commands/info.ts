@@ -50,7 +50,8 @@ function extractFrontmatter(content: string): { frontmatter: Record<string, unkn
     return { frontmatter: {}, body: content }
   }
 
-  const [, fmRaw, body] = match
+  const fmRaw = match[1] ?? ''
+  const body = match[2] ?? ''
   const frontmatter: Record<string, unknown> = {}
 
   for (const line of fmRaw.split('\n')) {

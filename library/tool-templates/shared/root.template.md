@@ -7,23 +7,19 @@
 {{TOOL_DESCRIPTION}}
 
 {{#if features.contextEngineering}}
-{{#include fragments/context-engineering.xml}}
+{{#include fragments/context-discipline.md}}
 {{/if}}
 
 {{#if features.rpiWorkflow}}
-{{#include fragments/rpi-workflow.xml}}
+{{#include fragments/rpi-workflow.md}}
 {{/if}}
 
 {{#if features.chainOfThought}}
-{{#include fragments/chain-of-thought.xml}}
+{{#include fragments/reasoning-protocol.md}}
 {{/if}}
 
 {{#if features.treeOfThoughts}}
-{{#include fragments/tree-of-thoughts.xml}}
-{{/if}}
-
-{{#if features.adrEnforcement}}
-{{#include fragments/adr-enforcement.xml}}
+{{#include fragments/decision-protocol.md}}
 {{/if}}
 
 {{#if features.qualityGates}}
@@ -35,11 +31,7 @@
 {{/if}}
 
 {{#if features.agentHarness}}
-{{#include fragments/agent-harness.xml}}
-{{/if}}
-
-{{#if features.pivotHandling}}
-{{#include fragments/pivot-handling.xml}}
+{{#include fragments/agent-harness.md}}
 {{/if}}
 
 {{#if features.bugResolution}}

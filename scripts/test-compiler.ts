@@ -1,5 +1,6 @@
-import { TemplateCompiler, type ToolId } from "../src/compiler/template-compiler.js";
+import { TemplateCompiler } from "../src/compiler/template-compiler.js";
 import type { FragmentContext } from "../src/compiler/fragment-resolver.js";
+import type { ToolId } from "../src/types.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -46,15 +47,15 @@ for (const tool of tools) {
       const content = firstFile.content;
       const hasSystemContext = content.includes("<system-context>");
       const hasRpi = content.includes("<rpi-workflow>");
-      const hasCot = content.includes("<chain-of-thought>");
-      const hasAdr = content.includes("<adr-enforcement>");
+      const hasReasoning = content.includes("<reasoning-protocol>");
+      const hasDecision = content.includes("<decision-protocol>");
       const hasPlanningDir = content.includes(".planning");
       const hasProjectName = content.includes("test-project");
       
       console.log(`✅ ${tool}:`);
       console.log(`   Files: ${result.files.map(f => f.relativePath).join(", ")}`);
       console.log(`   Length: ${content.length} chars`);
-      console.log(`   XML Tags: ✓ system-context, ${hasRpi ? '✓' : '✗'} rpi, ${hasCot ? '✓' : '✗'} cot, ${hasAdr ? '✓' : '✗'} adr`);
+      console.log(`   Fragment markers: ✓ system-context, ${hasRpi ? '✓' : '✗'} rpi, ${hasReasoning ? '✓' : '✗'} reasoning, ${hasDecision ? '✓' : '✗'} decision`);
       console.log(`   Variables: planningDir=${hasPlanningDir}, projectName=${hasProjectName}`);
     } else {
       console.log(`⚠️ ${tool}: No files generated`);

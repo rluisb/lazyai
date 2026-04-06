@@ -734,7 +734,7 @@ describe('Real library integration', () => {
       expect(rootFile.content).toContain('docs/planning')
       expect(rootFile.content).toContain('Follow TypeScript best practices.')
       // Check that features were included
-      expect(rootFile.content).toContain('tree-of-thoughts')
+      expect(rootFile.content).toContain('decision-protocol')
       expect(rootFile.content).toContain('agent-harness')
     }
   })
@@ -762,7 +762,7 @@ describe('Real library integration', () => {
     expect(rootFile).toBeDefined()
     if (rootFile) {
       // These fragments should not appear when conditionals are false
-      expect(rootFile.content).not.toContain('tree-of-thoughts')
+      expect(rootFile.content).not.toContain('decision-protocol')
       expect(rootFile.content).not.toContain('agent-harness')
     }
   })

@@ -7,11 +7,10 @@ import type { ConflictStrategy, FileRecord } from '../types.js'
 import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
 
 const DEFAULT_FEATURE_FRAGMENT_MARKERS = [
-  '<context-engineering>',
+  '<context-discipline>',
   '<rpi-workflow>',
-  '<chain-of-thought>',
-  '<tree-of-thoughts>',
-  '<adr-enforcement>',
+  '<reasoning-protocol>',
+  '<decision-protocol>',
   '<quality-gates>',
 ] as const
 
@@ -81,7 +80,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('passes through feature flags in context', async () => {
-    // Test with tree-of-thoughts disabled (default behavior)
+    // Test with decision protocol disabled (default behavior)
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
@@ -152,10 +151,10 @@ describe('scaffoldCompiledRoot', () => {
 
     const agentsContent = readFile(path.join(targetDir, 'AGENTS.md'))
 
-    expect(agentsContent).not.toContain('<context-engineering>')
+    expect(agentsContent).not.toContain('<context-discipline>')
     expect(agentsContent).not.toContain('<rpi-workflow>')
-    expect(agentsContent).toContain('<chain-of-thought>')
-    expect(agentsContent).toContain('<tree-of-thoughts>')
+    expect(agentsContent).toContain('<reasoning-protocol>')
+    expect(agentsContent).toContain('<decision-protocol>')
   })
 
   it('compiles all six root templates with camelCase feature conditions', async () => {
@@ -182,7 +181,7 @@ describe('scaffoldCompiledRoot', () => {
 
     for (const rootFile of rootFiles) {
       const content = readFile(path.join(targetDir, rootFile))
-      expect(content).toContain('<context-engineering>')
+      expect(content).toContain('<context-discipline>')
       expect(content).toContain('<quality-gates>')
     }
   })

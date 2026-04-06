@@ -251,7 +251,7 @@ describe('cli init integration', () => {
     expect(fs.existsSync(rootFile)).toBe(true)
     const content = fs.readFileSync(rootFile, 'utf-8')
     expect(content).toContain('<planning-dir>.specs</planning-dir>')
-    expect(content).not.toContain('<tree-of-thoughts>')
+    expect(content).not.toContain('<decision-protocol>')
     expect(content).toContain('<git-conventions>')
   })
 

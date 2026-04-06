@@ -32,11 +32,6 @@ interface ManifestShape {
   files: ManifestFile[];
 }
 
-function isManifestFile(value: unknown): value is ManifestFile {
-  const parsed = trackedFileSchema.safeParse(value);
-  return parsed.success;
-}
-
 function normalizeManifest(raw: unknown): ManifestShape {
   const now = new Date().toISOString();
   const fallback: ManifestShape = {

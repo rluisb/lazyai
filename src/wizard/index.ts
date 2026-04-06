@@ -23,6 +23,7 @@ import { appendOperation, writeStore } from '../store/index.js'
 import type { FeatureFlags, GitConventions, StoreData } from '../store/schema.js'
 import type {
   FileRecord,
+  PresetLevel,
   SetupScope,
   SetupType,
   ToolId,
@@ -107,6 +108,7 @@ export async function runWizard(opts: {
     planningRepo?: string
     repos?: string[]
     planningDir?: string
+    preset?: PresetLevel
     features?: string[]
     disableFeatures?: string[]
     branchPattern?: string
@@ -161,6 +163,7 @@ export async function runWizard(opts: {
     // Phase 2: Planning directory, feature flags, and git conventions
     const { planningDir, features, gitConventions } = await runPhase2Features({
       interactive: opts.interactive,
+      setupScope,
       prior: {
         ...(prior.planningDir != null ? { planningDir: prior.planningDir } : {}),
         ...(prior.features != null ? { features: prior.features } : {}),
@@ -168,6 +171,7 @@ export async function runWizard(opts: {
       },
       cliOverrides: {
         ...(opts.cliOverrides.planningDir != null ? { planningDir: opts.cliOverrides.planningDir } : {}),
+        ...(opts.cliOverrides.preset != null ? { preset: opts.cliOverrides.preset } : {}),
         ...(opts.cliOverrides.features != null ? { features: opts.cliOverrides.features } : {}),
         ...(opts.cliOverrides.disableFeatures != null ? { disableFeatures: opts.cliOverrides.disableFeatures } : {}),
         ...(opts.cliOverrides.branchPattern != null ? { branchPattern: opts.cliOverrides.branchPattern } : {}),

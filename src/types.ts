@@ -1,5 +1,6 @@
 import type { WizardSelections as StoreWizardSelections } from './store/schema.js'
 
+export type { PresetLevel } from './presets.js'
 // Re-export store types (source of truth is zod schemas)
 export type { Config, Meta, Operation, StoreData, Sync, TrackedFile } from './store/schema.js'
 export type WizardSelections = StoreWizardSelections

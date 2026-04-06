@@ -1,6 +1,8 @@
 import * as p from '@clack/prompts'
 import { Errors } from '../errors/index.js'
+import { defaultPresetForScope, PRESET_FEATURES, type PresetLevel, resolvePreset } from '../presets.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
+import type { SetupScope } from '../types.js'
 
 function cancelWizard(): never {
   p.cancel('Setup cancelled.')
@@ -12,6 +14,18 @@ export interface Phase2Result {
   features: FeatureFlags
   gitConventions: GitConventions
 }
+
+const FEATURE_KEYS: Array<keyof FeatureFlags> = [
+  'contextEngineering',
+  'rpiWorkflow',
+  'chainOfThought',
+  'treeOfThoughts',
+  'adrEnforcement',
+  'qualityGates',
+  'agentHarness',
+  'bugResolution',
+  'pivotHandling',
+]
 
 // All features ON by default - users can disable what they don't need
 const DEFAULT_FEATURES: FeatureFlags = {
@@ -51,12 +65,46 @@ const COMMIT_PATTERN_OPTIONS = [
   { value: 'custom', label: 'Custom Pattern', hint: 'Define your own pattern' },
 ]
 
+function buildFeaturesFromSelection(selectedFeatures: string[]): FeatureFlags {
+  return {
+    contextEngineering: selectedFeatures.includes('contextEngineering'),
+    rpiWorkflow: selectedFeatures.includes('rpiWorkflow'),
+    chainOfThought: selectedFeatures.includes('chainOfThought'),
+    treeOfThoughts: selectedFeatures.includes('treeOfThoughts'),
+    adrEnforcement: selectedFeatures.includes('adrEnforcement'),
+    qualityGates: selectedFeatures.includes('qualityGates'),
+    agentHarness: selectedFeatures.includes('agentHarness'),
+    bugResolution: selectedFeatures.includes('bugResolution'),
+    pivotHandling: selectedFeatures.includes('pivotHandling'),
+  }
+}
+
+function inferPresetFromFeatures(features?: Partial<FeatureFlags>): PresetLevel | undefined {
+  if (!features || !FEATURE_KEYS.every((key) => key in features)) {
+    return undefined
+  }
+
+  const fullFeatures = features as FeatureFlags
+
+  for (const [preset, presetFeatures] of Object.entries(PRESET_FEATURES) as Array<[
+    Exclude<PresetLevel, 'custom'>,
+    FeatureFlags,
+  ]>) {
+    if (FEATURE_KEYS.every((key) => fullFeatures[key] === presetFeatures[key])) {
+      return preset
+    }
+  }
+
+  return 'custom'
+}
+
 /**
  * Run Phase 2 of the interactive wizard: gather planningDir, feature flags, and git conventions.
  * These control which XML-tagged prompt engineering blocks are embedded and how git operations are formatted.
  */
 export async function runPhase2Features(opts: {
   interactive: boolean
+  setupScope?: SetupScope
   prior?: {
     planningDir?: string
     features?: Partial<FeatureFlags>
@@ -64,6 +112,7 @@ export async function runPhase2Features(opts: {
   }
   cliOverrides?: {
     planningDir?: string
+    preset?: PresetLevel
     features?: string[]
     disableFeatures?: string[]
     branchPattern?: string
@@ -73,7 +122,14 @@ export async function runPhase2Features(opts: {
   // Non-interactive mode: use cliOverrides or defaults
   if (!opts.interactive) {
     const planningDir = opts.cliOverrides?.planningDir ?? opts.prior?.planningDir ?? '.planning'
-    const features = { ...DEFAULT_FEATURES }
+
+    let features: FeatureFlags
+    if (opts.cliOverrides?.preset) {
+      const resolved = resolvePreset(opts.cliOverrides.preset)
+      features = resolved ?? { ...DEFAULT_FEATURES }
+    } else {
+      features = { ...DEFAULT_FEATURES }
+    }
 
     // Apply prior feature overrides (baseline from last run)
     if (opts.prior?.features) {
@@ -142,60 +198,94 @@ export async function runPhase2Features(opts: {
 
   const planningDir = planningDirResult
 
-  // Prompt 2: Feature flags (multiselect with all defaults ON)
+  // Prompt 2: Preset selection
+  const presetOptions: Array<{ value: PresetLevel; label: string; hint: string }> = [
+    {
+      value: 'minimal',
+      label: 'Minimal',
+      hint: 'Quality gates + git conventions only. Best for cheap models or small context.',
+    },
+    {
+      value: 'standard',
+      label: 'Standard (recommended)',
+      hint: '+ Reasoning protocol, RPI workflow, bug resolution. Best for most teams.',
+    },
+    {
+      value: 'full',
+      label: 'Full',
+      hint: '+ Context discipline, decision protocol, agent coordination, ADR enforcement.',
+    },
+    {
+      value: 'custom',
+      label: 'Custom',
+      hint: 'Pick features individually.',
+    },
+  ]
+
+  const presetResult =
+    opts.cliOverrides?.preset ??
+    (await p.select({
+      message: 'Feature preset?',
+      options: presetOptions,
+      initialValue:
+        inferPresetFromFeatures(opts.prior?.features) ?? defaultPresetForScope(opts.setupScope ?? 'project'),
+    }))
+
+  if (p.isCancel(presetResult)) {
+    cancelWizard()
+  }
+
+  const preset = presetResult as PresetLevel
+
+  // Prompt 3: Feature flags (multiselect only for custom preset)
   const featureOptions = [
-    { value: 'contextEngineering', label: 'Context Engineering', hint: 'Optimal context selection principles' },
-    { value: 'rpiWorkflow', label: 'RPI Workflow', hint: 'Research → Plan → Implement phases' },
-    { value: 'chainOfThought', label: 'Chain of Thought', hint: 'Structured reasoning: understand → analyze → synthesize → verify' },
-    { value: 'treeOfThoughts', label: 'Tree of Thoughts', hint: 'Parallel exploration of multiple approaches' },
-    { value: 'adrEnforcement', label: 'ADR Enforcement', hint: 'Architecture Decision Records for significant changes' },
     { value: 'qualityGates', label: 'Quality Gates', hint: 'Lint, typecheck, test, build checks' },
-    { value: 'agentHarness', label: 'Agent Harness', hint: 'Multi-agent coordination (planner, builder, reviewer, scout, documenter)' },
+    { value: 'rpiWorkflow', label: 'RPI Workflow', hint: 'Research → Plan → Implement phases' },
+    { value: 'chainOfThought', label: 'Reasoning Protocol', hint: 'Structured <cot> reasoning before acting' },
     { value: 'bugResolution', label: 'Bug Resolution', hint: 'Structured debugging: reproduce → diagnose → fix → verify' },
-    { value: 'pivotHandling', label: 'Pivot Handling', hint: 'Detection and ADR process when plans change' },
+    { value: 'contextEngineering', label: 'Context Discipline', hint: 'File budget, session hygiene, read priority' },
+    { value: 'treeOfThoughts', label: 'Decision Protocol', hint: 'Evaluate multiple approaches before choosing' },
+    { value: 'adrEnforcement', label: 'ADR Enforcement', hint: 'Architecture Decision Records for significant changes' },
+    { value: 'agentHarness', label: 'Agent Coordination', hint: 'Multi-agent handoff and escalation rules' },
+    { value: 'pivotHandling', label: 'Pivot Handling', hint: 'What to do when plans change mid-implementation' },
   ]
 
   // Pre-select: all enabled by default
   const priorFeatures = opts.prior?.features ?? {}
   const initialValues = featureOptions
-    .filter(opt => {
+    .filter((opt) => {
       const key = opt.value as keyof FeatureFlags
       return priorFeatures[key] ?? DEFAULT_FEATURES[key]
     })
-    .map(opt => opt.value)
+    .map((opt) => opt.value)
 
-  const featuresResult = await p.multiselect({
-    message: 'Which prompt engineering features to enable? (all recommended)',
-    options: featureOptions,
-    initialValues,
-    required: false,
-  })
+  let features: FeatureFlags
+  if (preset === 'custom') {
+    const featuresResult = await p.multiselect({
+      message: 'Which features should be enabled?',
+      options: featureOptions,
+      initialValues,
+      required: false,
+    })
 
-  if (p.isCancel(featuresResult)) {
-    cancelWizard()
+    if (p.isCancel(featuresResult)) {
+      cancelWizard()
+    }
+
+    features = buildFeaturesFromSelection(featuresResult as string[])
+  } else {
+    features = resolvePreset(preset) ?? { ...DEFAULT_FEATURES }
   }
 
-  const selectedFeatures = featuresResult as string[]
-
-  // Build FeatureFlags from selection
-  const features: FeatureFlags = {
-    contextEngineering: selectedFeatures.includes('contextEngineering'),
-    rpiWorkflow: selectedFeatures.includes('rpiWorkflow'),
-    chainOfThought: selectedFeatures.includes('chainOfThought'),
-    treeOfThoughts: selectedFeatures.includes('treeOfThoughts'),
-    adrEnforcement: selectedFeatures.includes('adrEnforcement'),
-    qualityGates: selectedFeatures.includes('qualityGates'),
-    agentHarness: selectedFeatures.includes('agentHarness'),
-    bugResolution: selectedFeatures.includes('bugResolution'),
-    pivotHandling: selectedFeatures.includes('pivotHandling'),
-  }
-
-  // Prompt 3: Branch naming pattern
+  // Prompt 4: Branch naming pattern
   const priorBranch = opts.prior?.gitConventions?.branchPattern ?? DEFAULT_GIT_CONVENTIONS.branchPattern
   const branchPatternResult = await p.select({
     message: 'Branch naming pattern?',
     options: BRANCH_PATTERN_OPTIONS,
-    initialValue: BRANCH_PATTERN_OPTIONS.find(o => o.value === priorBranch)?.value ?? BRANCH_PATTERN_OPTIONS[0]?.value ?? DEFAULT_GIT_CONVENTIONS.branchPattern,
+    initialValue:
+      BRANCH_PATTERN_OPTIONS.find((o) => o.value === priorBranch)?.value ??
+      BRANCH_PATTERN_OPTIONS[0]?.value ??
+      DEFAULT_GIT_CONVENTIONS.branchPattern,
   })
 
   if (p.isCancel(branchPatternResult)) {
@@ -215,12 +305,15 @@ export async function runPhase2Features(opts: {
     branchPattern = customBranch
   }
 
-  // Prompt 4: Commit message pattern
+  // Prompt 5: Commit message pattern
   const priorCommit = opts.prior?.gitConventions?.commitPattern ?? DEFAULT_GIT_CONVENTIONS.commitPattern
   const commitPatternResult = await p.select({
     message: 'Commit message pattern?',
     options: COMMIT_PATTERN_OPTIONS,
-    initialValue: COMMIT_PATTERN_OPTIONS.find(o => o.value === priorCommit)?.value ?? COMMIT_PATTERN_OPTIONS[0]?.value ?? DEFAULT_GIT_CONVENTIONS.commitPattern,
+    initialValue:
+      COMMIT_PATTERN_OPTIONS.find((o) => o.value === priorCommit)?.value ??
+      COMMIT_PATTERN_OPTIONS[0]?.value ??
+      DEFAULT_GIT_CONVENTIONS.commitPattern,
   })
 
   if (p.isCancel(commitPatternResult)) {
@@ -240,7 +333,7 @@ export async function runPhase2Features(opts: {
     commitPattern = customCommit
   }
 
-  // Prompt 5: Require ticket in branch/commit?
+  // Prompt 6: Require ticket in branch/commit?
   const requireTicketResult = await p.confirm({
     message: 'Require ticket ID in branches/commits?',
     initialValue: opts.prior?.gitConventions?.requireTicket ?? false,

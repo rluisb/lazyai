@@ -44,7 +44,7 @@ function ensurePromptText(value: string | symbol): string {
 }
 
 async function askText(message: string, placeholder?: string): Promise<string> {
-  const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string) => string | undefined } = {
+  const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string | undefined) => string | undefined } = {
     message,
     validate: (value) => validateRequiredText(value, message),
   }
@@ -183,7 +183,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
       }
 
       if (question.type === 'text') {
-        const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string) => string | undefined } = {
+        const textOptions: { message: string; placeholder?: string; defaultValue?: string; validate: (value: string | undefined) => string | undefined } = {
           message: question.label,
           validate: (value) => validateRequiredText(value, question.label),
         }

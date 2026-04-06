@@ -50,7 +50,7 @@ export function registerAdd(program: Command): void {
       const adapter = registry.get(toolId)
 
       if (!adapter) {
-        s.stop(`Failed to load adapter for ${toolId}`, 1)
+        s.error(`Failed to load adapter for ${toolId}`)
         throw Errors.missingDependency(`adapter:${toolId}`)
       }
 

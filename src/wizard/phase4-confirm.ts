@@ -1,10 +1,34 @@
 import * as p from '@clack/prompts'
 import { Errors } from '../errors/index.js'
+import type { SetupScope, ToolId, WizardConfig } from '../types.js'
+import { type SummaryItem, showSummaryBox } from '../utils/ui.js'
 import type { PlannedFile } from './planner.js'
+
+function formatTools(tools: ToolId[]): string {
+  const toolNames: Record<ToolId, string> = {
+    pi: 'Pi',
+    opencode: 'OpenCode',
+    'claude-code': 'Claude Code',
+    gemini: 'Gemini CLI',
+    copilot: 'GitHub Copilot',
+    codex: 'Codex',
+  }
+  return tools.map((t) => toolNames[t] || t).join(', ')
+}
+
+function formatScope(scope: SetupScope): string {
+  const scopeNames: Record<SetupScope, string> = {
+    global: 'Global (~/.ai/)',
+    workspace: 'Workspace (multi-repo)',
+    project: 'Project (single repo)',
+  }
+  return scopeNames[scope] || scope
+}
 
 export async function runPhase4(opts: {
   interactive: boolean
   plan: PlannedFile[]
+  config?: WizardConfig
 }): Promise<boolean> {
   // Non-interactive: always return true
   if (!opts.interactive) {
@@ -23,10 +47,23 @@ export async function runPhase4(opts: {
     groups.set(file.category, existing)
   }
 
-  // Build summary lines
-  const lines: string[] = []
+  // Calculate totals
   const totalNew = opts.plan.filter((f) => f.isNew).length
   const totalUpdate = opts.plan.filter((f) => !f.isNew).length
+
+  // Build summary items
+  const summaryItems: SummaryItem[] = []
+
+  if (opts.config) {
+    summaryItems.push({ label: 'Scope', value: formatScope(opts.config.setupScope) })
+    summaryItems.push({ label: 'Tools', value: formatTools(opts.config.tools) })
+    summaryItems.push({ label: 'Project', value: opts.config.projectName })
+  }
+
+  summaryItems.push({ label: 'Files', value: `${totalNew} new, ${totalUpdate} updates` })
+
+  // Show summary box
+  showSummaryBox('📦 Setup Summary', summaryItems)
 
   // Category display names
   const categoryNames: Record<string, string> = {
@@ -40,8 +77,11 @@ export async function runPhase4(opts: {
     agent: 'Agent definitions',
     skill: 'Skills',
     prompt: 'Prompt templates',
+    mcp: 'MCP configuration',
   }
 
+  // Build detail lines
+  const lines: string[] = []
   for (const [category, counts] of groups) {
     const name = categoryNames[category] ?? category
     const parts: string[] = []
@@ -50,11 +90,9 @@ export async function runPhase4(opts: {
     lines.push(`  ${name}: ${parts.join(', ')}`)
   }
 
-  lines.unshift(`Total: ${totalNew} new files, ${totalUpdate} updates`)
-  lines.push('')
-
-  // Show summary
-  p.note(lines.join('\n'), 'Installation Plan')
+  if (lines.length > 0) {
+    p.note(lines.join('\n'), 'File Breakdown')
+  }
 
   // Confirm
   const confirmed = await p.confirm({

@@ -17,11 +17,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check .", 
+    "lint": "biome check .",
     "prepare": "npm run build"
   },
   "dependencies": {
-    "@clack/prompts": "^0.9.1",
+    "@clack/prompts": "^1.2.0",
     "commander": "^12.1.0",
     "glob": "^13.0.6",
     "lowdb": "^7.0.1",

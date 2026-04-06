@@ -47,6 +47,7 @@ import {
   resolveGlobalToolTargetDir,
 } from '../utils/global-paths.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
+import { showPhaseProgress } from '../utils/ui.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
 import { runPhase3 } from './phase3-conflicts.js'
@@ -125,6 +126,7 @@ export async function runWizard(opts: {
 
     if (opts.interactive) {
       p.intro('ai-setup wizard')
+      showPhaseProgress({ current: 1, total: 4, name: 'Setup Context' })
     }
 
     const manifest = await readManifest(opts.targetDir)
@@ -163,6 +165,9 @@ export async function runWizard(opts: {
     })
 
     // Phase 2: Planning directory, feature flags, and git conventions
+    if (opts.interactive) {
+      showPhaseProgress({ current: 2, total: 4, name: 'Features & Conventions' })
+    }
     const { planningDir, features, gitConventions, preset } = await runPhase2Features({
       interactive: opts.interactive,
       setupScope,
@@ -322,8 +327,14 @@ export async function runWizard(opts: {
       ...(opts.force !== undefined ? { force: opts.force } : {}),
     }
 
+    if (opts.interactive) {
+      showPhaseProgress({ current: 3, total: 4, name: 'Conflict Resolution' })
+    }
     const { strategy, perFileOverrides } = await runPhase3(phase3Opts)
 
+    if (opts.interactive) {
+      showPhaseProgress({ current: 4, total: 4, name: 'Review & Confirm' })
+    }
     const phase4Opts = { interactive: opts.interactive, plan, config }
     const confirmed = await runPhase4(phase4Opts)
     if (!confirmed) return
@@ -507,6 +518,12 @@ export async function runWizard(opts: {
       await installFiles()
       await installGlobalAdapters()
       s.stop('Files installed successfully!')
+
+      // Show what was created
+      const createdCount = fileRecords.length
+      if (createdCount > 0) {
+        p.log.success(`Created ${createdCount} file${createdCount === 1 ? '' : 's'}`)
+      }
     } else {
       await installFiles()
       await installGlobalAdapters()

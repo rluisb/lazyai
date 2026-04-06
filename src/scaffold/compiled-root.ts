@@ -37,11 +37,9 @@ export interface ScaffoldCompiledRootOptions {
 }
 
 /**
- * Compiles and writes root AI tool configuration files using the TemplateCompiler.
- * 
- * This is an alternative to scaffoldRootFiles that uses the fragment/template
- * compilation system to embed XML-tagged prompt engineering blocks.
- * 
+ * Compiles and writes root AI tool configuration files using the shared
+ * fragment/template compilation system.
+ *
  * Default behavior:
  * - When features are omitted, schema/wizard defaults are used (all feature flags enabled)
  * - Callers can pass explicit features to disable specific blocks

@@ -2,7 +2,15 @@ import path from 'node:path'
 import type { ConflictStrategy, FileRecord, ToolId } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
 import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
-import { ROOT_FILE_BY_TOOL, ROOT_TEMPLATE_BY_FILE } from './root-file-map.js'
+import { ROOT_FILE_BY_TOOL } from './root-file-map.js'
+
+const DEPRECATED_ROOT_TEMPLATE_BY_FILE: Partial<Record<string, string>> = {
+  'AGENTS.md': 'root/AGENTS.template.md',
+  'INSTRUCTIONS.md': 'root/AGENTS.template.md',
+  'CLAUDE.md': 'root/CLAUDE.template.md',
+  'GEMINI.md': 'root/GEMINI.template.md',
+  '.github/copilot-instructions.md': 'root/copilot-instructions.template.md',
+}
 
 export interface ScaffoldRootFilesOptions {
   targetDir: string
@@ -16,6 +24,9 @@ export interface ScaffoldRootFilesOptions {
 
 /**
  * Creates root-level AI tool configuration files.
+ *
+ * @deprecated Root files are now always generated through scaffoldCompiledRoot.
+ * This fallback is kept temporarily for reference and test coverage only.
  *
  * Behavior:
  * - For each tool in `tools`, reads template from `library/root/` and writes substituted content
@@ -36,7 +47,7 @@ export async function scaffoldRootFiles(opts: ScaffoldRootFilesOptions): Promise
 
   for (const tool of tools) {
     const outputName = ROOT_FILE_BY_TOOL[tool]
-    const templateSource = ROOT_TEMPLATE_BY_FILE[outputName]
+    const templateSource = DEPRECATED_ROOT_TEMPLATE_BY_FILE[outputName]
     if (!templateSource) continue
 
     const templatePath = path.join(rootDir, path.basename(templateSource))

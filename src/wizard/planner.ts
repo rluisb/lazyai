@@ -1,7 +1,9 @@
 import path from 'node:path'
-import { ROOT_FILE_BY_TOOL, ROOT_TEMPLATE_BY_FILE } from '../scaffold/root-file-map.js'
+import { ROOT_FILE_BY_TOOL } from '../scaffold/root-file-map.js'
 import type { ToolId, WizardConfig } from '../types.js'
 import { fileExists } from '../utils/files.js'
+
+const COMPILED_ROOT_TEMPLATE_SOURCE = 'tool-templates/shared/root.template.md'
 
 export interface PlannedFile {
   destPath: string
@@ -92,7 +94,7 @@ export async function computePlan(
     if (rootFile) {
       if (!rootFiles.has(rootFile)) {
         rootFiles.add(rootFile)
-        const srcPath = ROOT_TEMPLATE_BY_FILE[rootFile] ?? null
+        const srcPath = COMPILED_ROOT_TEMPLATE_SOURCE
         planned.push(
           makePlannedFile(targetDir, rootFile, srcPath, 'root'),
         )

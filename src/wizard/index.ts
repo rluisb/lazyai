@@ -14,11 +14,10 @@ import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
-import { scaffoldSpecs } from '../scaffold/specs.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
-import { scaffoldRootFiles } from '../scaffold/root-files.js'
+import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { appendOperation, writeStore } from '../store/index.js'
 import type { FeatureFlags, GitConventions, StoreData } from '../store/schema.js'
@@ -32,11 +31,11 @@ import type {
 } from '../types.js'
 import {
   ALL_AGENTS,
-  ALL_SPECS_DIRS,
   ALL_INFRA,
   ALL_PROMPTS,
   ALL_RULES,
   ALL_SKILLS,
+  ALL_SPECS_DIRS,
   ALL_TEMPLATES,
 } from '../types.js'
 import { fileExists, readFile, resolveLibraryDir } from '../utils/files.js'
@@ -112,7 +111,6 @@ export async function runWizard(opts: {
     disableFeatures?: string[]
     branchPattern?: string
     commitPattern?: string
-    useCompiledRoot?: boolean
   }
   targetDir: string
 }): Promise<void> {
@@ -176,9 +174,6 @@ export async function runWizard(opts: {
         ...(opts.cliOverrides.commitPattern != null ? { commitPattern: opts.cliOverrides.commitPattern } : {}),
       },
     })
-
-    // Determine whether to use compiled root files (with XML tags)
-    const useCompiledRoot = opts.cliOverrides.useCompiledRoot ?? true
 
     const userHomeDir = opts.homeDir ?? homedir()
     const effectiveTargetDir =
@@ -262,7 +257,6 @@ export async function runWizard(opts: {
       ...(planningRepoPath ? { planningRepoPath } : {}),
       ...(repos && repos.length > 0 ? { repos } : {}),
       ...(globalRef ? { globalRef } : {}),
-      useCompiledRoot,
       selections,
       interactive: opts.interactive,
       force: opts.force,
@@ -270,8 +264,8 @@ export async function runWizard(opts: {
 
     const plan = await computePlan(config, effectiveTargetDir, selections)
 
-    const plannedFiles = plan.map(file => {
-        const destPath = path.join(effectiveTargetDir, file.destPath)
+    const plannedFiles = plan.map((file) => {
+      const destPath = path.join(effectiveTargetDir, file.destPath)
 
       let srcContent = ''
       if (!file.isNew && file.srcPath) {
@@ -341,8 +335,8 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:mcp')
 
       await scaffoldTemplatesRules({
-          targetDir: effectiveTargetDir,
-          libraryDir,
+        targetDir: effectiveTargetDir,
+        libraryDir,
         templates: selections.templates,
         rules: selections.rules,
         fileRecords,
@@ -352,48 +346,34 @@ export async function runWizard(opts: {
       tracker.trackSuccess('scaffold:templates-rules')
 
       await scaffoldInfra({
-          targetDir: effectiveTargetDir,
-          libraryDir,
+        targetDir: effectiveTargetDir,
+        libraryDir,
         infra: selections.infra,
-          projectName: effectiveProjectName,
+        projectName: effectiveProjectName,
         fileRecords,
         strategy,
         perFileOverrides,
       })
       tracker.trackSuccess('scaffold:infra')
 
-      // Use compiled root files (with XML tags) or simple templates
-      if (useCompiledRoot) {
-        await scaffoldCompiledRoot({
-          targetDir: effectiveTargetDir,
-          libraryDir,
-          tools: installableTools,
-          projectName: effectiveProjectName,
-          planningDir,
-          features,
-          gitConventions,
-          fileRecords,
-          strategy,
-          perFileOverrides,
-        })
-        tracker.trackSuccess('scaffold:compiled-root')
-      } else {
-        await scaffoldRootFiles({
-          targetDir: effectiveTargetDir,
-          libraryDir,
-          tools: installableTools,
-          projectName: effectiveProjectName,
-          fileRecords,
-          strategy,
-          perFileOverrides,
-        })
-        tracker.trackSuccess('scaffold:root-files')
-      }
+      await scaffoldCompiledRoot({
+        targetDir: effectiveTargetDir,
+        libraryDir,
+        tools: installableTools,
+        projectName: effectiveProjectName,
+        planningDir,
+        features,
+        gitConventions,
+        fileRecords,
+        strategy,
+        perFileOverrides,
+      })
+      tracker.trackSuccess('scaffold:compiled-root')
 
       await scaffoldAgentsSkillsPrompts({
-          targetDir: effectiveTargetDir,
-          libraryDir,
-          tools: installableTools,
+        targetDir: effectiveTargetDir,
+        libraryDir,
+        tools: installableTools,
         agents: selections.agents,
         skills: selections.skills,
         prompts: selections.prompts,
@@ -481,7 +461,6 @@ export async function runWizard(opts: {
         ...(repos && repos.length > 0 ? { repos } : {}),
         ...(globalRef ? { globalRef } : {}),
         planningDir,
-        useCompiledRoot,
       },
       selections: {
         ...selections,

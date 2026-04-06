@@ -4,7 +4,7 @@
 
 ## AI Assistant Configuration
 
-This project uses OpenCode with ai-setup integration.
+{{TOOL_DESCRIPTION}}
 
 {{#if features.contextEngineering}}
 {{#include fragments/context-engineering.xml}}
@@ -45,6 +45,8 @@ This project uses OpenCode with ai-setup integration.
 {{#if features.bugResolution}}
 {{#include fragments/bug-resolution.xml}}
 {{/if}}
+
+{{TOOL_NOTES}}
 
 ## Project-Specific Instructions
 

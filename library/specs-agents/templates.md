@@ -19,17 +19,19 @@ These templates define the structure for project documents. They are NOT example
 
 | Template | Used For | Output Location |
 |----------|---------|----------------|
-| prd-template.md | Product requirements (WHAT/WHY) | specs/features/NNN-*/prd.md |
-| techspec-template.md | Technical specification (HOW) | specs/features/NNN-*/techspec.md |
-| tasks-template.md | Ordered task list with phases | specs/features/NNN-*/tasks/tasks.md |
-| task-template.md | Individual task files | specs/features/NNN-*/tasks/NNN-*.md |
-| adr-template.md | Architecture decision records | specs/adrs/NNN-*.md |
+| plan-template.md | Main plan document for features and refactors | specs/features/NNN-*/plan.md |
+| spec-template.md | Detailed specification for complex changes | specs/features/NNN-*/spec.md |
+| checklist-template.md | Verification criteria and release checks | specs/features/NNN-*/checklists/requirements.md |
+| task.md | Individual task files | specs/features/NNN-*/tasks/NNN-*.md |
+| adr.md | Architecture decision records | specs/adrs/NNN-*.md |
 | tech-debt-template.md | Technical debt assessment | specs/tech-debt/NNN-*/techspec.md |
-| standard-template.md | Project coding standards | specs/standards/[pattern-name].md |
-| progress-template.md | Feature trace log | specs/features/NNN-*/progress.md |
+| bugfix-rca-template.md | Bugfix root cause analysis | specs/bugfixes/NNN-*/techspec.md |
+| standard.md | Project standards | specs/standards/[pattern-name].md |
+| code-review-template.md | Structured review notes | specs/reviews/[topic].md |
+| postmortem-template.md | Incident or failure retrospectives | specs/postmortems/[topic].md |
 
 ## Self-Improvement
 When a new template is created or existing one updated:
 - Update the inventory table above
-- If the template adds a new document type → update specs/features/AGENTS.md workflow
+- If the template adds a new document type → update specs workflow guidance
 - If the template changes output location → update all AGENTS.md files that reference it

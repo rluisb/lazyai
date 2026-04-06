@@ -14,38 +14,36 @@ AI coding agents assist developers with research, planning, code generation, rev
 No AI-generated code reaches production without human review at multiple gates:
 
 ```
-Research ──GATE──▶ PRD ──GATE──▶ TechSpec ──GATE──▶ Tasks ──GATE──▶ Code ──GATE──▶ Review ──GATE──▶ Merge
-           │              │              │               │            │              │
-       Human reviews  Human approves  Human approves  Human approves  Human reviews  Human merges
-       accuracy       scope           architecture    plan            code quality   to main
+Research ──GATE──▶ Plan ──GATE──▶ Spec (optional) ──GATE──▶ Tasks ──GATE──▶ Code ──GATE──▶ Review ──GATE──▶ Merge
+           │               │                   │                 │            │              │
+       Human reviews   Human approves     Human approves     Human approves  Human reviews  Human merges
+       accuracy        scope/approach     detailed contract  task scope      code quality   to main
 ```
 
 ## Audit Trail
 
-Every feature, bugfix, refactor, and tech debt item produces a `progress.md` file that records:
+Every feature, bugfix, refactor, and tech debt item produces a version-controlled paper trail that records:
 
 - **Which AI agent** performed each step (Scout, Planner, Builder, Reviewer, Red-Team)
 - **What context** the agent was given (files loaded)
 - **What files** were read and changed
 - **What decisions** were made
 - **What the human approved** at each gate
-- **Timestamps** for every entry
+- **What remains** in tasks, checklists, and handoffs
 
-**Location:** `specs/features/NNN-*/progress.md` (or bugfixes/, refactors/, tech-debt/)
+**Location:** `specs/{type}/NNN-*/research.md`, `plan.md`, optional `spec.md`, `tasks/`, `checklists/`, and `specs/memory/handoffs/`
 
 ## How to Read the Audit Trail
 
-Each entry in progress.md follows this format:
+Use these artifacts together:
 
 ```
-### [YYYY-MM-DD HH:MM] — [Step Name] ([Agent Name])
-- Agent: [which AI agent role]
-- Session: new (clean context, no carryover from previous work)
-- Context loaded: [exactly which files the AI read]
-- Files changed: [exactly which files were modified]
-- Output: [what artifact was produced]
-- Decisions: [what choices were made]
-- Status: ✅ Complete (human approved)
+research.md     → what was investigated and what evidence was found
+plan.md         → what was approved and why
+spec.md         → detailed contract for complex work
+tasks/*.md      → execution slices and acceptance criteria
+checklists/*.md → verification status
+handoffs/*.md   → session-level status, decisions, and next actions
 ```
 
 ## Safeguards

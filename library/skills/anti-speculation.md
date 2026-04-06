@@ -7,13 +7,7 @@ phase: implement
 
 # Anti-Speculation
 
-## Purpose
-
 Detect and prevent speculative implementation — code that goes beyond what the spec or task requires. This is the enforcement arm of the YAGNI principle.
-
-## When Active
-
-Loaded during implementation and review workflows. Runs continuously — not triggered once.
 
 ## The 5 Speculation Patterns
 
@@ -96,4 +90,4 @@ Options:
 - **Builder agent**: Runs YAGNI checkpoint before writing production code
 - **Reviewer agent**: Runs detection heuristics during code review
 - **Planner agent**: References this skill when scoping tasks
-- **Workflow rule**: Cross-references anti-speculation for Purpose Gate enforcement
+- **Workflow rule**: Cross-references anti-speculation for scope enforcement

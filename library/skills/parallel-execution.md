@@ -3,6 +3,7 @@ name: parallel-execution
 description: Execute independent sub-tasks concurrently.
 trigger: /parallel-execution
 phase: implement
+preset: full
 ---
 
 # Parallel Execution

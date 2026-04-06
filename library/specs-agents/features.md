@@ -1,79 +1,72 @@
 <rule>
   <scope>auto</scope>
-  <globs>specs/features/**</globs>
-  <description>Feature workflow — RPI flow with PRD, TechSpec, Tasks, and observability</description>
+  <globs>specs/features/**,specs/bugfixes/**,specs/refactors/**,specs/tech-debt/**</globs>
+  <description>Unified workflow rules for all work types</description>
 </rule>
 
-# Feature Workflow Rules
+# Workflow Rules
+
+## Work Types
+
+| Type | Flow | plan.md? | spec.md? | ADR? | Task Threshold |
+|------|------|----------|----------|------|---------------|
+| **Feature** | Full RPI | Yes | Optional (complex) | If applicable | Always |
+| **Bugfix** | Shortened | Yes (brief) | No | Rarely | >20 lines only |
+| **Refactor** | Full RPI | Yes | Yes (always) | **Always** | Always |
+| **Tech Debt** | Shortened | Yes (brief) | No | If applicable | >20 lines only |
 
 ## Directory Structure
 
-Each feature gets a numbered directory:
+All work items follow: `specs/{type}/NNN-name/`
+
 ```
-specs/features/NNN-feature-name/
-├── research.md          ← R phase (Scout)
-├── prd.md               ← P step 1 (Planner)
-├── techspec.md          ← P step 2 (Planner)
-├── tasks/
-│   ├── tasks.md         ← P step 3 (Planner)
-│   ├── 001-name.md      ← P step 4 (Planner)
-│   ├── 002-name.md
-│   └── 003-name.md
-└── progress.md          ← Trace log (all agents)
+specs/{type}/NNN-name/
+├── research.md              ← R phase (Scout)
+├── plan.md                  ← P phase (Planner) — replaces prd + techspec
+├── spec.md                  ← Detailed spec (optional, complex features/refactors)
+├── checklists/
+│   └── requirements.md      ← Verification criteria
+├── quickstart.md            ← Team onboarding (optional)
+└── tasks/
+    ├── 001-name.md
+    └── 002-name.md
 ```
 
-## RPI Flow
+## RPI Flow (all types)
 
-1. **Research** (Scout) — map what exists → research.md
+1. **Research** (Scout) — map what exists
    - ⛔ HUMAN GATE: approve before planning
-2. **PRD** (Planner) — define WHAT/WHY → prd.md
-   - Ask clarifying questions FIRST. Never skip.
-   - ⛔ HUMAN GATE: approve before techspec
-3. **TechSpec** (Planner) — define HOW → techspec.md
-   - Pass simplicity gate. Explore ≥2 approaches. Reference standards.
-   - Create ADR if non-obvious decision made.
-   - ⛔ HUMAN GATE: approve before tasks
-4. **Tasks** (Planner) — ordered breakdown → tasks/tasks.md
-   - Show HIGH-LEVEL list FIRST → human approves → then generate task files
-   - ⛔ HUMAN GATE: approve task list
-5. **Task Breakdown** (Planner) — individual files → tasks/NNN-*.md
-   - ⛔ HUMAN GATE: review task files
-6. **Implement** (Builder) — one task per session → code
-   - Follow task file. Check boxes. Run tests. Update progress.md.
+2. **Plan** (Planner) — define approach
+   - Bugfixes/tech-debt: shortened plan (root cause + fix)
+   - Features/refactors: full plan with phases
+   - ⛔ HUMAN GATE: approve before implementing
+3. **Implement** (Builder) — one task per session
+   - Follow task file. Run tests. Update progress.
    - ⛔ CHECKPOINT after each task
 
-## Observability — MANDATORY
+## Type-Specific Rules
 
-After completing ANY step, the agent MUST append to progress.md:
+### Features
+- YAGNI: build only what's needed for the current phase
+- MVP first: complete and validate before starting the next phase
 
-```
-### [YYYY-MM-DD HH:MM] — [Step] ([Agent])
-- Agent: [name]
-- Session: new | continued
-- Context loaded: [files]
-- Files read: [count, paths]
-- Files changed: [paths — or "N/A"]
-- Output: [artifact]
-- Decisions: [choices — or "None"]
-- Status: ✅ Complete | ⏳ In Progress | 🚫 Blocked
-```
+### Bugfixes
+- Fix the bug, nothing else. No drive-by refactors.
+- Always add a regression test.
 
-This is NOT optional. Every step updates progress.md.
+### Refactors
+- ADR is MANDATORY — capture why the architecture changed
+- Must be phased. No big-bang rewrites.
+- Each phase leaves the codebase working.
 
-## Principles
-- YAGNI: build only what P1 needs
-- Simplest thing that works
-- Respect existing patterns (check specs/standards/)
-- One task = one session = clean context
-- MVP first: P1 complete and validated before P2 starts
+### Tech Debt
+- Prioritize by risk impact, not annoyance.
+- Always add tests that would have caught the debt earlier.
 
 ## Self-Improvement — After Every Step
 
-Before ending any session within a feature, run the Impact Check from root AGENTS.md.
-
-Additionally for features:
-- New pattern introduced? → Flag for specs/standards/ update
-- ADR created during TechSpec? → Verify it's linked in progress.md AND KNOWLEDGE_MAP.md
+Run the Impact Check from root AGENTS.md. Additionally:
+- New pattern? → Flag for specs/standards/ update
+- Bug revealed missing rule? → Flag for specs/rules/ update
+- ADR created? → Verify linked in KNOWLEDGE_MAP.md
 - Feature completed? → Update KNOWLEDGE_MAP.md status
-- New test type created? → Check if specs/standards/testing/ needs a new standard
-- New module created? → Update root AGENTS.md codebase map

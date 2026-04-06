@@ -19,12 +19,11 @@ This directory contains workflow skills that guide execution quality. Skills are
 | anti-speculation | Prevent assumptions and require evidence for claims | Ambiguity appears, undocumented behavior inferred | Cross-cutting guardrail |
 | tdd-loop | Drive changes through fail → pass → refactor cycles | Behavioral changes, bug fixes, regression prevention | During implement + iterate |
 | memory-write | Capture decisions, rationale, and reusable context | Implementation accepted, notable tradeoff made | 5 |
-| lessons-learned | Distill improvements for future execution | Task wrap-up, recurring friction detected | 6 |
-| parallel-execution | Coordinate independent tracks safely and efficiently | Multiple non-blocking tasks identified | Optional accelerator |
+| parallel-execution | Coordinate independent tracks safely and efficiently | Multiple non-blocking tasks identified | Optional accelerator (Full preset only) |
 
 ## Mandatory Skill Chain
 
-`research → plan → implement → iterate → memory-write → lessons-learned → task closed`
+`research → plan → implement → iterate → memory-write → task closed`
 
 Use this chain as the default operating sequence. Deviations are allowed only when a step is clearly not applicable and the reason is explicit.
 
@@ -48,7 +47,7 @@ Use this chain as the default operating sequence. Deviations are allowed only wh
 
 - Every transition should include what was learned, what remains, and what is next.
 - If blocked, return to the previous chain step rather than guessing forward.
-- Close tasks only after memory-write and lessons-learned are complete.
+- Close tasks only after memory-write is complete.
 
 ## Self-Improvement
 

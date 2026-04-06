@@ -32,6 +32,7 @@ export function createProgram(): Command {
     .description('AI development environment scaffold — one command to set up your AI tools')
     .version(getVersion())
     .option('-v, --verbose', 'Enable verbose debug output')
+    .addHelpText('after', '\nGlobal flags:\n  -v, --verbose           Enable verbose debug output')
     .hook('preAction', (thisCommand) => {
       if (thisCommand.opts().verbose) {
         process.env.AI_SETUP_DEBUG = '1'

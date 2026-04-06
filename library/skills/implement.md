@@ -1,71 +1,27 @@
 ---
 name: implement
-description: Execute one approved plan phase with TDD discipline.
 trigger: /implement
 phase: implement
 ---
 
 # Implement Skill
 
-**Command:** `/implement [plan-file] [phase]`
-**Goal:** Execute one plan phase using TDD and disciplined progress updates.
-
----
-
 ## Workflow
+1. Read task — confirm scope, acceptance criteria, and constraints
+2. Write failing tests first — one behavior at a time
+3. Implement minimum change to pass tests
+4. Refactor safely — no behavior changes
+5. Run quality gates — lint, typecheck, test, build. Fix before continuing.
+6. Update progress — mark task complete, record outcomes
 
-1. **Read Plan Phase**
-   - Confirm target tasks, scope boundaries, and acceptance criteria.
-2. **Write Failing Tests First**
-   - Add or update focused tests for one task at a time.
-3. **Implement Minimum Change**
-   - Write the smallest production code needed to pass tests.
-4. **Refactor Safely**
-   - Improve clarity and maintainability without changing behavior.
-5. **Run Quality Gates**
-   - Execute required checks and fix regressions before continuing.
-6. **Update Progress**
-   - Mark task status, record outcomes, and note follow-ups.
-
-## Principles
-
-- Small commits
-- One task at a time
-- Checkpoint after each task
-
-## Trace Protocol (ReAct, complex tasks only)
-
-For multi-step or risky work, keep a concise trace:
-
-1. **Thought:** key implementation consideration
-2. **Action:** test/edit/command executed
-3. **Observation:** concrete outcome
-4. **Decision:** continue, revise, or escalate
-
-Skip this for trivial, direct edits.
-
-## Output Format
-
-```markdown
-## Implementation Run: [Plan File] — [Phase]
-
-### Task Status
-- [task ID]: [in progress | done | blocked]
-
-### Test Cycle
-- Added failing test: [test name]
-- Implementation change: [file + summary]
-- Result: [green/red]
-
-### Quality Gates
-- [command]: [pass/fail]
-
-### Notes
-- [risks, follow-ups, or handoff items]
-```
+## Trace Protocol (complex implementations only)
+1. **Thought**: key consideration for this step
+2. **Action**: test write / code edit / command run
+3. **Observation**: concrete outcome
+4. **Decision**: continue / revise / escalate
 
 ## Integration
-- **Primary agent:** Implementor (execution phase)
-- **Triggered by:** `/implement` command after an approved plan phase
-- **Depends on:** Phase tasks, acceptance criteria, and current code/test state
-- **Feeds into:** `iterate` for failures or `memory-write` after a green run
+- Agent: Builder
+- Requires: plan output (plan.md + tasks/)
+- On failure feeds into: `iterate` skill
+- On success feeds into: `memory-write` skill (if lessons learned)

@@ -1,59 +1,72 @@
 <rule>
   <scope>auto</scope>
-  <globs>specs/tech-debt/**</globs>
-  <description>Tech debt workflow — planned risk reduction, no PRD needed</description>
+  <globs>specs/features/**,specs/bugfixes/**,specs/refactors/**,specs/tech-debt/**</globs>
+  <description>Unified workflow rules for all work types</description>
 </rule>
 
-# Tech Debt Workflow Rules
+# Workflow Rules
+
+## Work Types
+
+| Type | Flow | plan.md? | spec.md? | ADR? | Task Threshold |
+|------|------|----------|----------|------|---------------|
+| **Feature** | Full RPI | Yes | Optional (complex) | If applicable | Always |
+| **Bugfix** | Shortened | Yes (brief) | No | Rarely | >20 lines only |
+| **Refactor** | Full RPI | Yes | Yes (always) | **Always** | Always |
+| **Tech Debt** | Shortened | Yes (brief) | No | If applicable | >20 lines only |
 
 ## Directory Structure
 
+All work items follow: `specs/{type}/NNN-name/`
+
 ```
-specs/tech-debt/NNN-debt-name/
-├── research.md          ← Assess the debt (Scout)
-├── techspec.md          ← Fix approach using tech-debt-template (Planner)
-├── tasks/               ← Only if fix is >20 lines
-│   ├── tasks.md
-│   └── NNN-name.md
-└── progress.md          ← Trace log
+specs/{type}/NNN-name/
+├── research.md              ← R phase (Scout)
+├── plan.md                  ← P phase (Planner) — replaces prd + techspec
+├── spec.md                  ← Detailed spec (optional, complex features/refactors)
+├── checklists/
+│   └── requirements.md      ← Verification criteria
+├── quickstart.md            ← Team onboarding (optional)
+└── tasks/
+    ├── 001-name.md
+    └── 002-name.md
 ```
 
-## Flow
+## RPI Flow (all types)
 
-1. **Research** (Scout) — assess the debt, map affected code, measure impact → research.md
-   - ⛔ HUMAN GATE: confirm priority and scope
-2. **TechSpec** (Planner) — fix approach using tech-debt-template → techspec.md
-   - **No PRD needed** — tech debt is technical, not a product requirement
-   - Pass simplicity gate. Prefer incremental fix.
-   - ADR if the fix changes architecture.
-   - ⛔ HUMAN GATE: approve fix approach
-3. **Tasks** — if fix is >20 lines or >3 files
-4. **Implement** (Builder) — fix incrementally, add tests
+1. **Research** (Scout) — map what exists
+   - ⛔ HUMAN GATE: approve before planning
+2. **Plan** (Planner) — define approach
+   - Bugfixes/tech-debt: shortened plan (root cause + fix)
+   - Features/refactors: full plan with phases
+   - ⛔ HUMAN GATE: approve before implementing
+3. **Implement** (Builder) — one task per session
+   - Follow task file. Run tests. Update progress.
+   - ⛔ CHECKPOINT after each task
 
-## How Tech Debt Differs
+## Type-Specific Rules
 
-| | Feature | Bugfix | Refactor | Tech Debt |
-|---|---|---|---|---|
-| **Urgency** | Planned | Urgent | Planned | Planned |
-| **PRD needed** | Yes | No | Yes | No |
-| **ADR needed** | If applicable | Rarely | Always | If applicable |
-| **Goal** | Add value | Fix broken | Change structure | Reduce risk |
-| **Approach** | Full RPI | Shortened | Full RPI + ADR | Shortened |
+### Features
+- YAGNI: build only what's needed for the current phase
+- MVP first: complete and validate before starting the next phase
 
-## Principles
-- Tech debt is about RISK, not annoyance. Prioritize by impact.
-- Prefer incremental fixes. Never big-bang.
+### Bugfixes
+- Fix the bug, nothing else. No drive-by refactors.
+- Always add a regression test.
+
+### Refactors
+- ADR is MANDATORY — capture why the architecture changed
+- Must be phased. No big-bang rewrites.
+- Each phase leaves the codebase working.
+
+### Tech Debt
+- Prioritize by risk impact, not annoyance.
 - Always add tests that would have caught the debt earlier.
-- If debt reveals a missing rule → add the rule via PR.
-- If debt reveals a missing standard → document the pattern after fixing.
 
-## Self-Improvement — After Every Tech Debt Resolution
+## Self-Improvement — After Every Step
 
-Before ending the session, run the Impact Check from root AGENTS.md.
-
-Additionally for tech debt:
-- Debt caused by missing standard? → Create the standard now
-- Debt caused by missing rule? → Add the rule now
-- Dependency upgraded? → Update root AGENTS.md stack + any affected standards
-- Fix introduced a better pattern? → Update specs/standards/ to reflect it
-- Write a memory note to specs/memory/ explaining what caused the debt and how to prevent recurrence
+Run the Impact Check from root AGENTS.md. Additionally:
+- New pattern? → Flag for specs/standards/ update
+- Bug revealed missing rule? → Flag for specs/rules/ update
+- ADR created? → Verify linked in KNOWLEDGE_MAP.md
+- Feature completed? → Update KNOWLEDGE_MAP.md status

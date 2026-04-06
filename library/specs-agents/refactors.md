@@ -1,63 +1,72 @@
 <rule>
   <scope>auto</scope>
-  <globs>specs/refactors/**</globs>
-  <description>Refactor workflow — full RPI flow, ADR mandatory</description>
+  <globs>specs/features/**,specs/bugfixes/**,specs/refactors/**,specs/tech-debt/**</globs>
+  <description>Unified workflow rules for all work types</description>
 </rule>
 
-# Refactor Workflow Rules
+# Workflow Rules
+
+## Work Types
+
+| Type | Flow | plan.md? | spec.md? | ADR? | Task Threshold |
+|------|------|----------|----------|------|---------------|
+| **Feature** | Full RPI | Yes | Optional (complex) | If applicable | Always |
+| **Bugfix** | Shortened | Yes (brief) | No | Rarely | >20 lines only |
+| **Refactor** | Full RPI | Yes | Yes (always) | **Always** | Always |
+| **Tech Debt** | Shortened | Yes (brief) | No | If applicable | >20 lines only |
 
 ## Directory Structure
 
+All work items follow: `specs/{type}/NNN-name/`
+
 ```
-specs/refactors/NNN-refactor-name/
-├── research.md          ← Map current state (Scout)
-├── prd.md               ← Why refactor, goals, scope (Planner)
-├── techspec.md          ← New design + migration path (Planner)
-├── tasks/
-│   ├── tasks.md
-│   └── NNN-name.md
-└── progress.md          ← Trace log
+specs/{type}/NNN-name/
+├── research.md              ← R phase (Scout)
+├── plan.md                  ← P phase (Planner) — replaces prd + techspec
+├── spec.md                  ← Detailed spec (optional, complex features/refactors)
+├── checklists/
+│   └── requirements.md      ← Verification criteria
+├── quickstart.md            ← Team onboarding (optional)
+└── tasks/
+    ├── 001-name.md
+    └── 002-name.md
 ```
 
-## Full Flow (same as features, plus ADR)
+## RPI Flow (all types)
 
-1. **Research** — map current state of code being refactored
-2. **PRD** — why this refactor, what's the goal, what's the scope
-3. **TechSpec** — new design, migration path, rollback plan
-   - **ADR is MANDATORY** — capture the architectural decision in specs/adrs/
-4. **Tasks** — phased approach. Never big-bang refactors.
-5. **Implement** — one phase at a time. Tests pass after each phase.
+1. **Research** (Scout) — map what exists
+   - ⛔ HUMAN GATE: approve before planning
+2. **Plan** (Planner) — define approach
+   - Bugfixes/tech-debt: shortened plan (root cause + fix)
+   - Features/refactors: full plan with phases
+   - ⛔ HUMAN GATE: approve before implementing
+3. **Implement** (Builder) — one task per session
+   - Follow task file. Run tests. Update progress.
+   - ⛔ CHECKPOINT after each task
 
-## Principles
-- Refactors MUST be phased. No "rewrite everything in one go."
-- Each phase must leave the codebase in a working state.
-- ADR captures WHY we changed the architecture.
-- If the refactor introduces a new pattern → update specs/standards/.
-- Keep existing tests passing at every step. Add new tests for new patterns.
+## Type-Specific Rules
 
-## Decision-Making Protocol (Required for structural refactors)
+### Features
+- YAGNI: build only what's needed for the current phase
+- MVP first: complete and validate before starting the next phase
 
-Before committing to a refactor direction:
+### Bugfixes
+- Fix the bug, nothing else. No drive-by refactors.
+- Always add a regression test.
 
-1. Generate **2+ viable alternatives**.
-2. Evaluate each option using:
-   - complexity
-   - consistency with current code patterns
-   - reversibility / rollback safety
-   - performance impact
-   - team familiarity
-3. Choose one path and state why it is preferred now.
-4. Record tradeoffs and what risk is accepted by rejecting other options.
+### Refactors
+- ADR is MANDATORY — capture why the architecture changed
+- Must be phased. No big-bang rewrites.
+- Each phase leaves the codebase working.
 
-If the decision changes architecture or boundaries, capture it in an ADR.
+### Tech Debt
+- Prioritize by risk impact, not annoyance.
+- Always add tests that would have caught the debt earlier.
 
-## Self-Improvement — After Every Refactor
+## Self-Improvement — After Every Step
 
-Before ending the session, run the Impact Check from root AGENTS.md.
-
-Refactors are the HIGHEST impact on project knowledge. Additionally:
-- Module structure changed? → Update root AGENTS.md codebase map immediately
-- Code patterns changed? → Update ALL affected specs/standards/ files
-- Old pattern replaced? → Update standards to show new pattern, mark old as deprecated
-- ADR is MANDATORY → verify it exists and is linked in KNOWLEDGE_MAP.md
-- Cross-module boundaries changed? → Update specs/standards/architecture/
+Run the Impact Check from root AGENTS.md. Additionally:
+- New pattern? → Flag for specs/standards/ update
+- Bug revealed missing rule? → Flag for specs/rules/ update
+- ADR created? → Verify linked in KNOWLEDGE_MAP.md
+- Feature completed? → Update KNOWLEDGE_MAP.md status

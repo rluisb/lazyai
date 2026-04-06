@@ -53,24 +53,26 @@ Default to repository conventions before introducing new patterns.
 
 ### Writing code for a feature
 - Read: `specs/features/NNN-*/tasks/NNN-current-task.md` (your task)
-- Read: `specs/features/NNN-*/techspec.md` (architecture)
+- Read: `specs/features/NNN-*/plan.md` (approach)
+- Read: `specs/features/NNN-*/spec.md` when it exists (detailed contract)
 - Read: `specs/standards/` relevant pattern file
 - Read: `specs/rules/code-style.md`
-- Do NOT read: PRD, research, ADRs (Builder follows the plan, doesn't re-evaluate it)
+- Do NOT read: research or ADRs unless the task explicitly requires them
 
 ### Researching a topic
 - Read: `specs/KNOWLEDGE_MAP.md` (orientation)
 - Read: `specs/standards/` (existing patterns to be aware of)
 - Do NOT read: any feature/bugfix/refactor artifacts (avoid bias — discover, don't confirm)
 
-### Writing a PRD
+### Writing a plan
 - Read: `specs/features/NNN-*/research.md`
-- Read: `specs/templates/prd-template.md`
-- Do NOT read: `specs/standards/` (PRD is WHAT/WHY, not HOW)
+- Read: `specs/templates/plan-template.md`
+- Read: `specs/standards/` relevant patterns
+- Read: `specs/rules/` relevant rules
 
-### Writing a TechSpec
-- Read: `specs/features/NNN-*/research.md` + `prd.md`
-- Read: `specs/templates/techspec-template.md`
+### Writing a detailed spec
+- Read: `specs/features/NNN-*/research.md` + `plan.md`
+- Read: `specs/templates/spec-template.md`
 - Read: `specs/standards/` relevant patterns
 - Read: `specs/rules/` relevant rules
 - Read: `specs/adrs/` related past decisions
@@ -92,7 +94,7 @@ Default to repository conventions before introducing new patterns.
 - Read: `specs/standards/` relevant pattern
 
 ### Handling tech debt
-- Read: `specs/tech-debt/NNN-*/techspec.md`
+- Read: `specs/tech-debt/NNN-*/plan.md`
 - Read: `specs/adrs/` related decisions
 - Read: `specs/standards/` relevant pattern
 

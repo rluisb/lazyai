@@ -21,7 +21,6 @@ export const skillIdSchema = z.enum([
   'anti-speculation',
   'implement',
   'iterate',
-  'lessons-learned',
   'memory-write',
   'parallel-execution',
   'plan',
@@ -32,15 +31,14 @@ export const promptIdSchema = z.enum(['compact', 'implement', 'local-example', '
 export const templateIdSchema = z.enum([
   'adr',
   'bugfix-rca-template',
+  'checklist-template',
   'code-review-template',
+  'plan-template',
   'postmortem-template',
-  'prd-template',
-  'progress',
+  'spec-template',
   'standard',
   'task',
-  'tasks-template',
   'tech-debt-template',
-  'techspec-template',
 ])
 export const ruleIdSchema = z.enum(['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'tool-use', 'workflow'])
 export const infraIdSchema = z.enum(['pre-commit', 'compliance', 'KNOWLEDGE_MAP', 'codeowners'])

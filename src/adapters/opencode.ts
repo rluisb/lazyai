@@ -1,6 +1,6 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
-import { stripYamlFrontmatter } from '../utils/frontmatter.js'
+import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
 import { copyLibraryDirectory, installToolContextFiles } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
@@ -26,7 +26,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       selectionKey: 'agents',
       toDestPath: (file) => path.join(ocDir, 'agents', file),
       warnOnSkip: true,
-      transform: stripYamlFrontmatter,
+      transform: stripFrontmatterAndInjectModel,
     })
 
     await copyLibraryDirectory({

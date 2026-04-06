@@ -15,11 +15,11 @@ export interface ScaffoldTemplatesRulesOptions {
 
 export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions): Promise<void> {
   const { targetDir, libraryDir, templates, rules, fileRecords, strategy, perFileOverrides } = opts
-  const docsDir = path.join(targetDir, 'docs')
+  const specsDir = path.join(targetDir, 'specs')
 
   // Copy selected templates
   if (templates.length > 0) {
-    const templatesDir = path.join(docsDir, 'templates')
+    const templatesDir = path.join(specsDir, 'templates')
     files.ensureDir(templatesDir)
 
     for (const templateId of templates) {
@@ -31,7 +31,7 @@ export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions
 
   // Copy selected rules
   if (rules.length > 0) {
-    const rulesDir = path.join(docsDir, 'rules')
+    const rulesDir = path.join(specsDir, 'rules')
     files.ensureDir(rulesDir)
 
     for (const ruleId of rules) {
@@ -44,7 +44,7 @@ export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions
   // Always copy prompts/local-examples directory
   await copyLibraryDir(
     path.join(libraryDir, 'prompts/local-examples'),
-    path.join(docsDir, 'prompts/local-examples'),
+    path.join(specsDir, 'prompts/local-examples'),
     fileRecords,
     targetDir,
     libraryDir,

@@ -31,8 +31,8 @@ export async function runPhase4(opts: {
   // Category display names
   const categoryNames: Record<string, string> = {
     constitution: 'Constitution files',
-    docs: 'Documentation dirs',
-    'docs-agents': 'Docs AGENTS.md files',
+    specs: 'Specs dirs',
+    'specs-agents': 'Specs AGENTS.md files',
     templates: 'Templates',
     rules: 'Rules',
     infra: 'Infrastructure',

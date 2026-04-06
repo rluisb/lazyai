@@ -1,6 +1,6 @@
 <template>
   <name>Tasks — Implementation Task List</name>
-  <output>docs/features/NNN-feature-name/tasks/tasks.md</output>
+  <output>specs/features/NNN-feature-name/tasks/tasks.md</output>
   <input>PRD + TechSpec</input>
   <phase>Plan — Step 3</phase>
 </template>
@@ -59,7 +59,7 @@ Phase 3 (Sequential):     T007 → T008 → T009
 ## Phase 2: [User Story 1 Title] (P1) ⭐ MVP
 
 **Goal:** [what this delivers — independently testable]
-**Standards:** [docs/standards files to follow]
+**Standards:** [specs/standards files to follow]
 
 - [ ] T004 [US-1] [description] — [path]
 - [ ] T005 [P] [US-1] [description] — [path]
@@ -73,7 +73,7 @@ Phase 3 (Sequential):     T007 → T008 → T009
 ## Phase 3: [User Story 2 Title] (P2)
 
 **Goal:** [what this delivers]
-**Standards:** [docs/standards files to follow]
+**Standards:** [specs/standards files to follow]
 
 - [ ] T008 [US-2] [description] — [path]
 - [ ] T009 [P] [US-2] [description] — [path]
@@ -87,7 +87,7 @@ Phase 3 (Sequential):     T007 → T008 → T009
 
 **Goal:** Cross-cutting. Only after all target user stories pass.
 
-- [ ] TNNN [P] Documentation updates — docs/
+- [ ] TNNN [P] Documentation updates — specs/
 - [ ] TNNN Code cleanup — [paths]
 - [ ] TNNN Run full test suite and fix regressions
 
@@ -101,7 +101,7 @@ Phase 3 (Sequential):     T007 → T008 → T009
 4. **[P] tasks can run in parallel** by different agents or in separate sessions.
 5. **Sequential tasks MUST wait.** Don't start T005 if T004 isn't done.
 6. **If blocked:** mark `[BLOCKED: reason]`, move to next unblocked task.
-7. **Follow project standards.** Every task references docs/standards/ patterns.
+7. **Follow project standards.** Every task references specs/standards/ patterns.
 8. **Update progress.md** after completing each task.
 
 ---

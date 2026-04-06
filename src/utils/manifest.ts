@@ -67,12 +67,12 @@ export function extractSelections(manifest: ManifestWithFeatures): Partial<Wizar
   const selections: Partial<WizardSelections> = {}
   const files = manifest.files.map(f => f.path)
 
-  // Templates: look for docs/templates/<name>.md
-  const templates = ALL_TEMPLATES.filter(t => files.some(f => f === `docs/templates/${t}.md`))
+  // Templates: look for specs/templates/<name>.md
+  const templates = ALL_TEMPLATES.filter(t => files.some(f => f === `specs/templates/${t}.md`))
   if (templates.length > 0) selections.templates = templates
 
-  // Rules: look for docs/rules/<name>.md
-  const rules = ALL_RULES.filter(r => files.some(f => f === `docs/rules/${r}.md`))
+  // Rules: look for specs/rules/<name>.md
+  const rules = ALL_RULES.filter(r => files.some(f => f === `specs/rules/${r}.md`))
   if (rules.length > 0) selections.rules = rules
 
   // Agents: look for agent files in any adapter dir pattern

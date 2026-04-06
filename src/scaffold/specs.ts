@@ -3,56 +3,56 @@ import type { ConflictStrategy, FileRecord, SetupScope } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
 import { copyFile, ensureDir, fileExists, fileHash } from '../utils/files.js'
 
-export interface ScaffoldDocsOptions {
+export interface ScaffoldSpecsOptions {
   targetDir: string
   setupScope?: SetupScope
   libraryDir: string
-  docsDirs: string[]
-  docsAgents: string[]
+  specsDirs: string[]
+  specsAgents: string[]
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
 }
 
 /**
- * Creates docs directory structure and copies AGENTS.md files.
+ * Creates specs directory structure and copies AGENTS.md files.
  *
  * Behavior:
- * - For each dir in `docsDirs`: create `docs/<dir>/`
- * - Special case: `memory` also creates `docs/memory/handoffs/`
- * - For each dir in `docsAgents` (must be subset of docsDirs):
- *   copy `library/docs-agents/<dir>.md` → `docs/<dir>/AGENTS.md`
+ * - For each dir in `specsDirs`: create `specs/<dir>/`
+ * - Special case: `memory` also creates `specs/memory/handoffs/`
+ * - For each dir in `specsAgents` (must be subset of specsDirs):
+ *   copy `library/specs-agents/<dir>.md` → `specs/<dir>/AGENTS.md`
  * - Record each copied AGENTS.md in `fileRecords`
- * - If `docsDirs` is empty, create no directories
+ * - If `specsDirs` is empty, create no directories
  */
-export async function scaffoldDocs(opts: ScaffoldDocsOptions): Promise<void> {
-  const { targetDir, setupScope, libraryDir, docsDirs, docsAgents, fileRecords, strategy, perFileOverrides } = opts
+export async function scaffoldSpecs(opts: ScaffoldSpecsOptions): Promise<void> {
+  const { targetDir, setupScope, libraryDir, specsDirs, specsAgents, fileRecords, strategy, perFileOverrides } = opts
 
-  // Create docs root
-  const docsDir = path.join(targetDir, 'docs')
+  // Create specs root
+  const specsDir = path.join(targetDir, 'specs')
 
-  // 1. Create selected docs directories
-  if (docsDirs.length > 0) {
-    for (const dir of docsDirs) {
-      ensureDir(path.join(docsDir, dir))
+  // 1. Create selected specs directories
+  if (specsDirs.length > 0) {
+    for (const dir of specsDirs) {
+      ensureDir(path.join(specsDir, dir))
 
       // Special case: memory also needs handoffs subdirectory
       if (dir === 'memory') {
         if (setupScope === 'workspace') {
-          ensureDir(path.join(docsDir, 'memory', 'decisions'))
-          ensureDir(path.join(docsDir, 'memory', 'patterns'))
-          ensureDir(path.join(docsDir, 'memory', 'projects'))
+          ensureDir(path.join(specsDir, 'memory', 'decisions'))
+          ensureDir(path.join(specsDir, 'memory', 'patterns'))
+          ensureDir(path.join(specsDir, 'memory', 'projects'))
         }
 
-        ensureDir(path.join(docsDir, 'memory', 'handoffs'))
+        ensureDir(path.join(specsDir, 'memory', 'handoffs'))
       }
     }
   }
 
-  // 2. Copy AGENTS.md files for selected docs directories
-  for (const dir of docsAgents) {
-    const src = path.join(libraryDir, 'docs-agents', `${dir}.md`)
-    const dest = path.join(docsDir, dir, 'AGENTS.md')
+  // 2. Copy AGENTS.md files for selected specs directories
+  for (const dir of specsAgents) {
+    const src = path.join(libraryDir, 'specs-agents', `${dir}.md`)
+    const dest = path.join(specsDir, dir, 'AGENTS.md')
 
     await copyLibraryFile(src, dest, fileRecords, targetDir, strategy, perFileOverrides)
   }

@@ -14,7 +14,7 @@ Add retry logic to outbound webhook delivery without changing public API behavio
 
 **I will NOT touch:**
 - `src/api/**`
-- `docs/adrs/**`
+- `specs/adrs/**`
 
 **Assumptions:**
 - Existing queue supports delayed jobs (**verified**)

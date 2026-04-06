@@ -1,6 +1,6 @@
 <template>
   <name>Code Review — External PR Review</name>
-  <output>docs/code-reviews/NNN-pr-name/review.md</output>
+  <output>specs/code-reviews/NNN-pr-name/review.md</output>
   <input>PR diff + original ticket + relevant standards + relevant ADRs</input>
   <phase>Review — used for teammate PR reviews, not self-review</phase>
 </template>
@@ -26,7 +26,7 @@
 - **PR diff:** [link — or "pasted below"]
 - **Original ticket:** [link — or "N/A, inferred from PR description"]
 - **Related ADRs:** [list — or "None"]
-- **Relevant standards:** [docs/standards/... — or "None"]
+- **Relevant standards:** [specs/standards/... — or "None"]
 - **Prior art:** [related PRs or features — or "None"]
 
 ---
@@ -82,7 +82,7 @@
 
 ## Standards Compliance
 
-- [ ] Code style follows `docs/rules/code-style.md`
+- [ ] Code style follows `specs/rules/code-style.md`
 - [ ] Error handling follows project patterns
 - [ ] No security violations (auth, input validation, secrets exposure)
 - [ ] No new dependencies without justification

@@ -24,12 +24,12 @@ Turn research into actionable, phased plans. You produce PRDs, TechSpecs, Tasks,
 - Think step-by-step before answering; keep internal reasoning private and share concise conclusions only.
 - ALWAYS ask clarifying questions before writing any document (minimum 3)
 - Wait for answers before producing output
-- Reference docs/standards/ for existing patterns — never ignore them
-- Reference docs/rules/ for project conventions — never violate them
+- Reference specs/standards/ for existing patterns — never ignore them
+- Reference specs/rules/ for project conventions — never violate them
 - Do NOT write code
 - Do NOT assume — ask instead
 - Flag uncertainty with [NEEDS CLARIFICATION: specific question] — max 3 per document
-- Use templates from docs/templates/ for every output document
+- Use templates from specs/templates/ for every output document
 
 ## Reasoning Protocol
 
@@ -51,11 +51,11 @@ Then ask your clarifying questions. Then produce the document.
 
 | Step | Template | Output Location |
 |------|----------|----------------|
-| PRD | docs/templates/prd-template.md | docs/features/NNN-*/prd.md |
-| TechSpec | docs/templates/techspec-template.md | docs/features/NNN-*/techspec.md |
-| Tasks | docs/templates/tasks-template.md | docs/features/NNN-*/tasks/tasks.md |
-| Task files | docs/templates/task-template.md | docs/features/NNN-*/tasks/NNN-*.md |
-| ADR | docs/templates/adr-template.md | docs/adrs/NNN-*.md |
+| PRD | specs/templates/prd-template.md | specs/features/NNN-*/prd.md |
+| TechSpec | specs/templates/techspec-template.md | specs/features/NNN-*/techspec.md |
+| Tasks | specs/templates/tasks-template.md | specs/features/NNN-*/tasks/tasks.md |
+| Task files | specs/templates/task-template.md | specs/features/NNN-*/tasks/NNN-*.md |
+| ADR | specs/templates/adr-template.md | specs/adrs/NNN-*.md |
 
 ## Behavior
 ### Multi-Plan Generation
@@ -69,9 +69,9 @@ For simple features (1-2 phases, no architectural decisions): skip multi-plan an
 
 - Use the simplest approach that satisfies P1 requirements
 - Explore ≥2 options in TechSpec before choosing (Tree of Thoughts)
-- Tasks must reference docs/standards/ patterns the Builder should follow
+- Tasks must reference specs/standards/ patterns the Builder should follow
 - Show high-level task list for approval BEFORE generating individual task files
 - After completing any step: update progress.md with your session entry
 - After completing: run the Impact Check from root AGENTS.md
-- If TechSpec introduces a new pattern → flag for docs/standards/ creation
+- If TechSpec introduces a new pattern → flag for specs/standards/ creation
 - If ADR created → verify KNOWLEDGE_MAP.md link

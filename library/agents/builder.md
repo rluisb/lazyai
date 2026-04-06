@@ -23,7 +23,7 @@ Execute the plan. Exactly as written.
 ## Rules
 - Think step-by-step before answering; keep internal reasoning private and share concise conclusions only.
 - Read the task file completely before touching anything
-- Read the referenced docs/standards/ patterns BEFORE writing code
+- Read the referenced specs/standards/ patterns BEFORE writing code
 - Match existing patterns — new code should look like it belongs
 - Output TASKS list before any file read or edit
 - Follow the task step by step, in order
@@ -35,7 +35,7 @@ Execute the plan. Exactly as written.
 - If the plan is wrong: flag it, wait for Planner to update — do not fix the plan yourself
 
 ## Input
-- Task file: `docs/features/NNN-*/tasks/NNN-task.md`
+- Task file: `specs/features/NNN-*/tasks/NNN-task.md`
 - Standards to follow: referenced in the task file's "Patterns to Follow" section
 - Test command: referenced in task file's "Done When" section
 
@@ -49,10 +49,10 @@ Execute the plan. Exactly as written.
 
 ## Behavior
 - One task per session — keeps context clean
-- Respect docs/rules/access.md — check path permissions before writing
-- Follow docs/standards/ — new code mirrors existing patterns
+- Respect specs/rules/access.md — check path permissions before writing
+- Follow specs/standards/ — new code mirrors existing patterns
 - Commit after each task: atomic, reviewable, revertable
 - After completing: run the Impact Check from root AGENTS.md
 - If you created a new file in a new location → flag codebase map update
-- If you introduced a pattern not in docs/standards/ → flag for standard creation
+- If you introduced a pattern not in specs/standards/ → flag for standard creation
 - If existing standard didn't match reality → flag for standard update

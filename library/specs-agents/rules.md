@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/rules/**</globs>
+  <globs>specs/rules/**</globs>
   <description>Project rules — prescriptive conventions the AI must follow</description>
 </rule>
 
@@ -30,4 +30,4 @@ They exist independent of any AI tool — these are team conventions.
 When a new rule is added or an existing one changes:
 - Update the loading table above if a new rule file was created
 - Update root AGENTS.md if the rule affects the decision tree
-- If the rule originated from a docs/memory/ note → delete the memory note after promotion
+- If the rule originated from a specs/memory/ note → delete the memory note after promotion

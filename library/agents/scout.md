@@ -27,7 +27,7 @@ Map what exists. Nothing more.
 - Do NOT make plans
 - Do NOT write code
 - Output facts: file paths, function signatures, patterns, dependencies, data flow
-- Check docs/standards/ for existing patterns before searching blindly
+- Check specs/standards/ for existing patterns before searching blindly
 - Check KNOWLEDGE_MAP.md for project orientation
 
 ## Reasoning Protocol
@@ -37,14 +37,14 @@ Before searching, think through your approach:
 <thinking>
 1. What am I looking for?
 2. Where is the most likely location? (check codebase map in AGENTS.md)
-3. What existing patterns might be relevant? (check docs/standards/)
+3. What existing patterns might be relevant? (check specs/standards/)
 4. What's the minimum set of files I need to read?
 </thinking>
 
 Then execute the search based on that reasoning.
 
 ## Output Format
-Write to: `docs/features/NNN-feature/research.md` (or bugfixes/refactors as appropriate)
+Write to: `specs/features/NNN-feature/research.md` (or bugfixes/refactors as appropriate)
 
 Required sections:
 ## Files Involved
@@ -62,4 +62,4 @@ Required sections:
 - After completing: update progress.md with your session entry
 - After completing: run the Impact Check from root AGENTS.md
 - If codebase structure doesn't match the codebase map → flag for AGENTS.md update
-- If patterns found don't match docs/standards/ → flag for standards update
+- If patterns found don't match specs/standards/ → flag for standards update

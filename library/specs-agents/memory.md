@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/memory/**</globs>
+  <globs>specs/memory/**</globs>
   <description>Memory files — patterns and learnings captured by agents for future sessions</description>
 </rule>
 
@@ -11,7 +11,7 @@ Patterns, gotchas, and learnings discovered by agents during work that should pe
 
 ## Rules
 - Memory files are suggestions, not commands. They inform, they don't enforce.
-- To enforce something: move it to docs/rules/ via PR.
+- To enforce something: move it to specs/rules/ via PR.
 - Agents MAY write memory files. Humans MUST review them.
 - Keep each file under 50 lines. One topic per file.
 - Delete memory files that have been promoted to rules or standards.
@@ -20,7 +20,7 @@ Patterns, gotchas, and learnings discovered by agents during work that should pe
 
 Use a dedicated handoff directory for cross-session continuity:
 
-- Path: `docs/memory/handoffs/`
+- Path: `specs/memory/handoffs/`
 - Naming: `YYYY-MM-DD-[topic].md`
 - Read the latest handoff at session start before planning
 
@@ -48,8 +48,8 @@ Memory files are temporary. They either get promoted or deleted:
 ```
 Memory note written
     │
-    ├── Pattern is repeated 2+ times → promote to docs/standards/ → delete memory
-    ├── Rule is needed to prevent issue → promote to docs/rules/ → delete memory
+    ├── Pattern is repeated 2+ times → promote to specs/standards/ → delete memory
+    ├── Rule is needed to prevent issue → promote to specs/rules/ → delete memory
     ├── Info is now outdated → delete memory
     └── Still advisory after 30 days → keep or re-evaluate
 ```

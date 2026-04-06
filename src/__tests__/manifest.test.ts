@@ -43,7 +43,7 @@ describe('readManifest', () => {
   })
 
   it('returns parsed AiSetupConfig for valid manifest JSON', async () => {
-    const manifest = buildManifest(['docs/features/example.md'])
+    const manifest = buildManifest(['specs/features/example.md'])
     fs.writeFileSync(path.join(tempDir, '.ai-setup.json'), JSON.stringify(manifest), 'utf-8')
 
     const result = await readManifest(tempDir)
@@ -52,7 +52,7 @@ describe('readManifest', () => {
     expect(result?.tools).toEqual(['opencode'])
     expect(result?.projectName).toBe('test-project')
     expect(result?.files).toHaveLength(1)
-    expect(result?.files?.[0]?.path).toBe('docs/features/example.md')
+    expect(result?.files?.[0]?.path).toBe('specs/features/example.md')
   })
 })
 
@@ -67,23 +67,23 @@ describe('extractSelections', () => {
       infra: ["pre-commit"],
       constitution: [],
     }
-    const manifest = buildManifest(['docs/features/example.md'], selections)
+    const manifest = buildManifest(['specs/features/example.md'], selections)
 
     const result = extractSelections(manifest)
 
     expect(result).toBe(selections)
   })
 
-  it('infers templates from docs/templates/*.md paths', () => {
-    const manifest = buildManifest(['docs/templates/adr.md'])
+  it('infers templates from specs/templates/*.md paths', () => {
+    const manifest = buildManifest(['specs/templates/adr.md'])
 
     const result = extractSelections(manifest)
 
     expect(result.templates).toEqual(['adr'])
   })
 
-  it('infers rules from docs/rules/*.md paths', () => {
-    const manifest = buildManifest(['docs/rules/cost.md'])
+  it('infers rules from specs/rules/*.md paths', () => {
+    const manifest = buildManifest(['specs/rules/cost.md'])
 
     const result = extractSelections(manifest)
 
@@ -107,7 +107,7 @@ describe('extractSelections', () => {
   })
 
   it('infers infra from git hook and compliance files', () => {
-    const manifest = buildManifest(['.git/hooks/pre-commit', 'docs/compliance.md'])
+    const manifest = buildManifest(['.git/hooks/pre-commit', 'specs/compliance.md'])
 
     const result = extractSelections(manifest)
 

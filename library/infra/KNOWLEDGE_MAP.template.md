@@ -9,38 +9,38 @@
 
 | ADR | Decision | Feature | Status |
 |-----|----------|---------|--------|
-| [docs/adrs/001-title.md] | [what was decided] | [NNN-feature — or "Cross-cutting"] | Accepted |
+| [specs/adrs/001-title.md] | [what was decided] | [NNN-feature — or "Cross-cutting"] | Accepted |
 
 ## Active Features
 
 | ID | Name | Status | ADRs |
 |----|------|--------|------|
-| [docs/features/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN, NNN — or "None"] |
+| [specs/features/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN, NNN — or "None"] |
 
 ## Active Bugfixes
 
 | ID | Name | Status |
 |----|------|--------|
-| [docs/bugfixes/001-name/] | [description] | [Research/Fix/Done] |
+| [specs/bugfixes/001-name/] | [description] | [Research/Fix/Done] |
 
 ## Active Refactors
 
 | ID | Name | Status | ADRs |
 |----|------|--------|------|
-| [docs/refactors/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN] |
+| [specs/refactors/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN] |
 
 ## Tech Debt
 
 | ID | Name | Priority | Status |
 |----|------|----------|--------|
-| [docs/tech-debt/001-name/] | [description] | [Low/Med/High/Critical] | [Identified/Planned/In Progress/Resolved] |
+| [specs/tech-debt/001-name/] | [description] | [Low/Med/High/Critical] | [Identified/Planned/In Progress/Resolved] |
 
 ## Rules & Standards
 
 | Type | Files | Purpose |
 |------|-------|---------|
-| Rules | docs/rules/*.md | Prescriptive — WHAT to do |
-| Standards | docs/standards/*.md | Descriptive — HOW we do it |
+| Rules | specs/rules/*.md | Prescriptive — WHAT to do |
+| Standards | specs/standards/*.md | Descriptive — HOW we do it |
 
 ## Key Modules
 

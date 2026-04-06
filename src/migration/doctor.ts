@@ -61,7 +61,7 @@ export async function checkDrift(
     'CLAUDE.md',
     'GEMINI.md',
     'KNOWLEDGE_MAP.md',
-    'docs/**/*',
+    'specs/**/*',
     '.opencode/**/*',
     '.claude/**/*',
     '.pi/**/*',

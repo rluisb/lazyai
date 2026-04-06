@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/standards/**</globs>
+  <globs>specs/standards/**</globs>
   <description>Project standards — real patterns extracted from the codebase. Load before writing code.</description>
 </rule>
 
@@ -16,7 +16,7 @@ Rules say "validate input." Standards show "here's how we validate input in this
 ## Categories
 
 ```
-docs/standards/
+specs/standards/
 ├── coding/           ← API patterns, service patterns, error handling, enums
 ├── architecture/     ← Module boundaries, cross-module communication, state isolation
 ├── testing/          ← Unit/integration/e2e patterns, fixtures, mocking
@@ -63,7 +63,7 @@ If standards don't exist yet for this project, follow this process:
    - How are modules organized? → architecture/ standards
    - How is logging done? → observability/ standards
    - How is auth handled? → security/ standards
-3. **Documenter agent** extracts patterns into standard files using `docs/templates/standard-template.md`
+3. **Documenter agent** extracts patterns into standard files using `specs/templates/standard-template.md`
 4. Each standard MUST reference a real file in the codebase — not invented code
 5. Submit all standards as a single PR for team review
 

@@ -49,8 +49,8 @@ describe('wizard integration (non-interactive)', () => {
       targetDir: tempDir,
     })
 
-    expect(existsSync(path.join(tempDir, 'docs', 'features'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'bugfixes'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'features'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'bugfixes'))).toBe(true)
 
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
@@ -149,7 +149,7 @@ describe('wizard integration (non-interactive)', () => {
 
     const canonicalDir = path.join(homeDir, '.ai')
     expect(existsSync(path.join(canonicalDir, '.ai-setup.json'))).toBe(true)
-    expect(existsSync(path.join(canonicalDir, 'docs', 'templates', 'task.md'))).toBe(true)
+    expect(existsSync(path.join(canonicalDir, 'specs', 'templates', 'task.md'))).toBe(true)
 
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'agents', 'builder.md'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)
@@ -196,10 +196,10 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(planningRepoDir, '.ai-setup.json'))).toBe(true)
     expect(existsSync(path.join(planningRepoDir, '.opencode', 'agents', 'builder.md'))).toBe(true)
     expect(existsSync(path.join(planningRepoDir, '.claude', 'agents', 'builder.md'))).toBe(true)
-    expect(existsSync(path.join(planningRepoDir, 'docs', 'memory', 'decisions'))).toBe(true)
-    expect(existsSync(path.join(planningRepoDir, 'docs', 'memory', 'handoffs'))).toBe(true)
-    expect(existsSync(path.join(planningRepoDir, 'docs', 'memory', 'patterns'))).toBe(true)
-    expect(existsSync(path.join(planningRepoDir, 'docs', 'memory', 'projects'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'decisions'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'handoffs'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'patterns'))).toBe(true)
+    expect(existsSync(path.join(planningRepoDir, 'specs', 'memory', 'projects'))).toBe(true)
 
     expect(existsSync(path.join(fedoraRepoDir, '.ai-setup.json'))).toBe(false)
     expect(existsSync(path.join(checkoutRepoDir, '.ai-setup.json'))).toBe(false)

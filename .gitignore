@@ -15,16 +15,16 @@ KNOWLEDGE_MAP.md
 CODEOWNERS
 
 # Scaffold-generated docs (copies from library/)
-docs/bugfixes/
-docs/memory/
-docs/prompts/
-docs/refactors/
-docs/rules/
-docs/standards/
-docs/tech-debt/
-docs/templates/
-docs/compliance.md
-docs/**/AGENTS.md
+specs/bugfixes/
+specs/memory/
+specs/prompts/
+specs/refactors/
+specs/rules/
+specs/standards/
+specs/tech-debt/
+specs/templates/
+specs/compliance.md
+specs/**/AGENTS.md
 
 # ai-setup store
 .ai-setup.json

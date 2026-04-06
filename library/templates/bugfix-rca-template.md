@@ -1,6 +1,6 @@
 <template>
   <name>Bugfix RCA — Root Cause Analysis</name>
-  <output>docs/bugfixes/NNN-bug-name/techspec.md</output>
+  <output>specs/bugfixes/NNN-bug-name/techspec.md</output>
   <input>Bug report + Scout research + Codebase context</input>
   <phase>Plan — Step 2 of Bugfix flow (replaces heavy TechSpec for bugs)</phase>
 </template>

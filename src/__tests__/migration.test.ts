@@ -196,7 +196,7 @@ describe('Migration Engine', () => {
 
     it('should detect extra files', async () => {
       // Create a file that looks like an AI setup file
-      await fs.mkdir(path.join(tempDir, 'docs'), { recursive: true });
+      await fs.mkdir(path.join(tempDir, 'specs'), { recursive: true });
       await fs.writeFile(
         path.join(tempDir, 'AGENTS.md'),
         '# Test\n'

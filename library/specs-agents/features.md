@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/features/**</globs>
+  <globs>specs/features/**</globs>
   <description>Feature workflow — RPI flow with PRD, TechSpec, Tasks, and observability</description>
 </rule>
 
@@ -10,7 +10,7 @@
 
 Each feature gets a numbered directory:
 ```
-docs/features/NNN-feature-name/
+specs/features/NNN-feature-name/
 ├── research.md          ← R phase (Scout)
 ├── prd.md               ← P step 1 (Planner)
 ├── techspec.md          ← P step 2 (Planner)
@@ -63,7 +63,7 @@ This is NOT optional. Every step updates progress.md.
 ## Principles
 - YAGNI: build only what P1 needs
 - Simplest thing that works
-- Respect existing patterns (check docs/standards/)
+- Respect existing patterns (check specs/standards/)
 - One task = one session = clean context
 - MVP first: P1 complete and validated before P2 starts
 
@@ -72,8 +72,8 @@ This is NOT optional. Every step updates progress.md.
 Before ending any session within a feature, run the Impact Check from root AGENTS.md.
 
 Additionally for features:
-- New pattern introduced? → Flag for docs/standards/ update
+- New pattern introduced? → Flag for specs/standards/ update
 - ADR created during TechSpec? → Verify it's linked in progress.md AND KNOWLEDGE_MAP.md
 - Feature completed? → Update KNOWLEDGE_MAP.md status
-- New test type created? → Check if docs/standards/testing/ needs a new standard
+- New test type created? → Check if specs/standards/testing/ needs a new standard
 - New module created? → Update root AGENTS.md codebase map

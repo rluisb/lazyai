@@ -44,15 +44,15 @@ Before starting work, identify the task type and follow the appropriate guide:
 
 | Task Type | Guide | Key Process |
 |-----------|-------|-------------|
-| Feature (new) | `@docs/features/AGENTS.md` | Research → PRD → TechSpec → Implement → Verify |
-| Bugfix | `@docs/bugfixes/AGENTS.md` | Reproduce → Root-cause → Fix → Regression test |
-| Refactor | `@docs/refactors/AGENTS.md` | ADR → Plan → Phased implementation |
-| Tech Debt | `@docs/tech-debt/AGENTS.md` | Risk assessment → Prioritize → Incremental fix |
-| Architecture Decision | `@docs/adrs/AGENTS.md` | Context → Options → Decision → Record |
-| Standards/Rules | `@docs/standards/AGENTS.md` | Review existing → Propose → Document |
-| Documentation | `@docs/AGENTS.md` | Structure → Write → Cross-reference |
+| Feature (new) | `@specs/features/AGENTS.md` | Research → PRD → TechSpec → Implement → Verify |
+| Bugfix | `@specs/bugfixes/AGENTS.md` | Reproduce → Root-cause → Fix → Regression test |
+| Refactor | `@specs/refactors/AGENTS.md` | ADR → Plan → Phased implementation |
+| Tech Debt | `@specs/tech-debt/AGENTS.md` | Risk assessment → Prioritize → Incremental fix |
+| Architecture Decision | `@specs/adrs/AGENTS.md` | Context → Options → Decision → Record |
+| Standards/Rules | `@specs/standards/AGENTS.md` | Review existing → Propose → Document |
+| Documentation | `@specs/AGENTS.md` | Structure → Write → Cross-reference |
 
-> **Don't know where to start?** Read `@docs/AGENTS.md` first for the full documentation map.
+> **Don't know where to start?** Read `@specs/AGENTS.md` first for the full documentation map.
 
 ## Rules
 
@@ -108,7 +108,7 @@ Run this only when the task affects architecture, major boundaries, or ADR/refac
    - team familiarity
 3. Choose one path and explain why it wins now
 4. Record tradeoffs and rejected-option risks
-5. If non-trivial, record in `@docs/adrs/`
+5. If non-trivial, record in `@specs/adrs/`
 
 Mini example:
 - A: Keep synchronous processing (simpler, weaker performance)
@@ -162,17 +162,17 @@ Each round must confirm:
 ## Session Start Checks
 
 1. Read this file completely
-2. Check the latest handoff in `docs/memory/handoffs/` (if present)
+2. Check the latest handoff in `specs/memory/handoffs/` (if present)
 3. Review recent git log for context
-4. Check `docs/` for project documentation and standards
+4. Check `specs/` for project documentation and standards
 5. Verify you are on the correct branch
 6. Record assumptions and mark each as verified or unverified
 7. State uncertainty level (low/medium/high) and biggest unknown
 8. [YOUR_SESSION_CHECK]
 
 Example references:
-- `docs/prompts/local-examples/preflight-task-framing.md`
-- `docs/prompts/local-examples/react-trace-and-handoff.md`
+- `specs/prompts/local-examples/preflight-task-framing.md`
+- `specs/prompts/local-examples/react-trace-and-handoff.md`
 
 ## Recovery Procedures
 
@@ -196,12 +196,12 @@ Example references:
 <!-- Claude Code auto-manages memory in ~/.claude/projects/ -->
 <!-- Reference project docs for persistent context -->
 
-@docs/rules/
-@docs/standards/
-@docs/AGENTS.md
-@docs/features/AGENTS.md
-@docs/bugfixes/AGENTS.md
-<!-- For other task types, reference the corresponding docs/*/AGENTS.md guide -->
+@specs/rules/
+@specs/standards/
+@specs/AGENTS.md
+@specs/features/AGENTS.md
+@specs/bugfixes/AGENTS.md
+<!-- For other task types, reference the corresponding specs/*/AGENTS.md guide -->
 
 ## Session Management & Compaction
 
@@ -249,17 +249,17 @@ Before ending any session, ask yourself:
 ```
 Did my work change any of the following?
 ├── Project structure (new modules, moved files)     → update Codebase Map above
-├── API contracts (new/changed endpoints)             → update @docs/standards/coding/
-├── Architecture decisions                            → create ADR in @docs/adrs/
-├── Testing patterns (new test type, new fixture)     → update @docs/standards/testing/
+├── API contracts (new/changed endpoints)             → update @specs/standards/coding/
+├── Architecture decisions                            → create ADR in @specs/adrs/
+├── Testing patterns (new test type, new fixture)     → update @specs/standards/testing/
 ├── Dependencies (added/removed/upgraded)             → update Stack section above
 ├── Build/test/lint commands                          → update Key Commands above
-├── Security patterns (auth, validation)              → update @docs/standards/security/
-├── Error handling approach                           → update @docs/standards/coding/
+├── Security patterns (auth, validation)              → update @specs/standards/security/
+├── Error handling approach                           → update @specs/standards/coding/
 ├── New code pattern not in standards                 → create new standard
 ├── Existing standard's reference file changed        → update the standard
-├── Feature completed/status changed                  → update @docs/KNOWLEDGE_MAP.md
-└── Workflow process changed                          → update @docs/rules/workflow.md
+├── Feature completed/status changed                  → update @specs/KNOWLEDGE_MAP.md
+└── Workflow process changed                          → update @specs/rules/workflow.md
 ```
 
 If YES to any: **flag it before ending the session.**
@@ -276,7 +276,7 @@ The human decides whether to update now or create a follow-up task.
 ### Session End Protocol (Multi-Session Handoff)
 
 When work spans sessions or leaves unresolved items, create/update a handoff note in:
-`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+`specs/memory/handoffs/YYYY-MM-DD-[topic].md`
 
 Minimum handoff content:
 1. Current objective and status (done/in-progress/blocked)
@@ -286,8 +286,8 @@ Minimum handoff content:
 5. Risks/watchouts for the next agent
 
 Example references:
-- Handoff structure: `docs/prompts/local-examples/react-trace-and-handoff.md`
-- Commit-message pattern: `docs/prompts/local-examples/commit-message-pattern.md`
+- Handoff structure: `specs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `specs/prompts/local-examples/commit-message-pattern.md`
 
 ### Severity of Updates
 
@@ -295,19 +295,19 @@ Example references:
 |----------|------|--------|
 | **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
 | **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
-| **Note** | Minor improvement opportunity spotted | Write to @docs/memory/ for future consideration |
+| **Note** | Minor improvement opportunity spotted | Write to @specs/memory/ for future consideration |
 
 ### What Gets Updated Where
 
 | Change Type | Update Target |
 |-------------|--------------|
-| New module or directory | Root CLAUDE.md (codebase map) + @docs/KNOWLEDGE_MAP.md |
-| New API pattern | @docs/standards/coding/api-patterns.md |
-| New architecture pattern | @docs/standards/architecture/ + ADR if non-obvious |
-| New test pattern | @docs/standards/testing/ |
-| Changed conventions | @docs/rules/ relevant file |
-| New feature started/completed | @docs/KNOWLEDGE_MAP.md |
-| Architecture decision made | @docs/adrs/NNN-*.md |
-| Bug revealed missing rule | @docs/rules/ + @docs/memory/ |
-| Refactor changed structure | Root CLAUDE.md + @docs/standards/ + @docs/KNOWLEDGE_MAP.md |
+| New module or directory | Root CLAUDE.md (codebase map) + @specs/KNOWLEDGE_MAP.md |
+| New API pattern | @specs/standards/coding/api-patterns.md |
+| New architecture pattern | @specs/standards/architecture/ + ADR if non-obvious |
+| New test pattern | @specs/standards/testing/ |
+| Changed conventions | @specs/rules/ relevant file |
+| New feature started/completed | @specs/KNOWLEDGE_MAP.md |
+| Architecture decision made | @specs/adrs/NNN-*.md |
+| Bug revealed missing rule | @specs/rules/ + @specs/memory/ |
+| Refactor changed structure | Root CLAUDE.md + @specs/standards/ + @specs/KNOWLEDGE_MAP.md |
 

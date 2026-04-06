@@ -12,7 +12,7 @@ Refactor payment retry flow across service and worker modules.
 
 ## Handoff Note (Example)
 
-**Path:** `docs/memory/handoffs/2026-03-31-payment-retry-refactor.md`
+**Path:** `specs/memory/handoffs/2026-03-31-payment-retry-refactor.md`
 
 ```md
 # Payment Retry Refactor — Handoff

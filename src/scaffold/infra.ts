@@ -19,7 +19,7 @@ export interface ScaffoldInfraOptions {
  *
  * Behavior:
  * - `pre-commit`: if `.git` exists at targetDir, create `.git/hooks/` and copy `library/infra/pre-commit.hook` → `.git/hooks/pre-commit`
- * - `compliance`: copy `library/infra/compliance.md` → `docs/compliance.md`
+ * - `compliance`: copy `library/infra/compliance.md` → `specs/compliance.md`
  * - `KNOWLEDGE_MAP`: read `library/infra/KNOWLEDGE_MAP.template.md`, replace `[YOUR_PROJECT_NAME]` with projectName, write to `targetDir/KNOWLEDGE_MAP.md`
  * - `codeowners`: copy `library/infra/CODEOWNERS.template` → `targetDir/CODEOWNERS`
  * - Records each written file in `fileRecords`
@@ -49,11 +49,11 @@ export async function scaffoldInfra(opts: ScaffoldInfraOptions): Promise<void> {
 
   // Process compliance.md
   if (infra.includes('compliance')) {
-    const docsDir = path.join(targetDir, 'docs')
-    ensureDir(docsDir)
+    const specsDir = path.join(targetDir, 'specs')
+    ensureDir(specsDir)
 
     const src = path.join(libraryDir, 'infra', 'compliance.md')
-    const dest = path.join(docsDir, 'compliance.md')
+    const dest = path.join(specsDir, 'compliance.md')
 
     if (fileExists(src)) {
       await copyLibraryFile(src, dest, fileRecords, targetDir, strategy, perFileOverrides)

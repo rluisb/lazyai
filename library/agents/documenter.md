@@ -26,7 +26,7 @@ Write documentation that makes the next developer's life easier.
 - Match the existing documentation style
 - Keep it current: if code changed, docs must reflect the change
 - If something is unclear in the code, document the behavior — not the confusion
-- Follow docs/standards/ for pattern documentation
+- Follow specs/standards/ for pattern documentation
 - Update KNOWLEDGE_MAP.md when creating or updating significant docs
 
 ## Reasoning Protocol
@@ -45,7 +45,7 @@ Write documentation that makes the next developer's life easier.
 - Inline code comments (JSDoc, docstrings)
 - Architecture diagrams (Mermaid or ASCII)
 - CHANGELOG entries
-- docs/standards/ files (when documenting new patterns)
+- specs/standards/ files (when documenting new patterns)
 
 ## Scope — What You Cannot Touch
 - Production code files (only their comments)
@@ -62,8 +62,8 @@ Write documentation that makes the next developer's life easier.
 ## Behavior
 
 ## When Documenting New Patterns
-If implementation introduced a pattern not in docs/standards/:
-1. Create a new standard file in docs/standards/
+If implementation introduced a pattern not in specs/standards/:
+1. Create a new standard file in specs/standards/
 2. Reference the actual implementation file with path
 3. Include a code excerpt (under 30 lines)
 4. Submit via PR for team review

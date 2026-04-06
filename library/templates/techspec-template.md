@@ -1,6 +1,6 @@
 <template>
   <name>TechSpec — Technical Specification</name>
-  <output>docs/features/NNN-feature-name/techspec.md</output>
+  <output>specs/features/NNN-feature-name/techspec.md</output>
   <input>PRD + Research + Codebase + Project Rules + Standards</input>
   <phase>Plan — Step 2</phase>
 </template>
@@ -82,10 +82,10 @@
 
 | Pattern | Standard | Reference File | Apply To |
 |---------|----------|---------------|----------|
-| [e.g. API endpoint] | [docs/standards/api-patterns.md] | [src/modules/auth/auth.controller.ts] | [new endpoints] |
-| [e.g. Service layer] | [docs/standards/service-patterns.md] | [src/modules/auth/auth.service.ts] | [new services] |
-| [e.g. Error handling] | [docs/standards/error-handling.md] | [src/shared/errors/app-error.ts] | [all error cases] |
-| [e.g. Test structure] | [docs/standards/test-patterns.md] | [src/modules/auth/__tests__/] | [new tests] |
+| [e.g. API endpoint] | [specs/standards/api-patterns.md] | [src/modules/auth/auth.controller.ts] | [new endpoints] |
+| [e.g. Service layer] | [specs/standards/service-patterns.md] | [src/modules/auth/auth.service.ts] | [new services] |
+| [e.g. Error handling] | [specs/standards/error-handling.md] | [src/shared/errors/app-error.ts] | [all error cases] |
+| [e.g. Test structure] | [specs/standards/test-patterns.md] | [src/modules/auth/__tests__/] | [new tests] |
 
 ## Data Model
 
@@ -124,11 +124,11 @@
 
 <!-- Map decisions against project rules and standards. Flag deviations. -->
 
-- [ ] Follows code style (docs/rules/code-style.md)
-- [ ] Follows testing rules (docs/rules/testing.md)
-- [ ] Respects path access (docs/rules/access.md)
-- [ ] No security violations (docs/rules/security.md)
-- [ ] Follows existing patterns (docs/standards/)
+- [ ] Follows code style (specs/rules/code-style.md)
+- [ ] Follows testing rules (specs/rules/testing.md)
+- [ ] Respects path access (specs/rules/access.md)
+- [ ] No security violations (specs/rules/security.md)
+- [ ] Follows existing patterns (specs/standards/)
 - **Deviations:** [list with justification — or "None"]
 
 ## Test Strategy
@@ -150,7 +150,7 @@
 <!-- Architectural decisions worth recording permanently.
      If Approach Options above had a non-obvious choice, it needs an ADR. -->
 
-- [ ] ADR needed: [decision] → docs/adrs/NNN-title.md
+- [ ] ADR needed: [decision] → specs/adrs/NNN-title.md
 - [ ] No ADR needed for this feature
 
 ## Unknowns

@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/tech-debt/**</globs>
+  <globs>specs/tech-debt/**</globs>
   <description>Tech debt workflow — planned risk reduction, no PRD needed</description>
 </rule>
 
@@ -9,7 +9,7 @@
 ## Directory Structure
 
 ```
-docs/tech-debt/NNN-debt-name/
+specs/tech-debt/NNN-debt-name/
 ├── research.md          ← Assess the debt (Scout)
 ├── techspec.md          ← Fix approach using tech-debt-template (Planner)
 ├── tasks/               ← Only if fix is >20 lines
@@ -55,5 +55,5 @@ Additionally for tech debt:
 - Debt caused by missing standard? → Create the standard now
 - Debt caused by missing rule? → Add the rule now
 - Dependency upgraded? → Update root AGENTS.md stack + any affected standards
-- Fix introduced a better pattern? → Update docs/standards/ to reflect it
-- Write a memory note to docs/memory/ explaining what caused the debt and how to prevent recurrence
+- Fix introduced a better pattern? → Update specs/standards/ to reflect it
+- Write a memory note to specs/memory/ explaining what caused the debt and how to prevent recurrence

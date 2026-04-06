@@ -4,7 +4,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
-import { scaffoldDocs } from '../scaffold/docs.js'
+import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
@@ -12,12 +12,12 @@ import type { ConflictStrategy, FileRecord } from '../types.js'
 
 const libraryDir = path.resolve(process.cwd(), 'library')
 
-describe('scaffoldDocs', () => {
+describe('scaffoldSpecs', () => {
   let tempDir: string
   let fileRecords: FileRecord[]
 
   beforeEach(() => {
-    tempDir = mkdtempSync(path.join(tmpdir(), 'scaffold-docs-'))
+    tempDir = mkdtempSync(path.join(tmpdir(), 'scaffold-specs-'))
     fileRecords = []
   })
 
@@ -25,51 +25,51 @@ describe('scaffoldDocs', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('creates only selected docs directories', async () => {
-    await scaffoldDocs({
+  it('creates only selected specs directories', async () => {
+    await scaffoldSpecs({
       targetDir: tempDir,
       libraryDir,
-      docsDirs: ['features', 'bugfixes'],
-      docsAgents: [],
+      specsDirs: ['features', 'bugfixes'],
+      specsAgents: [],
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'docs', 'features'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'bugfixes'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'adrs'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'features'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'bugfixes'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'adrs'))).toBe(false)
     expect(fileRecords).toHaveLength(0)
   })
 
-  it('creates no directories when docsDirs is empty', async () => {
-    await scaffoldDocs({
+  it('creates no directories when specsDirs is empty', async () => {
+    await scaffoldSpecs({
       targetDir: tempDir,
       libraryDir,
-      docsDirs: [],
-      docsAgents: [],
+      specsDirs: [],
+      specsAgents: [],
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'docs'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs'))).toBe(false)
     expect(fileRecords).toHaveLength(0)
   })
 
-  it('copies AGENTS.md for selected docsAgents', async () => {
-    await scaffoldDocs({
+  it('copies AGENTS.md for selected specsAgents', async () => {
+    await scaffoldSpecs({
       targetDir: tempDir,
       libraryDir,
-      docsDirs: ['features', 'bugfixes'],
-      docsAgents: ['features'],
+      specsDirs: ['features', 'bugfixes'],
+      specsAgents: ['features'],
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'docs', 'features', 'AGENTS.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'bugfixes', 'AGENTS.md'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'features', 'AGENTS.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'bugfixes', 'AGENTS.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
 })
@@ -98,9 +98,9 @@ describe('scaffoldTemplatesRules', () => {
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'docs', 'templates'))).toBe(false)
-    expect(existsSync(path.join(tempDir, 'docs', 'rules'))).toBe(false)
-    expect(existsSync(path.join(tempDir, 'docs', 'prompts', 'local-examples'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'templates'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'rules'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'prompts', 'local-examples'))).toBe(true)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
 
@@ -115,10 +115,10 @@ describe('scaffoldTemplatesRules', () => {
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'docs', 'templates', 'task.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'templates', 'prd.md'))).toBe(false)
-    expect(existsSync(path.join(tempDir, 'docs', 'rules', 'security.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'docs', 'rules', 'review.md'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'task.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'prd.md'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'rules', 'security.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'rules', 'review.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
 })

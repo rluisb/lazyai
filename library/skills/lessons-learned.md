@@ -31,7 +31,7 @@ research → plan → implement → iterate → memory-write → lessons-learned
 2. Identify candidates: surprises, abandoned paths, late discoveries
 3. Apply YAGNI filter to each candidate
 4. Keep maximum 3 highest-value lessons (zero is valid)
-5. Write each lesson to `docs/memory/lessons/` directory
+5. Write each lesson to `specs/memory/lessons/` directory
 
 ## YAGNI Filter
 
@@ -43,10 +43,10 @@ A lesson passes ONLY if ALL THREE are true:
 
 ## Output Format
 
-Write each lesson as a file in `docs/memory/lessons/`:
+Write each lesson as a file in `specs/memory/lessons/`:
 
 ```
-docs/memory/lessons/YYYY-MM-DD-slug.md
+specs/memory/lessons/YYYY-MM-DD-slug.md
 ```
 
 Each file contains:

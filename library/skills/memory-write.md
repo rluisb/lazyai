@@ -17,10 +17,10 @@ Triggered during implementation and at task completion. Runs BEFORE lessons-lear
 
 ## Memory Directory Structure
 
-All memory artifacts live under `docs/memory/` (gitignored except index files):
+All memory artifacts live under `specs/memory/` (gitignored except index files):
 
 ```
-docs/memory/
+specs/memory/
 ├── decisions/       # Why we chose X over Y
 ├── docs/            # Domain knowledge
 ├── tech/            # Patterns, gotchas, workarounds
@@ -32,10 +32,10 @@ docs/memory/
 
 | Event | Action | Target |
 |-------|--------|--------|
-| Decision made | Write decision file | `docs/memory/decisions/YYYY-MM-DD-slug.md` |
-| Domain knowledge | Write domain doc | `docs/memory/docs/topic.md` |
-| Pattern or gotcha | Write tech pattern | `docs/memory/tech/slug.md` |
-| Question answered (non-obvious) | Write answer file | `docs/memory/tasks/questions/TICKET-slug.md` |
+| Decision made | Write decision file | `specs/memory/decisions/YYYY-MM-DD-slug.md` |
+| Domain knowledge | Write domain doc | `specs/memory/docs/topic.md` |
+| Pattern or gotcha | Write tech pattern | `specs/memory/tech/slug.md` |
+| Question answered (non-obvious) | Write answer file | `specs/memory/tasks/questions/TICKET-slug.md` |
 | Path abandoned | Append journal line | Task file journal section |
 | Task complete | Update task status | Task file: status=done + files list |
 

@@ -4,7 +4,7 @@
 * @your-org/tech-leads
 
 # Docs and standards
-/docs/ @your-org/engineering
+/specs/ @your-org/engineering
 
 # Infrastructure and governance
 /AGENTS.md @your-org/tech-leads

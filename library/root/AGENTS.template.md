@@ -52,58 +52,58 @@ Default to repository conventions before introducing new patterns.
      This tree tells you exactly what to read based on what you're doing. -->
 
 ### Writing code for a feature
-- Read: `docs/features/NNN-*/tasks/NNN-current-task.md` (your task)
-- Read: `docs/features/NNN-*/techspec.md` (architecture)
-- Read: `docs/standards/` relevant pattern file
-- Read: `docs/rules/code-style.md`
+- Read: `specs/features/NNN-*/tasks/NNN-current-task.md` (your task)
+- Read: `specs/features/NNN-*/techspec.md` (architecture)
+- Read: `specs/standards/` relevant pattern file
+- Read: `specs/rules/code-style.md`
 - Do NOT read: PRD, research, ADRs (Builder follows the plan, doesn't re-evaluate it)
 
 ### Researching a topic
-- Read: `docs/KNOWLEDGE_MAP.md` (orientation)
-- Read: `docs/standards/` (existing patterns to be aware of)
+- Read: `specs/KNOWLEDGE_MAP.md` (orientation)
+- Read: `specs/standards/` (existing patterns to be aware of)
 - Do NOT read: any feature/bugfix/refactor artifacts (avoid bias — discover, don't confirm)
 
 ### Writing a PRD
-- Read: `docs/features/NNN-*/research.md`
-- Read: `docs/templates/prd-template.md`
-- Do NOT read: `docs/standards/` (PRD is WHAT/WHY, not HOW)
+- Read: `specs/features/NNN-*/research.md`
+- Read: `specs/templates/prd-template.md`
+- Do NOT read: `specs/standards/` (PRD is WHAT/WHY, not HOW)
 
 ### Writing a TechSpec
-- Read: `docs/features/NNN-*/research.md` + `prd.md`
-- Read: `docs/templates/techspec-template.md`
-- Read: `docs/standards/` relevant patterns
-- Read: `docs/rules/` relevant rules
-- Read: `docs/adrs/` related past decisions
+- Read: `specs/features/NNN-*/research.md` + `prd.md`
+- Read: `specs/templates/techspec-template.md`
+- Read: `specs/standards/` relevant patterns
+- Read: `specs/rules/` relevant rules
+- Read: `specs/adrs/` related past decisions
 
 ### Writing or modifying tests
-- Read: `docs/standards/test-patterns.md`
-- Read: `docs/rules/testing.md`
+- Read: `specs/standards/test-patterns.md`
+- Read: `specs/rules/testing.md`
 - Read: the implementation file being tested
 
 ### Reviewing code
-- Read: `docs/rules/review.md`
-- Read: `docs/rules/code-style.md`
-- Read: `docs/standards/` relevant pattern
+- Read: `specs/rules/review.md`
+- Read: `specs/rules/code-style.md`
+- Read: `specs/standards/` relevant pattern
 - Do NOT read: PRD or research (review the code, not the plan)
 
 ### Fixing a bug
-- Read: `docs/bugfixes/NNN-*/research.md`
-- Read: `docs/rules/testing.md`
-- Read: `docs/standards/` relevant pattern
+- Read: `specs/bugfixes/NNN-*/research.md`
+- Read: `specs/rules/testing.md`
+- Read: `specs/standards/` relevant pattern
 
 ### Handling tech debt
-- Read: `docs/tech-debt/NNN-*/techspec.md`
-- Read: `docs/adrs/` related decisions
-- Read: `docs/standards/` relevant pattern
+- Read: `specs/tech-debt/NNN-*/techspec.md`
+- Read: `specs/adrs/` related decisions
+- Read: `specs/standards/` relevant pattern
 
 ### Making an architecture decision
-- Read: `docs/adrs/` existing ADRs (understand past decisions)
-- Read: `docs/templates/adr-template.md`
-- Read: `docs/standards/` (understand current patterns)
+- Read: `specs/adrs/` existing ADRs (understand past decisions)
+- Read: `specs/templates/adr-template.md`
+- Read: `specs/standards/` (understand current patterns)
 - Use: **Architecture Decision Protocol** below before selecting a path
 
 ### Don't know yet
-- Read: `docs/KNOWLEDGE_MAP.md` (orient yourself)
+- Read: `specs/KNOWLEDGE_MAP.md` (orient yourself)
 - Ask the human what you're doing before loading more context
 
 ---
@@ -173,7 +173,7 @@ Run this only when the task affects architecture, major module boundaries, or an
    - team familiarity
 3. Choose one path and state why it wins now
 4. Record explicit tradeoffs and rejected-option risks
-5. If decision is non-trivial, document it in `docs/adrs/`
+5. If decision is non-trivial, document it in `specs/adrs/`
 
 Mini example (concise):
 - A: Keep sync workflow (low complexity, poor performance)
@@ -297,13 +297,13 @@ When a task requires a different expertise (e.g., security review during impleme
 
 Before doing any work:
 1. **Sync check:** If both AGENTS.md and CLAUDE.md exist, verify they are identical. If they differ → flag immediately. Do not proceed until resolved.
-2. **Handoff check:** Read the latest file in `docs/memory/handoffs/` (if present) before planning.
+2. **Handoff check:** Read the latest file in `specs/memory/handoffs/` (if present) before planning.
 3. **Context check:** Read this file's Decision Tree. Load ONLY what your task needs.
-4. **Standards check:** If you're about to write code, check if a relevant standard exists in `docs/standards/`. Read it before writing.
+4. **Standards check:** If you're about to write code, check if a relevant standard exists in `specs/standards/`. Read it before writing.
 
 Example references:
-- Pre-flight framing: `docs/prompts/local-examples/preflight-task-framing.md`
-- Trace format example: `docs/prompts/local-examples/react-trace-and-handoff.md`
+- Pre-flight framing: `specs/prompts/local-examples/preflight-task-framing.md`
+- Trace format example: `specs/prompts/local-examples/react-trace-and-handoff.md`
 
 ---
 
@@ -312,15 +312,15 @@ Example references:
 If AI-generated code causes issues after merging:
 
 1. **Revert** the commit. Atomic commits (one task = one commit) make this safe.
-2. **Create** a bugfix entry in `docs/bugfixes/NNN-description/`
+2. **Create** a bugfix entry in `specs/bugfixes/NNN-description/`
 3. **Impact Check:** What rule or standard was missing that allowed the bad output?
 4. **Fix the gap:** Add the missing rule or standard BEFORE re-attempting
 5. **Retry** using Ralph Loop (different model reviews the fix)
-6. **Document** in `docs/memory/` what went wrong for future prevention
+6. **Document** in `specs/memory/` what went wrong for future prevention
 
 If AGENTS.md or rules are corrupted:
 ```bash
-git checkout main -- AGENTS.md CLAUDE.md docs/rules/ docs/standards/
+git checkout main -- AGENTS.md CLAUDE.md specs/rules/ specs/standards/
 ```
 
 ---
@@ -337,17 +337,17 @@ Before ending any session, ask yourself:
 ```
 Did my work change any of the following?
 ├── Project structure (new modules, moved files)     → update Codebase Map above
-├── API contracts (new/changed endpoints)             → update docs/standards/coding/
-├── Architecture decisions                            → create ADR in docs/adrs/
-├── Testing patterns (new test type, new fixture)     → update docs/standards/testing/
+├── API contracts (new/changed endpoints)             → update specs/standards/coding/
+├── Architecture decisions                            → create ADR in specs/adrs/
+├── Testing patterns (new test type, new fixture)     → update specs/standards/testing/
 ├── Dependencies (added/removed/upgraded)             → update Stack section above
 ├── Build/test/lint commands                          → update Key Commands above
-├── Security patterns (auth, validation)              → update docs/standards/security/
-├── Error handling approach                           → update docs/standards/coding/
+├── Security patterns (auth, validation)              → update specs/standards/security/
+├── Error handling approach                           → update specs/standards/coding/
 ├── New code pattern not in standards                 → create new standard
 ├── Existing standard's reference file changed        → update the standard
-├── Feature completed/status changed                  → update docs/KNOWLEDGE_MAP.md
-└── Workflow process changed                          → update docs/rules/workflow.md
+├── Feature completed/status changed                  → update specs/KNOWLEDGE_MAP.md
+└── Workflow process changed                          → update specs/rules/workflow.md
 ```
 
 If YES to any: **flag it before ending the session.**
@@ -364,7 +364,7 @@ The human decides whether to update now or create a follow-up task.
 ### Session End Protocol (Multi-Session Handoff)
 
 When work spans sessions or leaves unresolved items, create/update a handoff note in:
-`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+`specs/memory/handoffs/YYYY-MM-DD-[topic].md`
 
 Minimum handoff content:
 1. Current objective and status (done/in-progress/blocked)
@@ -374,8 +374,8 @@ Minimum handoff content:
 5. Risks/watchouts for the next agent
 
 Example references:
-- Handoff structure: `docs/prompts/local-examples/react-trace-and-handoff.md`
-- Commit-message pattern: `docs/prompts/local-examples/commit-message-pattern.md`
+- Handoff structure: `specs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `specs/prompts/local-examples/commit-message-pattern.md`
 
 ### Severity of Updates
 
@@ -383,18 +383,18 @@ Example references:
 |----------|------|--------|
 | **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
 | **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
-| **Note** | Minor improvement opportunity spotted | Write to docs/memory/ for future consideration |
+| **Note** | Minor improvement opportunity spotted | Write to specs/memory/ for future consideration |
 
 ### What Gets Updated Where
 
 | Change Type | Update Target |
 |-------------|--------------|
 | New module or directory | Root AGENTS.md (codebase map) + KNOWLEDGE_MAP.md |
-| New API pattern | docs/standards/coding/api-patterns.md |
-| New architecture pattern | docs/standards/architecture/ + ADR if non-obvious |
-| New test pattern | docs/standards/testing/ |
-| Changed conventions | docs/rules/ relevant file |
-| New feature started/completed | docs/KNOWLEDGE_MAP.md |
-| Architecture decision made | docs/adrs/NNN-*.md |
-| Bug revealed missing rule | docs/rules/ + docs/memory/ |
-| Refactor changed structure | Root AGENTS.md + docs/standards/ + KNOWLEDGE_MAP.md |
+| New API pattern | specs/standards/coding/api-patterns.md |
+| New architecture pattern | specs/standards/architecture/ + ADR if non-obvious |
+| New test pattern | specs/standards/testing/ |
+| Changed conventions | specs/rules/ relevant file |
+| New feature started/completed | specs/KNOWLEDGE_MAP.md |
+| Architecture decision made | specs/adrs/NNN-*.md |
+| Bug revealed missing rule | specs/rules/ + specs/memory/ |
+| Refactor changed structure | Root AGENTS.md + specs/standards/ + KNOWLEDGE_MAP.md |

@@ -27,8 +27,8 @@ Find issues. Report them. Never fix.
 - Classify every issue by severity: CRITICAL, MAJOR, MINOR
 - If no issues found: output "LGTM" with summary
 - Do not review files outside the stated scope
-- Check against docs/rules/ for convention violations
-- Check against docs/standards/ for pattern deviations
+- Check against specs/rules/ for convention violations
+- Check against specs/standards/ for pattern deviations
 
 ## Reasoning Protocol
 
@@ -54,7 +54,7 @@ Then classify and report.
 ## Standards Detection (Local Enforcement)
 
 Before writing the review output:
-1. Identify which `docs/standards/` files are relevant to the changed code
+1. Identify which `specs/standards/` files are relevant to the changed code
 2. For each standard that has a `## Detection` section with bash commands → **run those commands**
 3. Include detection results in the review under "Standards Compliance"
 
@@ -81,8 +81,8 @@ This is how standards are enforced without CI. The Reviewer IS the enforcement l
 - [at least one positive observation]
 
 ### Conformance
-- [ ] Follows docs/rules/code-style.md
-- [ ] Follows docs/standards/ patterns
+- [ ] Follows specs/rules/code-style.md
+- [ ] Follows specs/standards/ patterns
 - [ ] Tests cover new behavior
 - [ ] No scope drift
 - [ ] Standards detection commands pass
@@ -97,4 +97,4 @@ APPROVED | CHANGES_REQUESTED
 - After completing: run the Impact Check from root AGENTS.md
 - If review found a pattern violation not covered by standards → flag for standard creation
 - If review found a rule violation → check if the rule is clear enough, flag improvement if not
-- If review found a recurring issue → flag for docs/rules/ addition
+- If review found a recurring issue → flag for specs/rules/ addition

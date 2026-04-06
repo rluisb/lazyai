@@ -65,24 +65,24 @@ describe('cli init integration', () => {
     ])
 
     const expectedPaths = [
-      'docs/features',
-      'docs/bugfixes',
-      'docs/refactors',
-      'docs/tech-debt',
-      'docs/adrs',
-      'docs/memory',
-      'docs/standards',
-      'docs/templates',
-      'docs/rules',
-      'docs/features/AGENTS.md',
-      'docs/bugfixes/AGENTS.md',
-      'docs/refactors/AGENTS.md',
-      'docs/tech-debt/AGENTS.md',
-      'docs/adrs/AGENTS.md',
-      'docs/memory/AGENTS.md',
-      'docs/standards/AGENTS.md',
-      'docs/templates/AGENTS.md',
-      'docs/rules/AGENTS.md',
+      'specs/features',
+      'specs/bugfixes',
+      'specs/refactors',
+      'specs/tech-debt',
+      'specs/adrs',
+      'specs/memory',
+      'specs/standards',
+      'specs/templates',
+      'specs/rules',
+      'specs/features/AGENTS.md',
+      'specs/bugfixes/AGENTS.md',
+      'specs/refactors/AGENTS.md',
+      'specs/tech-debt/AGENTS.md',
+      'specs/adrs/AGENTS.md',
+      'specs/memory/AGENTS.md',
+      'specs/standards/AGENTS.md',
+      'specs/templates/AGENTS.md',
+      'specs/rules/AGENTS.md',
       'AGENTS.md',
       'INSTRUCTIONS.md',
       '.git/hooks/pre-commit',
@@ -107,7 +107,7 @@ describe('cli init integration', () => {
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.pi/skills/research.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/skills/research/SKILL.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === 'docs/templates/task.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === 'specs/templates/task.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })
 

@@ -1,6 +1,6 @@
 <template>
   <name>Tech Debt — Technical Debt Assessment</name>
-  <output>docs/tech-debt/NNN-debt-name/techspec.md</output>
+  <output>specs/tech-debt/NNN-debt-name/techspec.md</output>
   <input>Research + codebase observation</input>
   <phase>Plan (no PRD — debt is technical, not product)</phase>
 </template>
@@ -55,7 +55,7 @@
 
 | Pattern | Standard | Reference File |
 |---------|----------|---------------|
-| [pattern] | [docs/standards/file.md] | [src/path/to/reference] |
+| [pattern] | [specs/standards/file.md] | [src/path/to/reference] |
 
 ### Files Affected
 - [paths]

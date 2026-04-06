@@ -16,7 +16,7 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
     srcPath: 'infra/pre-commit.hook',
   },
   compliance: {
-    destPath: 'docs/compliance.md',
+    destPath: 'specs/compliance.md',
     srcPath: 'infra/compliance.md',
   },
   KNOWLEDGE_MAP: {

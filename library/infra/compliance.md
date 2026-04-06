@@ -31,7 +31,7 @@ Every feature, bugfix, refactor, and tech debt item produces a `progress.md` fil
 - **What the human approved** at each gate
 - **Timestamps** for every entry
 
-**Location:** `docs/features/NNN-*/progress.md` (or bugfixes/, refactors/, tech-debt/)
+**Location:** `specs/features/NNN-*/progress.md` (or bugfixes/, refactors/, tech-debt/)
 
 ## How to Read the Audit Trail
 
@@ -66,8 +66,8 @@ All AI behavior is defined in version-controlled files:
 | File | Purpose |
 |------|---------|
 | `AGENTS.md` / `CLAUDE.md` | Project overview, conventions, decision tree |
-| `docs/rules/*.md` | Prescriptive rules (what to do / not do) |
-| `docs/standards/**/*.md` | Descriptive patterns (how we do it, with real code references) |
+| `specs/rules/*.md` | Prescriptive rules (what to do / not do) |
+| `specs/standards/**/*.md` | Descriptive patterns (how we do it, with real code references) |
 | `.pi/agents/*.md` | Agent role definitions (scope, tools, behavior) |
 
 All changes to these files require tech lead approval (see `CODEOWNERS`).

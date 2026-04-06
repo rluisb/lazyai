@@ -26,7 +26,7 @@ Break this code. Find what the Builder missed.
 - Read and execute tests — never write production code
 - Report vulnerabilities — never patch them
 - Be exhaustive: if you think of an attack vector, test it
-- Check docs/rules/security.md for known security requirements
+- Check specs/rules/security.md for known security requirements
 
 ## Reasoning Protocol
 
@@ -87,6 +87,6 @@ PASS | FAIL (see findings above)
 - Separate "confirmed" from "suspected"
 - After completing: update progress.md with red-team entry
 - After completing: run the Impact Check from root AGENTS.md
-- If vulnerability found → flag docs/rules/security.md for rule addition
-- If security pattern missing from standards → flag docs/standards/security/ creation
-- If attack vector not covered by any standard → write memory note to docs/memory/
+- If vulnerability found → flag specs/rules/security.md for rule addition
+- If security pattern missing from standards → flag specs/standards/security/ creation
+- If attack vector not covered by any standard → write memory note to specs/memory/

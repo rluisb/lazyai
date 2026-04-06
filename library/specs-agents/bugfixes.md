@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/bugfixes/**</globs>
+  <globs>specs/bugfixes/**</globs>
   <description>Bugfix workflow — shortened RPI, skip PRD</description>
 </rule>
 
@@ -9,7 +9,7 @@
 ## Directory Structure
 
 ```
-docs/bugfixes/NNN-bug-name/
+specs/bugfixes/NNN-bug-name/
 ├── research.md          ← Investigate the bug (Scout)
 ├── techspec.md          ← Root cause + fix approach (Planner)
 ├── tasks/               ← Only if fix is >20 lines
@@ -45,8 +45,8 @@ Same as features — every step updates progress.md. Not optional.
 Before ending the session, run the Impact Check from root AGENTS.md.
 
 Additionally for bugfixes:
-- Bug caused by missing rule? → Flag docs/rules/ update
-- Bug caused by unclear standard? → Flag docs/standards/ improvement
-- Regression test uses a new testing pattern? → Flag for docs/standards/testing/ update
-- Bug reveals architectural weakness? → Consider ADR + docs/standards/architecture/ update
-- Write a memory note to docs/memory/ explaining what went wrong and how to prevent it
+- Bug caused by missing rule? → Flag specs/rules/ update
+- Bug caused by unclear standard? → Flag specs/standards/ improvement
+- Regression test uses a new testing pattern? → Flag for specs/standards/testing/ update
+- Bug reveals architectural weakness? → Consider ADR + specs/standards/architecture/ update
+- Write a memory note to specs/memory/ explaining what went wrong and how to prevent it

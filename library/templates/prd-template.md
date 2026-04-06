@@ -1,6 +1,6 @@
 <template>
   <name>PRD — Product Requirements Document</name>
-  <output>docs/features/NNN-feature-name/prd.md</output>
+  <output>specs/features/NNN-feature-name/prd.md</output>
   <input>Research artifact + human feature request</input>
   <phase>Plan — Step 1</phase>
 </template>

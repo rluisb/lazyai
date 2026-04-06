@@ -65,7 +65,7 @@ export const ALL_PROMPTS: PromptId[] = ['compact', 'implement', 'local-example',
 export const ALL_TEMPLATES: TemplateId[] = ['adr', 'bugfix-rca-template', 'code-review-template', 'postmortem-template', 'prd-template', 'progress', 'standard', 'task', 'tasks-template', 'tech-debt-template', 'techspec-template']
 export const ALL_RULES: RuleId[] = ['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'tool-use', 'workflow']
 export const ALL_INFRA: InfraId[] = ['pre-commit', 'compliance', 'KNOWLEDGE_MAP', 'codeowners']
-export const ALL_DOCS_DIRS: string[] = ['features', 'bugfixes', 'refactors', 'tech-debt', 'adrs', 'memory', 'prompts', 'standards', 'templates', 'rules']
+export const ALL_SPECS_DIRS: string[] = ['features', 'bugfixes', 'refactors', 'tech-debt', 'adrs', 'memory', 'prompts', 'standards', 'templates', 'rules']
 
 export type ConflictStrategy = 'align' | 'backup-and-replace' | 'skip'
 

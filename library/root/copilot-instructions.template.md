@@ -44,15 +44,15 @@ Before starting work, identify the task type and follow the appropriate guide:
 
 | Task Type | Guide | Key Process |
 |-----------|-------|-------------|
-| Feature (new) | [docs/features/AGENTS.md](docs/features/AGENTS.md) | Research → PRD → TechSpec → Implement → Verify |
-| Bugfix | [docs/bugfixes/AGENTS.md](docs/bugfixes/AGENTS.md) | Reproduce → Root-cause → Fix → Regression test |
-| Refactor | [docs/refactors/AGENTS.md](docs/refactors/AGENTS.md) | ADR → Plan → Phased implementation |
-| Tech Debt | [docs/tech-debt/AGENTS.md](docs/tech-debt/AGENTS.md) | Risk assessment → Prioritize → Incremental fix |
-| Architecture Decision | [docs/adrs/AGENTS.md](docs/adrs/AGENTS.md) | Context → Options → Decision → Record |
-| Standards/Rules | [docs/standards/AGENTS.md](docs/standards/AGENTS.md) | Review existing → Propose → Document |
-| Documentation | [docs/AGENTS.md](docs/AGENTS.md) | Structure → Write → Cross-reference |
+| Feature (new) | [specs/features/AGENTS.md](specs/features/AGENTS.md) | Research → PRD → TechSpec → Implement → Verify |
+| Bugfix | [specs/bugfixes/AGENTS.md](specs/bugfixes/AGENTS.md) | Reproduce → Root-cause → Fix → Regression test |
+| Refactor | [specs/refactors/AGENTS.md](specs/refactors/AGENTS.md) | ADR → Plan → Phased implementation |
+| Tech Debt | [specs/tech-debt/AGENTS.md](specs/tech-debt/AGENTS.md) | Risk assessment → Prioritize → Incremental fix |
+| Architecture Decision | [specs/adrs/AGENTS.md](specs/adrs/AGENTS.md) | Context → Options → Decision → Record |
+| Standards/Rules | [specs/standards/AGENTS.md](specs/standards/AGENTS.md) | Review existing → Propose → Document |
+| Documentation | [specs/AGENTS.md](specs/AGENTS.md) | Structure → Write → Cross-reference |
 
-> **Don't know where to start?** Read [docs/AGENTS.md](docs/AGENTS.md) first for the full documentation map.
+> **Don't know where to start?** Read [specs/AGENTS.md](specs/AGENTS.md) first for the full documentation map.
 
 ## Rules
 
@@ -108,7 +108,7 @@ Run this only when work affects architecture, major boundaries, or ADR/refactor 
    - team familiarity
 3. Choose one path and explain why it wins now
 4. Record tradeoffs and rejected-option risks
-5. If non-trivial, record in [docs/adrs/](docs/adrs/)
+5. If non-trivial, record in [specs/adrs/](specs/adrs/)
 
 Mini example:
 - A: Keep synchronous processing (simpler, weaker performance)
@@ -162,17 +162,17 @@ Each round must confirm:
 ## Session Start Checks
 
 1. Read this file completely
-2. Check the latest handoff in `docs/memory/handoffs/` (if present)
+2. Check the latest handoff in `specs/memory/handoffs/` (if present)
 3. Review recent git log for context
-4. Check `docs/` for project documentation and standards
+4. Check `specs/` for project documentation and standards
 5. Verify you are on the correct branch
 6. Record assumptions and mark each as verified or unverified
 7. State uncertainty level (low/medium/high) and biggest unknown
 8. [YOUR_SESSION_CHECK]
 
 Example references:
-- `docs/prompts/local-examples/preflight-task-framing.md`
-- `docs/prompts/local-examples/react-trace-and-handoff.md`
+- `specs/prompts/local-examples/preflight-task-framing.md`
+- `specs/prompts/local-examples/react-trace-and-handoff.md`
 
 ## Recovery Procedures
 
@@ -196,10 +196,10 @@ Example references:
 <!-- Copilot supports @workspace file references and #file references -->
 
 When starting a task, load relevant context:
-- Review [docs/rules/](docs/rules/) for coding standards
-- Review [docs/standards/](docs/standards/) for project conventions
-- Check [docs/memory/](docs/memory/) for prior decisions and handoffs
-- Reference [docs/templates/](docs/templates/) for document structures
+- Review [specs/rules/](specs/rules/) for coding standards
+- Review [specs/standards/](specs/standards/) for project conventions
+- Check [specs/memory/](specs/memory/) for prior decisions and handoffs
+- Reference [specs/templates/](specs/templates/) for document structures
 
 ## Session Management & Compaction
 
@@ -241,10 +241,10 @@ Prevent context bloat and preserve high-signal working memory:
 ## Documentation References
 
 Key guides for task execution:
-- `docs/AGENTS.md` — Documentation structure and navigation
-- `docs/features/AGENTS.md` — Feature development workflow
-- `docs/bugfixes/AGENTS.md` — Bug fix workflow
-- `docs/standards/AGENTS.md` — Coding standards reference
+- `specs/AGENTS.md` — Documentation structure and navigation
+- `specs/features/AGENTS.md` — Feature development workflow
+- `specs/bugfixes/AGENTS.md` — Bug fix workflow
+- `specs/standards/AGENTS.md` — Coding standards reference
 
 ## Self-Improvement Protocol
 
@@ -255,17 +255,17 @@ Before ending any session, ask yourself:
 ```
 Did my work change any of the following?
 ├── Project structure (new modules, moved files)     → update Codebase Map above
-├── API contracts (new/changed endpoints)             → update [docs/standards/coding/](docs/standards/coding/)
-├── Architecture decisions                            → create ADR in [docs/adrs/](docs/adrs/)
-├── Testing patterns (new test type, new fixture)     → update [docs/standards/testing/](docs/standards/testing/)
+├── API contracts (new/changed endpoints)             → update [specs/standards/coding/](specs/standards/coding/)
+├── Architecture decisions                            → create ADR in [specs/adrs/](specs/adrs/)
+├── Testing patterns (new test type, new fixture)     → update [specs/standards/testing/](specs/standards/testing/)
 ├── Dependencies (added/removed/upgraded)             → update Stack section above
 ├── Build/test/lint commands                          → update Key Commands above
-├── Security patterns (auth, validation)              → update [docs/standards/security/](docs/standards/security/)
-├── Error handling approach                           → update [docs/standards/coding/](docs/standards/coding/)
+├── Security patterns (auth, validation)              → update [specs/standards/security/](specs/standards/security/)
+├── Error handling approach                           → update [specs/standards/coding/](specs/standards/coding/)
 ├── New code pattern not in standards                 → create new standard
 ├── Existing standard's reference file changed        → update the standard
-├── Feature completed/status changed                  → update [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md)
-└── Workflow process changed                          → update [docs/rules/workflow.md](docs/rules/workflow.md)
+├── Feature completed/status changed                  → update [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md)
+└── Workflow process changed                          → update [specs/rules/workflow.md](specs/rules/workflow.md)
 ```
 
 If YES to any: **flag it before ending the session.**
@@ -282,7 +282,7 @@ The human decides whether to update now or create a follow-up task.
 ### Session End Protocol (Multi-Session Handoff)
 
 When work spans sessions or leaves unresolved items, create/update a handoff note in:
-`docs/memory/handoffs/YYYY-MM-DD-[topic].md`
+`specs/memory/handoffs/YYYY-MM-DD-[topic].md`
 
 Minimum handoff content:
 1. Current objective and status (done/in-progress/blocked)
@@ -292,8 +292,8 @@ Minimum handoff content:
 5. Risks/watchouts for the next agent
 
 Example references:
-- Handoff structure: `docs/prompts/local-examples/react-trace-and-handoff.md`
-- Commit-message pattern: `docs/prompts/local-examples/commit-message-pattern.md`
+- Handoff structure: `specs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `specs/prompts/local-examples/commit-message-pattern.md`
 
 ### Severity of Updates
 
@@ -301,19 +301,19 @@ Example references:
 |----------|------|--------|
 | **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
 | **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
-| **Note** | Minor improvement opportunity spotted | Write to [docs/memory/](docs/memory/) for future consideration |
+| **Note** | Minor improvement opportunity spotted | Write to [specs/memory/](specs/memory/) for future consideration |
 
 ### What Gets Updated Where
 
 | Change Type | Update Target |
 |-------------|--------------|
-| New module or directory | Root copilot-instructions.md (codebase map) + [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
-| New API pattern | [docs/standards/coding/api-patterns.md](docs/standards/coding/api-patterns.md) |
-| New architecture pattern | [docs/standards/architecture/](docs/standards/architecture/) + ADR if non-obvious |
-| New test pattern | [docs/standards/testing/](docs/standards/testing/) |
-| Changed conventions | [docs/rules/](docs/rules/) relevant file |
-| New feature started/completed | [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
-| Architecture decision made | [docs/adrs/NNN-*.md](docs/adrs/) |
-| Bug revealed missing rule | [docs/rules/](docs/rules/) + [docs/memory/](docs/memory/) |
-| Refactor changed structure | Root copilot-instructions.md + [docs/standards/](docs/standards/) + [docs/KNOWLEDGE_MAP.md](docs/KNOWLEDGE_MAP.md) |
+| New module or directory | Root copilot-instructions.md (codebase map) + [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) |
+| New API pattern | [specs/standards/coding/api-patterns.md](specs/standards/coding/api-patterns.md) |
+| New architecture pattern | [specs/standards/architecture/](specs/standards/architecture/) + ADR if non-obvious |
+| New test pattern | [specs/standards/testing/](specs/standards/testing/) |
+| Changed conventions | [specs/rules/](specs/rules/) relevant file |
+| New feature started/completed | [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) |
+| Architecture decision made | [specs/adrs/NNN-*.md](specs/adrs/) |
+| Bug revealed missing rule | [specs/rules/](specs/rules/) + [specs/memory/](specs/memory/) |
+| Refactor changed structure | Root copilot-instructions.md + [specs/standards/](specs/standards/) + [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) |
 

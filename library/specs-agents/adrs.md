@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/adrs/**</globs>
+  <globs>specs/adrs/**</globs>
   <description>ADRs are permanent architectural decisions. Never edit accepted ADRs.</description>
 </rule>
 
@@ -15,7 +15,7 @@ Architecture Decision Records — short documents that capture WHY a technical d
 - Mark the old ADR: `Status: Superseded by ADR-NNN`
 - One page max. If it's longer, you're over-explaining.
 - Number sequentially across the entire project: 001, 002, 003...
-- Use template: docs/templates/adr-template.md
+- Use template: specs/templates/adr-template.md
 
 ## Decision-Making Protocol (Required)
 
@@ -41,12 +41,12 @@ Use concise scoring/notes if helpful, but always keep rationale explicit.
 
 ## When NOT to Create an ADR
 - Obvious choices with no realistic alternative
-- Style preferences (those go in docs/rules/)
+- Style preferences (those go in specs/rules/)
 - Bug fixes (unless they reveal an architecture problem)
 
 ## Self-Improvement — After Every ADR
 
-- Update docs/KNOWLEDGE_MAP.md with the new ADR + linked feature/refactor
+- Update specs/KNOWLEDGE_MAP.md with the new ADR + linked feature/refactor
 - If ADR supersedes an old one → mark old ADR status as "Superseded by ADR-NNN"
-- If ADR changes architecture → flag docs/standards/architecture/ for update
-- If ADR affects coding patterns → flag docs/standards/coding/ for update
+- If ADR changes architecture → flag specs/standards/architecture/ for update
+- If ADR affects coding patterns → flag specs/standards/coding/ for update

@@ -157,10 +157,10 @@ npx @ricardoborges-teachable/ai-setup doctor --migration-check --verbose
 
 ### Documentation and examples
 
-- Full guide: [`docs/features/002-migration-engine/README.md`](docs/features/002-migration-engine/README.md)
-- Example migration: [`docs/features/002-migration-engine/examples/opencode-to-ai-setup.md`](docs/features/002-migration-engine/examples/opencode-to-ai-setup.md)
-- Example migration: [`docs/features/002-migration-engine/examples/claude-code-to-ai-setup.md`](docs/features/002-migration-engine/examples/claude-code-to-ai-setup.md)
-- Community parser guide: [`docs/features/002-migration-engine/COMMUNITY-PARSERS.md`](docs/features/002-migration-engine/COMMUNITY-PARSERS.md)
+- Full guide: [`specs/features/002-migration-engine/README.md`](specs/features/002-migration-engine/README.md)
+- Example migration: [`specs/features/002-migration-engine/examples/opencode-to-ai-setup.md`](specs/features/002-migration-engine/examples/opencode-to-ai-setup.md)
+- Example migration: [`specs/features/002-migration-engine/examples/claude-code-to-ai-setup.md`](specs/features/002-migration-engine/examples/claude-code-to-ai-setup.md)
+- Community parser guide: [`specs/features/002-migration-engine/COMMUNITY-PARSERS.md`](specs/features/002-migration-engine/COMMUNITY-PARSERS.md)
 
 ## Update + conflict behavior
 

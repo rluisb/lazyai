@@ -18,7 +18,7 @@ Unrestricted file access leads to scope leakage, unintended side effects, and ma
 ### Path Access Controls
 - Production code: restricted to paths listed in the task
 - Test code: restricted to corresponding test directories
-- Documentation: restricted to relevant docs/ subdirectories
+- Documentation: restricted to relevant specs/ subdirectories
 - Configuration: requires explicit approval for any config file changes
 
 ### Violation Detection

@@ -14,7 +14,7 @@ import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
-import { scaffoldDocs } from '../scaffold/docs.js'
+import { scaffoldSpecs } from '../scaffold/specs.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
@@ -32,7 +32,7 @@ import type {
 } from '../types.js'
 import {
   ALL_AGENTS,
-  ALL_DOCS_DIRS,
+  ALL_SPECS_DIRS,
   ALL_INFRA,
   ALL_PROMPTS,
   ALL_RULES,
@@ -308,17 +308,17 @@ export async function runWizard(opts: {
     }
 
     const installFiles = async (): Promise<void> => {
-      await scaffoldDocs({
+      await scaffoldSpecs({
         targetDir: effectiveTargetDir,
         setupScope,
         libraryDir,
-        docsDirs: ALL_DOCS_DIRS,
-        docsAgents: ALL_DOCS_DIRS,
+        specsDirs: ALL_SPECS_DIRS,
+        specsAgents: ALL_SPECS_DIRS,
         fileRecords,
         strategy,
         perFileOverrides,
       })
-      tracker.trackSuccess('scaffold:docs')
+      tracker.trackSuccess('scaffold:specs')
 
       await scaffoldConstitution({
         targetDir: effectiveTargetDir,

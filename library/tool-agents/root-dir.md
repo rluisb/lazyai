@@ -40,7 +40,7 @@ Do not load every agent or workflow file by default. Overloading context increas
 
 ## Rules Reference
 
-Always-active constraints live in `docs/rules/`.
+Always-active constraints live in `specs/rules/`.
 
 Core categories to consult:
 - workflow
@@ -55,13 +55,13 @@ When in doubt, prefer explicit rule guidance over inferred behavior.
 
 ## Standards Reference
 
-Project-specific implementation patterns live in `docs/standards/`.
+Project-specific implementation patterns live in `specs/standards/`.
 
 Use standards to align with established conventions for architecture, code structure, testing style, and quality expectations.
 
 ## Memory Reference
 
-Historical suggestions and contextual notes live in `docs/memory/`.
+Historical suggestions and contextual notes live in `specs/memory/`.
 
 Consult memory to avoid repeating past mistakes, recover rationale, and accelerate similar tasks.
 

@@ -24,17 +24,17 @@ interface UpdateOptions {
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 
-const docsAgentMappings: Array<{ source: string; destination: string }> = [
-  { source: 'docs.md', destination: 'docs/AGENTS.md' },
-  { source: 'features.md', destination: 'docs/features/AGENTS.md' },
-  { source: 'bugfixes.md', destination: 'docs/bugfixes/AGENTS.md' },
-  { source: 'refactors.md', destination: 'docs/refactors/AGENTS.md' },
-  { source: 'tech-debt.md', destination: 'docs/tech-debt/AGENTS.md' },
-  { source: 'rules.md', destination: 'docs/rules/AGENTS.md' },
-  { source: 'standards.md', destination: 'docs/standards/AGENTS.md' },
-  { source: 'templates.md', destination: 'docs/templates/AGENTS.md' },
-  { source: 'memory.md', destination: 'docs/memory/AGENTS.md' },
-  { source: 'adrs.md', destination: 'docs/adrs/AGENTS.md' },
+const specsAgentMappings: Array<{ source: string; destination: string }> = [
+  { source: 'docs.md', destination: 'specs/AGENTS.md' },
+  { source: 'features.md', destination: 'specs/features/AGENTS.md' },
+  { source: 'bugfixes.md', destination: 'specs/bugfixes/AGENTS.md' },
+  { source: 'refactors.md', destination: 'specs/refactors/AGENTS.md' },
+  { source: 'tech-debt.md', destination: 'specs/tech-debt/AGENTS.md' },
+  { source: 'rules.md', destination: 'specs/rules/AGENTS.md' },
+  { source: 'standards.md', destination: 'specs/standards/AGENTS.md' },
+  { source: 'templates.md', destination: 'specs/templates/AGENTS.md' },
+  { source: 'memory.md', destination: 'specs/memory/AGENTS.md' },
+  { source: 'adrs.md', destination: 'specs/adrs/AGENTS.md' },
 ]
 
 function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] {
@@ -82,9 +82,9 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     })
   }
 
-  const addDocsAgents = (): void => {
-    for (const mapping of docsAgentMappings) {
-      addFile(`docs-agents/${mapping.source}`, join(targetDir, mapping.destination))
+  const addSpecsAgents = (): void => {
+    for (const mapping of specsAgentMappings) {
+      addFile(`specs-agents/${mapping.source}`, join(targetDir, mapping.destination))
     }
   }
 
@@ -139,13 +139,13 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
   }
 
-  addDir('templates', 'docs/templates')
-  addDir('rules', 'docs/rules')
-  addDocsAgents()
+  addDir('templates', 'specs/templates')
+  addDir('rules', 'specs/rules')
+  addSpecsAgents()
 
   addFile('infra/CODEOWNERS.template', join(targetDir, 'CODEOWNERS'))
-  addFile('infra/compliance.md', join(targetDir, 'docs/compliance.md'))
-  addFile('infra/KNOWLEDGE_MAP.template.md', join(targetDir, 'docs/KNOWLEDGE_MAP.md'))
+  addFile('infra/compliance.md', join(targetDir, 'specs/compliance.md'))
+  addFile('infra/KNOWLEDGE_MAP.template.md', join(targetDir, 'specs/KNOWLEDGE_MAP.md'))
 
   if (fileExists(join(targetDir, '.git'))) {
     addFile('infra/pre-commit.hook', join(targetDir, '.git/hooks/pre-commit'))

@@ -1,6 +1,6 @@
 <rule>
   <scope>auto</scope>
-  <globs>docs/prompts/**</globs>
+  <globs>specs/prompts/**</globs>
   <description>Prompt templates and examples for AI-assisted workflows</description>
 </rule>
 

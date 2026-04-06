@@ -304,6 +304,21 @@ End
       expect(result).toContain(instructions)
     })
 
+    it('resolves tool-specific variables', () => {
+      const template = '{{TOOL_DESCRIPTION}}\n{{TOOL_NOTES}}'
+      const context: FragmentContext = {
+        projectName: 'Test',
+        planningDir: 'planning',
+        toolDescription: 'Uses Claude Code.',
+        toolNotes: '## Notes\n\n- Agents live here',
+      }
+
+      const result = resolver.resolve(template, context)
+      expect(result).toContain('Uses Claude Code.')
+      expect(result).toContain('## Notes')
+      expect(result).toContain('- Agents live here')
+    })
+
     it('handles multiple variable substitutions', () => {
       const template = '# {{PROJECT_NAME}}\nLanguage: {{PRIMARY_LANGUAGE}}\nDir: {{PLANNING_DIR}}'
       const context: FragmentContext = {
@@ -509,6 +524,34 @@ describe('TemplateCompiler', () => {
     const outputDisabled = compilerDisabled.compile()
     expect(outputDisabled.files.length).toBeGreaterThan(0)
     expect(outputDisabled.files[0]?.content).not.toContain('TOT')
+  })
+
+  it('prefers the shared root template and injects tool overrides', () => {
+    const sharedDir = path.join(libraryTempDir, 'tool-templates', 'shared')
+    mkdirSync(sharedDir, { recursive: true })
+    writeFileSync(
+      path.join(sharedDir, 'root.template.md'),
+      '{{TOOL_DESCRIPTION}}\n{{TOOL_NOTES}}\n{{PROJECT_NAME}}'
+    )
+    writeFileSync(path.join(templateDir, 'root.template.md'), 'Legacy per-tool root should be ignored')
+
+    const compiler = new TemplateCompiler({
+      libraryDir: libraryTempDir,
+      outputDir: tempDir,
+      tool: 'copilot' as ToolId,
+      context: {
+        projectName: 'SharedTemplateTest',
+        planningDir: 'planning',
+      },
+    })
+
+    const output = compiler.compile()
+    expect(output.files).toHaveLength(1)
+    expect(output.files[0]?.relativePath).toBe('root.md')
+    expect(output.files[0]?.content).toContain('This project uses GitHub Copilot with ai-setup integration.')
+    expect(output.files[0]?.content).toContain('## Copilot-Specific Notes')
+    expect(output.files[0]?.content).toContain('SharedTemplateTest')
+    expect(output.files[0]?.content).not.toContain('Legacy per-tool root should be ignored')
   })
 
   it('interpolates variables in compiled output', () => {

@@ -8,6 +8,8 @@ export interface FragmentContext {
   framework?: string
   workspaceType?: string
   projectInstructions?: string
+  toolDescription?: string
+  toolNotes?: string
   features?: FeatureFlags
 }
 
@@ -164,6 +166,8 @@ export class FragmentResolver {
       PRIMARY_LANGUAGE: context.primaryLanguage || 'TypeScript',
       FRAMEWORK: context.framework || '',
       WORKSPACE_TYPE: context.workspaceType || 'project',
+      TOOL_DESCRIPTION: context.toolDescription || '',
+      TOOL_NOTES: context.toolNotes || '',
       PROJECT_INSTRUCTIONS: context.projectInstructions || '',
     }
     

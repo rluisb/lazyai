@@ -3,6 +3,35 @@ import path from 'node:path'
 import type { ToolId } from '../types.js'
 import { type FragmentContext, FragmentResolver } from './fragment-resolver.js'
 
+const SHARED_ROOT_TEMPLATE_PATH = ['tool-templates', 'shared', 'root.template.md'] as const
+
+const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string }>> = {
+  opencode: {
+    description: 'This project uses OpenCode with ai-setup integration.',
+    notes: '',
+  },
+  'claude-code': {
+    description: 'This project uses Claude Code with ai-setup integration.',
+    notes: '',
+  },
+  copilot: {
+    description: 'This project uses GitHub Copilot with ai-setup integration.',
+    notes: '## Copilot-Specific Notes\n\n- Agents are in `.github/agents/*.md`\n- Prompts are in `.github/prompts/*.prompt.md`',
+  },
+  gemini: {
+    description: 'This project uses Gemini CLI with ai-setup integration.',
+    notes: '## Gemini-Specific Notes\n\n- Gemini does not have a separate agents concept\n- Skills are in `.gemini/skills/*/SKILL.md` and function as pseudo-agents',
+  },
+  pi: {
+    description: 'This project uses Pi Coding Agent with ai-setup integration.',
+    notes: '## Pi-Specific Notes\n\n- Agents are in `.pi/agents/*.md`\n- Templates are in `.pi/templates/*.md`\n- Skills are in `.pi/skills/*.md`',
+  },
+  codex: {
+    description: 'This project uses OpenAI Codex CLI with ai-setup integration.',
+    notes: '## Codex-Specific Notes\n\n- Agents are defined inline in this file (no separate agents directory)\n- Skills are in `.codex/skills/*/SKILL.md`',
+  },
+}
+
 export interface CompilerConfig {
   libraryDir: string
   outputDir: string
@@ -34,20 +63,34 @@ export class TemplateCompiler {
    */
   compile(): CompiledOutput {
     const toolTemplateDir = path.join(this.config.libraryDir, 'tool-templates', this.config.tool)
-    
-    if (!fs.existsSync(toolTemplateDir)) {
+    const sharedRootTemplate = path.join(this.config.libraryDir, ...SHARED_ROOT_TEMPLATE_PATH)
+    const hasSharedRootTemplate = fs.existsSync(sharedRootTemplate)
+    const hasToolTemplateDir = fs.existsSync(toolTemplateDir)
+
+    if (!hasSharedRootTemplate && !hasToolTemplateDir) {
       throw new Error(`Tool template directory not found: ${toolTemplateDir}`)
     }
 
     const files: CompiledOutput['files'] = []
-    
-    // Find all template files
-    const templateFiles = this.findTemplateFiles(toolTemplateDir)
-    
+    const context = this.getContextWithToolOverrides()
+
+    if (hasSharedRootTemplate) {
+      const content = fs.readFileSync(sharedRootTemplate, 'utf-8')
+      const resolved = this.resolver.resolve(content, context)
+      files.push({ relativePath: 'root.md', content: resolved })
+    }
+
+    const templateFiles = hasToolTemplateDir
+      ? this.findTemplateFiles(toolTemplateDir).filter((templateFile) => {
+          if (!hasSharedRootTemplate) return true
+          return !path.basename(templateFile).startsWith('root.template.')
+        })
+      : []
+
     for (const templateFile of templateFiles) {
       const content = fs.readFileSync(templateFile, 'utf-8')
-      const resolved = this.resolver.resolve(content, this.config.context)
-      
+      const resolved = this.resolver.resolve(content, context)
+
       // Convert template path to output path
       const relativePath = path.relative(toolTemplateDir, templateFile)
         .replace('.template.md', '.md')
@@ -94,6 +137,16 @@ export class TemplateCompiler {
     }
     
     return files
+  }
+
+  private getContextWithToolOverrides(): FragmentContext {
+    const overrides = TOOL_OVERRIDES[this.config.tool] ?? { description: '', notes: '' }
+
+    return {
+      ...this.config.context,
+      toolDescription: overrides.description,
+      toolNotes: overrides.notes,
+    }
   }
 }
 

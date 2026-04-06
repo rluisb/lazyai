@@ -46,7 +46,6 @@ interface InitOptions {
   disableFeatures?: string
   branchPattern?: string
   commitPattern?: string
-  compiledRoot?: boolean
 }
 
 export function registerInit(program: Command): void {
@@ -89,7 +88,6 @@ export function registerInit(program: Command): void {
       'Default: {type}({scope}): {description}  →  feat(auth): add login\n' +
       'Options: {type}: {description}, [{ticket}] {description}, {description}'
     )
-    .option('--no-compiled-root', 'Use simple templates instead of compiled XML-tagged root files')
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
@@ -121,7 +119,6 @@ export function registerInit(program: Command): void {
         disableFeatures?: string[]
         branchPattern?: string
         commitPattern?: string
-        useCompiledRoot?: boolean
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
@@ -136,8 +133,6 @@ export function registerInit(program: Command): void {
       if (disableFeatures) cliOverrides.disableFeatures = disableFeatures
       if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern
       if (opts.commitPattern) cliOverrides.commitPattern = opts.commitPattern
-      // useCompiledRoot defaults to true, --no-compiled-root sets it to false
-      if (opts.compiledRoot !== undefined) cliOverrides.useCompiledRoot = opts.compiledRoot
 
       // Check if we should migrate
       if (opts.migrate) {

@@ -75,7 +75,6 @@ export function registerStatus(program: Command): void {
       p.log.info(`Project name: ${projectName}`)
       p.log.info(`Tools: ${tools}`)
       p.log.info(`Planning dir: ${store.config.planningDir ?? '.planning'}`)
-      p.log.info(`Use compiled root: ${store.config.useCompiledRoot ?? true}`)
       p.log.info(`Active features: ${summarizeFeatures(store.selections.features as Record<string, boolean> | undefined)}`)
       p.log.info(`Git conventions: ${summarizeGitConventions(store.selections.gitConventions)}`)
       p.log.info(`Files: total=${total}, healthy=${healthy}, missing=${missing}, modified=${modified}`)

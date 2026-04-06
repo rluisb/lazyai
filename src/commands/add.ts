@@ -5,7 +5,6 @@ import type { Command } from 'commander'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { Errors } from '../errors/index.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
-import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { createStore, writeStore } from '../store/index.js'
 import type { FileRecord, ToolId } from '../types.js'
 import { fileExists, resolveLibraryDir } from '../utils/files.js'
@@ -56,33 +55,20 @@ export function registerAdd(program: Command): void {
       }
 
       const newFiles: FileRecord[] = []
-      const useCompiledRoot = data.config.useCompiledRoot ?? true
       const planningDir = data.config.planningDir ?? '.planning'
 
-      if (useCompiledRoot) {
-        await scaffoldCompiledRoot({
-          targetDir,
-          libraryDir,
-          tools: [toolId],
-          projectName: data.config.projectName,
-          planningDir,
-          ...(data.selections.features != null ? { features: data.selections.features } : {}),
-          ...(data.selections.gitConventions != null ? { gitConventions: data.selections.gitConventions } : {}),
-          fileRecords: newFiles,
-          strategy: 'skip',
-          perFileOverrides: new Map(),
-        })
-      } else {
-        await scaffoldRootFiles({
-          targetDir,
-          libraryDir,
-          tools: [toolId],
-          projectName: data.config.projectName,
-          fileRecords: newFiles,
-          strategy: 'skip',
-          perFileOverrides: new Map(),
-        })
-      }
+      await scaffoldCompiledRoot({
+        targetDir,
+        libraryDir,
+        tools: [toolId],
+        projectName: data.config.projectName,
+        planningDir,
+        ...(data.selections.features != null ? { features: data.selections.features } : {}),
+        ...(data.selections.gitConventions != null ? { gitConventions: data.selections.gitConventions } : {}),
+        fileRecords: newFiles,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+      })
 
       await adapter.install({
         targetDir,

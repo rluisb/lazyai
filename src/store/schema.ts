@@ -82,7 +82,6 @@ export const configSchema = z.object({
   workspaceName: z.string().optional(),
   targetDir: z.string(),
   planningDir: z.string().optional(),
-  useCompiledRoot: z.boolean().optional(),
   planningRepoPath: z.string().optional(),
   repos: z
     .array(

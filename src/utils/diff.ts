@@ -4,7 +4,14 @@
  * Line-level and word-level diff computation with rich terminal rendering.
  */
 
-import { styleText } from 'node:util'
+import * as util from 'node:util'
+
+// styleText was added in Node.js 20.12.0 / 21.7.0
+// Provide a fallback for older Node versions
+const styleText: (style: string, text: string) => string =
+  typeof (util as { styleText?: unknown }).styleText === 'function'
+    ? (util as { styleText: (style: string, text: string) => string }).styleText
+    : (_style: string, text: string) => text
 
 export interface DiffLine {
   type: 'add' | 'remove' | 'context'

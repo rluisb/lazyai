@@ -19,6 +19,7 @@ export const toolIdSchema = z.enum(['pi', 'opencode', 'claude-code', 'gemini', '
 export const agentIdSchema = z.enum(['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout'])
 export const skillIdSchema = z.enum([
   'anti-speculation',
+  'extract-standards',
   'implement',
   'iterate',
   'memory-write',

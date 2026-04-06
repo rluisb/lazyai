@@ -1,9 +1,10 @@
 import path from 'node:path'
 import { type FragmentContext, TemplateCompiler } from '../compiler/index.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
-import type { ConflictStrategy, FileRecord, ToolId } from '../types.js'
+import type { ConflictStrategy, FileRecord, SetupScope, ToolId } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
 import { ensureDir, fileHash, writeFile } from '../utils/files.js'
+import { detectProjectStack } from '../utils/repo-detection.js'
 import { ROOT_FILE_BY_TOOL } from './root-file-map.js'
 
 const DEFAULT_ENABLED_FEATURES: FeatureFlags = {
@@ -29,6 +30,7 @@ export interface ScaffoldCompiledRootOptions {
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
+  setupScope?: SetupScope
   // Optional context overrides
   primaryLanguage?: string
   framework?: string
@@ -57,6 +59,7 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     fileRecords,
     strategy,
     perFileOverrides,
+    setupScope,
     primaryLanguage,
     framework,
     workspaceType,
@@ -67,15 +70,26 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     ...DEFAULT_ENABLED_FEATURES,
     ...(features ?? {}),
   }
+  const stack = setupScope === 'project' ? detectProjectStack(targetDir) : undefined
+  const effectivePrimaryLanguage = primaryLanguage ?? stack?.language
+  const effectiveFramework = framework ?? stack?.framework
 
   // Build fragment context from options
   const context: FragmentContext = {
     projectName,
     planningDir,
-    ...(primaryLanguage != null ? { primaryLanguage } : {}),
-    ...(framework != null ? { framework } : {}),
+    ...(effectivePrimaryLanguage !== undefined ? { primaryLanguage: effectivePrimaryLanguage } : {}),
+    ...(effectiveFramework !== undefined ? { framework: effectiveFramework } : {}),
     ...(workspaceType != null ? { workspaceType } : {}),
     ...(projectInstructions != null ? { projectInstructions } : {}),
+    ...(stack?.testFramework ? { testFramework: stack.testFramework } : {}),
+    ...(stack?.packageManager ? { packageManager: stack.packageManager } : {}),
+    ...(stack?.commands.test ? { testCommand: stack.commands.test } : {}),
+    ...(stack?.commands.lint ? { lintCommand: stack.commands.lint } : {}),
+    ...(stack?.commands.build ? { buildCommand: stack.commands.build } : {}),
+    ...(stack?.commands.dev ? { devCommand: stack.commands.dev } : {}),
+    ...(stack?.commands.install ? { installCommand: stack.commands.install } : {}),
+    ...(stack?.description ? { projectDescription: stack.description } : {}),
     features: {
       contextEngineering: effectiveFeatures.contextEngineering,
       rpiWorkflow: effectiveFeatures.rpiWorkflow,
@@ -138,6 +152,7 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
         path: outputPath,
         hash: fileHash(destPath),
         source: `compiled:${tool}`,
+        owner: 'library',
       })
     }
   }

@@ -44,6 +44,7 @@ export async function scaffoldConstitution(opts: ScaffoldConstitutionOptions): P
       path: relPath,
       hash: fileHash(dest),
       source: `constitution/${file}.template.md`,
+      owner: 'library',
     })
   }
 }

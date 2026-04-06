@@ -54,5 +54,6 @@ export async function scaffoldMcp(opts: ScaffoldMcpOptions): Promise<void> {
     path: relPath,
     hash: fileHash(dest),
     source: 'mcp/catalog.json',
+    owner: 'library',
   })
 }

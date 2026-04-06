@@ -114,6 +114,7 @@ export class CopilotAdapter implements ToolAdapter {
             path: '.github/copilot-instructions.md',
             hash: files.fileHash(copilotMdPath),
             source: 'root/copilot-instructions.template.md',
+            owner: 'library',
           })
         }
       }
@@ -143,6 +144,7 @@ export class CopilotAdapter implements ToolAdapter {
       path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
+      owner: 'library',
     })
   }
 
@@ -164,6 +166,7 @@ export class CopilotAdapter implements ToolAdapter {
       path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
+      owner: 'library',
     })
   }
 
@@ -185,6 +188,7 @@ export class CopilotAdapter implements ToolAdapter {
       path: relPath,
       hash: files.fileHash(dest),
       source: path.relative(ctx.libraryDir, src),
+      owner: 'library',
     })
   }
 }

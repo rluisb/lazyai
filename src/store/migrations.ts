@@ -20,10 +20,19 @@ function ensureError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value))
 }
 
-function isLegacyFileRecord(value: unknown): value is { path: string; hash: string; source: string } {
+function isLegacyFileRecord(value: unknown): value is {
+  path: string
+  hash: string
+  source: string
+  owner?: 'library' | 'user' | 'migrated'
+} {
   const record = asRecord(value)
   return Boolean(
-    record && typeof record.path === 'string' && typeof record.hash === 'string' && typeof record.source === 'string',
+    record &&
+      typeof record.path === 'string' &&
+      typeof record.hash === 'string' &&
+      typeof record.source === 'string' &&
+      (record.owner === undefined || record.owner === 'library' || record.owner === 'user' || record.owner === 'migrated'),
   )
 }
 
@@ -107,6 +116,7 @@ export function migrateV0toV1(data: Record<string, unknown>, targetDir: string =
       path: file.path,
       hash: file.hash,
       source: file.source,
+      owner: file.owner ?? 'library',
       status: 'installed',
       installedAt,
       lastCheckedAt: now,

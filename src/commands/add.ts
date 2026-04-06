@@ -63,6 +63,7 @@ export function registerAdd(program: Command): void {
         tools: [toolId],
         projectName: data.config.projectName,
         planningDir,
+        ...(data.config.setupScope ? { setupScope: data.config.setupScope } : {}),
         ...(data.selections.features != null ? { features: data.selections.features } : {}),
         ...(data.selections.gitConventions != null ? { gitConventions: data.selections.gitConventions } : {}),
         fileRecords: newFiles,
@@ -84,6 +85,7 @@ export function registerAdd(program: Command): void {
         ...data.files,
         ...newFiles.map((file) => ({
           ...file,
+          owner: file.owner ?? 'library',
           status: 'installed' as const,
           installedAt: now,
           lastCheckedAt: now,

@@ -50,6 +50,7 @@ function writeCanonicalFile(args: {
     path: path.relative(args.targetDir, args.destination),
     hash: fileHash(args.destination),
     source: args.source,
+    owner: 'migrated',
   });
 
   return true;

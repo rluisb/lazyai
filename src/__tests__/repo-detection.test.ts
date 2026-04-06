@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { detectRepoInfo, detectRepoType, scanWorkspaceRepos } from '../utils/repo-detection.js'
+import {
+  detectProjectStack,
+  detectRepoInfo,
+  detectRepoType,
+  scanWorkspaceRepos,
+} from '../utils/repo-detection.js'
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
@@ -109,6 +114,102 @@ describe('repo detection utilities', () => {
 
     expect(gitInfo.isGitRepo).toBe(true)
     expect(plainInfo.isGitRepo).toBe(false)
+
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('detectProjectStack detects a TypeScript project with pnpm and vitest', () => {
+    const root = makeTempDir('ai-setup-project-stack-')
+
+    writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        description: 'React app',
+        dependencies: { react: '^18.0.0' },
+        devDependencies: { vitest: '^2.0.0' },
+        scripts: {
+          test: 'vitest run',
+          lint: 'biome check .',
+          build: 'vite build',
+          dev: 'vite dev',
+        },
+      }),
+    )
+    writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'lockfileVersion: 9.0')
+
+    expect(detectProjectStack(root)).toEqual({
+      language: 'TypeScript',
+      framework: 'React',
+      testFramework: 'Vitest',
+      packageManager: 'pnpm',
+      commands: {
+        test: 'pnpm test',
+        lint: 'pnpm run lint',
+        build: 'pnpm run build',
+        dev: 'pnpm run dev',
+        install: 'pnpm install',
+      },
+      description: 'React app',
+    })
+
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('detectProjectStack returns commands from package.json scripts', () => {
+    const root = makeTempDir('ai-setup-project-stack-scripts-')
+
+    writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({
+        dependencies: { next: '14.0.0' },
+        scripts: {
+          test: 'jest',
+          lint: 'eslint .',
+          build: 'next build',
+          dev: 'next dev',
+        },
+      }),
+    )
+    writeFileSync(path.join(root, 'package-lock.json'), '{}')
+
+    expect(detectProjectStack(root).commands).toEqual({
+      test: 'npm test',
+      lint: 'npm run lint',
+      build: 'npm run build',
+      dev: 'npm run dev',
+      install: 'npm install',
+    })
+
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('detectProjectStack returns Unknown language for an empty directory', () => {
+    const root = makeTempDir('ai-setup-project-stack-empty-')
+
+    expect(detectProjectStack(root)).toEqual({
+      language: 'Unknown',
+      commands: {},
+    })
+
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('detectProjectStack detects package manager from lock files', () => {
+    const root = makeTempDir('ai-setup-project-stack-lockfiles-')
+    const cases = [
+      { dir: 'npm', file: 'package-lock.json', expected: 'npm' },
+      { dir: 'yarn', file: 'yarn.lock', expected: 'yarn' },
+      { dir: 'pnpm', file: 'pnpm-lock.yaml', expected: 'pnpm' },
+      { dir: 'bun', file: 'bun.lockb', expected: 'bun' },
+    ] as const
+
+    for (const testCase of cases) {
+      const projectDir = path.join(root, testCase.dir)
+      mkdirSync(projectDir, { recursive: true })
+      writeFileSync(path.join(projectDir, testCase.file), '')
+
+      expect(detectProjectStack(projectDir).packageManager).toBe(testCase.expected)
+    }
 
     rmSync(root, { recursive: true, force: true })
   })

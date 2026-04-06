@@ -70,6 +70,7 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
         path: relPath,
         hash: 'dry-run',
         source: path.relative(opts.ctx.libraryDir, opts.src),
+        owner: 'library',
       })
       return
     }
@@ -83,6 +84,7 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
       path: relPath,
       hash: 'dry-run',
       source: path.relative(opts.ctx.libraryDir, opts.src),
+      owner: 'library',
     })
     return
   }
@@ -100,6 +102,7 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
     path: relPath,
     hash: files.fileHash(opts.dest),
     source: path.relative(opts.ctx.libraryDir, opts.src),
+    owner: 'library',
   })
 }
 
@@ -191,5 +194,6 @@ export async function installRootTemplateIfMissing(opts: RootTemplateOptions): P
     path: opts.recordPath,
     hash: files.fileHash(opts.destPath),
     source: opts.templateSource,
+    owner: 'library',
   })
 }

@@ -8,9 +8,17 @@ export interface FragmentContext {
   framework?: string
   workspaceType?: string
   projectInstructions?: string
+  features?: FeatureFlags
   toolDescription?: string
   toolNotes?: string
-  features?: FeatureFlags
+  testFramework?: string
+  packageManager?: string
+  testCommand?: string
+  lintCommand?: string
+  buildCommand?: string
+  devCommand?: string
+  installCommand?: string
+  projectDescription?: string
 }
 
 export interface FeatureFlags {
@@ -169,6 +177,14 @@ export class FragmentResolver {
       TOOL_DESCRIPTION: context.toolDescription || '',
       TOOL_NOTES: context.toolNotes || '',
       PROJECT_INSTRUCTIONS: context.projectInstructions || '',
+      TEST_FRAMEWORK: context.testFramework || '',
+      PACKAGE_MANAGER: context.packageManager || '',
+      TEST_COMMAND: context.testCommand || '',
+      LINT_COMMAND: context.lintCommand || '',
+      BUILD_COMMAND: context.buildCommand || '',
+      DEV_COMMAND: context.devCommand || '',
+      INSTALL_COMMAND: context.installCommand || '',
+      PROJECT_DESCRIPTION: context.projectDescription || '',
     }
     
     return content.replace(variableRegex, (_, varName) => {

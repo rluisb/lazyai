@@ -77,6 +77,7 @@ async function copyLibraryFile(
     path: relPath,
     hash: files.fileHash(dest),
     source: path.relative(libraryDir, src),
+    owner: 'library',
   })
 }
 

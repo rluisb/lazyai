@@ -2,7 +2,7 @@ import path from 'node:path'
 import type { AgentId, PromptId, SkillId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
-import { ensureModeAgentFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
+import { ensureModeAgentFrontmatter, stripFrontmatterAndInjectModel, stripYamlFrontmatter } from '../utils/frontmatter.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class CopilotAdapter implements ToolAdapter {
@@ -158,7 +158,7 @@ export class CopilotAdapter implements ToolAdapter {
       files.backupFile(dest, ctx.targetDir)
     }
 
-    const transformed = stripYamlFrontmatter(files.readFile(src))
+    const transformed = stripFrontmatterAndInjectModel(files.readFile(src))
     files.writeFile(dest, transformed)
     ctx.fileRecords.push({
       path: relPath,

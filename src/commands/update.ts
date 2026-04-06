@@ -10,6 +10,7 @@ import type { ToolId } from '../types.js'
 import { ALL_SKILLS } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
+import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
 
 interface ExpectedFile {
   path: string
@@ -48,16 +49,17 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     expected.push(entry)
   }
 
-  const addDir = (librarySubDir: string, targetSubDir: string): void => {
+  const addDir = (librarySubDir: string, targetSubDir: string, transform?: (content: string) => string): void => {
     const srcDir = join(libraryDir, librarySubDir)
     if (!fileExists(srcDir)) return
     for (const file of listDir(srcDir)) {
       const srcPath = join(srcDir, file)
       const targetPath = join(targetDir, targetSubDir, file)
+      const raw = readFile(srcPath)
       upsertExpected({
         path: path.relative(targetDir, targetPath),
         source: path.join(librarySubDir, file).replaceAll('\\', '/'),
-        content: readFile(srcPath),
+        content: transform ? transform(raw) : raw,
       })
     }
   }
@@ -194,7 +196,11 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   }
 
   for (const tool of data.config.tools) {
-    if (tool !== 'gemini') { addDir('agents', tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude/agents' : '.github/agents') }
+    if (tool !== 'gemini') { 
+      const targetSubdir = tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude/agents' : '.github/agents'
+      const transform = (tool === 'opencode' || tool === 'copilot') ? stripFrontmatterAndInjectModel : undefined
+      addDir('agents', targetSubdir, transform) 
+    }
     addSkillsAndPromptsForTool(tool)
   }
 

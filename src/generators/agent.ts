@@ -26,10 +26,11 @@ export class AgentGenerator implements Generator {
         label: 'Model',
         type: 'select',
         required: true,
-        default: 'gpt-4o',
+        default: 'claude-sonnet-4-5',
         options: [
+          { value: 'claude-sonnet-4-5', label: 'claude-sonnet-4-5 (recommended for most agents)' },
+          { value: 'claude-opus-4-5', label: 'claude-opus-4-5 (deep reasoning: planner, reviewer, red-team)' },
           { value: 'gpt-4o', label: 'gpt-4o' },
-          { value: 'claude-sonnet', label: 'claude-sonnet' },
           { value: 'gemini-pro', label: 'gemini-pro' },
           { value: 'other', label: 'other' },
         ],
@@ -58,7 +59,7 @@ export class AgentGenerator implements Generator {
   async generate(config: GeneratorConfig): Promise<GeneratedFile[]> {
     const slug = toSlug(config.name)
     const title = toTitleCase(slug || config.name)
-    const model = String(config.answers?.model ?? 'gpt-4o')
+    const model = String(config.answers?.model ?? 'claude-sonnet-4-5')
     const mode = String(config.answers?.mode ?? 'interactive')
     const tools = String(config.answers?.tools ?? '')
       .split(',')
@@ -76,6 +77,9 @@ mode: ${mode}
 ---
 
 # ${title} Agent
+
+## Model
+Recommended: ${model}
 
 ## Identity
 

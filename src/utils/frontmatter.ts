@@ -14,6 +14,22 @@ export function stripYamlFrontmatter(content: string): string {
   return content.replace(YAML_FRONTMATTER_REGEX, '')
 }
 
+export function stripFrontmatterAndInjectModel(content: string): string {
+  const match = content.match(YAML_FRONTMATTER_REGEX)
+  if (!match) return content
+
+  const [, frontmatterBody = ''] = match
+  const body = content.slice(match[0].length)
+
+  const modelMatch = frontmatterBody.match(/^model\s*:\s*(.+)$/m)
+  if (modelMatch && modelMatch[1]) {
+    const model = modelMatch[1].trim()
+    return `<!-- Recommended model: ${model} -->\n\n${body}`
+  }
+
+  return body
+}
+
 export function ensureModeAgentFrontmatter(content: string): string {
   const split = splitYamlFrontmatter(content)
 

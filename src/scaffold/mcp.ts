@@ -18,6 +18,8 @@ export interface ScaffoldMcpOptions {
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
   cliTools?: string[]
+  /** MCP server names to enable (e.g., ['atlassian']) */
+  enableServers?: string[]
 }
 
 export async function scaffoldMcp(opts: ScaffoldMcpOptions): Promise<void> {
@@ -37,18 +39,27 @@ export async function scaffoldMcp(opts: ScaffoldMcpOptions): Promise<void> {
     return
   }
 
-  let content = readFile(catalogPath)
+  const catalog = JSON.parse(readFile(catalogPath)) as McpCatalog
 
+  // Enable CLI tools that are also MCP servers (legacy behavior)
   if (opts.cliTools && opts.cliTools.length > 0) {
-    const catalog = JSON.parse(content) as McpCatalog
     for (const toolName of opts.cliTools) {
       if (catalog.servers[toolName]) {
         catalog.servers[toolName].enabled = true
       }
     }
-    content = JSON.stringify(catalog, null, 2)
   }
 
+  // Enable explicitly selected MCP servers
+  if (opts.enableServers && opts.enableServers.length > 0) {
+    for (const serverName of opts.enableServers) {
+      if (catalog.servers[serverName]) {
+        catalog.servers[serverName].enabled = true
+      }
+    }
+  }
+
+  const content = JSON.stringify(catalog, null, 2)
   writeFile(dest, content)
   fileRecords.push({
     path: relPath,

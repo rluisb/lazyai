@@ -38,6 +38,8 @@
 {{#include fragments/bug-resolution.xml}}
 {{/if}}
 
+{{#include fragments/git-safety.md}}
+
 {{TOOL_NOTES}}
 
 ## Project-Specific Instructions

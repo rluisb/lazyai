@@ -16,6 +16,7 @@ import { outroSuccess } from '../prompts.js'
 import { scaffoldAgentsSkillsPrompts } from '../scaffold/agents-skills-prompts.js'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { scaffoldConstitution } from '../scaffold/constitution.js'
+import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
@@ -113,6 +114,7 @@ export async function runWizard(opts: {
     disableFeatures?: string[]
     branchPattern?: string
     commitPattern?: string
+    enableServers?: string[]
   }
   targetDir: string
 }): Promise<void> {
@@ -153,7 +155,7 @@ export async function runWizard(opts: {
         }
       : {}
 
-    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos, cliTools } = await runPhase1({
+    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos, cliTools, enableServers } = await runPhase1({
       interactive: opts.interactive,
       prior,
       cliOverrides: opts.cliOverrides,
@@ -366,8 +368,17 @@ export async function runWizard(opts: {
         strategy,
         perFileOverrides,
         ...(cliTools ? { cliTools } : {}),
+        ...(enableServers ? { enableServers } : {}),
       })
       tracker.trackSuccess('scaffold:mcp')
+
+      await scaffoldEnvExample({
+        targetDir: effectiveTargetDir,
+        fileRecords,
+        strategy,
+        perFileOverrides,
+      })
+      tracker.trackSuccess('scaffold:env-example')
 
       await scaffoldTemplatesRules({
         targetDir: effectiveTargetDir,

@@ -31,6 +31,8 @@ export interface Phase1Result {
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   cliTools?: string[]
+  /** MCP server names explicitly enabled by user (e.g., ['atlassian']) */
+  enableServers?: string[]
 }
 
 function getCliToolOptions(_targetDir: string): Array<{ value: string; label: string; hint: string }> {
@@ -52,6 +54,38 @@ function getCliToolOptions(_targetDir: string): Array<{ value: string; label: st
     for (const [name, tool] of Object.entries(catalog.cliTools ?? {})) {
       const label = name.toUpperCase()
       const hint = tool.installHint ? `CLI tool (${tool.installHint})` : 'CLI tool requiring local install'
+      options.push({ value: name, label, hint })
+    }
+
+    return options
+  } catch {
+    return []
+  }
+}
+
+interface McpIntegrationConfig {
+  description?: string
+  enabled?: boolean
+  requiresInstall?: boolean
+}
+
+function getIntegrationOptions(_targetDir: string): Array<{ value: string; label: string; hint: string }> {
+  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
+  const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
+  if (!fileExists(catalogPath)) return []
+
+  try {
+    const catalog = JSON.parse(readFile(catalogPath)) as {
+      servers: Record<string, McpIntegrationConfig>
+    }
+    const options: Array<{ value: string; label: string; hint: string }> = []
+
+    // Surface disabled, non-requiresInstall servers as optional integrations
+    // Excludes core servers (enabled by default) and install-gated servers (shown in CLI tools)
+    for (const [name, server] of Object.entries(catalog.servers)) {
+      if (server.enabled || server.requiresInstall) continue
+      const label = name.charAt(0).toUpperCase() + name.slice(1)
+      const hint = server.description ?? 'MCP integration'
       options.push({ value: name, label, hint })
     }
 
@@ -153,6 +187,7 @@ export async function runPhase1(opts: {
     name?: string
     planningRepo?: string
     repos?: string[]
+    enableServers?: string[]
   }
   targetDir: string
 }): Promise<Phase1Result> {
@@ -173,6 +208,7 @@ export async function runPhase1(opts: {
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
     const cliTools = opts.cliOverrides.cliTools
+    const enableServers = opts.cliOverrides.enableServers
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
@@ -195,6 +231,7 @@ export async function runPhase1(opts: {
       ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
       ...(setupScope === 'workspace' && parsedRepos.length > 0 ? { repos: parsedRepos } : {}),
       ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
+      ...(enableServers && enableServers.length > 0 ? { enableServers } : {}),
     }
   }
 
@@ -282,6 +319,26 @@ export async function runPhase1(opts: {
       }
 
       cliTools = (cliToolsResult as string[]) || []
+    }
+  }
+
+  // Prompt: External integrations (MCP servers like Atlassian)
+  let enableServers: string[] = opts.cliOverrides.enableServers ?? []
+  if (!opts.cliOverrides.enableServers) {
+    const integrationOptions = getIntegrationOptions(opts.targetDir)
+    if (integrationOptions.length > 0) {
+      const integrationsResult = await p.multiselect({
+        message: 'Enable external integrations? (optional, press Enter to skip)',
+        options: integrationOptions,
+        required: false,
+      })
+
+      if (p.isCancel(integrationsResult)) {
+        p.cancel('Setup cancelled.')
+        process.exit(0)
+      }
+
+      enableServers = (integrationsResult as string[]) || []
     }
   }
 
@@ -530,5 +587,6 @@ export async function runPhase1(opts: {
     ...(planningRepoPath ? { planningRepoPath } : {}),
     ...(repos.length > 0 ? { repos } : {}),
     ...(cliTools.length > 0 ? { cliTools } : {}),
+    ...(enableServers.length > 0 ? { enableServers } : {}),
   }
 }

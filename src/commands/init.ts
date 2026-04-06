@@ -53,6 +53,7 @@ interface InitOptions {
   disableFeatures?: string
   branchPattern?: string
   commitPattern?: string
+  enableServers?: string
 }
 
 export function registerInit(program: Command): void {
@@ -102,6 +103,10 @@ export function registerInit(program: Command): void {
       'Default: {type}({scope}): {description}  →  feat(auth): add login\n' +
       'Options: {type}: {description}, [{ticket}] {description}, {description}'
     )
+    .option(
+      '--enable-servers <servers>',
+      'Comma-separated MCP servers to enable (e.g., atlassian,playwright)'
+    )
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
       const tools = opts.tools
@@ -134,6 +139,7 @@ export function registerInit(program: Command): void {
         disableFeatures?: string[]
         branchPattern?: string
         commitPattern?: string
+        enableServers?: string[]
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
@@ -149,6 +155,7 @@ export function registerInit(program: Command): void {
       if (disableFeatures) cliOverrides.disableFeatures = disableFeatures
       if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern
       if (opts.commitPattern) cliOverrides.commitPattern = opts.commitPattern
+      if (opts.enableServers) cliOverrides.enableServers = opts.enableServers.split(',').map((s) => s.trim()).filter(Boolean)
 
       // Check if we should migrate
       if (opts.migrate) {

@@ -8,15 +8,6 @@
       "enabled": true,
       "requiresInstall": false
     },
-    "github": {
-      "description": "GitHub repository operations",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" },
-      "tools": ["search_repositories", "get_file_contents", "search_issues", "get_issue", "create_issue", "create_pull_request", "list_commits"],
-      "enabled": true,
-      "requiresInstall": false
-    },
     "filesystem": {
       "description": "Local filesystem read/write access",
       "command": "npx",
@@ -76,10 +67,10 @@
       "requiresInstall": false
     },
     "atlassian": {
-      "description": "Jira and Confluence integration",
+      "description": "Jira and Confluence read-only access (search issues, read pages via OAuth)",
       "command": "npx",
       "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp"],
-      "tools": ["searchAtlassian", "getJiraIssue", "searchJiraIssuesUsingJql", "getConfluencePage", "createJiraIssue"],
+      "tools": ["searchAtlassian", "getJiraIssue", "searchJiraIssuesUsingJql", "getConfluencePage"],
       "enabled": false,
       "requiresInstall": false
     },
@@ -102,6 +93,11 @@
     }
   },
   "cliTools": {
+    "gh": {
+      "description": "GitHub CLI for repository, issue, and PR operations (never pushes without explicit user approval)",
+      "installHint": "brew install gh",
+      "enabled": true
+    },
     "rtk": {
       "description": "Token-efficient output formatting",
       "installHint": "brew install rtk",

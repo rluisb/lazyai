@@ -3,9 +3,10 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { compileMcp } from '../adapters/mcp-compiler.js'
+import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
 import type { FileRecord } from '../types.js'
-import { ensureDir, readFile, writeFile } from '../utils/files.js'
+import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
@@ -269,6 +270,35 @@ describe('MCP scaffold and compile', () => {
     expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
   })
 
+  it('enableServers option enables disabled MCP servers by name', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+      enableServers: ['stdioDisabled'],
+    })
+
+    const catalog = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
+    expect(catalog.servers.stdioDisabled.enabled).toBe(true)
+    expect(catalog.servers.stdioEnabled.enabled).toBe(true)
+  })
+
+  it('enableServers ignores unknown server names', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+      enableServers: ['nonexistent'],
+    })
+
+    const catalog = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
+    expect(catalog.servers.nonexistent).toBeUndefined()
+  })
+
   it('compileMcp generates .mcp.json for pi', async () => {
     await scaffoldMcp({
       targetDir,
@@ -288,5 +318,68 @@ describe('MCP scaffold and compile', () => {
     const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
     expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
     expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+  })
+
+  describe('env-example generation', () => {
+    it('generates .env.example from enabled servers with env vars', async () => {
+      await scaffoldMcp({
+        targetDir,
+        libraryDir,
+        fileRecords,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+      })
+
+      await scaffoldEnvExample({
+        targetDir,
+        fileRecords,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+      })
+
+      const envExample = readFile(path.join(targetDir, '.env.example'))
+      expect(envExample).toContain('API_KEY=')
+      expect(envExample).toContain('Required by: stdioEnabled')
+      expect(envExample).toContain('NEVER commit .env')
+      expect(fileRecords.some((r) => r.path === '.env.example')).toBe(true)
+    })
+
+    it('does not generate .env.example when no enabled servers have env vars', async () => {
+      // Create a catalog with no env vars on enabled servers
+      writeFile(
+        path.join(libraryDir, 'mcp', 'catalog.json'),
+        JSON.stringify(
+          {
+            servers: {
+              noenv: {
+                command: 'npx',
+                args: ['-y', 'no-env-server'],
+                enabled: true,
+              },
+            },
+          },
+          null,
+          2,
+        ),
+      )
+
+      const records: FileRecord[] = []
+      await scaffoldMcp({
+        targetDir,
+        libraryDir,
+        fileRecords: records,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+      })
+
+      await scaffoldEnvExample({
+        targetDir,
+        fileRecords: records,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+      })
+
+      expect(fileExists(path.join(targetDir, '.env.example'))).toBe(false)
+    })
   })
 })

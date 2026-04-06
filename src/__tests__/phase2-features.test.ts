@@ -14,6 +14,7 @@ vi.mock('@clack/prompts', () => ({
 }))
 
 import * as p from '@clack/prompts'
+import { PRESET_FEATURES } from '../presets.js'
 import { runPhase2Features } from '../wizard/phase2-features.js'
 
 const DEFAULT_FEATURES = {
@@ -139,6 +140,63 @@ describe('phase2 features merge behavior', () => {
     expect(Object.values(result.features).every(value => value === false)).toBe(true)
   })
 
+  it('--preset minimal sets only qualityGates to true in non-interactive mode', async () => {
+    const result = await runPhase2Features({
+      interactive: false,
+      cliOverrides: { preset: 'minimal' },
+    })
+
+    expect(result.features).toEqual(PRESET_FEATURES.minimal)
+  })
+
+  it('--preset standard sets the recommended baseline in non-interactive mode', async () => {
+    const result = await runPhase2Features({
+      interactive: false,
+      cliOverrides: { preset: 'standard' },
+    })
+
+    expect(result.features).toEqual(PRESET_FEATURES.standard)
+  })
+
+  it('--preset full sets all features to true in non-interactive mode', async () => {
+    const result = await runPhase2Features({
+      interactive: false,
+      cliOverrides: { preset: 'full' },
+    })
+
+    expect(result.features).toEqual(PRESET_FEATURES.full)
+  })
+
+  it('--preset + --features uses preset as base, then enables additional features', async () => {
+    const result = await runPhase2Features({
+      interactive: false,
+      cliOverrides: {
+        preset: 'minimal',
+        features: ['rpiWorkflow'],
+      },
+    })
+
+    expect(result.features).toEqual({
+      ...PRESET_FEATURES.minimal,
+      rpiWorkflow: true,
+    })
+  })
+
+  it('--preset + --disable-features uses preset as base, then disables specific features', async () => {
+    const result = await runPhase2Features({
+      interactive: false,
+      cliOverrides: {
+        preset: 'standard',
+        disableFeatures: ['bugResolution'],
+      },
+    })
+
+    expect(result.features).toEqual({
+      ...PRESET_FEATURES.standard,
+      bugResolution: false,
+    })
+  })
+
   it('accepts unknown feature flags from prior values and keeps them', async () => {
     const result = await runPhase2Features({
       interactive: false,
@@ -196,6 +254,7 @@ describe('phase2 features merge behavior', () => {
     vi.mocked(p.text).mockResolvedValueOnce('.planning')
     vi.mocked(p.multiselect).mockResolvedValueOnce(['contextEngineering', 'qualityGates'])
     vi.mocked(p.select)
+      .mockResolvedValueOnce('custom')
       .mockResolvedValueOnce('{type}/{ticket}-{description}')
       .mockResolvedValueOnce('{type}({scope}): {description}')
     vi.mocked(p.confirm).mockResolvedValueOnce(false)
@@ -214,6 +273,7 @@ describe('phase2 features merge behavior', () => {
     vi.mocked(p.text).mockResolvedValueOnce('.planning')
     vi.mocked(p.multiselect).mockResolvedValueOnce(['contextEngineering'])
     vi.mocked(p.select)
+      .mockResolvedValueOnce('custom')
       .mockResolvedValueOnce('{type}/{ticket}-{description}')
       .mockResolvedValueOnce('{type}({scope}): {description}')
     vi.mocked(p.confirm).mockResolvedValueOnce(false)
@@ -229,6 +289,7 @@ describe('phase2 features merge behavior', () => {
     vi.mocked(p.text).mockResolvedValueOnce('.planning')
     vi.mocked(p.multiselect).mockResolvedValueOnce(['qualityGates'])
     vi.mocked(p.select)
+      .mockResolvedValueOnce('custom')
       .mockResolvedValueOnce('{type}/{ticket}-{description}')
       .mockResolvedValueOnce('{type}({scope}): {description}')
     vi.mocked(p.confirm).mockResolvedValueOnce(false)
@@ -243,5 +304,50 @@ describe('phase2 features merge behavior', () => {
 
     expect(result.features.qualityGates).toBe(true)
     expect(result.features.contextEngineering).toBe(false)
+  })
+
+  it("interactive standard preset returns preset features without showing multiselect", async () => {
+    vi.mocked(p.text).mockResolvedValueOnce('.planning')
+    vi.mocked(p.select)
+      .mockResolvedValueOnce('standard')
+      .mockResolvedValueOnce('{type}/{ticket}-{description}')
+      .mockResolvedValueOnce('{type}({scope}): {description}')
+    vi.mocked(p.confirm).mockResolvedValueOnce(false)
+
+    const result = await runPhase2Features({
+      interactive: true,
+      setupScope: 'project',
+    })
+
+    expect(result.features).toEqual(PRESET_FEATURES.standard)
+    expect(p.multiselect).not.toHaveBeenCalled()
+  })
+
+  it("interactive custom preset shows multiselect with individual toggles", async () => {
+    vi.mocked(p.text).mockResolvedValueOnce('.planning')
+    vi.mocked(p.multiselect).mockResolvedValueOnce(['qualityGates', 'pivotHandling'])
+    vi.mocked(p.select)
+      .mockResolvedValueOnce('custom')
+      .mockResolvedValueOnce('{type}/{ticket}-{description}')
+      .mockResolvedValueOnce('{type}({scope}): {description}')
+    vi.mocked(p.confirm).mockResolvedValueOnce(false)
+
+    const result = await runPhase2Features({
+      interactive: true,
+      setupScope: 'project',
+    })
+
+    expect(p.multiselect).toHaveBeenCalledTimes(1)
+    expect(result.features).toEqual({
+      contextEngineering: false,
+      rpiWorkflow: false,
+      chainOfThought: false,
+      treeOfThoughts: false,
+      adrEnforcement: false,
+      qualityGates: true,
+      agentHarness: false,
+      bugResolution: false,
+      pivotHandling: true,
+    })
   })
 })

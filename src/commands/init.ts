@@ -2,27 +2,33 @@ import * as p from '@clack/prompts'
 import type { Command } from 'commander'
 import pc from 'picocolors'
 import { detectAdapters, importSetup } from '../migration/index.js'
-import type { SetupScope, SetupType, ToolId } from '../types.js'
+import type { PresetLevel, SetupScope, SetupType, ToolId } from '../types.js'
 import { runWizard } from '../wizard/index.js'
 import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
 // Help text for features - detailed descriptions
 const FEATURES_HELP = `
-Prompt Engineering Features (all ON by default):
-  contextEngineering  - Principles for optimal context selection (relevance, recency, locality)
-  rpiWorkflow         - Research → Plan → Implement structured execution
-  chainOfThought      - Step-by-step reasoning: understand → analyze → synthesize → verify
-  treeOfThoughts      - Parallel exploration of multiple solution approaches
-  adrEnforcement      - Architecture Decision Records for significant changes
-  qualityGates        - Lint, typecheck, test, build verification requirements
-  agentHarness        - Multi-agent coordination (planner, builder, reviewer, scout, documenter)
-  bugResolution       - Structured debugging: reproduce → diagnose → fix → verify
-  pivotHandling       - Detection and ADR process when implementation plans change
+Feature Presets:
+  minimal   - Quality gates + git conventions only
+  standard  - + Reasoning protocol, RPI workflow, bug resolution (default)
+  full      - All prompt engineering features
+  custom    - Pick individually (interactive only)
 
-Use --features to enable specific features (if using --disable-features first)
-Use --disable-features to disable specific features (all are ON by default)
+Individual features (for --features / --disable-features):
+  contextEngineering  - Context discipline: file budget, session hygiene
+  rpiWorkflow         - Research → Plan → Implement workflow
+  chainOfThought      - Reasoning protocol: structured <cot> reasoning
+  treeOfThoughts      - Decision protocol: evaluate multiple approaches
+  adrEnforcement      - Architecture Decision Records for significant changes
+  qualityGates        - Lint, typecheck, test, build checks
+  agentHarness        - Agent coordination: multi-agent handoff rules
+  bugResolution       - Structured debugging: reproduce → diagnose → fix → verify
+  pivotHandling       - What to do when plans change mid-implementation
 
 Examples:
+  --preset minimal                                  # Lightweight setup
+  --preset standard                                 # Recommended (default)
+  --preset full                                     # Everything
   --disable-features treeOfThoughts,agentHarness    # Disable advanced features
   --disable-features all --features rpiWorkflow     # Minimal: only RPI workflow
 `
@@ -42,6 +48,7 @@ interface InitOptions {
   absorb?: boolean
   dryRun?: boolean
   planningDir?: string
+  preset?: string
   features?: string
   disableFeatures?: string
   branchPattern?: string
@@ -66,6 +73,13 @@ export function registerInit(program: Command): void {
     .option('--absorb', 'Absorb existing tool configs into .ai/ during init')
     .option('--dry-run', 'Preview changes without writing files')
     .option('--planning-dir <dir>', 'Planning directory for specs/ADRs (default: .planning)')
+    .option(
+      '--preset <level>',
+      'Feature preset: minimal | standard | full | custom\n' +
+      '  minimal  — quality gates + git conventions only\n' +
+      '  standard — + reasoning protocol, RPI workflow, bug resolution (default)\n' +
+      '  full     — all prompt engineering features'
+    )
     .option(
       '--features <features>',
       'Enable specific features (comma-separated). Use with --disable-features all for minimal setup.\n' +
@@ -115,6 +129,7 @@ export function registerInit(program: Command): void {
         cliTools?: string[]
         name?: string
         planningDir?: string
+        preset?: PresetLevel
         features?: string[]
         disableFeatures?: string[]
         branchPattern?: string
@@ -129,6 +144,7 @@ export function registerInit(program: Command): void {
       if (cliTools) cliOverrides.cliTools = cliTools
       if (opts.name) cliOverrides.name = opts.name
       if (opts.planningDir) cliOverrides.planningDir = opts.planningDir
+      if (opts.preset) cliOverrides.preset = opts.preset as PresetLevel
       if (features) cliOverrides.features = features
       if (disableFeatures) cliOverrides.disableFeatures = disableFeatures
       if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern

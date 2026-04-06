@@ -295,8 +295,8 @@ describe('generateMigrationPlan', () => {
     expect(plan.actions).toHaveLength(1);
     const action = plan.actions[0];
     expect(action).toBeDefined();
-    expect(action!.type).toBe('backup');
-    expect(action!.sourcePath).toBe('config.yml');
+    expect(action?.type).toBe('backup');
+    expect(action?.sourcePath).toBe('config.yml');
   });
 
   it('should set canProceed false when smart strategy has unresolved conflicts', async () => {

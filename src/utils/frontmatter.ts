@@ -22,7 +22,7 @@ export function stripFrontmatterAndInjectModel(content: string): string {
   const body = content.slice(match[0].length)
 
   const modelMatch = frontmatterBody.match(/^model\s*:\s*(.+)$/m)
-  if (modelMatch && modelMatch[1]) {
+  if (modelMatch?.[1]) {
     const model = modelMatch[1].trim()
     return `<!-- Recommended model: ${model} -->\n\n${body}`
   }

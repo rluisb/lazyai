@@ -1113,12 +1113,13 @@ ai-setup completions fish > ~/.config/fish/completions/ai-setup.fish
 
 ![Library demo](demo/08-library.gif)
 
-### Bundled agents (6)
+### Bundled agents (7)
 
 | Agent | Brief description |
 |---|---|
 | `builder` | Disciplined implementer that follows a plan exactly and avoids unrequested changes. |
 | `documenter` | Technical writer focused on concise docs grounded in real repo examples. |
+| `orchestrator` | Task coordinator that dispatches agents in RPI order and tracks progress. |
 | `planner` | Careful planner that turns research into phased implementation plans. |
 | `red-team` | Adversarial tester focused on edge cases, security, and breakage. |
 | `reviewer` | Code reviewer that reports findings without fixing them. |

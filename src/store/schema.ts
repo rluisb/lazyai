@@ -16,7 +16,7 @@ export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
 export const presetLevelSchema = z.enum(['minimal', 'standard', 'full', 'custom'])
 export const toolIdSchema = z.enum(['opencode', 'claude-code', 'gemini', 'copilot', 'codex'])
-export const agentIdSchema = z.enum(['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout'])
+export const agentIdSchema = z.enum(['builder', 'documenter', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout'])
 export const skillIdSchema = z.enum([
   'anti-speculation',
   'extract-standards',

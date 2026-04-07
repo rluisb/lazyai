@@ -292,6 +292,29 @@ describe('scaffoldCompiledRoot', () => {
     expect(fileRecords.length).toBeGreaterThan(0)
   })
 
+  it('includes workspace repos section when repos are provided', async () => {
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: ['opencode'],
+      projectName: 'test-workspace',
+      planningDir: '.planning',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+      repos: [
+        { name: 'frontend', path: '../frontend', type: 'nextjs-typescript', description: 'Web app' },
+        { name: 'backend', path: '../backend', type: 'go' },
+      ],
+    })
+
+    const content = readFile(path.join(targetDir, 'AGENTS.md'))
+    expect(content).toContain('## Workspace Repos')
+    expect(content).toContain('### frontend')
+    expect(content).toContain('nextjs-typescript')
+    expect(content).toContain('### backend')
+  })
+
   it('writes files to correct directories maintaining structure', async () => {
     await scaffoldCompiledRoot({
       targetDir,

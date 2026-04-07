@@ -20,7 +20,7 @@ import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
-import { scaffoldRepoLedgers, scaffoldRepoRoots } from '../scaffold/repo-roots.js'
+import { scaffoldRepoLedgers } from '../scaffold/repo-roots.js'
 import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { appendOperation, writeStore } from '../store/index.js'
@@ -425,6 +425,7 @@ export async function runWizard(opts: {
         fileRecords,
         strategy,
         perFileOverrides,
+        ...(repos && repos.length > 0 ? { repos } : {}),
       })
       tracker.trackSuccess('scaffold:compiled-root')
 
@@ -453,19 +454,7 @@ export async function runWizard(opts: {
       tracker.trackSuccess('compile:mcp')
 
       if (setupScope === 'workspace' && repos && repos.length > 0) {
-        const repoResults = await scaffoldRepoRoots({
-          repos,
-          planningRepoPath: effectiveTargetDir,
-          tools: installableTools,
-          strategy,
-          perFileOverrides,
-        })
-
-        for (const records of repoResults.values()) {
-          fileRecords.push(...records)
-        }
-        tracker.trackSuccess('scaffold:repo-roots')
-
+        // Ledgers are written in the workspace root (specs/memory/repos/), not in referenced repos
         await scaffoldRepoLedgers({
           planningRepoPath: effectiveTargetDir,
           repos,

@@ -31,7 +31,7 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
   },
 }
 
-const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string; rulesDir?: string }> = {
+const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string; rulesDir?: string; commandDir?: string }> = {
   'claude-code': {
     agentDir: '.claude/agents',
     skillDir: '.claude/skills',
@@ -40,6 +40,7 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
   opencode: {
     agentDir: '.opencode/agents',
     skillDir: '.opencode/skills',
+    commandDir: '.opencode/commands',
   },
   gemini: {
     skillDir: '.gemini/skills',

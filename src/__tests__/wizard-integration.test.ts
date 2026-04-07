@@ -153,7 +153,7 @@ describe('wizard integration (non-interactive)', () => {
 
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'agents', 'builder.md'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)
-    expect(existsSync(path.join(homeDir, '.config', 'opencode', 'commands'))).toBe(false)
+    expect(existsSync(path.join(homeDir, '.config', 'opencode', 'commands'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'templates'))).toBe(false)
     expect(existsSync(path.join(homeDir, '.claude', 'builder.md'))).toBe(true)
 

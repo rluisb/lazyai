@@ -151,9 +151,10 @@ describe('cli init integration', () => {
     ])
 
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'opencode.json'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/skills'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(false)
+    expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/templates'))).toBe(false)
 
     expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)

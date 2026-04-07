@@ -146,12 +146,17 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.opencode/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/skills/implement/SKILL.md'))).toBe(true)
     expect(readFile(path.join(targetDir, '.opencode/skills/implement/SKILL.md'))).toContain('name: implement')
-    expect(fileExists(path.join(targetDir, '.opencode/commands'))).toBe(false)
+    expect(fileExists(path.join(targetDir, 'opencode.json'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode/commands'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/templates'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.opencode/agents/AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/skills/AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.ai-setup-backup/.opencode/agents/builder.md'))).toBe(true)
+
+    const config = JSON.parse(readFile(path.join(targetDir, 'opencode.json')))
+    expect(config.$schema).toBe('https://opencode.ai/config.json')
+    expect(config.instructions).toContain('AGENTS.md')
 
     expect(fileRecords.map((f) => f.path).sort()).toEqual([
       '.opencode/AGENTS.md',
@@ -160,7 +165,9 @@ describe('tool adapters', () => {
       '.opencode/agents/reviewer.md',
       '.opencode/skills/AGENTS.md',
       '.opencode/skills/implement/SKILL.md',
+      'opencode.json',
     ])
+    expect(fileRecords.some((f) => f.path === 'opencode.json')).toBe(true)
   })
 
   it('OpenCode adapter uses skills directory for global scope', async () => {
@@ -182,7 +189,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'skills', 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'command'))).toBe(false)
-    expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(false)
+    expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(true)
   })
 
   it('Copilot adapter writes repo instructions, prompt files, and root AGENTS.md', async () => {
@@ -238,13 +245,18 @@ describe('tool adapters', () => {
 
     // Skills use directory format: .gemini/skills/<name>/SKILL.md
     expect(fileExists(path.join(targetDir, '.gemini/skills/implement/SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.gemini/settings.json'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
+
+    const settings = JSON.parse(readFile(path.join(targetDir, '.gemini/settings.json')))
+    expect(settings.model.name).toBe('gemini-2.5-pro')
 
     // Gemini has NO agents or templates concepts
     expect(fileExists(path.join(targetDir, '.gemini/agents'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.gemini/templates'))).toBe(false)
 
     expect(fileRecords.some((f) => f.path === '.gemini/skills/implement/SKILL.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.gemini/settings.json')).toBe(true)
     expect(fileRecords.some((f) => f.path === 'GEMINI.md')).toBe(true)
   })
 

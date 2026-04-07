@@ -8,7 +8,7 @@ const SHARED_ROOT_TEMPLATE_PATH = ['tool-templates', 'shared', 'root.template.md
 const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string; rootFile?: string }>> = {
   opencode: {
     description: 'This project uses OpenCode with ai-setup integration.',
-    notes: '',
+    notes: '## OpenCode-Specific Notes\n\n- Project config: `opencode.json` at project root\n- Agents: `.opencode/agents/<name>.md`\n- Skills: `.opencode/skills/<name>/SKILL.md`\n- Commands: `.opencode/commands/<name>.md`\n- Multiple config sources merged (project → global → env)',
   },
   'claude-code': {
     description: 'This project uses Claude Code with ai-setup integration.',
@@ -21,7 +21,8 @@ const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: strin
   },
   gemini: {
     description: 'This project uses Gemini CLI with ai-setup integration.',
-    notes: '## Gemini-Specific Notes\n\n- Gemini does not have a separate agents concept\n- Skills are in `.gemini/skills/*/SKILL.md` and function as pseudo-agents',
+    rootFile: 'GEMINI.md',
+    notes: '## Gemini CLI-Specific Notes\n\n- Project settings: `.gemini/settings.json`\n- Skills: `.gemini/skills/<name>/SKILL.md`\n- No agents concept (agents are inline in GEMINI.md)\n- Context traversal: walks up to .git boundary loading GEMINI.md files',
   },
   pi: {
     description: 'This project uses Pi Coding Agent with ai-setup integration.',

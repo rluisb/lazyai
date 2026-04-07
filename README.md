@@ -6,6 +6,29 @@ Scaffold a canonical, multi-tool AI development environment from one CLI.
 
 ![ai-setup demo](demo/01-hero.gif)
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [How It Works](#how-it-works)
+- [Scopes](#scopes)
+  - [Project Scope](#51-project-scope)
+  - [Global Scope](#52-global-scope)
+  - [Workspace Scope](#53-workspace-scope)
+- [Supported Tools](#supported-tools)
+  - [OpenCode](#opencode) · [Claude Code](#claude-code) · [Gemini CLI](#gemini-cli) · [GitHub Copilot](#github-copilot) · [Codex](#codex)
+- [Commands Reference](#commands-reference)
+  - [`init`](#init) · [`compile`](#compile) · [`add`](#add) · [`update`](#update) · [`doctor`](#doctor) · [`status`](#status) · [`create`](#create) · [`import`](#import) · [`migrate`](#migrate) · [`eject`](#eject) · [`list`](#list) · [`info`](#info) · [`completions`](#completions)
+- [Library Content](#library-content)
+- [Feature Presets](#feature-presets)
+- [MCP Integration](#mcp-integration)
+- [Migration](#migration)
+- [Update & Conflict Behavior](#update--conflict-behavior)
+- [Development](#development)
+- [License](#license)
+
+---
+
 ## Quick Start
 
 > **Important:** this package is **not published to npm**. Install and run it directly from GitHub with `npx`.
@@ -403,15 +426,16 @@ npx github:ricardoborges-teachable/ai-setup init \
 
 - your team coordinates work across multiple repositories
 - you want one planning repo for specs, ADRs, memory, and ledgers
-- you want referenced repos to receive lightweight root instructions without copying the whole planning structure into each repo
+- you want a single place for all AI tool configuration
 
 **How it works:**
 
-- the planning repo gets the full canonical + managed setup
-- referenced repos are scanned for stack detection
-- referenced repos get lightweight root files per selected tool
-- Claude-enabled referenced repos also get `.claude/settings.json` with safe default permissions
-- per-repo ledgers and state files are written back to the planning repo under `specs/memory/repos/`
+- **everything lives in the workspace root** (the planning repo) — referenced repos are never touched
+- the workspace root gets the full canonical setup: `.ai/`, specs, tool directories, MCP configs
+- referenced repos are scanned for stack detection (language, framework, commands)
+- detected repo info is included in the compiled root files (`AGENTS.md`, `CLAUDE.md`, etc.) so AI agents know what's in the workspace
+- per-repo ledgers and state snapshots are written to the workspace root under `specs/memory/repos/`
+- launch your AI tool from the workspace root — it reads config there and navigates into repos to edit code
 
 **Supported tools:** all 5 project-scope tools are supported for workspace root generation.
 
@@ -432,18 +456,30 @@ npx github:ricardoborges-teachable/ai-setup init \
 <summary>Example workspace file tree</summary>
 
 ```text
-planning-repo/
+planning-repo/                          ← workspace root (everything lives here)
 ├── .ai/
 │   ├── constitution/
 │   └── mcp.json
 ├── .ai-setup.json
-├── AGENTS.md
-├── CLAUDE.md
-├── .github/
-│   └── copilot-instructions.md
+├── AGENTS.md                           ← includes "Workspace Repos" section with detected stacks
+├── CLAUDE.md                           ← includes "Workspace Repos" section with detected stacks
+├── opencode.json
+├── opencode.jsonc
+├── .mcp.json
 ├── .opencode/
+│   ├── agents/
+│   ├── skills/
+│   └── commands/
 ├── .claude/
-├── .github/prompts/
+│   ├── settings.json
+│   ├── rules/
+│   ├── agents/
+│   └── skills/
+├── .github/
+│   ├── copilot-instructions.md
+│   └── prompts/
+├── .vscode/
+│   └── mcp.json
 └── specs/
     ├── adrs/
     ├── features/
@@ -456,24 +492,21 @@ planning-repo/
     │       ├── api/
     │       │   ├── ledger.md
     │       │   └── last-known-state.md
-    │       ├── web/
-    │       │   ├── ledger.md
-    │       │   └── last-known-state.md
-    │       └── worker/
+    │       └── web/
     │           ├── ledger.md
     │           └── last-known-state.md
     └── ...
 
-../api/
-├── AGENTS.md
-├── CLAUDE.md
-├── .github/
-│   └── copilot-instructions.md
-└── .claude/
-    └── settings.json
+../api/                                 ← referenced repo (NOT touched by ai-setup)
+├── .git/
+└── src/
+
+../web/                                 ← referenced repo (NOT touched by ai-setup)
+├── .git/
+└── src/
 ```
 
-_Referenced repos get lightweight root files and stack-aware hints, not the full planning repo scaffold._
+_Referenced repos are never modified. Their detected stack info (language, framework, commands) is included in the workspace root's compiled root files._
 </details>
 
 ---

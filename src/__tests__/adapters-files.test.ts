@@ -100,8 +100,10 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'tool-agents/skills-dir.md'), '# skills context')
     writeFile(path.join(libraryDir, 'tool-agents/templates-dir.md'), '# templates context')
     writeFile(path.join(libraryDir, 'tool-agents/root-dir.md'), '# root context')
+    writeFile(path.join(libraryDir, 'root/AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nRoot agent instructions')
     writeFile(path.join(libraryDir, 'root/GEMINI.template.md'), '# GEMINI root')
     writeFile(path.join(libraryDir, 'root/CLAUDE.template.md'), '# CLAUDE root')
+    writeFile(path.join(libraryDir, 'root/copilot-instructions.template.md'), '# Copilot repo instructions')
   })
 
   it('Pi adapter installs agents/templates and records metadata', async () => {
@@ -183,7 +185,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(false)
   })
 
-  it('Copilot adapter writes agents and templates to nested .github directories', async () => {
+  it('Copilot adapter writes repo instructions, prompt files, and root AGENTS.md', async () => {
     const adapter = new CopilotAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
@@ -201,14 +203,21 @@ describe('tool adapters', () => {
       },
     })
 
-    expect(fileExists(path.join(targetDir, '.github/agents/builder.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.github/prompts/plan.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/instructions'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/prompts/plan.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/prompts/implement.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
 
-    expect(fileExists(path.join(targetDir, '.github/builder.md'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.github/agents'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.github/AGENTS.md'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.github/prompts/AGENTS.md'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.github/templates/plan.md'))).toBe(false)
 
-    expect(fileRecords.some((f) => f.path === '.github/agents/builder.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === '.github/prompts/plan.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/prompts/plan.prompt.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/prompts/implement.prompt.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/copilot-instructions.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
   })
 
   it('Gemini adapter installs .gemini skills/<name>/SKILL.md and root GEMINI.md (no agents, no templates)', async () => {
@@ -259,13 +268,25 @@ describe('tool adapters', () => {
 
     expect(fileExists(path.join(targetDir, '.claude/agents/builder.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.claude/skills/implement/SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.claude/settings.json'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.claude/commands'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.claude/templates'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.claude/rules'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.claude/rules/typescript.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
 
+    expect(JSON.parse(readFile(path.join(targetDir, '.claude/settings.json')))).toEqual({
+      permissions: {
+        allow: [],
+        deny: [],
+      },
+    })
+    expect(readFile(path.join(targetDir, '.claude/rules/typescript.md'))).toContain('paths:')
+
     expect(fileRecords.some((f) => f.path === '.claude/agents/builder.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.claude/settings.json')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/skills/implement/SKILL.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.claude/rules/typescript.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
   })
 
@@ -274,7 +295,6 @@ describe('tool adapters', () => {
 
     ensureDir(path.join(libraryDir, 'skills'))
     writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-    ensureDir(path.join(libraryDir, 'root'))
     writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
 
     await adapter.install({
@@ -310,7 +330,6 @@ describe('tool adapters', () => {
     const globalAgentsDir = path.join(targetDir, '.config', '.agents')
     ensureDir(path.join(libraryDir, 'skills'))
     writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-    ensureDir(path.join(libraryDir, 'root'))
     writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
 
     await adapter.install({

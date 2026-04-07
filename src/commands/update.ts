@@ -134,7 +134,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
         }
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.github/prompts/${name}.md`)
+        addPrompt(name, `.github/prompts/${name}.prompt.md`)
       }
     }
   }
@@ -154,7 +154,7 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   const rootAgentsTemplatePath = join(libraryDir, 'root/AGENTS.template.md')
   if (fileExists(rootAgentsTemplatePath)) {
     const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName)
-    if (data.config.tools.includes('opencode')) {
+    if (data.config.tools.includes('opencode') || data.config.tools.includes('copilot')) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
     }
     if (data.config.tools.includes('pi') && !data.config.tools.includes('claude-code')) {
@@ -196,10 +196,10 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   }
 
   for (const tool of data.config.tools) {
-    if (tool !== 'gemini') { 
-      const targetSubdir = tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : tool === 'claude-code' ? '.claude/agents' : '.github/agents'
-      const transform = (tool === 'opencode' || tool === 'copilot') ? stripFrontmatterAndInjectModel : undefined
-      addDir('agents', targetSubdir, transform) 
+    if (tool === 'pi' || tool === 'opencode' || tool === 'claude-code') {
+      const targetSubdir = tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : '.claude/agents'
+      const transform = tool === 'opencode' ? stripFrontmatterAndInjectModel : undefined
+      addDir('agents', targetSubdir, transform)
     }
     addSkillsAndPromptsForTool(tool)
   }

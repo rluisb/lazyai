@@ -5,18 +5,19 @@ import { type FragmentContext, FragmentResolver } from './fragment-resolver.js'
 
 const SHARED_ROOT_TEMPLATE_PATH = ['tool-templates', 'shared', 'root.template.md'] as const
 
-const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string }>> = {
+const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string; rootFile?: string }>> = {
   opencode: {
     description: 'This project uses OpenCode with ai-setup integration.',
     notes: '',
   },
   'claude-code': {
     description: 'This project uses Claude Code with ai-setup integration.',
-    notes: '',
+    notes: '## Claude Code-Specific Notes\n\n- Project settings: `.claude/settings.json`\n- Modular rules: `.claude/rules/<name>.md` (supports `paths` frontmatter for scoping)\n- Skills: `.claude/skills/<name>/SKILL.md`\n- Agents: `.claude/agents/<name>.md`\n- Personal overrides: `CLAUDE.local.md` (gitignore this)',
   },
   copilot: {
     description: 'This project uses GitHub Copilot with ai-setup integration.',
-    notes: '## Copilot-Specific Notes\n\n- Agents are in `.github/agents/*.md`\n- Prompts are in `.github/prompts/*.prompt.md`',
+    rootFile: 'copilot-instructions.md',
+    notes: '## Copilot-Specific Notes\n\n- Repository-wide instructions: `.github/copilot-instructions.md`\n- Path-specific instructions: `.github/instructions/<name>.instructions.md` with `applyTo` frontmatter\n- Reusable prompts: `.github/prompts/<name>.prompt.md`\n- Agent instructions: `AGENTS.md` at project root',
   },
   gemini: {
     description: 'This project uses Gemini CLI with ai-setup integration.',

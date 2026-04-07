@@ -31,10 +31,11 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
   },
 }
 
-const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string }> = {
+const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string; rulesDir?: string }> = {
   'claude-code': {
     agentDir: '.claude/agents',
     skillDir: '.claude/skills',
+    rulesDir: '.claude/rules',
   },
   opencode: {
     agentDir: '.opencode/agents',
@@ -44,7 +45,7 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
     skillDir: '.gemini/skills',
   },
   copilot: {
-    agentDir: '.github/agents',
+    // Copilot uses AGENTS.md at the repository root for agent instructions.
     skillDir: '.github/prompts',
     promptDir: '.github/prompts',
   },
@@ -160,10 +161,13 @@ export async function computePlan(
     // Only add prompts if tool supports them
     if (paths.promptDir) {
       for (const promptId of selections.prompts) {
+        const promptDestPath = tool === 'copilot'
+          ? `${promptId}.prompt.md`
+          : `${promptId}.md`
         planned.push(
           makePlannedFile(
             targetDir,
-            path.posix.join(paths.promptDir, `${promptId}.md`),
+            path.posix.join(paths.promptDir, promptDestPath),
             `prompts/${promptId}.md`,
             'prompt',
           ),

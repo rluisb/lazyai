@@ -36,6 +36,8 @@ export interface ScaffoldCompiledRootOptions {
   framework?: string
   workspaceType?: string
   projectInstructions?: string
+  /** Referenced repos for workspace scope — appended as context to compiled root */
+  repos?: Array<{ name: string; path: string; type?: string; description?: string }>
 }
 
 /**
@@ -64,6 +66,7 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
     framework,
     workspaceType,
     projectInstructions,
+    repos,
   } = opts
 
   const effectiveFeatures: FeatureFlags = {
@@ -126,6 +129,29 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
 
     const result = compiler.compile()
 
+    // For workspace scope, append repo context to compiled output
+    let workspaceReposSection = ''
+    if (repos && repos.length > 0) {
+      const lines = [
+        '',
+        '## Workspace Repos',
+        '',
+        'This workspace contains the following repositories:',
+        '',
+      ]
+      for (const repo of repos) {
+        lines.push(`### ${repo.name}`)
+        lines.push('')
+        lines.push(`- **Path**: \`${repo.path}\``)
+        if (repo.type && repo.type !== 'unknown') lines.push(`- **Type**: ${repo.type}`)
+        if (repo.description) lines.push(`- **Description**: ${repo.description}`)
+        lines.push('')
+      }
+      lines.push('When working in a repo, refer to its README or package.json for repo-specific details.')
+      lines.push('')
+      workspaceReposSection = lines.join('\n')
+    }
+
     // Write each compiled file
     for (const file of result.files) {
       // Map 'root.md' to tool-specific filename (e.g., CLAUDE.md, AGENTS.md)
@@ -145,7 +171,8 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
       if (action === 'skip') continue
 
       // Write the compiled content
-      writeFile(destPath, file.content)
+      const content = workspaceReposSection ? file.content + workspaceReposSection : file.content
+      writeFile(destPath, content)
 
       // Record the file
       fileRecords.push({

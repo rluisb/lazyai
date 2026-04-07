@@ -4,7 +4,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI.
 
 ![Node >=20.12.0](https://img.shields.io/badge/node-%3E%3D20.12.0-339933?logo=node.js&logoColor=white)
 
-![ai-setup demo](demo/demo.gif)
+![ai-setup demo](demo/01-hero.gif)
 
 ## Quick Start
 
@@ -211,6 +211,8 @@ This is what powers:
 ---
 
 ## Scopes
+
+![Scopes demo](demo/03-scopes.gif)
 
 ### Overview
 
@@ -466,6 +468,8 @@ _Referenced repos get lightweight root files and stack-aware hints, not the full
 
 ## Supported Tools
 
+![Tool structures demo](demo/04-tools.gif)
+
 ### OpenCode
 
 - **Description:** project instructions for OpenCode plus agent, skill, and command directories
@@ -663,6 +667,8 @@ AGENTS.md
 > ai-setup -v <command>
 > ```
 
+![Init demo](demo/02-init.gif)
+
 ### `init`
 
 **Syntax**
@@ -717,6 +723,8 @@ ai-setup init --migrate --from ../legacy-project
 ai-setup init --scope project --tools opencode --disable-features all --features rpiWorkflow,qualityGates --no-interactive
 ```
 
+![Compile and Add demo](demo/05-compile-add.gif)
+
 ### `compile`
 
 **Syntax**
@@ -769,6 +777,8 @@ Adds another tool adapter to an existing managed setup in the current directory.
 ai-setup add claude-code
 ai-setup add copilot
 ```
+
+![Maintenance demo](demo/06-maintain.gif)
 
 ### `update`
 
@@ -842,6 +852,8 @@ Prints the current setup summary: scope, tools, enabled features, git convention
 ai-setup status
 ai-setup status --json
 ```
+
+![Create demo](demo/07-create.gif)
 
 ### `create`
 
@@ -1053,6 +1065,8 @@ ai-setup completions fish > ~/.config/fish/completions/ai-setup.fish
 ---
 
 ## Library Content
+
+![Library demo](demo/08-library.gif)
 
 ### Bundled agents (6)
 

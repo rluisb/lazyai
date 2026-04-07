@@ -7,7 +7,6 @@ import { CodexAdapter } from '../adapters/codex.js'
 import { CopilotAdapter } from '../adapters/copilot.js'
 import { GeminiAdapter } from '../adapters/gemini.js'
 import { OpenCodeAdapter } from '../adapters/opencode.js'
-import { PiAdapter } from '../adapters/pi.js'
 import type { FileRecord } from '../types.js'
 import {
   copyDir,
@@ -104,28 +103,6 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'root/GEMINI.template.md'), '# GEMINI root')
     writeFile(path.join(libraryDir, 'root/CLAUDE.template.md'), '# CLAUDE root')
     writeFile(path.join(libraryDir, 'root/copilot-instructions.template.md'), '# Copilot repo instructions')
-  })
-
-  it('Pi adapter installs skills directory-per-skill, prompts, and root AGENTS.md', async () => {
-    const adapter = new PiAdapter()
-
-    ensureDir(path.join(libraryDir, 'skills'))
-    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-
-    await adapter.install({ targetDir, libraryDir, fileRecords })
-
-    expect(fileExists(path.join(targetDir, '.pi/skills/implement/SKILL.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/prompts'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/settings.json'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
-    expect(fileExists(path.join(targetDir, '.pi/agents'))).toBe(false)
-    expect(fileExists(path.join(targetDir, '.pi/templates'))).toBe(false)
-
-    expect(fileRecords.some((f) => f.path === '.pi/skills/implement/SKILL.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === '.pi/settings.json')).toBe(true)
-    expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
-    expect(fileRecords.every((f) => f.hash.length === 16)).toBe(true)
   })
 
   it('OpenCode adapter installs agents and force-overwrites existing files with backup', async () => {

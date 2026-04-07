@@ -53,7 +53,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini'],
+      tools: ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'],
       projectName: 'test-project',
       planningDir: '.ai/planning',
       fileRecords,
@@ -157,8 +157,8 @@ describe('scaffoldCompiledRoot', () => {
     expect(agentsContent).toContain('<decision-protocol>')
   })
 
-  it('compiles shared root outputs for all six tools with camelCase feature conditions', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini'] as const
+  it('compiles shared root outputs for all supported tools with camelCase feature conditions', async () => {
+    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
 
     await scaffoldCompiledRoot({
       targetDir,
@@ -315,7 +315,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('generates valid content for all supported tools', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini'] as const
+    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
 
     for (const tool of tools) {
       const toolTargetDir = makeTempDir(`ai-setup-tool-${tool}-`)

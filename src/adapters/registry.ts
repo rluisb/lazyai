@@ -4,14 +4,12 @@ import { CodexAdapter } from './codex.js'
 import { CopilotAdapter } from './copilot.js'
 import { GeminiAdapter } from './gemini.js'
 import { OpenCodeAdapter } from './opencode.js'
-import { PiAdapter } from './pi.js'
 import type { ToolAdapter } from './types.js'
 
 export class AdapterRegistry {
   private adapters: Map<string, ToolAdapter> = new Map()
 
   constructor() {
-    this.register(new PiAdapter())
     this.register(new OpenCodeAdapter())
     this.register(new ClaudeCodeAdapter())
     this.register(new GeminiAdapter())

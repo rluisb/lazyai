@@ -12,7 +12,7 @@ type Shell = 'bash' | 'zsh' | 'fish'
 
 const COMMANDS = ['init', 'add', 'update', 'doctor', 'status', 'compile', 'eject', 'list', 'info', 'create', 'completions']
 
-const TOOLS = ['opencode', 'claude-code', 'pi', 'copilot', 'gemini', 'codex']
+const TOOLS = ['opencode', 'claude-code', 'copilot', 'gemini', 'codex']
 
 const SCOPES = ['project', 'global', 'workspace']
 
@@ -134,7 +134,6 @@ _ai_setup() {
     tools=(
         'opencode:OpenCode AI assistant'
         'claude-code:Claude Code assistant'
-        'pi:Pi assistant'
         'copilot:GitHub Copilot'
         'gemini:Google Gemini'
         'codex:OpenAI Codex'
@@ -155,7 +154,7 @@ _ai_setup() {
         'cli:List CLI tools'
     )
 
-    case "\$words[2]" in
+    case "$words[2]" in
         init)
             _arguments \\
                 '--tools[Tools to install]:tool:->tools' \\
@@ -163,7 +162,7 @@ _ai_setup() {
                 '--non-interactive[Run without prompts]' \\
                 '--enable-servers[Enable MCP servers]:servers:' \\
                 '--help[Show help]'
-            case "\$state" in
+            case "$state" in
                 tools)
                     _describe 'tool' tools
                     ;;
@@ -180,7 +179,7 @@ _ai_setup() {
                 '1:category:->categories' \\
                 '--json[Output as JSON]' \\
                 '--enabled[Show only enabled items]'
-            case "\$state" in
+            case "$state" in
                 categories)
                     _describe 'category' categories
                     ;;
@@ -204,7 +203,7 @@ _ai_setup() {
             _arguments \\
                 '--scope[Compile scope]:scope:->scopes' \\
                 '--dry-run[Preview without writing]'
-            case "\$state" in
+            case "$state" in
                 scopes)
                     _describe 'scope' scopes
                     ;;

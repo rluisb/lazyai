@@ -43,7 +43,7 @@ describe('wizard integration (non-interactive)', () => {
       interactive: false,
       cliOverrides: {
         scope: 'project',
-        tools: ['pi', 'opencode', 'claude-code', 'gemini', 'copilot'],
+        tools: ['opencode', 'claude-code', 'gemini', 'copilot', 'codex'],
         name: 'test-project',
       },
       targetDir: tempDir,
@@ -142,7 +142,7 @@ describe('wizard integration (non-interactive)', () => {
       homeDir,
       cliOverrides: {
         scope: 'global',
-        tools: ['opencode', 'claude-code', 'copilot', 'gemini', 'pi'],
+        tools: ['opencode', 'claude-code', 'copilot', 'gemini', 'codex'],
       },
       targetDir: tempDir,
     })
@@ -165,7 +165,6 @@ describe('wizard integration (non-interactive)', () => {
 
     expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
     expect(infoSpy).toHaveBeenCalledWith("Gemini doesn't support file-based global config. Use project scope instead.")
-    expect(infoSpy).toHaveBeenCalledWith("Pi doesn't support file-based global config. Use project scope instead.")
 
     rmSync(homeDir, { recursive: true, force: true })
     infoSpy.mockRestore()

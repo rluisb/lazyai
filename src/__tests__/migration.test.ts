@@ -213,7 +213,7 @@ describe('Migration Engine', () => {
 });
 
 describe('Parser Registry', () => {
-  it('should detect all 5 adapters', async () => {
+  it('should detect all supported migration adapters', async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'parser-test-'));
     
     // Create a multi-adapter setup
@@ -224,7 +224,6 @@ describe('Parser Registry', () => {
     await fs.mkdir(path.join(tempDir, '.opencode'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.claude'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.gemini'), { recursive: true });
-    await fs.mkdir(path.join(tempDir, '.pi'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.github'), { recursive: true });
     
     await fs.writeFile(
@@ -237,7 +236,6 @@ describe('Parser Registry', () => {
     expect(adapters).toContain('opencode');
     expect(adapters).toContain('claude-code');
     expect(adapters).toContain('gemini');
-    expect(adapters).toContain('pi');
     expect(adapters).toContain('copilot');
     
     await fs.rm(tempDir, { recursive: true, force: true });

@@ -58,7 +58,7 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'pi,opencode',
+      'opencode,claude-code',
       '--name',
       'integration-test',
       '--no-interactive',
@@ -84,10 +84,10 @@ describe('cli init integration', () => {
       'specs/templates/AGENTS.md',
       'specs/rules/AGENTS.md',
       'AGENTS.md',
+      'CLAUDE.md',
       '.git/hooks/pre-commit',
-      '.pi/prompts',
-      '.pi/skills',
-      '.pi/settings.json',
+      '.claude/agents',
+      '.claude/skills',
       '.opencode/agents',
       '.opencode/skills',
       '.ai-setup.json',
@@ -100,12 +100,11 @@ describe('cli init integration', () => {
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('integration-test')
     expect(config.config.setupScope).toBe('project')
-    expect(config.config.tools).toEqual(['pi', 'opencode'])
+    expect(config.config.tools).toEqual(['opencode', 'claude-code'])
     expect(config.files.length).toBeGreaterThan(20)
-    expect(config.files.some((f: { path: string }) => f.path === '.pi/settings.json')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.claude/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === '.pi/skills/research/SKILL.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === '.pi/prompts/plan.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === '.claude/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === 'specs/templates/task.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
@@ -119,7 +118,7 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'pi,opencode',
+      'opencode,claude-code',
       '--name',
       'rerun-test',
       '--no-interactive',
@@ -131,9 +130,10 @@ describe('cli init integration', () => {
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('rerun-test')
     expect(config.config.setupScope).toBe('project')
-    expect(config.config.tools).toEqual(['pi', 'opencode'])
+    expect(config.config.tools).toEqual(['opencode', 'claude-code'])
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.claude/agents'))).toBe(true)
   }, 15000)
 
   it('supports partial tool selection with --tools opencode', async () => {
@@ -158,13 +158,10 @@ describe('cli init integration', () => {
     expect(fs.existsSync(path.join(tempDir, '.opencode/templates'))).toBe(false)
 
     expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
-    expect(fs.existsSync(path.join(tempDir, '.pi/agents'))).toBe(false)
-    expect(fs.existsSync(path.join(tempDir, '.pi/skills'))).toBe(false)
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path.startsWith('.pi/'))).toBe(false)
   })
 
   it('init --dry-run shows plan output and writes no files', async () => {

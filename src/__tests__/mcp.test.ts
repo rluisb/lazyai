@@ -299,27 +299,6 @@ describe('MCP scaffold and compile', () => {
     expect(catalog.servers.nonexistent).toBeUndefined()
   })
 
-  it('compileMcp generates .mcp.json for pi', async () => {
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'pi',
-      fileRecords,
-    })
-
-    const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
-    expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
-  })
-
   describe('env-example generation', () => {
     it('generates .env.example from enabled servers with env vars', async () => {
       await scaffoldMcp({

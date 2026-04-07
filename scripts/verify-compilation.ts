@@ -2,7 +2,7 @@
 
 /**
  * Verification script for the multi-tool compilation pipeline
- * Tests: FragmentResolver, TemplateCompiler, and all 6 tool templates
+ * Tests: FragmentResolver, TemplateCompiler, and all 5 supported tool templates
  */
 
 import path from 'node:path'
@@ -39,7 +39,7 @@ async function main() {
   
   // Check 2: Tool templates exist
   console.log('\n2️⃣ Checking tool templates...')
-  const expectedTools = ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini']
+  const expectedTools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini']
   
   const templatesExist = expectedTools.every(tool => {
     const templatePath = path.join(TEMPLATES_DIR, tool, 'root.template.md')

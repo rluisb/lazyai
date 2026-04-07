@@ -217,17 +217,5 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       break
     }
 
-    case 'pi': {
-      const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
-      const content = toMcpJson(enabledServers)
-      writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
-      opts.fileRecords.push({
-        path: '.mcp.json',
-        hash: fileHash(mcpPath),
-        source: 'compiled:mcp',
-        owner: 'library',
-      })
-      break
-    }
   }
 }

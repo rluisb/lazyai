@@ -84,23 +84,6 @@ export async function scaffoldRepoRoots(opts: RepoRootOptions): Promise<Map<stri
       }
     }
 
-    if (opts.tools.includes('pi')) {
-      const piDir = path.join(repoAbsPath, '.pi')
-      ensureDir(piDir)
-
-      const settingsPath = path.join(piDir, 'settings.json')
-      const action = applyStrategy(settingsPath, opts.strategy, opts.perFileOverrides, repoAbsPath)
-      if (action !== 'skip') {
-        writeFile(settingsPath, JSON.stringify({ compaction: { enabled: true } }, null, 2))
-        records.push({
-          path: `${repo.name}/.pi/settings.json`,
-          hash: fileHash(settingsPath),
-          source: 'workspace:pi-settings',
-          owner: 'library',
-        })
-      }
-    }
-
     results.set(repo.name, records)
   }
 

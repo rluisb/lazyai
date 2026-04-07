@@ -32,13 +32,6 @@ export const DETECTION_PATTERNS: Record<string, string[]> = {
     '.claude/commands/*.md',
     '.claude/rules/*.md',
   ],
-  pi: [
-    '.pi/**/*',
-    'AGENTS.md',
-    '.pi/settings.json',
-    '.pi/skills/*/SKILL.md',
-    '.pi/prompts/*.md',
-  ],
   gemini: [
     '.gemini/**/*',
     'GEMINI.md',
@@ -106,7 +99,6 @@ async function detectAdapter(
   const adapterNames: Record<string, string> = {
     opencode: 'OpenCode',
     'claude-code': 'Claude Code',
-    pi: 'Pi',
     gemini: 'Gemini CLI',
     copilot: 'GitHub Copilot',
   };

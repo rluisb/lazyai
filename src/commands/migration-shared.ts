@@ -18,13 +18,12 @@ export interface MigrationCommandOptions {
 const ADAPTER_LABELS: Record<string, string> = {
   opencode: 'OpenCode',
   'claude-code': 'Claude Code',
-  pi: 'Pi',
   gemini: 'Gemini CLI',
   copilot: 'GitHub Copilot',
 }
 
 export const VALID_MERGE_STRATEGIES: MergeStrategy[] = ['smart', 'preserve', 'replace', 'append']
-export const MIGRATION_MARKER_HINT = 'Expected markers include: AGENTS.md, CLAUDE.md, GEMINI.md, .opencode/, .claude/, .pi/, .gemini/, or .github/copilot-instructions.md'
+export const MIGRATION_MARKER_HINT = 'Expected markers include: AGENTS.md, CLAUDE.md, GEMINI.md, .opencode/, .claude/, .gemini/, or .github/copilot-instructions.md'
 
 const STRATEGY_DESCRIPTIONS: Record<MergeStrategy, string> = {
   smart: 'attempt a 3-way merge and stop when manual review is required',

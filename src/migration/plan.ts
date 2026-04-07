@@ -169,7 +169,6 @@ export function formatPlan(plan: MigrationPlan): string {
   const adapterLabels: Record<string, string> = {
     opencode: 'OpenCode',
     'claude-code': 'Claude Code',
-    pi: 'Pi',
     gemini: 'Gemini CLI',
     copilot: 'GitHub Copilot',
   };

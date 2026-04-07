@@ -29,7 +29,7 @@ console.log(`Library: ${LIBRARY}`);
 console.log(`Output: ${TMP_OUTPUT}\n`);
 
 // Test each tool
-const tools: ToolId[] = ["claude-code", "opencode", "codex", "copilot", "pi", "gemini"];
+const tools: ToolId[] = ["claude-code", "opencode", "codex", "copilot", "gemini"];
 
 for (const tool of tools) {
   try {

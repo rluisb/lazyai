@@ -184,7 +184,7 @@ export async function detectAdapters(path?: string): Promise<string[]> {
   const sourcePath = path || process.cwd();
   const adapters: string[] = [];
 
-  const adapterIds = ['opencode', 'claude-code', 'pi', 'gemini', 'copilot'];
+  const adapterIds = ['opencode', 'claude-code', 'gemini', 'copilot'];
   
   for (const adapterId of adapterIds) {
     if (await hasAdapter(sourcePath, adapterId)) {

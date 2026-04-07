@@ -21,7 +21,6 @@ export function logUnsupportedGlobalTool(tool: ToolId): void {
   const messages: Partial<Record<ToolId, string>> = {
     copilot: "Copilot doesn't support file-based global config. Use project scope instead.",
     gemini: "Gemini doesn't support file-based global config. Use project scope instead.",
-    pi: "Pi doesn't support file-based global config. Use project scope instead.",
   }
 
   const message = messages[tool]

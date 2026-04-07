@@ -50,11 +50,6 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
     skillDir: '.github/prompts',
     promptDir: '.github/prompts',
   },
-  pi: {
-    // Pi has no agents concept — agents are inline in AGENTS.md
-    skillDir: '.pi/skills',
-    promptDir: '.pi/prompts',
-  },
   codex: {
     // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
     skillDir: '.agents/skills',
@@ -142,7 +137,7 @@ export async function computePlan(
     for (const skillId of selections.skills) {
       const skillDestPath = tool === 'copilot'
         ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini' || tool === 'pi'
+        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini'
           ? `${skillId}/SKILL.md`
           : `${skillId}.md`
       planned.push(

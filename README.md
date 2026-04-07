@@ -4,6 +4,8 @@ Scaffold a canonical, multi-tool AI development environment from one CLI.
 
 ![Node >=20.12.0](https://img.shields.io/badge/node-%3E%3D20.12.0-339933?logo=node.js&logoColor=white)
 
+![ai-setup demo](demo/demo.gif)
+
 ## Quick Start
 
 > **Important:** this package is **not published to npm**. Install and run it directly from GitHub with `npx`.

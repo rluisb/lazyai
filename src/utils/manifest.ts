@@ -85,7 +85,7 @@ export function extractSelections(manifest: ManifestWithFeatures): Partial<Wizar
           f.includes('.opencode/') ||
           f.includes('.gemini/') ||
           f.includes('.pi/') ||
-          f.includes('.codex/') ||
+          f.includes('.agents/') ||
           f.includes('.github/')),
     ),
   )

@@ -5,30 +5,33 @@ import { type FragmentContext, FragmentResolver } from './fragment-resolver.js'
 
 const SHARED_ROOT_TEMPLATE_PATH = ['tool-templates', 'shared', 'root.template.md'] as const
 
-const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string }>> = {
+const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: string; rootFile?: string }>> = {
   opencode: {
     description: 'This project uses OpenCode with ai-setup integration.',
-    notes: '',
+    notes: '## OpenCode-Specific Notes\n\n- Project config: `opencode.json` at project root\n- Agents: `.opencode/agents/<name>.md`\n- Skills: `.opencode/skills/<name>/SKILL.md`\n- Commands: `.opencode/commands/<name>.md`\n- Multiple config sources merged (project → global → env)',
   },
   'claude-code': {
     description: 'This project uses Claude Code with ai-setup integration.',
-    notes: '',
+    notes: '## Claude Code-Specific Notes\n\n- Project settings: `.claude/settings.json`\n- Modular rules: `.claude/rules/<name>.md` (supports `paths` frontmatter for scoping)\n- Skills: `.claude/skills/<name>/SKILL.md`\n- Agents: `.claude/agents/<name>.md`\n- Personal overrides: `CLAUDE.local.md` (gitignore this)',
   },
   copilot: {
     description: 'This project uses GitHub Copilot with ai-setup integration.',
-    notes: '## Copilot-Specific Notes\n\n- Agents are in `.github/agents/*.md`\n- Prompts are in `.github/prompts/*.prompt.md`',
+    rootFile: 'copilot-instructions.md',
+    notes: '## Copilot-Specific Notes\n\n- Repository-wide instructions: `.github/copilot-instructions.md`\n- Path-specific instructions: `.github/instructions/<name>.instructions.md` with `applyTo` frontmatter\n- Reusable prompts: `.github/prompts/<name>.prompt.md`\n- Agent instructions: `AGENTS.md` at project root',
   },
   gemini: {
     description: 'This project uses Gemini CLI with ai-setup integration.',
-    notes: '## Gemini-Specific Notes\n\n- Gemini does not have a separate agents concept\n- Skills are in `.gemini/skills/*/SKILL.md` and function as pseudo-agents',
+    rootFile: 'GEMINI.md',
+    notes: '## Gemini CLI-Specific Notes\n\n- Project settings: `.gemini/settings.json`\n- Skills: `.gemini/skills/<name>/SKILL.md`\n- No agents concept (agents are inline in GEMINI.md)\n- Context traversal: walks up to .git boundary loading GEMINI.md files',
   },
   pi: {
     description: 'This project uses Pi Coding Agent with ai-setup integration.',
-    notes: '## Pi-Specific Notes\n\n- Agents are in `.pi/agents/*.md`\n- Templates are in `.pi/templates/*.md`\n- Skills are in `.pi/skills/*.md`',
+    rootFile: 'AGENTS.md',
+    notes: '## Pi-Specific Notes\n\n- Project settings: `.pi/settings.json`\n- Skills: `.pi/skills/<name>/SKILL.md` (AgentSkills standard)\n- Prompt templates: `.pi/prompts/<name>.md`\n- No agents concept (agents are inline in AGENTS.md)\n- Extensions via `.pi/extensions/` (TypeScript modules)',
   },
   codex: {
     description: 'This project uses OpenAI Codex CLI with ai-setup integration.',
-    notes: '## Codex-Specific Notes\n\n- Agents are defined inline in this file (no separate agents directory)\n- Skills are in `.codex/skills/*/SKILL.md`',
+    notes: '## Codex-Specific Notes\n\n- Agents are defined inline in this file (no separate agents directory)\n- Skills use AgentSkills standard: `.agents/skills/*/SKILL.md`\n- No `.codex/` project directory (global config only in `~/.codex/`)',
   },
 }
 

@@ -56,7 +56,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
     const tools = await p.multiselect({
       message: 'Which AI tools are you using?',
       options: [
-        { value: 'pi', label: 'Pi (Claude Code)', hint: 'Uses .pi/ directory + CLAUDE.md' },
+        { value: 'pi', label: 'Pi', hint: 'Uses .pi/ with settings.json + AGENTS.md' },
         { value: 'opencode', label: 'OpenCode', hint: 'Uses .opencode/ directory + AGENTS.md' },
         { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + CLAUDE.md' },
         { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ directory + GEMINI.md' },
@@ -93,13 +93,15 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
 }
 
 export function outroSuccess(config: SetupConfig): void {
-  const rootFiles: string[] = []
-  if (config.tools.includes('opencode')) rootFiles.push('AGENTS.md')
-  if (config.tools.includes('pi') || config.tools.includes('claude-code')) rootFiles.push('CLAUDE.md')
-  if (config.tools.includes('gemini')) rootFiles.push('GEMINI.md')
-  if (config.tools.includes('copilot')) rootFiles.push('.github/copilot-instructions.md')
+  const rootFiles = new Set<string>()
+  if (config.tools.includes('opencode') || config.tools.includes('pi') || config.tools.includes('codex')) {
+    rootFiles.add('AGENTS.md')
+  }
+  if (config.tools.includes('claude-code')) rootFiles.add('CLAUDE.md')
+  if (config.tools.includes('gemini')) rootFiles.add('GEMINI.md')
+  if (config.tools.includes('copilot')) rootFiles.add('.github/copilot-instructions.md')
 
-  const fileList = rootFiles.length > 0 ? rootFiles.join(', ') : 'your config files'
+  const fileList = rootFiles.size > 0 ? Array.from(rootFiles).join(', ') : 'your config files'
 
   p.outro(`✅  Setup complete for ${config.projectName}!
 

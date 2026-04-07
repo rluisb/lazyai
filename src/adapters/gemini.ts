@@ -15,6 +15,31 @@ export class GeminiAdapter implements ToolAdapter {
     const geminiDir = path.join(ctx.targetDir, '.gemini')
     files.ensureDir(geminiDir)
     files.ensureDir(path.join(geminiDir, 'skills'))
+
+    const settingsPath = path.join(geminiDir, 'settings.json')
+    if (!files.fileExists(settingsPath)) {
+      const defaultSettings = {
+        general: {
+          defaultApprovalMode: 'default',
+        },
+        model: {
+          name: 'gemini-2.5-pro',
+        },
+        context: {
+          fileName: 'GEMINI.md',
+          includeDirectoryTree: true,
+        },
+      }
+
+      files.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2))
+      ctx.fileRecords.push({
+        path: '.gemini/settings.json',
+        hash: files.fileHash(settingsPath),
+        source: 'generated',
+        owner: 'library',
+      })
+    }
+
     // Gemini CLI has NO agents concept — skip agents/
     // Gemini CLI has NO templates concept — skip templates/
 

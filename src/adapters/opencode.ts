@@ -13,12 +13,35 @@ export class OpenCodeAdapter implements ToolAdapter {
     const isGlobal = ctx.setupScope === 'global'
     const ocDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.opencode')
     const skillsDir = 'skills'
+    const commandsDir = 'commands'
 
     files.ensureDir(ocDir)
     files.ensureDir(path.join(ocDir, 'agents'))
     files.ensureDir(path.join(ocDir, skillsDir))
+    files.ensureDir(path.join(ocDir, commandsDir))
 
     console.log('🤖  Installing OpenCode tools...')
+
+    if (!isGlobal) {
+      const configPath = path.join(ctx.targetDir, 'opencode.json')
+      if (!files.fileExists(configPath)) {
+        const defaultConfig = {
+          $schema: 'https://opencode.ai/config.json',
+          instructions: ['AGENTS.md'],
+          permission: {
+            edit: 'ask',
+            bash: 'ask',
+          },
+        }
+        files.writeFile(configPath, JSON.stringify(defaultConfig, null, 2))
+        ctx.fileRecords.push({
+          path: 'opencode.json',
+          hash: files.fileHash(configPath),
+          source: 'generated',
+          owner: 'library',
+        })
+      }
+    }
 
     await copyLibraryDirectory({
       ctx,

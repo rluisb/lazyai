@@ -66,7 +66,7 @@ export async function scaffoldRepoRoots(opts: RepoRootOptions): Promise<Map<stri
       })
     }
 
-    if (opts.tools.includes('claude-code') || opts.tools.includes('pi')) {
+    if (opts.tools.includes('claude-code')) {
       const settings = generateClaudeSettings(DEFAULT_REPO_PERMISSIONS, stack)
       const claudeDir = path.join(repoAbsPath, '.claude')
       ensureDir(claudeDir)
@@ -79,6 +79,23 @@ export async function scaffoldRepoRoots(opts: RepoRootOptions): Promise<Map<stri
           path: `${repo.name}/.claude/settings.json`,
           hash: fileHash(settingsPath),
           source: 'workspace:permissions',
+          owner: 'library',
+        })
+      }
+    }
+
+    if (opts.tools.includes('pi')) {
+      const piDir = path.join(repoAbsPath, '.pi')
+      ensureDir(piDir)
+
+      const settingsPath = path.join(piDir, 'settings.json')
+      const action = applyStrategy(settingsPath, opts.strategy, opts.perFileOverrides, repoAbsPath)
+      if (action !== 'skip') {
+        writeFile(settingsPath, JSON.stringify({ compaction: { enabled: true } }, null, 2))
+        records.push({
+          path: `${repo.name}/.pi/settings.json`,
+          hash: fileHash(settingsPath),
+          source: 'workspace:pi-settings',
           owner: 'library',
         })
       }

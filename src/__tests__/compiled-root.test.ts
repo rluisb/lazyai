@@ -61,11 +61,11 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // Check that tool-specific filenames were created
+    // Check that the expected shared/tool-specific root files were created
     expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true) // opencode
+    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
     expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
 
     // Verify file records have correct source annotations
@@ -157,7 +157,7 @@ describe('scaffoldCompiledRoot', () => {
     expect(agentsContent).toContain('<decision-protocol>')
   })
 
-  it('compiles all six root templates with camelCase feature conditions', async () => {
+  it('compiles shared root outputs for all six tools with camelCase feature conditions', async () => {
     const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'pi', 'gemini'] as const
 
     await scaffoldCompiledRoot({
@@ -175,7 +175,6 @@ describe('scaffoldCompiledRoot', () => {
       'CLAUDE.md',
       'AGENTS.md',
       '.github/copilot-instructions.md',
-      'INSTRUCTIONS.md',
       'GEMINI.md',
     ]
 

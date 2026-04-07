@@ -31,31 +31,33 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
   },
 }
 
-const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string }> = {
+const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string; rulesDir?: string; commandDir?: string }> = {
   'claude-code': {
     agentDir: '.claude/agents',
     skillDir: '.claude/skills',
+    rulesDir: '.claude/rules',
   },
   opencode: {
     agentDir: '.opencode/agents',
     skillDir: '.opencode/skills',
+    commandDir: '.opencode/commands',
   },
   gemini: {
     skillDir: '.gemini/skills',
   },
   copilot: {
-    agentDir: '.github/agents',
+    // Copilot uses AGENTS.md at the repository root for agent instructions.
     skillDir: '.github/prompts',
     promptDir: '.github/prompts',
   },
   pi: {
-    agentDir: '.pi/agents',
+    // Pi has no agents concept — agents are inline in AGENTS.md
     skillDir: '.pi/skills',
-    promptDir: '.pi/templates',
+    promptDir: '.pi/prompts',
   },
   codex: {
-    // Codex agents are inline in AGENTS.md, no separate directory
-    skillDir: '.codex/skills',
+    // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
+    skillDir: '.agents/skills',
   },
 }
 
@@ -140,7 +142,7 @@ export async function computePlan(
     for (const skillId of selections.skills) {
       const skillDestPath = tool === 'copilot'
         ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini'
+        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini' || tool === 'pi'
           ? `${skillId}/SKILL.md`
           : `${skillId}.md`
       planned.push(
@@ -160,10 +162,13 @@ export async function computePlan(
     // Only add prompts if tool supports them
     if (paths.promptDir) {
       for (const promptId of selections.prompts) {
+        const promptDestPath = tool === 'copilot'
+          ? `${promptId}.prompt.md`
+          : `${promptId}.md`
         planned.push(
           makePlannedFile(
             targetDir,
-            path.posix.join(paths.promptDir, `${promptId}.md`),
+            path.posix.join(paths.promptDir, promptDestPath),
             `prompts/${promptId}.md`,
             'prompt',
           ),

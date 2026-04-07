@@ -68,6 +68,6 @@ All AI behavior is defined in version-controlled files:
 | `AGENTS.md` / `CLAUDE.md` | Project overview, conventions, decision tree |
 | `docs/rules/*.md` | Prescriptive rules (what to do / not do) |
 | `docs/standards/**/*.md` | Descriptive patterns (how we do it, with real code references) |
-| `.pi/agents/*.md` | Agent role definitions (scope, tools, behavior) |
+| `.pi/settings.json`, `.pi/skills/*/SKILL.md`, `.pi/prompts/*.md` | Pi project config, skills, and prompt templates |
 
 All changes to these files require tech lead approval (see `CODEOWNERS`).

@@ -68,7 +68,7 @@ export interface AiSetupConfig {
 
 export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow'
 
-export type AgentId = 'builder' | 'documenter' | 'planner' | 'red-team' | 'reviewer' | 'scout'
+export type AgentId = 'builder' | 'documenter' | 'orchestrator' | 'planner' | 'red-team' | 'reviewer' | 'scout'
 export type SkillId = 'anti-speculation' | 'extract-standards' | 'implement' | 'iterate' | 'memory-write' | 'parallel-execution' | 'plan' | 'research' | 'tdd-loop'
 export type PromptId = 'compact' | 'implement' | 'local-example' | 'plan' | 'research'
 export type TemplateId = 'adr' | 'bugfix-rca-template' | 'checklist-template' | 'code-review-template' | 'plan-template' | 'postmortem-template' | 'spec-template' | 'standard' | 'task' | 'tech-debt-template'
@@ -76,7 +76,7 @@ export type RuleId = 'access' | 'agent-security' | 'code-style' | 'cost' | 'revi
 export type ToolAgentId = 'agents-dir' | 'root-dir' | 'skills-dir' | 'templates-dir'
 export type InfraId = 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP' | 'codeowners'
 
-export const ALL_AGENTS: AgentId[] = ['builder', 'documenter', 'planner', 'red-team', 'reviewer', 'scout']
+export const ALL_AGENTS: AgentId[] = ['builder', 'documenter', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout']
 export const ALL_SKILLS: SkillId[] = ['anti-speculation', 'extract-standards', 'implement', 'iterate', 'memory-write', 'parallel-execution', 'plan', 'research', 'tdd-loop']
 export const ALL_PROMPTS: PromptId[] = ['compact', 'implement', 'local-example', 'plan', 'research']
 export const ALL_TEMPLATES: TemplateId[] = ['adr', 'bugfix-rca-template', 'checklist-template', 'code-review-template', 'plan-template', 'postmortem-template', 'spec-template', 'standard', 'task', 'tech-debt-template']

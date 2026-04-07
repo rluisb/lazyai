@@ -224,6 +224,8 @@ This is what powers:
 
 ### 5.1 Project Scope
 
+![Project scope interactive demo](demo/09-scope-project.gif)
+
 **What it is:** the default, self-contained setup in the current working directory.
 
 **When to use it:**
@@ -315,6 +317,8 @@ _Trimmed for readability. Tool-context helper files such as `.opencode/AGENTS.md
 
 ### 5.2 Global Scope
 
+![Global scope interactive demo](demo/10-scope-global.gif)
+
 **What it is:** personal defaults shared across all projects on your machine.
 
 **When to use it:**
@@ -384,6 +388,14 @@ npx github:ricardoborges-teachable/ai-setup init \
 </details>
 
 ### 5.3 Workspace Scope
+
+**Scenario 1: Separate planning repo**
+
+![Workspace scope — separate planning repo](demo/11-scope-workspace-separate.gif)
+
+**Scenario 2: Planning repo is also a code repo**
+
+![Workspace scope — planning repo as code repo](demo/12-scope-workspace-combined.gif)
 
 **What it is:** a multi-repo team setup with a dedicated planning repo as the central hub.
 

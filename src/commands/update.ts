@@ -97,11 +97,12 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
 
     if (tool === 'pi') {
+      addContent('.pi/settings.json', 'generated', JSON.stringify({ compaction: { enabled: true } }, null, 2))
       for (const name of ALL_SKILLS) {
-        addSkill(name, `.pi/skills/${name}.md`)
+        addSkill(name, `.pi/skills/${name}/SKILL.md`)
       }
       for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.pi/templates/${name}.md`)
+        addPrompt(name, `.pi/prompts/${name}.md`)
       }
     }
 
@@ -154,11 +155,13 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   const rootAgentsTemplatePath = join(libraryDir, 'root/AGENTS.template.md')
   if (fileExists(rootAgentsTemplatePath)) {
     const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName)
-    if (data.config.tools.includes('opencode') || data.config.tools.includes('copilot')) {
+    if (
+      data.config.tools.includes('opencode')
+      || data.config.tools.includes('copilot')
+      || data.config.tools.includes('pi')
+      || data.config.tools.includes('codex')
+    ) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
-    }
-    if (data.config.tools.includes('pi') && !data.config.tools.includes('claude-code')) {
-      addContent('CLAUDE.md', 'root/AGENTS.template.md', rootContent)
     }
   }
 
@@ -196,8 +199,8 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   }
 
   for (const tool of data.config.tools) {
-    if (tool === 'pi' || tool === 'opencode' || tool === 'claude-code') {
-      const targetSubdir = tool === 'pi' ? '.pi/agents' : tool === 'opencode' ? '.opencode/agents' : '.claude/agents'
+    if (tool === 'opencode' || tool === 'claude-code') {
+      const targetSubdir = tool === 'opencode' ? '.opencode/agents' : '.claude/agents'
       const transform = tool === 'opencode' ? stripFrontmatterAndInjectModel : undefined
       addDir('agents', targetSubdir, transform)
     }

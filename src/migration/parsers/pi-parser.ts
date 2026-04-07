@@ -2,7 +2,8 @@
  * Pi Parser
  * 
  * Detects, parses, and merges Pi AI setups.
- * Pi is a Claude Code wrapper that uses similar structure.
+ * Pi uses AGENTS.md, .pi/settings.json, AgentSkills-style skills,
+ * and prompt templates under .pi/prompts/.
  */
 
 import { promises as fs } from 'node:fs';
@@ -31,14 +32,14 @@ const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)
 export class PiParser extends BaseParser {
   readonly id = 'pi';
   readonly name = 'Pi';
-  readonly description = 'Parser for Pi AI assistant configuration (Claude Code wrapper)';
+  readonly description = 'Parser for Pi AI assistant configuration';
   readonly version = '1.0.0';
   readonly supportedPatterns = [
     '.pi/**/*',
-    'CLAUDE.md',
-    '.pi/agents/*.md',
-    '.pi/skills/*.md',
-    '.pi/templates/*.md',
+    'AGENTS.md',
+    '.pi/settings.json',
+    '.pi/skills/*/SKILL.md',
+    '.pi/prompts/*.md',
   ];
 
   async detect(context: MigrationContext): Promise<DetectionResult> {
@@ -78,13 +79,13 @@ export class PiParser extends BaseParser {
       // Directory doesn't exist
     }
 
-    // Check for CLAUDE.md (Pi uses this as root)
+    // Check for AGENTS.md (Pi uses this as root)
     if (detected) {
       try {
-        const claudePath = path.join(context.sourcePath, 'CLAUDE.md');
-        await fs.access(claudePath);
+        const agentsPath = path.join(context.sourcePath, 'AGENTS.md');
+        await fs.access(agentsPath);
         files.push({
-          path: 'CLAUDE.md',
+          path: 'AGENTS.md',
           type: 'config',
           priority: 100,
         });
@@ -115,57 +116,32 @@ export class PiParser extends BaseParser {
     let projectName: string | undefined;
     let description: string | undefined;
 
-    // Parse CLAUDE.md
+    // Parse AGENTS.md
     try {
-      const claudePath = path.join(context.sourcePath, 'CLAUDE.md');
-      const content = await fs.readFile(claudePath, 'utf-8');
+      const agentsPath = path.join(context.sourcePath, 'AGENTS.md');
+      const content = await fs.readFile(agentsPath, 'utf-8');
       
       projectName = this.getFirstMatch(content, /#\s+(.+?)\s*$/m)
 
       description = this.getFirstMatch(content, /##\s+Overview\s*\n\n(.+?)(?=\n\n|#{1,6}\s|$)/s)
 
-      files.push({ path: 'CLAUDE.md', content, type: 'config' });
+      files.push({ path: 'AGENTS.md', content, type: 'config' });
     } catch {
       // Not found
     }
 
-    // Parse .pi/agents/*.md
+    // Parse .pi/settings.json
     try {
-      const agentFiles = await glob('.pi/agents/*.md', {
-        cwd: context.sourcePath,
-        absolute: false,
-      });
-
-      for (const file of agentFiles) {
-        try {
-          const fullPath = path.join(context.sourcePath, file);
-          const content = await fs.readFile(fullPath, 'utf-8');
-          
-          const agentId = path.basename(file, '.md');
-          const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || agentId;
-
-          agents.push({
-            id: agentId,
-            name,
-            description: this.extractDescription(content),
-            role: agentId,
-            content,
-            sourcePath: file,
-            custom: true,
-          });
-
-          files.push({ path: file, content, type: 'agent' });
-        } catch {
-          // Skip
-        }
-      }
+      const settingsPath = path.join(context.sourcePath, '.pi', 'settings.json');
+      const content = await fs.readFile(settingsPath, 'utf-8');
+      files.push({ path: '.pi/settings.json', content, type: 'config' });
     } catch {
-      // No agents
+      // No settings
     }
 
-    // Parse .pi/skills/*.md (Pi calls them skills, we map to commands)
+    // Parse .pi/skills/*/SKILL.md (Pi calls them skills, we map to commands)
     try {
-      const skillFiles = await glob('.pi/skills/*.md', {
+      const skillFiles = await glob('.pi/skills/*/SKILL.md', {
         cwd: context.sourcePath,
         absolute: false,
       });
@@ -175,7 +151,7 @@ export class PiParser extends BaseParser {
           const fullPath = path.join(context.sourcePath, file);
           const content = await fs.readFile(fullPath, 'utf-8');
           
-          const skillId = path.basename(file, '.md');
+          const skillId = path.basename(path.dirname(file));
           const name = this.getFirstMatch(content, /^#\s+(.+?)$/m) || skillId;
 
           commands.push({
@@ -195,9 +171,9 @@ export class PiParser extends BaseParser {
       // No skills
     }
 
-    // Parse .pi/templates/*.md
+    // Parse .pi/prompts/*.md
     try {
-      const templateFiles = await glob('.pi/templates/*.md', {
+      const templateFiles = await glob('.pi/prompts/*.md', {
         cwd: context.sourcePath,
         absolute: false,
       });
@@ -256,13 +232,13 @@ export class PiParser extends BaseParser {
 
     const templateDir = libraryDir;
 
-    // Merge CLAUDE.md (shared with Claude Code)
+    // Merge AGENTS.md
     try {
-      const templatePath = path.join(templateDir, 'root', 'CLAUDE.template.md');
+      const templatePath = path.join(templateDir, 'root', 'AGENTS.template.md');
       const templateContent = await fs.readFile(templatePath, 'utf-8');
       
-      if (existing.files.find(f => f.path === 'CLAUDE.md')) {
-        const existingContent = existing.files.find(f => f.path === 'CLAUDE.md')?.content;
+      if (existing.files.find(f => f.path === 'AGENTS.md')) {
+        const existingContent = existing.files.find(f => f.path === 'AGENTS.md')?.content;
         const lines = templateContent.split('\n');
         const existingLines = (existingContent ?? '').split('\n');
         
@@ -271,44 +247,44 @@ export class PiParser extends BaseParser {
         if (diff3Result.hasConflicts) {
           if (strategy === 'smart') {
             conflicts.push(...diff3Result.conflicts.map(conflict => ({
-              file: 'CLAUDE.md',
+              file: 'AGENTS.md',
               lineStart: conflict.lineStart,
               lineEnd: conflict.lineEnd,
               baseContent: conflict.base.join('\n'),
               oursContent: conflict.ours.join('\n'),
               theirsContent: conflict.theirs.join('\n'),
             })));
-            modifiedFiles.push('CLAUDE.md');
+            modifiedFiles.push('AGENTS.md');
           } else if (strategy === 'preserve') {
-            warnings.push('CLAUDE.md: keeping existing version');
+            warnings.push('AGENTS.md: keeping existing version');
           } else if (strategy === 'replace') {
-            newFiles.push('CLAUDE.md');
+            newFiles.push('AGENTS.md');
           }
         } else {
-          modifiedFiles.push('CLAUDE.md');
+          modifiedFiles.push('AGENTS.md');
         }
       } else {
-        newFiles.push('CLAUDE.md');
+        newFiles.push('AGENTS.md');
       }
     } catch (error) {
-      warnings.push(`Could not merge CLAUDE.md: ${error}`);
+      warnings.push(`Could not merge AGENTS.md: ${error}`);
     }
 
-    // Migrate to .pi structure
-    for (const agent of existing.agents) {
-      const targetPath = `.pi/agents/${agent.id}.md`;
-      newFiles.push(targetPath);
+    if (existing.agents.length > 0) {
+      warnings.push('Pi does not support separate agent files; inline agent instructions into AGENTS.md manually.');
     }
 
     for (const command of existing.commands) {
-      const targetPath = `.pi/skills/${command.id}.md`;
+      const targetPath = `.pi/skills/${command.id}/SKILL.md`;
       newFiles.push(targetPath);
     }
 
     for (const template of existing.templates) {
-      const targetPath = `.pi/templates/${template.id}.md`;
+      const targetPath = `.pi/prompts/${template.id}.md`;
       newFiles.push(targetPath);
     }
+
+    newFiles.push('.pi/settings.json');
 
     return {
       success: true,
@@ -324,9 +300,9 @@ export class PiParser extends BaseParser {
   private categorizeFile(filePath: string): DetectedFile['type'] {
     const normalized = filePath.toLowerCase();
     
-    if (normalized.includes('/agents/')) return 'agent';
+    if (normalized.endsWith('agents.md') || normalized.endsWith('settings.json')) return 'config';
     if (normalized.includes('/skills/')) return 'command';
-    if (normalized.includes('/templates/')) return 'template';
+    if (normalized.includes('/prompts/')) return 'template';
     if (normalized.endsWith('.md')) return 'config';
     
     return 'other';
@@ -336,10 +312,10 @@ export class PiParser extends BaseParser {
     let priority = 0;
     const normalized = filePath.toLowerCase();
     
-    if (filePath === 'CLAUDE.md') priority += 100;
-    if (normalized.includes('/agents/')) priority += 50;
+    if (filePath === 'AGENTS.md') priority += 100;
+    if (normalized.endsWith('settings.json')) priority += 80;
     if (normalized.includes('/skills/')) priority += 40;
-    if (normalized.includes('/templates/')) priority += 30;
+    if (normalized.includes('/prompts/')) priority += 30;
     
     return priority;
   }

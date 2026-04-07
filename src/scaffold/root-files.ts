@@ -6,7 +6,6 @@ import { ROOT_FILE_BY_TOOL } from './root-file-map.js'
 
 const DEPRECATED_ROOT_TEMPLATE_BY_FILE: Partial<Record<string, string>> = {
   'AGENTS.md': 'root/AGENTS.template.md',
-  'INSTRUCTIONS.md': 'root/AGENTS.template.md',
   'CLAUDE.md': 'root/CLAUDE.template.md',
   'GEMINI.md': 'root/GEMINI.template.md',
   '.github/copilot-instructions.md': 'root/copilot-instructions.template.md',
@@ -32,7 +31,7 @@ export interface ScaffoldRootFilesOptions {
  * - For each tool in `tools`, reads template from `library/root/` and writes substituted content
  * - `opencode` → reads AGENTS.template.md, writes AGENTS.md
  * - `codex` → reads AGENTS.template.md, writes AGENTS.md
- * - `pi` → reads AGENTS.template.md, writes INSTRUCTIONS.md
+ * - `pi` → reads AGENTS.template.md, writes AGENTS.md
  * - `claude-code` → reads CLAUDE.template.md (if exists), writes CLAUDE.md
  * - `gemini` → reads GEMINI.template.md (if exists), writes GEMINI.md
  * - `copilot` → reads copilot-instructions.template.md (if exists), ensures .github/, writes .github/copilot-instructions.md

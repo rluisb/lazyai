@@ -34,10 +34,10 @@ export const DETECTION_PATTERNS: Record<string, string[]> = {
   ],
   pi: [
     '.pi/**/*',
-    'CLAUDE.md', // Pi uses CLAUDE.md as root
-    '.pi/agents/*.md',
-    '.pi/skills/*.md',
-    '.pi/templates/*.md',
+    'AGENTS.md',
+    '.pi/settings.json',
+    '.pi/skills/*/SKILL.md',
+    '.pi/prompts/*.md',
   ],
   gemini: [
     '.gemini/**/*',

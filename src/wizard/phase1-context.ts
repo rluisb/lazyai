@@ -288,7 +288,7 @@ export async function runPhase1(opts: {
     (await p.multiselect({
       message: 'Which AI tools are you using?',
       options: [
-        { value: 'pi', label: 'Pi (Claude Code)', hint: 'Uses .pi/ directory + CLAUDE.md' },
+        { value: 'pi', label: 'Pi', hint: 'Uses .pi/ with settings.json + AGENTS.md' },
         { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
         { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
         { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },

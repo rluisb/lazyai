@@ -26,7 +26,8 @@ const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: strin
   },
   pi: {
     description: 'This project uses Pi Coding Agent with ai-setup integration.',
-    notes: '## Pi-Specific Notes\n\n- Agents are in `.pi/agents/*.md`\n- Templates are in `.pi/templates/*.md`\n- Skills are in `.pi/skills/*.md`',
+    rootFile: 'AGENTS.md',
+    notes: '## Pi-Specific Notes\n\n- Project settings: `.pi/settings.json`\n- Skills: `.pi/skills/<name>/SKILL.md` (AgentSkills standard)\n- Prompt templates: `.pi/prompts/<name>.md`\n- No agents concept (agents are inline in AGENTS.md)\n- Extensions via `.pi/extensions/` (TypeScript modules)',
   },
   codex: {
     description: 'This project uses OpenAI Codex CLI with ai-setup integration.',

@@ -62,7 +62,7 @@ ai-setup uses a **canonical source → compile** model:
 | codex | `.codex/` | `.codex/skills/<name>/SKILL.md` | `AGENTS.md` | ❌ |
 | copilot | `.github/` | `.github/prompts/<name>.prompt.md` | `copilot-instructions.md` | ❌ |
 | gemini | `.gemini/` | `.gemini/skills/<name>/SKILL.md` | `GEMINI.md` | ❌ |
-| pi | `.pi/` | `.pi/skills/` | `INSTRUCTIONS.md` | ❌ |
+| pi | `.pi/` | `.pi/skills/<name>/SKILL.md` | `AGENTS.md` | ❌ |
 
 ## Usage
 

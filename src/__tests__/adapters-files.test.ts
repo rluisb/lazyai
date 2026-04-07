@@ -106,29 +106,25 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'root/copilot-instructions.template.md'), '# Copilot repo instructions')
   })
 
-  it('Pi adapter installs agents/templates and records metadata', async () => {
+  it('Pi adapter installs skills directory-per-skill, prompts, and root AGENTS.md', async () => {
     const adapter = new PiAdapter()
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
 
     await adapter.install({ targetDir, libraryDir, fileRecords })
 
-    expect(fileExists(path.join(targetDir, '.pi/agents/builder.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/agents/reviewer.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/templates/plan.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/skills'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/agents/INSTRUCTIONS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/skills/INSTRUCTIONS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/templates/INSTRUCTIONS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.pi/INSTRUCTIONS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/skills/implement/SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/prompts'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.pi/settings.json'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.pi/agents'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.pi/templates'))).toBe(false)
 
-    expect(fileRecords.map((f) => f.path).sort()).toEqual([
-      '.pi/INSTRUCTIONS.md',
-      '.pi/agents/INSTRUCTIONS.md',
-      '.pi/agents/builder.md',
-      '.pi/agents/reviewer.md',
-      '.pi/skills/INSTRUCTIONS.md',
-      '.pi/templates/INSTRUCTIONS.md',
-      '.pi/templates/plan.md',
-    ])
+    expect(fileRecords.some((f) => f.path === '.pi/skills/implement/SKILL.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.pi/settings.json')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
     expect(fileRecords.every((f) => f.hash.length === 16)).toBe(true)
   })
 

@@ -64,7 +64,7 @@ export function registerInit(program: Command): void {
     .option('--type <type>', 'Deprecated alias for --scope')
     .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
     .option('--repos <paths>', 'Workspace repo references as comma-separated relative paths')
-    .option('--tools <tools>', 'Comma-separated tool list: pi,opencode,claude-code,codex,copilot,gemini')
+    .option('--tools <tools>', 'Comma-separated tool list: opencode,claude-code,codex,copilot,gemini')
     .option('--cli-tools <tools>', 'Comma-separated CLI tools available (codegraph,qmd,rtk)')
     .option('--name <name>', 'Project name (defaults to directory name)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')

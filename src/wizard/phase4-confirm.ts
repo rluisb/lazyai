@@ -6,7 +6,6 @@ import type { PlannedFile } from './planner.js'
 
 function formatTools(tools: ToolId[]): string {
   const toolNames: Record<ToolId, string> = {
-    pi: 'Pi',
     opencode: 'OpenCode',
     'claude-code': 'Claude Code',
     gemini: 'Gemini CLI',

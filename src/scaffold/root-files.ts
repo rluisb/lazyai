@@ -31,14 +31,13 @@ export interface ScaffoldRootFilesOptions {
  * - For each tool in `tools`, reads template from `library/root/` and writes substituted content
  * - `opencode` → reads AGENTS.template.md, writes AGENTS.md
  * - `codex` → reads AGENTS.template.md, writes AGENTS.md
- * - `pi` → reads AGENTS.template.md, writes AGENTS.md
  * - `claude-code` → reads CLAUDE.template.md (if exists), writes CLAUDE.md
  * - `gemini` → reads GEMINI.template.md (if exists), writes GEMINI.md
  * - `copilot` → reads copilot-instructions.template.md (if exists), ensures .github/, writes .github/copilot-instructions.md
  * - All templates replace [YOUR_PROJECT_NAME] with config.projectName
  * - Uses deterministic applyStrategy for conflict handling
  * - Records each written file in fileRecords
- * - If both pi and claude-code are selected, CLAUDE.md is written by the last one (claude-code wins)
+ * - If multiple tools share a root filename, the last processed tool wins for that file
  */
 export async function scaffoldRootFiles(opts: ScaffoldRootFilesOptions): Promise<void> {
   const { targetDir, libraryDir, tools, projectName, fileRecords, strategy, perFileOverrides } = opts

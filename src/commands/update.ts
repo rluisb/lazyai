@@ -96,16 +96,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
       addFile(`prompts/${name}.md`, join(targetDir, targetPath))
     }
 
-    if (tool === 'pi') {
-      addContent('.pi/settings.json', 'generated', JSON.stringify({ compaction: { enabled: true } }, null, 2))
-      for (const name of ALL_SKILLS) {
-        addSkill(name, `.pi/skills/${name}/SKILL.md`)
-      }
-      for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.pi/prompts/${name}.md`)
-      }
-    }
-
     if (tool === 'opencode') {
       for (const name of ALL_SKILLS) {
         addSkill(name, `.opencode/skills/${name}/SKILL.md`)
@@ -158,7 +148,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     if (
       data.config.tools.includes('opencode')
       || data.config.tools.includes('copilot')
-      || data.config.tools.includes('pi')
       || data.config.tools.includes('codex')
     ) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)

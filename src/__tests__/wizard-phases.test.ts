@@ -35,13 +35,13 @@ describe('wizard phases 1 and 3', () => {
     const result = await runPhase1({
       interactive: false,
       prior: {},
-      cliOverrides: { scope: 'project', tools: ['pi', 'opencode'], name: 'my-project' },
+      cliOverrides: { scope: 'project', tools: ['opencode', 'claude-code'], name: 'my-project' },
       targetDir: '/tmp',
     })
 
     expect(result).toEqual({
       setupScope: 'project',
-      tools: ['pi', 'opencode'],
+      tools: ['opencode', 'claude-code'],
       projectName: 'my-project',
     })
   })
@@ -50,7 +50,7 @@ describe('wizard phases 1 and 3', () => {
     const result = await runPhase1({
       interactive: false,
       prior: {},
-      cliOverrides: { scope: 'global', tools: ['pi'], name: 'my-project' },
+      cliOverrides: { scope: 'global', tools: ['opencode'], name: 'my-project' },
       targetDir: '/tmp',
     })
 
@@ -74,7 +74,7 @@ describe('wizard phases 1 and 3', () => {
       prior: {},
       cliOverrides: {
         scope: 'workspace',
-        tools: ['pi'],
+        tools: ['opencode'],
         name: 'my-project',
         planningRepo: '/tmp/planning-repo',
       },
@@ -93,7 +93,7 @@ describe('wizard phases 1 and 3', () => {
         prior: {},
         cliOverrides: {
           scope: 'workspace',
-          tools: ['pi'],
+          tools: ['opencode'],
           name: 'workspace-name',
         },
         targetDir: '/tmp',
@@ -122,7 +122,7 @@ describe('wizard phases 1 and 3', () => {
       prior: {},
       cliOverrides: {
         scope: 'workspace',
-        tools: ['pi'],
+        tools: ['opencode'],
         name: 'workspace-name',
         planningRepo: planningRepoDir,
         repos: ['..'],
@@ -153,7 +153,7 @@ describe('wizard phases 1 and 3', () => {
       prior: {},
       cliOverrides: {
         scope: 'workspace',
-        tools: ['pi'],
+        tools: ['opencode'],
         name: 'workspace-name',
         planningRepo: planningRepoDir,
         repos: ['..'],
@@ -172,7 +172,7 @@ describe('wizard phases 1 and 3', () => {
       runPhase1({
         interactive: false,
         prior: {},
-        cliOverrides: { tools: ['pi'], name: 'my-project' },
+        cliOverrides: { tools: ['opencode'], name: 'my-project' },
         targetDir: '/tmp',
       }),
     ).rejects.toThrow('required in non-interactive mode')

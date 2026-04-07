@@ -228,14 +228,12 @@ export async function getAllParsers(projectPath?: string): Promise<BaseParser[]>
   // Load built-in parsers
   const { OpenCodeParser } = await import('../parsers/opencode-parser.js');
   const { ClaudeCodeParser } = await import('../parsers/claude-parser.js');
-  const { PiParser } = await import('../parsers/pi-parser.js');
   const { GeminiParser } = await import('../parsers/gemini-parser.js');
   const { CopilotParser } = await import('../parsers/copilot-parser.js');
 
   const builtinParsers = [
     new OpenCodeParser(),
     new ClaudeCodeParser(),
-    new PiParser(),
     new GeminiParser(),
     new CopilotParser(),
   ];

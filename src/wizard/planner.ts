@@ -54,8 +54,8 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
     promptDir: '.pi/templates',
   },
   codex: {
-    // Codex agents are inline in AGENTS.md, no separate directory
-    skillDir: '.codex/skills',
+    // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
+    skillDir: '.agents/skills',
   },
 }
 

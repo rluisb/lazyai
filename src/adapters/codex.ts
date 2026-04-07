@@ -11,9 +11,9 @@ import type { AdapterContext, ToolAdapter } from './types.js'
  * Adapter for OpenAI Codex CLI
  *
  * Structure:
- * - Root: AGENTS.md
- * - Config: .codex/
- * - Skills: .codex/skills/{name}/SKILL.md
+ * - Root: AGENTS.md (shared project notes)
+ * - Skills: .agents/skills/{name}/SKILL.md (AgentSkills standard)
+ * - No .codex/ project directory (config only in ~/.codex/)
  * - Agents: Inline in AGENTS.md (no separate directory)
  */
 export class CodexAdapter implements ToolAdapter {
@@ -23,10 +23,12 @@ export class CodexAdapter implements ToolAdapter {
 
   async install(ctx: AdapterContext): Promise<void> {
     const isGlobal = ctx.setupScope === 'global'
-    const codexDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.codex')
+    const agentsDir = isGlobal
+      ? path.join(path.dirname(ctx.targetDir), '.agents')
+      : path.join(ctx.targetDir, '.agents')
 
-    files.ensureDir(codexDir)
-    files.ensureDir(path.join(codexDir, 'skills'))
+    files.ensureDir(agentsDir)
+    files.ensureDir(path.join(agentsDir, 'skills'))
 
     console.log('🤖  Installing Codex tools...')
 
@@ -37,14 +39,14 @@ export class CodexAdapter implements ToolAdapter {
       selectionKey: 'skills',
       toDestPath: (file) => {
         const name = path.parse(file).name
-        return path.join(codexDir, 'skills', name, 'SKILL.md')
+        return path.join(agentsDir, 'skills', name, 'SKILL.md')
       },
     })
 
     // Install context files (AGENTS.md references agents inline)
     await installToolContextFiles({
       ctx,
-      toolDir: codexDir,
+      toolDir: agentsDir,
       contextFileName: 'AGENTS.md',
       agentsDestDir: '.', // Inline - agents referenced in root file
       skillsDestDir: 'skills',
@@ -54,7 +56,7 @@ export class CodexAdapter implements ToolAdapter {
     await installRootTemplateIfMissing({
       ctx,
       recordPath: 'AGENTS.md',
-      destPath: path.join(isGlobal ? codexDir : ctx.targetDir, 'AGENTS.md'),
+      destPath: path.join(ctx.targetDir, 'AGENTS.md'),
       templateSource: 'root/AGENTS.template.md',
     })
   }

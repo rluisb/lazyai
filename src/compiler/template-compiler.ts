@@ -28,7 +28,7 @@ const TOOL_OVERRIDES: Partial<Record<ToolId, { description: string; notes: strin
   },
   codex: {
     description: 'This project uses OpenAI Codex CLI with ai-setup integration.',
-    notes: '## Codex-Specific Notes\n\n- Agents are defined inline in this file (no separate agents directory)\n- Skills are in `.codex/skills/*/SKILL.md`',
+    notes: '## Codex-Specific Notes\n\n- Agents are defined inline in this file (no separate agents directory)\n- Skills use AgentSkills standard: `.agents/skills/*/SKILL.md`\n- No `.codex/` project directory (global config only in `~/.codex/`)',
   },
 }
 

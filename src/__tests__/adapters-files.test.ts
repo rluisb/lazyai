@@ -269,7 +269,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
   })
 
-  it('Codex adapter installs .codex skills directory-per-skill and root AGENTS.md', async () => {
+  it('Codex adapter installs .agents skills directory-per-skill and root AGENTS.md', async () => {
     const adapter = new CodexAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
@@ -287,21 +287,27 @@ describe('tool adapters', () => {
       },
     })
 
-    // Codex uses directory-per-skill format: .codex/skills/<name>/SKILL.md
-    expect(fileExists(path.join(targetDir, '.codex/skills/implement/SKILL.md'))).toBe(true)
+    // Codex uses AgentSkills standard: .agents/skills/<name>/SKILL.md
+    expect(fileExists(path.join(targetDir, '.agents/skills/implement/SKILL.md'))).toBe(true)
+
+    // Root AGENTS.md should exist
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
 
-    // Codex has NO agents or templates directories (agents inline in AGENTS.md)
-    expect(fileExists(path.join(targetDir, '.codex/agents'))).toBe(false)
-    expect(fileExists(path.join(targetDir, '.codex/templates'))).toBe(false)
+    // No .codex directory should exist
+    expect(fileExists(path.join(targetDir, '.codex'))).toBe(false)
 
-    expect(fileRecords.some((f) => f.path === '.codex/skills/implement/SKILL.md')).toBe(true)
+    // No agents or templates directories (Codex has no separate agents dir)
+    expect(fileExists(path.join(targetDir, '.agents/agents'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.agents/templates'))).toBe(false)
+
+    expect(fileRecords.some((f) => f.path === '.agents/skills/implement/SKILL.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
   })
 
-  it('Codex adapter uses global scope for .codex directory', async () => {
+  it('Codex adapter uses global scope correctly', async () => {
     const adapter = new CodexAdapter()
     const globalTargetDir = path.join(targetDir, '.config', 'codex')
+    const globalAgentsDir = path.join(targetDir, '.config', '.agents')
     ensureDir(path.join(libraryDir, 'skills'))
     writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
     ensureDir(path.join(libraryDir, 'root'))
@@ -318,9 +324,12 @@ describe('tool adapters', () => {
       },
     })
 
-    // Global scope: no nested .codex directory, skills go directly in targetDir
-    expect(fileExists(path.join(globalTargetDir, 'skills', 'implement', 'SKILL.md'))).toBe(true)
+    // Global scope: config stays in ~/.codex, shared skills go in ~/.agents/skills
+    expect(fileExists(path.join(globalAgentsDir, 'skills', 'implement', 'SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(globalAgentsDir, 'skills', 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(globalAgentsDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(false)
+    expect(fileExists(path.join(globalTargetDir, '.agents'))).toBe(false)
   })
 })

@@ -293,7 +293,7 @@ export async function runPhase1(opts: {
         { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + CLAUDE.md' },
         { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ directory + GEMINI.md' },
         { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + copilot-instructions.md' },
-        { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .codex/ directory + AGENTS.md' },
+        { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
       ],
       required: true,
     }))

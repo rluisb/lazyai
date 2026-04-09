@@ -487,6 +487,7 @@ export async function runPhase1(opts: {
         const wantsCustom = (reposResult as string[]).includes('__custom__')
 
         repos = selectedDirs
+          // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
           .map((dir) => detectRepoInfo(dir, planningRepoPath!))
           .map((info) => ({
             name: info.name,
@@ -509,7 +510,9 @@ export async function runPhase1(opts: {
             }
 
             if (customPath) {
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const resolved = path.resolve(planningRepoPath!, customPath)
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const info = detectRepoInfo(resolved, planningRepoPath!)
               repos.push({
                 name: info.name,
@@ -558,7 +561,9 @@ export async function runPhase1(opts: {
             }
 
             if (customPath) {
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const resolved = path.resolve(planningRepoPath!, customPath)
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const info = detectRepoInfo(resolved, planningRepoPath!)
               repos.push({
                 name: info.name,

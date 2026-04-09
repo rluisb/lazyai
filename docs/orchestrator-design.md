@@ -2,6 +2,8 @@
 
 This document defines the technical design for the optional orchestration layer in ai-setup. It covers the architecture, definitions, schemas, runtime model, tool surface, composition algorithm, and control policies for sections 1-13 of the full design.
 
+> For the **current shipped user-facing workflow**, see [`docs/orchestration-usage.md`](./orchestration-usage.md). This design document includes rollout planning and future-facing architecture context; the usage guide is the source for what Phase 5 documents as available now.
+
 ---
 
 ## 1. Executive Summary

@@ -3,6 +3,7 @@ export type CatalogKind = 'agent' | 'domain' | 'mode' | 'chain' | 'team' | 'work
 export type HostCli = 'claude-code' | 'codex' | 'opencode' | 'gemini' | 'copilot'
 export type DispatchMode = 'task-tool' | 'native-subagent' | 'sdk-session' | 'instruction-only'
 export type ApprovalPolicy = 'minimal' | 'normal' | 'strict'
+export type RunKind = 'chain' | 'team' | 'workflow'
 export type ChainLifecycleState =
   | 'created'
   | 'running'
@@ -20,6 +21,26 @@ export type StepLifecycleState =
   | 'escalated'
   | 'skipped'
   | 'abandoned'
+export type TeamLifecycleState = 'created' | 'running' | 'synthesizing' | 'completed' | 'failed' | 'paused' | 'handoff'
+export type TeamTaskLifecycleState = 'pending' | 'assigned' | 'claimed' | 'blocked' | 'completed' | 'failed'
+export type WorkflowLifecycleState =
+  | 'created'
+  | 'waiting_on_child'
+  | 'running'
+  | 'gated'
+  | 'awaiting_recovery'
+  | 'completed'
+  | 'failed'
+  | 'handoff'
+  | 'paused'
+export type WorkflowPhaseLifecycleState =
+  | 'pending'
+  | 'waiting_on_child'
+  | 'running'
+  | 'gated'
+  | 'completed'
+  | 'failed'
+  | 'skipped'
 export type BudgetHealth = 'ok' | 'warning' | 'limit_reached'
 export type ErrorCategory = 'transient' | 'logical' | 'budget' | 'permission' | 'validation' | 'fatal'
 export type StepType = 'research' | 'plan' | 'implement' | 'review' | 'document' | 'custom'
@@ -95,6 +116,9 @@ export interface WorkflowPhaseDefinition {
   id: string
   kind: 'chain' | 'team' | 'gate' | 'terminal'
   ref?: string
+  gate?: 'user_approval' | 'severity_confirmation' | 'cost_confirmation'
+  prompt?: string
+  when?: string
   on?: Record<string, string>
 }
 
@@ -250,13 +274,21 @@ export interface StructuredError {
   skills: string[]
   context: {
     runId: string
-    runKind: 'chain' | 'team' | 'workflow'
+    runKind: RunKind
     task: string
     attempt: number
     hostCli: HostCli
     budgetSnapshot?: BudgetState
     rawOutput?: Record<string, unknown>
     notes?: string[]
+    child?: {
+      runId: string
+      runKind: Exclude<RunKind, 'workflow'>
+      definitionName: string
+      phaseId: string
+      stepId?: string
+      taskId?: string
+    }
   }
   suggestedRecovery: RecoveryAction
   timestamp: string
@@ -265,7 +297,7 @@ export interface StructuredError {
 export interface ErrorJournalEntry {
   id: string
   runId: string
-  runKind: 'chain' | 'team' | 'workflow'
+  runKind: RunKind
   definitionName: string
   stepId?: string
   error: StructuredError
@@ -422,11 +454,147 @@ export interface CatalogItem {
 export interface HandoffDocument {
   id: string
   runId: string
-  kind: 'chain' | 'team' | 'workflow'
+  kind: RunKind
   summary: string
   recipient?: string
   createdAt: string
   resumable: boolean
   status: ChainState
   plan: ExecutionPlan
+}
+
+export interface TeamTaskState {
+  taskId: string
+  kind: 'member' | 'synthesize'
+  role: string
+  agent: string
+  skills: string[]
+  focus: string
+  state: TeamTaskLifecycleState
+  order: number
+  dependsOn: string[]
+  assignee?: string
+  claimedBy?: string
+  assignedAt?: string
+  claimedAt?: string
+  completedAt?: string
+  result?: Record<string, unknown>
+  usage: StepUsage
+  error?: StructuredError
+}
+
+export interface TeamState {
+  teamId: string
+  definitionName: string
+  definitionVersion: string
+  state: TeamLifecycleState
+  task: string
+  tasks: TeamTaskState[]
+  readyTaskIds: string[]
+  synthesisTaskId: string
+  budgetPolicy: BudgetPolicy
+  budget: BudgetState
+  createdAt: string
+  updatedAt: string
+  summary?: Record<string, unknown>
+}
+
+export interface BuildTeamInput {
+  team: string
+  task: string
+  budget?: Partial<BudgetPolicy>
+}
+
+export interface AssignTaskInput {
+  teamId: string
+  taskId: string
+  assignee: string
+  claim?: boolean
+}
+
+export interface CompleteTaskInput {
+  teamId: string
+  taskId: string
+  outcome: 'success' | 'failure'
+  result?: Record<string, unknown>
+  usage?: StepUsage
+  error?: StructuredError
+}
+
+export interface WorkflowChildRun {
+  phaseId: string
+  runId: string
+  runKind: 'chain' | 'team'
+  definitionName: string
+  launchedAt: string
+  completedAt?: string
+  outcome?: string
+}
+
+export interface WorkflowPhaseState {
+  phaseId: string
+  kind: WorkflowPhaseDefinition['kind']
+  state: WorkflowPhaseLifecycleState
+  ref?: string
+  gate?: WorkflowPhaseDefinition['gate']
+  prompt?: string
+  startedAt?: string
+  completedAt?: string
+  lastOutcome?: string
+  childRun?: WorkflowChildRun
+}
+
+export interface WorkflowRecoveryDecision {
+  type: 'retry' | 'escalate' | 'handoff'
+  targetPhaseId?: string
+  reason?: string
+  recipient?: string
+  summary?: string
+}
+
+export interface WorkflowState {
+  workflowId: string
+  definitionName: string
+  definitionVersion: string
+  state: WorkflowLifecycleState
+  task: string
+  entryPhaseId: string
+  currentPhaseId?: string
+  phases: WorkflowPhaseState[]
+  childRuns: WorkflowChildRun[]
+  budgetPolicy: BudgetPolicy
+  budget: BudgetState
+  createdAt: string
+  updatedAt: string
+  lastError?: StructuredError
+  handoffSummary?: string
+  runtime?: {
+    domainSkill?: string
+    modeSkill?: string
+    context?: StartChainInput['context']
+  }
+}
+
+export interface StartWorkflowInput {
+  workflow: string
+  task: string
+  domainSkill?: string
+  modeSkill?: string
+  budget?: Partial<BudgetPolicy>
+  context?: StartChainInput['context']
+}
+
+export interface AdvanceWorkflowInput {
+  workflowId: string
+  outcome?: string
+  recovery?: WorkflowRecoveryDecision
+}
+
+export interface WorkflowAction {
+  type: 'start_child' | 'gate' | 'terminal'
+  phaseId: string
+  childKind?: 'chain' | 'team'
+  ref?: string
+  gate?: WorkflowPhaseDefinition['gate']
+  prompt?: string
 }

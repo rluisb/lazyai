@@ -1,13 +1,13 @@
 import crypto from 'node:crypto'
-import { updateBudget, createBudgetState, evaluateBudgetHealth } from './budget-tracker.js'
+import { aggregateBudgets, createBudgetState, evaluateBudgetHealth, updateBudget } from './budget-tracker.js'
 import {
   advanceChainState,
   createChainState,
   escalateChainStep,
   retryChainStep,
 } from './chain-machine.js'
+import { buildBudgetPolicy, compileChainDefinition, validateStepOutput } from './compiler.js'
 import { composeAgent as composePromptLayers } from './composer.js'
-import { compileChainDefinition, validateStepOutput } from './compiler.js'
 import {
   appendErrorJournalEntry,
   createErrorJournalEntry,
@@ -18,23 +18,44 @@ import { loadCatalog } from './loader.js'
 import {
   loadChainState,
   loadExecutionPlan,
+  loadTeamState,
+  loadWorkflowState,
   saveChainState,
   saveExecutionPlan,
   saveHandoff,
+  saveTeamState,
+  saveWorkflowState,
 } from './persistence.js'
+import {
+  assignTeamTask,
+  completeTeamTask,
+  createTeamState,
+} from './team-machine.js'
+import {
+  advanceWorkflowState,
+  applyWorkflowChildLaunch,
+  createWorkflowState,
+} from './workflow-machine.js'
 import type {
   AdvanceChainInput,
   AdvanceChainResult,
+  AdvanceWorkflowInput,
+  AssignTaskInput,
   BaseAgentDefinition,
+  BuildTeamInput,
   CatalogItem,
   ChainState,
   ChainStepStatus,
   ComposedAgentSpec,
+  CompleteTaskInput,
   HandoffDocument,
   OrchestrationCatalog,
   RootContextLayer,
   StartChainInput,
+  StartWorkflowInput,
   StructuredError,
+  TeamState,
+  WorkflowState,
 } from './types.js'
 
 export interface ToolHandlerOptions {
@@ -63,12 +84,12 @@ export interface ListCatalogInput {
 
 export interface GetStatusInput {
   runId: string
-  kind: 'chain'
+  kind: 'chain' | 'team' | 'workflow'
 }
 
 export interface GetBudgetInput {
   runId: string
-  kind: 'chain'
+  kind: 'chain' | 'team' | 'workflow'
 }
 
 export interface RetryStepInput {
@@ -233,7 +254,7 @@ export class OrchestratorToolHandlers {
         validationError = createStructuredError({
           category: 'validation',
           code: 'STEP_OUTPUT_SCHEMA_MISMATCH',
-          message: `Step output for \"${compiled.id}\" did not match its contract.`,
+          message: `Step output for "${compiled.id}" did not match its contract.`,
           stepId: compiled.id,
           agent: compiled.agent,
           skills: compiled.skills,
@@ -306,38 +327,229 @@ export class OrchestratorToolHandlers {
     }
   }
 
-  getStatus(input: GetStatusInput) {
-    if (input.kind !== 'chain') throw new Error('Phase 2 only supports chain runtime status.')
-    const state = loadChainState(this.options.projectRoot, input.runId)
-    const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
+  buildTeam(input: BuildTeamInput) {
+    const catalog = this.getCatalog()
+    const definition = catalog.teams[input.team]
+    if (!definition) throw new Error(`Unknown team definition: ${input.team}`)
+
+    const policy = buildBudgetPolicy('team', input.budget)
+    const state = createTeamState({
+      definition,
+      task: input.task,
+      policy,
+      budget: createBudgetState(policy),
+    })
+    saveTeamState(this.options.projectRoot, state)
 
     return {
-      kind: 'chain',
+      teamId: state.teamId,
       state: state.state,
-      summary: {
-        definitionName: state.definitionName,
-        totalSteps: state.steps.length,
-        completedSteps: state.completedStepIds.length,
-        currentStepId: state.currentStepId ?? null,
-      },
-      current: this.toCurrentStepStatus(plan, state),
+      readyTaskIds: state.readyTaskIds,
+      tasks: state.tasks,
       budget: state.budget,
     }
   }
 
-  getBudget(input: GetBudgetInput) {
-    if (input.kind !== 'chain') throw new Error('Phase 2 only supports chain budgets.')
-    const state = loadChainState(this.options.projectRoot, input.runId)
-    const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
+  assignTask(input: AssignTaskInput) {
+    const state = loadTeamState(this.options.projectRoot, input.teamId)
+    const assigned = assignTeamTask({
+      state,
+      taskId: input.taskId,
+      assignee: input.assignee,
+      ...(typeof input.claim === 'boolean' ? { claim: input.claim } : {}),
+    })
+    saveTeamState(this.options.projectRoot, assigned.state)
 
     return {
+      teamId: assigned.state.teamId,
+      state: assigned.state.state,
+      readyTaskIds: assigned.state.readyTaskIds,
+      task: assigned.state.tasks.find((task) => task.taskId === input.taskId) ?? null,
+    }
+  }
+
+  completeTask(input: CompleteTaskInput) {
+    const state = loadTeamState(this.options.projectRoot, input.teamId)
+    const completion = completeTeamTask({
+      state,
+      taskId: input.taskId,
+      outcome: input.outcome,
+      ...(input.result ? { result: input.result } : {}),
+      ...(input.usage ? { usage: input.usage } : {}),
+      ...(input.error ? { error: input.error } : {}),
+      policy: state.budgetPolicy,
+    })
+    saveTeamState(this.options.projectRoot, completion.state)
+
+    if (input.outcome === 'failure' && input.error) {
+      appendErrorJournalEntry(
+        this.options.projectRoot,
+        createErrorJournalEntry({
+          runId: completion.state.teamId,
+          runKind: 'team',
+          definitionName: completion.state.definitionName,
+          stepId: input.taskId,
+          error: input.error,
+        }),
+      )
+    }
+
+    return {
+      teamId: completion.state.teamId,
+      state: completion.state.state,
+      readyTaskIds: completion.state.readyTaskIds,
+      budget: completion.state.budget,
+      summary: completion.state.summary ?? null,
+      evaluation: completion.evaluation,
+    }
+  }
+
+  startWorkflow(input: StartWorkflowInput) {
+    const catalog = this.getCatalog()
+    const definition = catalog.workflows[input.workflow]
+    if (!definition) throw new Error(`Unknown workflow definition: ${input.workflow}`)
+
+    const policy = buildBudgetPolicy('workflow', input.budget)
+    const created = createWorkflowState({
+      definition,
+      task: input.task,
+      policy,
+      budget: createBudgetState(policy),
+      runtime: {
+        ...(input.domainSkill ? { domainSkill: input.domainSkill } : {}),
+        ...(input.modeSkill ? { modeSkill: input.modeSkill } : {}),
+        ...(input.context ? { context: input.context } : {}),
+      },
+    })
+
+    const state = this.materializeWorkflowAction(created.state, created.nextAction)
+    this.refreshWorkflowBudget(state)
+    saveWorkflowState(this.options.projectRoot, state)
+
+    return {
+      workflowId: state.workflowId,
+      state: state.state,
+      currentPhase: this.toCurrentWorkflowPhase(state),
+      budget: state.budget,
+    }
+  }
+
+  advanceWorkflow(input: AdvanceWorkflowInput) {
+    const state = loadWorkflowState(this.options.projectRoot, input.workflowId)
+    const definition = this.requireWorkflowDefinition(state.definitionName)
+    const advanced = advanceWorkflowState({
+      state,
+      definition,
+      ...(input.outcome ? { outcome: input.outcome } : {}),
+      ...(input.recovery ? { recovery: input.recovery } : {}),
+    })
+
+    const nextState = this.materializeWorkflowAction(advanced.state, advanced.nextAction)
+    this.refreshWorkflowBudget(nextState)
+    saveWorkflowState(this.options.projectRoot, nextState)
+
+    if (nextState.lastError) {
+      appendErrorJournalEntry(
+        this.options.projectRoot,
+        createErrorJournalEntry({
+          runId: nextState.workflowId,
+          runKind: 'workflow',
+          definitionName: nextState.definitionName,
+          ...(nextState.currentPhaseId ? { stepId: nextState.currentPhaseId } : {}),
+          error: nextState.lastError,
+        }),
+      )
+    }
+
+    return {
+      workflowId: nextState.workflowId,
+      state: nextState.state,
+      currentPhase: this.toCurrentWorkflowPhase(nextState),
+      budget: nextState.budget,
+      recoveryOptions: advanced.recoveryOptions,
+      ...(nextState.lastError ? { error: nextState.lastError } : {}),
+    }
+  }
+
+  getStatus(input: GetStatusInput) {
+    if (input.kind === 'chain') {
+      const state = loadChainState(this.options.projectRoot, input.runId)
+      const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
+
+      return {
+        kind: 'chain',
+        state: state.state,
+        summary: {
+          definitionName: state.definitionName,
+          totalSteps: state.steps.length,
+          completedSteps: state.completedStepIds.length,
+          currentStepId: state.currentStepId ?? null,
+        },
+        current: this.toCurrentStepStatus(plan, state),
+        budget: state.budget,
+      }
+    }
+
+    if (input.kind === 'team') {
+      const state = loadTeamState(this.options.projectRoot, input.runId)
+      return {
+        kind: 'team',
+        state: state.state,
+        summary: {
+          definitionName: state.definitionName,
+          totalTasks: state.tasks.length,
+          completedTasks: state.tasks.filter((task) => task.state === 'completed').length,
+          readyTaskIds: state.readyTaskIds,
+        },
+        current: this.toCurrentTeamTasks(state),
+        budget: state.budget,
+      }
+    }
+
+    const state = loadWorkflowState(this.options.projectRoot, input.runId)
+    return {
+      kind: 'workflow',
+      state: state.state,
+      summary: {
+        definitionName: state.definitionName,
+        totalPhases: state.phases.length,
+        completedPhases: state.phases.filter((phase) => phase.state === 'completed').length,
+        currentPhaseId: state.currentPhaseId ?? null,
+      },
+      current: this.toCurrentWorkflowPhase(state),
+      budget: state.budget,
+      ...(state.lastError ? { error: state.lastError } : {}),
+    }
+  }
+
+  getBudget(input: GetBudgetInput) {
+    if (input.kind === 'chain') {
+      const state = loadChainState(this.options.projectRoot, input.runId)
+      const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
+      return {
+        ...state.budget,
+        health: evaluateBudgetHealth(state.budget, plan.budgetPolicy),
+      }
+    }
+
+    if (input.kind === 'team') {
+      const state = loadTeamState(this.options.projectRoot, input.runId)
+      return {
+        ...state.budget,
+        health: evaluateBudgetHealth(state.budget, state.budgetPolicy),
+      }
+    }
+
+    const state = loadWorkflowState(this.options.projectRoot, input.runId)
+    this.refreshWorkflowBudget(state)
+    saveWorkflowState(this.options.projectRoot, state)
+    return {
       ...state.budget,
-      health: evaluateBudgetHealth(state.budget, plan.budgetPolicy),
+      health: evaluateBudgetHealth(state.budget, state.budgetPolicy),
     }
   }
 
   retryStep(input: RetryStepInput) {
-    if (input.kind !== 'chain') throw new Error('Phase 2 only supports chain retries.')
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
     const retried = retryChainStep(state, plan, input.stepId)
@@ -359,7 +571,6 @@ export class OrchestratorToolHandlers {
   }
 
   escalateStep(input: EscalateStepInput) {
-    if (input.kind !== 'chain') throw new Error('Phase 2 only supports chain escalation.')
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
     const escalated = escalateChainStep(state, plan, input.stepId, input.targetAgent, input.domainSkill, input.modeSkill)
@@ -376,7 +587,6 @@ export class OrchestratorToolHandlers {
   }
 
   handoff(input: HandoffInput) {
-    if (input.kind !== 'chain') throw new Error('Phase 2 only supports chain handoff.')
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
 
@@ -411,12 +621,74 @@ export class OrchestratorToolHandlers {
     return readErrorJournal(this.options.projectRoot)
   }
 
+  private materializeWorkflowAction(state: WorkflowState, action: ReturnType<typeof createWorkflowState>['nextAction']): WorkflowState {
+    if (!action || action.type !== 'start_child' || !action.ref || !action.childKind) {
+      return state
+    }
+
+    if (action.childKind === 'chain') {
+      const child = this.startChain({
+        chain: action.ref,
+        task: state.task,
+        ...(state.runtime?.domainSkill ? { domainSkill: state.runtime.domainSkill } : {}),
+        ...(state.runtime?.modeSkill ? { modeSkill: state.runtime.modeSkill } : {}),
+        ...(state.runtime?.context ? { context: state.runtime.context } : {}),
+      })
+
+      return applyWorkflowChildLaunch({
+        state,
+        phaseId: action.phaseId,
+        childRun: {
+          phaseId: action.phaseId,
+          runId: child.chainId,
+          runKind: 'chain',
+          definitionName: action.ref,
+          launchedAt: new Date().toISOString(),
+        },
+      }).state
+    }
+
+    const child = this.buildTeam({
+      team: action.ref,
+      task: state.task,
+    })
+
+    return applyWorkflowChildLaunch({
+      state,
+      phaseId: action.phaseId,
+      childRun: {
+        phaseId: action.phaseId,
+        runId: child.teamId,
+        runKind: 'team',
+        definitionName: action.ref,
+        launchedAt: new Date().toISOString(),
+      },
+    }).state
+  }
+
+  private refreshWorkflowBudget(state: WorkflowState): void {
+    const children = state.childRuns.map((child) => {
+      if (child.runKind === 'chain') {
+        const childState = loadChainState(this.options.projectRoot, child.runId)
+        return { childId: child.runId, budget: childState.budget }
+      }
+
+      const childState = loadTeamState(this.options.projectRoot, child.runId)
+      return { childId: child.runId, budget: childState.budget }
+    })
+
+    const aggregated = aggregateBudgets({
+      policy: state.budgetPolicy,
+      scope: 'workflow',
+      children,
+    })
+    state.budget = aggregated.budget
+  }
+
   private getCatalog(): OrchestrationCatalog {
     return loadCatalog({
       projectRoot: this.options.projectRoot,
-      ...(this.options.libraryOrchestrationRoot
-        ? { libraryOrchestrationRoot: this.options.libraryOrchestrationRoot }
-        : {}),
+      ...(this.options.libraryOrchestrationRoot ? { libraryOrchestrationRoot: this.options.libraryOrchestrationRoot } : {}),
       ...(this.options.libraryAgentsRoot ? { libraryAgentsRoot: this.options.libraryAgentsRoot } : {}),
     })
   }
@@ -439,6 +711,12 @@ export class OrchestratorToolHandlers {
     return step
   }
 
+  private requireWorkflowDefinition(name: string) {
+    const workflow = this.getCatalog().workflows[name]
+    if (!workflow) throw new Error(`Unknown workflow definition: ${name}`)
+    return workflow
+  }
+
   private toCurrentStepStatus(plan: ReturnType<typeof loadExecutionPlan>, state: ChainState): ChainStepStatus | null {
     if (!state.currentStepId) return null
     const runtimeStep = state.steps.find((entry) => entry.stepId === state.currentStepId)
@@ -459,6 +737,15 @@ export class OrchestratorToolHandlers {
       composedAgent: compiledStep.composedAgent,
     }
   }
+
+  private toCurrentTeamTasks(state: TeamState) {
+    return state.tasks.filter((task) => state.readyTaskIds.includes(task.taskId) || task.state === 'assigned' || task.state === 'claimed')
+  }
+
+  private toCurrentWorkflowPhase(state: WorkflowState) {
+    if (!state.currentPhaseId) return null
+    return state.phases.find((phase) => phase.phaseId === state.currentPhaseId) ?? null
+  }
 }
 
 function toCatalogItems<T extends { name: string; source: CatalogItem['source']; description: string; version?: string; path: string }>(
@@ -474,4 +761,3 @@ function toCatalogItems<T extends { name: string; source: CatalogItem['source'];
     path: item.path,
   }))
 }
-

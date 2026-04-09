@@ -25,6 +25,7 @@ export interface OrchestratorServerContext {
 
 type StructuredContent = Record<string, unknown>
 type HandlerCliTool = NonNullable<ComposeAgentInput['cliTool']>
+type ToolArgs = Record<string, unknown>
 
 function definedEntries<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(
@@ -161,7 +162,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         query: z.string().min(1).optional(),
       },
     },
-    async (args) => formatToolResult(handlers.listCatalog(normalizeListCatalogInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.listCatalog(normalizeListCatalogInput(args))),
   )
 
   server.registerTool(
@@ -188,7 +189,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         model: z.string().optional(),
       },
     },
-    async (args) => formatToolResult(handlers.composeAgent(normalizeComposeAgentInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.composeAgent(normalizeComposeAgentInput(args))),
   )
 
   server.registerTool(
@@ -218,7 +219,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
           .optional(),
       },
     },
-    async (args) => formatToolResult(handlers.startChain(normalizeStartChainInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.startChain(normalizeStartChainInput(args))),
   )
 
   server.registerTool(
@@ -241,7 +242,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
           .optional(),
       },
     },
-    async (args) => formatToolResult(handlers.advanceChain(normalizeAdvanceChainInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.advanceChain(normalizeAdvanceChainInput(args))),
   )
 
   server.registerTool(
@@ -253,7 +254,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         kind: CHAIN_KIND_SCHEMA,
       },
     },
-    async (args) => formatToolResult(handlers.getStatus(normalizeGetStatusInput(args))),
+    async (args: { runId: string; kind: 'chain' }) => formatToolResult(handlers.getStatus(normalizeGetStatusInput(args))),
   )
 
   server.registerTool(
@@ -265,7 +266,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         kind: CHAIN_KIND_SCHEMA,
       },
     },
-    async (args) => formatToolResult(handlers.getBudget(normalizeGetBudgetInput(args))),
+    async (args: { runId: string; kind: 'chain' }) => formatToolResult(handlers.getBudget(normalizeGetBudgetInput(args))),
   )
 
   server.registerTool(
@@ -279,7 +280,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         reason: z.string().optional(),
       },
     },
-    async (args) => formatToolResult(handlers.retryStep(normalizeRetryStepInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.retryStep(normalizeRetryStepInput(args))),
   )
 
   server.registerTool(
@@ -296,7 +297,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         reason: z.string().optional(),
       },
     },
-    async (args) => formatToolResult(handlers.escalateStep(normalizeEscalateStepInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.escalateStep(normalizeEscalateStepInput(args))),
   )
 
   server.registerTool(
@@ -311,7 +312,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         includeArtifacts: z.boolean().optional(),
       },
     },
-    async (args) => formatToolResult(handlers.handoff(normalizeHandoffInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.handoff(normalizeHandoffInput(args))),
   )
 
   return { server, handlers }
@@ -324,7 +325,7 @@ export async function startStdioServer(options: ToolHandlerOptions): Promise<Orc
   return context
 }
 
-function formatToolResult(data: unknown) {
+function formatToolResult(data: unknown): { content: Array<{ type: 'text'; text: string }>; structuredContent: Record<string, unknown> | undefined } {
   return {
     content: [
       {

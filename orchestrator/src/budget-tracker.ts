@@ -16,6 +16,16 @@ export interface BudgetUpdateInput {
   now?: string
 }
 
+export interface AggregateBudgetInput {
+  policy: BudgetPolicy
+  scope: BudgetState['scope']
+  children: Array<{
+    childId: string
+    budget: BudgetState
+  }>
+  now?: string
+}
+
 export function createBudgetState(policy: BudgetPolicy): BudgetState {
   const now = new Date().toISOString()
   return {
@@ -90,6 +100,30 @@ export function evaluateBudgetHealth(budget: BudgetState, policy: BudgetPolicy):
   }
 }
 
+export function aggregateBudgets(input: AggregateBudgetInput): { budget: BudgetState; evaluation: BudgetEvaluation } {
+  const now = input.now ?? new Date().toISOString()
+  const aggregated = createBudgetState({
+    ...input.policy,
+    scope: input.scope,
+  })
+
+  aggregated.tokens = mergeDimensionStates(input.children.map((child) => child.budget.tokens), input.policy.tokens)
+  aggregated.costUsd = mergeDimensionStates(input.children.map((child) => child.budget.costUsd), input.policy.costUsd)
+  aggregated.wallClockMs = mergeDimensionStates(input.children.map((child) => child.budget.wallClockMs), input.policy.wallClockMs)
+  aggregated.retries = mergeDimensionStates(input.children.map((child) => child.budget.retries), input.policy.retries)
+  aggregated.byStep = Object.fromEntries(
+    input.children.flatMap((child) =>
+      Object.entries(child.budget.byStep).map(([stepId, usage]) => [`${child.childId}:${stepId}`, usage] as const),
+    ),
+  )
+  aggregated.lastUpdatedAt = now
+
+  return {
+    budget: aggregated,
+    evaluation: evaluateBudgetHealth(aggregated, input.policy),
+  }
+}
+
 function createDimensionState(threshold?: BudgetPolicy['tokens']): BudgetDimensionState {
   return {
     consumed: 0,
@@ -150,5 +184,25 @@ function mergeUsage(existing: StepUsage | undefined, incoming: StepUsage): StepU
     totalTokens: (existing?.totalTokens ?? 0) + (incoming.totalTokens ?? 0),
     costUsd: (existing?.costUsd ?? 0) + (incoming.costUsd ?? 0),
     wallClockMs: (existing?.wallClockMs ?? 0) + (incoming.wallClockMs ?? 0),
+  }
+}
+
+function mergeDimensionStates(
+  states: BudgetDimensionState[],
+  threshold: BudgetPolicy['tokens'],
+): BudgetDimensionState {
+  const consumed = states.reduce((total, state) => total + state.consumed, 0)
+  const limit = threshold?.limit
+
+  return {
+    consumed,
+    warningTriggered: states.some((state) => state.warningTriggered),
+    pausedAtLimit: states.some((state) => state.pausedAtLimit),
+    ...(typeof limit === 'number'
+      ? {
+          limit,
+          remaining: Math.max(limit - consumed, 0),
+        }
+      : {}),
   }
 }

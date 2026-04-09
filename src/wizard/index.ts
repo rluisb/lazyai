@@ -450,6 +450,7 @@ export async function runWizard(opts: {
         agents: selections.agents,
         skills: selections.skills,
         prompts: selections.prompts,
+        ...(enableServers ? { enableServers } : {}),
         fileRecords,
         strategy,
         perFileOverrides,

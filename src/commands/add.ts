@@ -75,6 +75,7 @@ export function registerAdd(program: Command): void {
         targetDir,
         libraryDir,
         fileRecords: newFiles,
+        ...(data.config.enableServers ? { enableServers: data.config.enableServers } : {}),
       })
 
       s.stop(`Installed ${toolId} files`)

@@ -3,7 +3,6 @@ import * as p from '@clack/prompts'
 import type { Command } from 'commander'
 import { Errors } from '../errors/index.js'
 import { GeneratorRegistry } from '../generators/registry.js'
-import { discoverLibraryArtifacts } from '../generators/workflow.js'
 import type { ArtifactType } from '../types.js'
 import { fileExists, writeFile } from '../utils/files.js'
 import { validateRequiredText } from '../utils/validation.js'
@@ -26,11 +25,30 @@ interface CreateOptions {
   sections?: string
   fields?: string
   step?: string[]
+  chain?: string
+  team?: string
+}
+
+function isInteractiveEnabled(interactive: boolean | undefined): boolean {
+  if (interactive === false) {
+    return false
+  }
+
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY)
 }
 
 function parseArtifactType(value: string): ArtifactType {
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'agent' || normalized === 'skill' || normalized === 'command' || normalized === 'prompt' || normalized === 'template' || normalized === 'workflow') {
+  if (
+    normalized === 'agent' ||
+    normalized === 'skill' ||
+    normalized === 'command' ||
+    normalized === 'prompt' ||
+    normalized === 'template' ||
+    normalized === 'workflow' ||
+    normalized === 'domain' ||
+    normalized === 'mode'
+  ) {
     return normalized
   }
   throw Errors.invalidInput(`invalid artifact type: ${value}`)
@@ -62,7 +80,7 @@ async function askText(message: string, placeholder?: string): Promise<string> {
 }
 
 async function buildWorkflowStepsInteractively(targetDir: string): Promise<string[]> {
-  const discovered = discoverLibraryArtifacts(targetDir)
+  const discovered = { agents: [], skills: [], prompts: [], templates: [] }
   const typeToItems: Array<{ type: 'agent' | 'skill' | 'prompt' | 'template'; items: string[] }> = [
     { type: 'agent', items: discovered.agents },
     { type: 'skill', items: discovered.skills },
@@ -146,6 +164,10 @@ function extractAnswersFromOptions(type: ArtifactType, opts: CreateOptions): Rec
   }
 
   if (type === 'workflow') {
+    if (opts.command) answers.chain = opts.command
+    if (opts.mode) answers.team = opts.mode
+    if ((opts as CreateOptions & { chain?: string }).chain) answers.chain = (opts as CreateOptions & { chain?: string }).chain
+    if ((opts as CreateOptions & { team?: string }).team) answers.team = (opts as CreateOptions & { team?: string }).team
     if (opts.steps) answers.steps = opts.steps
     if (opts.step && opts.step.length > 0) answers.steps = opts.step
   }
@@ -162,7 +184,8 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
   }
 
   const targetDir = process.cwd()
-  const name = positionalName ?? opts.name ?? (opts.interactive ? await askText(`Name for ${type}?`) : undefined)
+  const interactive = isInteractiveEnabled(opts.interactive)
+  const name = positionalName ?? opts.name ?? (interactive ? await askText(`Name for ${type}?`) : undefined)
 
   if (!name) {
     throw Errors.invalidInput(`a name is required for create ${type} in non-interactive mode`)
@@ -170,11 +193,11 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
 
   const answers = extractAnswersFromOptions(type, opts)
 
-  if (type === 'workflow' && opts.interactive && !answers.steps) {
+  if (type === 'workflow' && interactive && !answers.steps) {
     answers.steps = await buildWorkflowStepsInteractively(targetDir)
   }
 
-  if (opts.interactive) {
+  if (interactive) {
     const questions = generator.getPromptQuestions()
 
     for (const question of questions) {
@@ -307,6 +330,8 @@ function registerCreateSubcommand(createCmd: Command, type: ArtifactType): void 
   }
 
   if (type === 'workflow') {
+    sub.option('--chain <chain>', 'Primary chain reference')
+    sub.option('--team <team>', 'Optional review/synthesis team reference')
     sub.option('--steps <steps>', 'Workflow steps as newline-delimited step specs')
     sub.option(
       '--step <step>',
@@ -331,8 +356,9 @@ export function registerCreate(program: Command): void {
     .option('--no-interactive', 'Disable interactive prompts')
     .action(async (opts: CreateOptions) => {
       let selectedType: string | undefined = opts.type
+      const interactive = isInteractiveEnabled(opts.interactive)
 
-      if (!selectedType && opts.interactive) {
+      if (!selectedType && interactive) {
         const selected = await p.select({
           message: 'What would you like to create?',
           options: [
@@ -366,4 +392,6 @@ export function registerCreate(program: Command): void {
   registerCreateSubcommand(create, 'prompt')
   registerCreateSubcommand(create, 'template')
   registerCreateSubcommand(create, 'workflow')
+  registerCreateSubcommand(create, 'domain')
+  registerCreateSubcommand(create, 'mode')
 }

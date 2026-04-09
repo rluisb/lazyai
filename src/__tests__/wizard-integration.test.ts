@@ -69,6 +69,39 @@ describe('wizard integration (non-interactive)', () => {
     expect(manifest.config.setupScope).toBe('project')
   })
 
+  it('creates .ai/orchestration when orchestrator is enabled', async () => {
+    await runWizard({
+      interactive: false,
+      cliOverrides: {
+        scope: 'project',
+        tools: ['opencode', 'claude-code'],
+        name: 'test-project',
+        enableServers: ['orchestrator'],
+      },
+      targetDir: tempDir,
+    })
+
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration', 'chains', 'feature.json'))).toBe(true)
+
+    const manifest = JSON.parse(readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8'))
+    expect(manifest.config.enableServers).toEqual(['orchestrator'])
+  })
+
+  it('does not create .ai/orchestration when orchestrator is not enabled', async () => {
+    await runWizard({
+      interactive: false,
+      cliOverrides: {
+        scope: 'project',
+        tools: ['opencode', 'claude-code'],
+        name: 'test-project',
+      },
+      targetDir: tempDir,
+    })
+
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration'))).toBe(false)
+  })
+
   it('creates only opencode files when only opencode selected', async () => {
     await runWizard({
       interactive: false,

@@ -1,6 +1,8 @@
 import type { ArtifactType } from '../types.js'
 import { AgentGenerator } from './agent.js'
 import { CommandGenerator } from './command.js'
+import { DomainGenerator } from './domain.js'
+import { ModeGenerator } from './mode.js'
 import { PromptGenerator } from './prompt.js'
 import { SkillGenerator } from './skill.js'
 import { TemplateGenerator } from './template.js'
@@ -18,6 +20,8 @@ export class GeneratorRegistry {
       new PromptGenerator(),
       new TemplateGenerator(),
       new WorkflowGenerator(),
+      new DomainGenerator(),
+      new ModeGenerator(),
     ]
 
     for (const generator of builtins) {

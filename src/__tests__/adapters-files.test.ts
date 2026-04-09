@@ -93,6 +93,7 @@ describe('tool adapters', () => {
     ensureDir(path.join(libraryDir, 'prompts'))
     ensureDir(path.join(libraryDir, 'tool-agents'))
     writeFile(path.join(libraryDir, 'agents/builder.md'), '# builder')
+    writeFile(path.join(libraryDir, 'agents/orchestrator.md'), '---\nname: Orchestrator\nmodel: opus\n---\n\n# Orchestrator\n\nUse start_chain, build_team, and get_status.')
     writeFile(path.join(libraryDir, 'agents/reviewer.md'), '# reviewer')
     writeFile(path.join(libraryDir, 'prompts/plan.md'), '# plan')
     writeFile(path.join(libraryDir, 'tool-agents/agents-dir.md'), '# agents context')
@@ -335,5 +336,59 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(false)
     expect(fileExists(path.join(globalTargetDir, '.agents'))).toBe(false)
+  })
+
+  it('adds orchestration guidance files for supported adapters when orchestrator is enabled', async () => {
+    const claudeTarget = makeTempDir('ai-setup-claude-orchestrator-')
+    const opencodeTarget = makeTempDir('ai-setup-opencode-orchestrator-')
+    const codexTarget = makeTempDir('ai-setup-codex-orchestrator-')
+    const geminiTarget = makeTempDir('ai-setup-gemini-orchestrator-')
+    const copilotTarget = makeTempDir('ai-setup-copilot-orchestrator-')
+
+    await new ClaudeCodeAdapter().install({
+      targetDir: claudeTarget,
+      libraryDir,
+      fileRecords: [],
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    await new OpenCodeAdapter().install({
+      targetDir: opencodeTarget,
+      libraryDir,
+      fileRecords: [],
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    await new CodexAdapter().install({
+      targetDir: codexTarget,
+      libraryDir,
+      fileRecords: [],
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    await new GeminiAdapter().install({
+      targetDir: geminiTarget,
+      libraryDir,
+      fileRecords: [],
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    await new CopilotAdapter().install({
+      targetDir: copilotTarget,
+      libraryDir,
+      fileRecords: [],
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    expect(readFile(path.join(claudeTarget, '.claude/agents/orchestrator.md'))).toContain('start_chain')
+    expect(readFile(path.join(opencodeTarget, '.opencode/agents/orchestrator.md'))).toContain('start_chain')
+    expect(readFile(path.join(codexTarget, '.agents/skills/orchestrator/SKILL.md'))).toContain('build_team')
+    expect(readFile(path.join(geminiTarget, '.gemini/skills/orchestrator/SKILL.md'))).toContain('get_status')
+    expect(readFile(path.join(copilotTarget, '.github/prompts/orchestrator.prompt.md'))).toContain('start_chain')
   })
 })

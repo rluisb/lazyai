@@ -40,22 +40,25 @@ export async function scaffoldMcp(opts: ScaffoldMcpOptions): Promise<void> {
   }
 
   const catalog = JSON.parse(readFile(catalogPath)) as McpCatalog
+  const enabledServerNames = new Set<string>()
 
   // Enable CLI tools that are also MCP servers (legacy behavior)
   if (opts.cliTools && opts.cliTools.length > 0) {
     for (const toolName of opts.cliTools) {
-      if (catalog.servers[toolName]) {
-        catalog.servers[toolName].enabled = true
-      }
+      enabledServerNames.add(toolName)
     }
   }
 
   // Enable explicitly selected MCP servers
   if (opts.enableServers && opts.enableServers.length > 0) {
     for (const serverName of opts.enableServers) {
-      if (catalog.servers[serverName]) {
-        catalog.servers[serverName].enabled = true
-      }
+      enabledServerNames.add(serverName)
+    }
+  }
+
+  for (const serverName of enabledServerNames) {
+    if (catalog.servers[serverName]) {
+      catalog.servers[serverName].enabled = true
     }
   }
 

@@ -9,6 +9,7 @@ export interface ScaffoldAgentsSkillsPromptsOptions {
   agents: AgentId[]
   skills: SkillId[]
   prompts: PromptId[]
+  enableServers?: string[]
   fileRecords: FileRecord[]
   force?: boolean
   strategy?: ConflictStrategy
@@ -25,7 +26,7 @@ export interface ScaffoldAgentsSkillsPromptsOptions {
  * Current behavior: Calls adapter.install() which copies all agents/skills/prompts for each tool.
  */
 export async function scaffoldAgentsSkillsPrompts(opts: ScaffoldAgentsSkillsPromptsOptions): Promise<void> {
-  const { targetDir, setupScope, libraryDir, tools, fileRecords, force, strategy, perFileOverrides } = opts
+  const { targetDir, setupScope, libraryDir, tools, fileRecords, force, strategy, perFileOverrides, enableServers } = opts
 
   const registry = new AdapterRegistry()
   const adapters = registry.getAll(tools)
@@ -34,6 +35,7 @@ export async function scaffoldAgentsSkillsPrompts(opts: ScaffoldAgentsSkillsProm
     const strategyOpts = strategy ? { strategy } : {}
     const perFileOverrideOpts = perFileOverrides ? { perFileOverrides } : {}
     const scopeOpts = setupScope ? { setupScope } : {}
+    const serverOpts = enableServers ? { enableServers } : {}
 
     await adapter.install({
       targetDir,
@@ -41,6 +43,7 @@ export async function scaffoldAgentsSkillsPrompts(opts: ScaffoldAgentsSkillsProm
       fileRecords,
       force,
       ...scopeOpts,
+      ...serverOpts,
       ...strategyOpts,
       ...perFileOverrideOpts,
     })

@@ -1,6 +1,6 @@
 # @ricardoborges-teachable/ai-setup
 
-Scaffold a canonical, multi-tool AI development environment from one CLI.
+Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
 
 ![Node >=20.12.0](https://img.shields.io/badge/node-%3E%3D20.12.0-339933?logo=node.js&logoColor=white)
 
@@ -10,6 +10,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI.
 
 - [Quick Start](#quick-start)
 - [Installation](#installation)
+- [Optional Orchestration](#optional-orchestration)
 - [How It Works](#how-it-works)
 - [Scopes](#scopes)
   - [Project Scope](#51-project-scope)
@@ -18,7 +19,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI.
 - [Supported Tools](#supported-tools)
   - [OpenCode](#opencode) · [Claude Code](#claude-code) · [Gemini CLI](#gemini-cli) · [GitHub Copilot](#github-copilot) · [Codex](#codex)
 - [Commands Reference](#commands-reference)
-  - [`init`](#init) · [`compile`](#compile) · [`add`](#add) · [`update`](#update) · [`doctor`](#doctor) · [`status`](#status) · [`create`](#create) · [`import`](#import) · [`migrate`](#migrate) · [`eject`](#eject) · [`list`](#list) · [`info`](#info) · [`completions`](#completions)
+  - [`init`](#init) · [`compile`](#compile) · [`add`](#add) · [`update`](#update) · [`doctor`](#doctor) · [`status`](#status) · [`create`](#create) · [`import`](#import) · [`migrate`](#migrate) · [`eject`](#eject) · [`list`](#list) · [`info`](#info) · [`orchestration`](#orchestration) · [`completions`](#completions)
 - [Library Content](#library-content)
 - [Feature Presets](#feature-presets)
 - [MCP Integration](#mcp-integration)
@@ -54,6 +55,7 @@ This launches the setup wizard, where you choose:
 - scope: `project`, `global`, or `workspace`
 - AI tools: OpenCode, Claude Code, Gemini CLI, GitHub Copilot, Codex
 - optional MCP integrations
+- optional orchestration scaffolding via `orchestrator`
 - feature preset and git conventions
 
 ### Non-interactive setup
@@ -64,6 +66,7 @@ This launches the setup wizard, where you choose:
 npx github:ricardoborges-teachable/ai-setup init \
   --scope project \
   --tools opencode,claude-code,copilot,gemini,codex \
+  --enable-servers orchestrator \
   --name my-app \
   --preset standard \
   --no-interactive
@@ -103,6 +106,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 4. generate tool-native directories such as `.opencode/`, `.claude/`, `.gemini/`, `.github/`, and `.agents/`
 5. write `.ai-setup.json` to track managed files, hashes, selections, and operations
 6. generate `.env.example` when enabled MCP servers require environment variables
+7. scaffold `.ai/orchestration/` when the optional `orchestrator` MCP server is enabled
 
 ---
 
@@ -166,6 +170,85 @@ are the local-linked equivalents of the `npx github:...` commands.
 
 ---
 
+## Optional Orchestration
+
+`ai-setup` can optionally scaffold orchestration definitions and register the `@ai-setup/orchestrator` MCP server.
+
+This is **opt-in**. If you never enable `orchestrator`, nothing about your existing `ai-setup` flow changes.
+
+### Enable it during `init`
+
+**Non-interactive**
+
+```bash
+ai-setup init \
+  --scope project \
+  --tools opencode,claude-code,codex,copilot,gemini \
+  --enable-servers orchestrator \
+  --name my-app \
+  --preset standard \
+  --no-interactive
+```
+
+**Interactive wizard**
+
+Run `ai-setup init`, then select `orchestrator` when the wizard asks which optional MCP integrations to enable.
+
+### What gets scaffolded
+
+When `orchestrator` is enabled, `ai-setup` copies the bundled orchestration library into your canonical source tree under:
+
+- `.ai/orchestration/chains/`
+- `.ai/orchestration/teams/`
+- `.ai/orchestration/workflows/`
+- `.ai/orchestration/skills/domains/`
+- `.ai/orchestration/skills/modes/`
+
+Those files are regular project files. You can inspect them, commit them, override built-in definitions, and generate new ones with the CLI.
+
+### What commands you get
+
+The current user-facing orchestration surface in `ai-setup` is:
+
+- `ai-setup create domain <name>`
+- `ai-setup create mode <name>`
+- `ai-setup create workflow <name>`
+- `ai-setup list workflows|chains|teams|domains|modes|orchestration`
+- `ai-setup info <workflow|chain|team|domain|mode-name>`
+- `ai-setup orchestration list [workflows|chains|teams|domains|modes]`
+- `ai-setup orchestration create <workflow|domain|mode> <name>`
+- `ai-setup orchestration status`
+
+### What the orchestrator package does
+
+`@ai-setup/orchestrator` is the runtime package in this repo's [`orchestrator/`](./orchestrator/) directory. At a high level it owns:
+
+- catalog loading and project override resolution
+- prompt composition from base agent + domain + mode layers
+- runtime state, persistence, and handoff artifacts
+- chain/team/workflow runtime machinery inside the MCP server package
+
+`ai-setup` itself does **not** run workflows directly. It scaffolds definitions, compiles tool-specific guidance/config, and registers the MCP server entry so host tools can talk to the runtime.
+
+### Tool integration notes
+
+When `orchestrator` is enabled, `ai-setup` also generates tool-specific orchestrator guidance:
+
+- OpenCode: `.opencode/agents/orchestrator.md`
+- Claude Code: `.claude/agents/orchestrator.md`
+- Codex: `.agents/skills/orchestrator/SKILL.md`
+- Gemini CLI: `.gemini/skills/orchestrator/SKILL.md`
+- GitHub Copilot: `.github/prompts/orchestrator.prompt.md`
+
+MCP server registration is compiled for tools that have project-local MCP config output. Codex still gets the orchestrator skill scaffold, but `ai-setup` does not generate a project-local Codex MCP config file.
+
+### Docs + demo
+
+- Usage guide: [`docs/orchestration-usage.md`](docs/orchestration-usage.md)
+- Reproducible demo tape: [`demo/13-orchestration.tape`](demo/13-orchestration.tape)
+
+---
+
 ## How It Works
 
 `ai-setup` uses a **canonical source → compile** model.
@@ -182,6 +265,7 @@ This is where `ai-setup` stores core setup data such as:
 
 - constitution files in `.ai/constitution/`
 - MCP server catalog in `.ai/mcp.json`
+- orchestration definitions in `.ai/orchestration/` when `orchestrator` is enabled
 - imported/migrated canonical data when using migration flows
 
 ### Compiled output
@@ -198,6 +282,7 @@ From that canonical layer, `ai-setup` compiles tool-native files into the format
 - `.github/`
 - `.agents/`
 - per-tool MCP config files
+- tool-native orchestration guidance files when the optional `orchestrator` server is enabled
 
 ### `.ai/` is the source of truth
 
@@ -280,7 +365,7 @@ npx github:ricardoborges-teachable/ai-setup init \
   --tools opencode,claude-code,copilot,gemini,codex \
   --name my-app \
   --preset standard \
-  --enable-servers atlassian \
+  --enable-servers atlassian,orchestrator \
   --no-interactive
 ```
 
@@ -911,7 +996,7 @@ ai-setup create <type> [name] [options]
 
 **What it does**
 
-Scaffolds a new artifact in your repo: agent, skill, command, prompt, template, or workflow.
+Scaffolds a new artifact in your repo: agent, skill, command, prompt, template, workflow, domain, or mode.
 
 **Shared flags**
 
@@ -932,7 +1017,9 @@ Scaffolds a new artifact in your repo: agent, skill, command, prompt, template, 
 | `create command` | `--arguments`, `--flags-description` |
 | `create prompt` | `--task-context`, `--output-format` |
 | `create template` | `--sections`, `--fields` |
-| `create workflow` | `--steps`, repeated `--step <step>` |
+| `create workflow` | `--chain`, `--team`, `--steps`, repeated `--step <step>` |
+| `create domain` | no extra flags beyond shared flags |
+| `create mode` | no extra flags beyond shared flags |
 
 **Examples**
 
@@ -940,7 +1027,9 @@ Scaffolds a new artifact in your repo: agent, skill, command, prompt, template, 
 ai-setup create --type agent --name release-manager
 ai-setup create skill deploy --command /deploy --steps "validate\nbuild\nship"
 ai-setup create prompt handoff --task-context "handoff summary" --output-format markdown
-ai-setup create workflow release --step "Research:agent=scout,skill=research" --step "Plan:agent=planner,skill=plan"
+ai-setup create workflow release --chain feature --team review-team --no-interactive
+ai-setup create domain payments --description "Payments domain constraints" --no-interactive
+ai-setup create mode strict-review --description "High-friction approval mode" --no-interactive
 ```
 
 ### `import`
@@ -1031,7 +1120,7 @@ ai-setup list [category] [options]
 
 **What it does**
 
-Lists bundled library content and MCP catalog entries.
+Lists bundled library content, MCP catalog entries, and orchestration definitions.
 
 **Categories**
 
@@ -1041,6 +1130,12 @@ Lists bundled library content and MCP catalog entries.
 - `rules`
 - `servers` / `mcp`
 - `tools` / `cli`
+- `workflows`
+- `chains`
+- `teams`
+- `domains`
+- `modes`
+- `orchestration` (aggregate orchestration view)
 - `all` (default)
 
 | Flag | Type | Default | Description |
@@ -1056,6 +1151,8 @@ ai-setup list
 ai-setup list agents
 ai-setup list servers --enabled
 ai-setup list tools --json
+ai-setup list orchestration --json
+ai-setup list workflows
 ```
 
 ### `info`
@@ -1068,7 +1165,7 @@ ai-setup info <item> [options]
 
 **What it does**
 
-Shows detailed information about a bundled agent, skill, template, rule, MCP server, or CLI tool.
+Shows detailed information about a bundled agent, skill, template, rule, MCP server, CLI tool, or orchestration artifact.
 
 | Flag | Type | Default | Description |
 |---|---|---:|---|
@@ -1081,6 +1178,37 @@ Shows detailed information about a bundled agent, skill, template, rule, MCP ser
 ai-setup info builder
 ai-setup info memory
 ai-setup info code-style --json
+ai-setup info review-team
+ai-setup info backend --json
+```
+
+### `orchestration`
+
+**Syntax**
+
+```bash
+ai-setup orchestration <subcommand> [options]
+```
+
+**What it does**
+
+Provides an orchestration-focused namespace for listing catalog items, creating new orchestration artifacts, and checking whether `.ai/orchestration/` has been scaffolded.
+
+**Subcommands**
+
+| Subcommand | What it does |
+|---|---|
+| `orchestration list [kind]` | Lists orchestration items for `workflows`, `chains`, `teams`, `domains`, or `modes` |
+| `orchestration create <type> <name>` | Creates a `workflow`, `domain`, or `mode` artifact |
+| `orchestration status` | Reports whether orchestration has been scaffolded plus project/library item counts |
+
+**Examples**
+
+```bash
+ai-setup orchestration list workflows --json
+ai-setup orchestration create domain payments --description "Payments domain" --no-interactive
+ai-setup orchestration create workflow payments-review --chain feature --team review-team --no-interactive
+ai-setup orchestration status --json
 ```
 
 ### `completions`
@@ -1181,7 +1309,21 @@ ai-setup completions fish > ~/.config/fish/completions/ai-setup.fish
 
 > Note: the library currently contains 10 rule documents, while presets install a curated subset by default.
 
-### Bundled MCP servers (11)
+### Bundled orchestration definitions
+
+These are copied into `.ai/orchestration/` when `orchestrator` is enabled during `init`.
+
+| Kind | Count | Included examples |
+|---|---:|---|
+| Chains | 6 | `feature`, `bugfix`, `review`, `refactor`, `tdd`, `onboard` |
+| Teams | 3 | `feature-team`, `review-team`, `assessment-team` |
+| Workflows | 8 | `rpi`, `tdd`, `refactor`, `code-review`, `incident-response`, `system-design` |
+| Domain skills | 5 | `backend`, `frontend`, `data`, `devops`, `security` |
+| Mode skills | 3 | `autonomous`, `junior`, `senior` |
+
+Project-local definitions with the same name take precedence over library defaults in `list` and `info` output.
+
+### Bundled MCP servers (12)
 
 | Server | Default status | Requires install | Notes |
 |---|---|---:|---|
@@ -1196,6 +1338,7 @@ ai-setup completions fish > ~/.config/fish/completions/ai-setup.fish
 | `atlassian` | disabled | No | Jira/Confluence remote access |
 | `brave-search` | disabled | No | Web search; needs `BRAVE_API_KEY` |
 | `fetch` | disabled | No | General HTTP fetch MCP |
+| `orchestrator` | disabled | No | Optional orchestration runtime via `npx -y @ai-setup/orchestrator` |
 
 ---
 
@@ -1286,8 +1429,10 @@ This file contains the full catalog of bundled servers, including:
 You can enable optional servers during setup:
 
 ```bash
-ai-setup init --enable-servers atlassian,playwright
+ai-setup init --enable-servers atlassian,playwright,orchestrator
 ```
+
+When `orchestrator` is enabled, `ai-setup` also scaffolds `.ai/orchestration/` and generates the per-tool orchestrator guidance files listed in [Optional Orchestration](#optional-orchestration).
 
 You can also edit `.ai/mcp.json` later, then recompile:
 

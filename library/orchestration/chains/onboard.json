@@ -1,0 +1,50 @@
+{
+  "kind": "chain",
+  "name": "onboard",
+  "description": "Codebase onboarding flow for architecture, conventions, testing, and documentation",
+  "version": "1.0.0",
+  "entry": "architecture",
+  "domain_skill_injection": "all_steps",
+  "mode_skill_injection": "none",
+  "steps": [
+    {
+      "id": "architecture",
+      "agent": "scout",
+      "skills": ["research"],
+      "description": "Map the high-level architecture, modules, and system boundaries.",
+      "transitions": {
+        "success": "conventions",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "conventions",
+      "agent": "scout",
+      "skills": ["extract-standards"],
+      "description": "Identify the key engineering conventions, rules, and file locations that matter to contributors.",
+      "transitions": {
+        "success": "testing",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "testing",
+      "agent": "scout",
+      "skills": ["research"],
+      "description": "Summarize the testing strategy, important commands, and confidence gaps.",
+      "transitions": {
+        "success": "document",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "document",
+      "agent": "documenter",
+      "skills": [],
+      "description": "Produce an onboarding summary that points a new contributor to the right starting materials.",
+      "transitions": {
+        "success": "done"
+      }
+    }
+  ]
+}

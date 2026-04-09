@@ -21,6 +21,7 @@ export interface ManifestWithFeatures extends AiSetupConfig {
   planningDir?: string
   features?: FeatureFlags
   gitConventions?: GitConventions
+  enableServers?: string[]
 }
 
 /**
@@ -38,6 +39,7 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
       setupScope: data.config.setupScope,
       ...(data.config.setupType ? { setupType: data.config.setupType } : {}),
       tools: data.config.tools,
+      ...(data.config.enableServers != null ? { enableServers: data.config.enableServers } : {}),
       projectName: data.config.projectName,
       installedAt: data.meta.installedAt,
       files: data.files.map((file) => ({

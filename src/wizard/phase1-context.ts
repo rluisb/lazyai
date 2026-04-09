@@ -171,14 +171,15 @@ function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string):
  */
 export async function runPhase1(opts: {
   interactive: boolean
-  prior: Partial<WizardSelections> & {
-    setupScope?: SetupScope
-    setupType?: SetupType
-    tools?: ToolId[]
-    projectName?: string
-    workspaceName?: string
-    planningRepoPath?: string
-  }
+    prior: Partial<WizardSelections> & {
+      setupScope?: SetupScope
+      setupType?: SetupType
+      tools?: ToolId[]
+      projectName?: string
+      workspaceName?: string
+      planningRepoPath?: string
+      enableServers?: string[]
+    }
   cliOverrides: {
     scope?: SetupScope
     type?: SetupType
@@ -208,7 +209,7 @@ export async function runPhase1(opts: {
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
     const cliTools = opts.cliOverrides.cliTools
-    const enableServers = opts.cliOverrides.enableServers
+    const enableServers = opts.cliOverrides.enableServers ?? opts.prior.enableServers
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
@@ -322,7 +323,7 @@ export async function runPhase1(opts: {
   }
 
   // Prompt: External integrations (MCP servers like Atlassian)
-  let enableServers: string[] = opts.cliOverrides.enableServers ?? []
+  let enableServers: string[] = opts.cliOverrides.enableServers ?? opts.prior.enableServers ?? []
   if (!opts.cliOverrides.enableServers) {
     const integrationOptions = getIntegrationOptions(opts.targetDir)
     if (integrationOptions.length > 0) {

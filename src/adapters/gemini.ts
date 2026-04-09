@@ -2,7 +2,10 @@ import path from 'node:path'
 import * as files from '../utils/files.js'
 import {
   copyLibraryDirectory,
+  getOrchestratorSkillContent,
   installRootTemplateIfMissing,
+  isOrchestratorEnabled,
+  writeContentWithRecord,
 } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
@@ -55,6 +58,15 @@ export class GeminiAdapter implements ToolAdapter {
         return path.join(geminiDir, 'skills', name, 'SKILL.md')
       },
     })
+
+    if (isOrchestratorEnabled(ctx)) {
+      await writeContentWithRecord({
+        dest: path.join(geminiDir, 'skills', 'orchestrator', 'SKILL.md'),
+        content: getOrchestratorSkillContent(ctx),
+        ctx,
+        source: 'generated:orchestrator-skill',
+      })
+    }
 
     // Agents → skip entirely (Gemini has no agents concept)
     // Prompts → skip (no templates dir in Gemini)

@@ -1,0 +1,26 @@
+{
+  "kind": "workflow",
+  "name": "code-review",
+  "description": "Parallel review workflow using the review team preset",
+  "version": "1.0.0",
+  "entry": "parallel_review",
+  "phases": [
+    {
+      "id": "parallel_review",
+      "kind": "team",
+      "ref": "review-team",
+      "on": {
+        "success": "complete",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "handoff",
+      "kind": "terminal"
+    },
+    {
+      "id": "complete",
+      "kind": "terminal"
+    }
+  ]
+}

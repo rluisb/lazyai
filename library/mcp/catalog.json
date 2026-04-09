@@ -90,6 +90,14 @@
       "tools": ["fetch"],
       "enabled": false,
       "requiresInstall": false
+    },
+    "orchestrator": {
+      "description": "Optional orchestration control plane for chains, teams, and workflows",
+      "command": "npx",
+      "args": ["-y", "@ai-setup/orchestrator"],
+      "tools": ["compose_agent", "start_chain", "advance_chain", "build_team", "start_workflow", "get_status", "list_catalog"],
+      "enabled": false,
+      "requiresInstall": false
     }
   },
   "cliTools": {

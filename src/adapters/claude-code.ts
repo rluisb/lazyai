@@ -2,6 +2,9 @@ import path from 'node:path'
 import * as files from '../utils/files.js'
 import {
   copyLibraryDirectory,
+  copyWithRecord,
+  getOrchestratorAgentContent,
+  isOrchestratorEnabled,
   installRootTemplateIfMissing,
   installToolContextFiles,
 } from './shared.js'
@@ -71,7 +74,18 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       sourceSubdir: 'agents',
       selectionKey: 'agents',
       toDestPath: (file) => isGlobal ? path.join(claudeDir, file) : path.join(claudeDir, 'agents', file),
+      includeFile: (file) => path.parse(file).name !== 'orchestrator',
     })
+
+    if (!isGlobal && isOrchestratorEnabled(ctx)) {
+      const orchestratorSource = path.join(ctx.libraryDir, 'agents', 'orchestrator.md')
+      await copyWithRecord({
+        src: orchestratorSource,
+        dest: path.join(claudeDir, 'agents', 'orchestrator.md'),
+        ctx,
+        transform: () => getOrchestratorAgentContent(ctx),
+      })
+    }
 
     await copyLibraryDirectory({
       ctx,

@@ -5,9 +5,11 @@
  */
 
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import type { Command } from 'commander'
 import { glob } from 'glob'
+import { listOrchestrationItems, type OrchestrationListCategory } from '../orchestration/catalog.js'
 import { resolveLibraryDir } from '../utils/files.js'
 import { showSummaryBox } from '../utils/ui.js'
 
@@ -33,7 +35,24 @@ interface McpCatalog {
   cliTools: Record<string, CliTool>
 }
 
-type Category = 'all' | 'agents' | 'skills' | 'templates' | 'rules' | 'servers' | 'mcp' | 'tools' | 'cli'
+type Category =
+  | 'all'
+  | 'agents'
+  | 'skills'
+  | 'templates'
+  | 'rules'
+  | 'servers'
+  | 'mcp'
+  | 'tools'
+  | 'cli'
+  | 'workflows'
+  | 'chains'
+  | 'teams'
+  | 'domains'
+  | 'modes'
+  | 'orchestration'
+
+const ORCHESTRATION_CATEGORIES: OrchestrationListCategory[] = ['workflows', 'chains', 'teams', 'domains', 'modes']
 
 function extractNameFromPath(filePath: string): string {
   const basename = path.basename(filePath, path.extname(filePath))
@@ -93,7 +112,7 @@ export function registerList(program: Command): void {
     .option('--json', 'Output as JSON')
     .option('--enabled', 'Show only enabled items (for servers/tools)')
     .action(async (category: Category | undefined, opts: { json?: boolean; enabled?: boolean }) => {
-      const libraryDir = resolveLibraryDir(path.dirname(import.meta.url))
+      const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
       // Normalize category aliases
       let selectedCategory = category ?? 'all'
       if (selectedCategory === 'mcp') selectedCategory = 'servers'
@@ -109,6 +128,13 @@ export function registerList(program: Command): void {
       const showRules = selectedCategory === 'all' || selectedCategory === 'rules'
       const showServers = selectedCategory === 'all' || selectedCategory === 'servers'
       const showTools = selectedCategory === 'all' || selectedCategory === 'tools'
+      const showOrchestrationAggregate = selectedCategory === 'orchestration'
+
+      for (const orchestrationCategory of ORCHESTRATION_CATEGORIES) {
+        if (selectedCategory === orchestrationCategory || showOrchestrationAggregate) {
+          results[orchestrationCategory] = listOrchestrationItems(process.cwd(), libraryDir, orchestrationCategory)
+        }
+      }
 
       if (showAgents) {
         results.agents = await listLibraryItems(libraryDir, 'agents')
@@ -244,6 +270,24 @@ export function registerList(program: Command): void {
         }
       }
 
+      for (const orchestrationCategory of ORCHESTRATION_CATEGORIES) {
+        const items = results[orchestrationCategory] as Array<{ name: string; source: string; description?: string }> | undefined
+        if (!items || items.length === 0) {
+          continue
+        }
+
+        console.log('')
+        const label = orchestrationCategory.charAt(0).toUpperCase() + orchestrationCategory.slice(1)
+        showSummaryBox(`🎛️ ${label}`, [{ label: 'Available', value: `${items.length} ${orchestrationCategory}` }])
+        for (const item of items) {
+          p.log.message(`  • ${item.name}`)
+          if (item.description) {
+            p.log.message(`    ${item.description}`)
+          }
+          p.log.message(`    source: ${item.source}`)
+        }
+      }
+
       // Summary
       console.log('')
       const totalItems =
@@ -252,7 +296,8 @@ export function registerList(program: Command): void {
         ((results.templates as string[])?.length ?? 0) +
         ((results.rules as string[])?.length ?? 0) +
         ((results.servers as unknown[])?.length ?? 0) +
-        ((results.cliTools as unknown[])?.length ?? 0)
+        ((results.cliTools as unknown[])?.length ?? 0) +
+        ORCHESTRATION_CATEGORIES.reduce((sum, categoryName) => sum + (((results[categoryName] as unknown[])?.length) ?? 0), 0)
 
       p.outro(`${totalItems} items available`)
     })

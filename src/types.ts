@@ -17,6 +17,7 @@ export interface SetupConfig {
   setupType?: SetupType
   tools: ToolId[]
   cliTools?: string[]
+  enableServers?: string[]
   projectName: string
   workspaceName?: string
   targetDir: string
@@ -66,7 +67,7 @@ export interface AiSetupConfig {
   selections?: WizardSelections
 }
 
-export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow'
+export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow' | 'domain' | 'mode'
 
 export type AgentId = 'builder' | 'documenter' | 'orchestrator' | 'planner' | 'red-team' | 'reviewer' | 'scout'
 export type SkillId = 'anti-speculation' | 'extract-standards' | 'implement' | 'iterate' | 'memory-write' | 'parallel-execution' | 'plan' | 'research' | 'tdd-loop'

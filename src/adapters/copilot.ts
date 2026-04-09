@@ -3,7 +3,7 @@ import type { PromptId, SkillId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
 import { ensureModeAgentFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
-import { installRootTemplateIfMissing } from './shared.js'
+import { getOrchestratorPromptContent, installRootTemplateIfMissing, isOrchestratorEnabled, writeContentWithRecord } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class CopilotAdapter implements ToolAdapter {
@@ -51,6 +51,15 @@ export class CopilotAdapter implements ToolAdapter {
       const destFile = `${parsed.name}.prompt.md`
       const dest = path.join(promptsDir, destFile)
       await this.copySkillAsPromptWithRecord(src, dest, ctx)
+    }
+
+    if (isOrchestratorEnabled(ctx)) {
+      await writeContentWithRecord({
+        dest: path.join(promptsDir, 'orchestrator.prompt.md'),
+        content: getOrchestratorPromptContent(),
+        ctx,
+        source: 'generated:orchestrator-prompt',
+      })
     }
 
     await installRootTemplateIfMissing({

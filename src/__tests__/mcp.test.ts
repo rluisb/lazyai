@@ -285,6 +285,53 @@ describe('MCP scaffold and compile', () => {
     expect(catalog.servers.stdioEnabled.enabled).toBe(true)
   })
 
+  it('compileMcp includes orchestrator when explicitly enabled', async () => {
+    writeFile(
+      path.join(libraryDir, 'mcp', 'catalog.json'),
+      JSON.stringify(
+        {
+          servers: {
+            memory: {
+              command: 'npx',
+              args: ['-y', '@modelcontextprotocol/server-memory'],
+              enabled: true,
+            },
+            orchestrator: {
+              command: 'npx',
+              args: ['-y', '@ai-setup/orchestrator'],
+              enabled: false,
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    )
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+      enableServers: ['orchestrator'],
+    })
+
+    const canonical = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
+    expect(canonical.servers.orchestrator.enabled).toBe(true)
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+    })
+
+    const compiled = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
+    expect(compiled.mcpServers.orchestrator.command).toBe('npx')
+    expect(compiled.mcpServers.orchestrator.args).toEqual(['-y', '@ai-setup/orchestrator'])
+  })
+
   it('enableServers ignores unknown server names', async () => {
     await scaffoldMcp({
       targetDir,

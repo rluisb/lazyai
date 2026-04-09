@@ -17,6 +17,7 @@ export interface SetupConfig {
   setupType?: SetupType
   tools: ToolId[]
   cliTools?: string[]
+  enableServers?: string[]
   projectName: string
   workspaceName?: string
   targetDir: string

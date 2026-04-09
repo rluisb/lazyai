@@ -1,0 +1,67 @@
+{
+  "kind": "chain",
+  "name": "tdd",
+  "description": "Test-driven delivery loop from test planning through refactor and final verification",
+  "version": "1.0.0",
+  "entry": "plan_tests",
+  "domain_skill_injection": "all_steps",
+  "mode_skill_injection": "builder_steps_only",
+  "steps": [
+    {
+      "id": "plan_tests",
+      "agent": "planner",
+      "skills": ["plan"],
+      "description": "Define the expected test cases and success criteria from the requirements.",
+      "transitions": {
+        "success": "red",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "red",
+      "agent": "builder",
+      "skills": ["tdd-loop"],
+      "description": "Write the failing test that proves the next required behavior is missing.",
+      "transitions": {
+        "success": "green",
+        "failure": {
+          "retry": 1,
+          "then": "handoff"
+        }
+      }
+    },
+    {
+      "id": "green",
+      "agent": "builder",
+      "skills": ["implement"],
+      "description": "Implement the minimum code needed to make the failing test pass.",
+      "transitions": {
+        "success": "refactor",
+        "failure": {
+          "retry": 2,
+          "then": "handoff"
+        }
+      }
+    },
+    {
+      "id": "refactor",
+      "agent": "builder",
+      "skills": ["iterate"],
+      "description": "Refactor for clarity and maintainability while keeping the tests green.",
+      "transitions": {
+        "success": "verify",
+        "failure": "green"
+      }
+    },
+    {
+      "id": "verify",
+      "agent": "reviewer",
+      "skills": [],
+      "description": "Verify the resulting implementation and tests satisfy the requested behavior.",
+      "transitions": {
+        "pass": "done",
+        "blocking": "red"
+      }
+    }
+  ]
+}

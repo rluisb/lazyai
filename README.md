@@ -54,6 +54,7 @@ This launches the setup wizard, where you choose:
 - scope: `project`, `global`, or `workspace`
 - AI tools: OpenCode, Claude Code, Gemini CLI, GitHub Copilot, Codex
 - optional MCP integrations
+- optional orchestration scaffolding via `orchestrator`
 - feature preset and git conventions
 
 ### Non-interactive setup
@@ -64,6 +65,7 @@ This launches the setup wizard, where you choose:
 npx github:ricardoborges-teachable/ai-setup init \
   --scope project \
   --tools opencode,claude-code,copilot,gemini,codex \
+  --enable-servers orchestrator \
   --name my-app \
   --preset standard \
   --no-interactive
@@ -103,6 +105,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 4. generate tool-native directories such as `.opencode/`, `.claude/`, `.gemini/`, `.github/`, and `.agents/`
 5. write `.ai-setup.json` to track managed files, hashes, selections, and operations
 6. generate `.env.example` when enabled MCP servers require environment variables
+7. scaffold `.ai/orchestration/` when the optional `orchestrator` MCP server is enabled
 
 ---
 

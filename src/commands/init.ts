@@ -105,7 +105,7 @@ export function registerInit(program: Command): void {
     )
     .option(
       '--enable-servers <servers>',
-      'Comma-separated MCP servers to enable (e.g., atlassian,playwright)'
+      'Comma-separated MCP servers to enable (e.g., atlassian,playwright,orchestrator)'
     )
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {

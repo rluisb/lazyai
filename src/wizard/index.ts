@@ -20,6 +20,7 @@ import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { checkGitignoreGuidance } from '../scaffold/gitignore.js'
 import { scaffoldInfra } from '../scaffold/infra.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
+import { scaffoldOrchestration } from '../scaffold/orchestration.js'
 import { scaffoldRepoLedgers } from '../scaffold/repo-roots.js'
 import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
@@ -142,6 +143,7 @@ export async function runWizard(opts: {
       workspaceName?: string
       planningRepoPath?: string
       planningDir?: string
+      enableServers?: string[]
       features?: Partial<FeatureFlags>
       gitConventions?: Partial<GitConventions>
     } = manifest
@@ -151,6 +153,7 @@ export async function runWizard(opts: {
           ...(manifest.setupType ? { setupType: manifest.setupType } : {}),
           tools: manifest.tools,
           projectName: manifest.projectName,
+          ...(manifest.enableServers != null ? { enableServers: manifest.enableServers } : {}),
           ...(manifest.planningDir != null ? { planningDir: manifest.planningDir } : {}),
           ...(manifest.features != null ? { features: manifest.features } : {}),
           ...(manifest.gitConventions != null ? { gitConventions: manifest.gitConventions } : {}),
@@ -383,6 +386,17 @@ export async function runWizard(opts: {
       })
       tracker.trackSuccess('scaffold:mcp')
 
+      if (enableServers?.includes('orchestrator')) {
+        await scaffoldOrchestration({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:orchestration')
+      }
+
       await scaffoldEnvExample({
         targetDir: effectiveTargetDir,
         fileRecords,
@@ -531,6 +545,7 @@ export async function runWizard(opts: {
         setupType: setupScope === 'global' ? 'project' : setupScope,
         tools: installableTools,
         ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
+        ...(enableServers && enableServers.length > 0 ? { enableServers } : {}),
         projectName: effectiveProjectName,
         ...(workspaceName ? { workspaceName } : {}),
         targetDir: effectiveTargetDir,

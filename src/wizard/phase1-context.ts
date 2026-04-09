@@ -267,7 +267,9 @@ export async function runPhase1(opts: {
 
   // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let setupScope: SetupScope
+  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let tools: ToolId[]
+  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let projectName: string
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined

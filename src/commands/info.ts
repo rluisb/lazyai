@@ -5,10 +5,12 @@
  */
 
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import type { Command } from 'commander'
 import { glob } from 'glob'
 import pc from 'picocolors'
+import { findOrchestrationItem } from '../orchestration/catalog.js'
 import { readFile, resolveLibraryDir } from '../utils/files.js'
 import { showSummaryBox } from '../utils/ui.js'
 
@@ -37,11 +39,14 @@ interface McpCatalog {
 }
 
 interface ItemInfo {
-  type: 'agent' | 'skill' | 'template' | 'rule' | 'server' | 'cli-tool'
+  type: 'agent' | 'skill' | 'template' | 'rule' | 'server' | 'cli-tool' | 'workflow' | 'chain' | 'team' | 'domain' | 'mode'
   name: string
   path?: string
   content?: string
   metadata?: Record<string, unknown>
+  source?: 'project' | 'library'
+  body?: string
+  data?: Record<string, unknown>
 }
 
 function extractFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
@@ -110,6 +115,23 @@ function toKebabCase(str: string): string {
 }
 
 async function findItem(libraryDir: string, query: string): Promise<ItemInfo | null> {
+  const orchestrationItem = findOrchestrationItem(process.cwd(), libraryDir, query)
+  if (orchestrationItem) {
+    const item: ItemInfo = {
+      type: orchestrationItem.type,
+      name: orchestrationItem.name,
+      path: orchestrationItem.path,
+      content: orchestrationItem.content,
+      source: orchestrationItem.source,
+    }
+
+    if (orchestrationItem.metadata) item.metadata = orchestrationItem.metadata
+    if (orchestrationItem.data) item.data = orchestrationItem.data
+    if (orchestrationItem.body) item.body = orchestrationItem.body
+
+    return item
+  }
+
   const queryLower = query.toLowerCase()
   const queryKebab = toKebabCase(query)
 
@@ -252,6 +274,8 @@ function displayMarkdownInfo(item: ItemInfo): void {
     skill: '⚡',
     template: '📄',
     rule: '📏',
+    domain: '🧠',
+    mode: '🎚️',
   }
 
   const typeLabel: Record<string, string> = {
@@ -259,6 +283,8 @@ function displayMarkdownInfo(item: ItemInfo): void {
     skill: 'Skill',
     template: 'Template',
     rule: 'Rule',
+    domain: 'Domain',
+    mode: 'Mode',
   }
 
   p.intro(`${typeEmoji[item.type]} ${typeLabel[item.type]}: ${pc.bold(item.name)}`)
@@ -300,13 +326,47 @@ function displayMarkdownInfo(item: ItemInfo): void {
   p.outro(`View full content with: ${pc.cyan(`cat "${item.path}"`)}`)
 }
 
+function displayOrchestrationInfo(item: ItemInfo): void {
+  p.intro(`🎛️ ${pc.bold(item.type)}: ${pc.bold(item.name)}`)
+
+  const summaryItems: Array<{ label: string; value: string }> = [
+    { label: 'Type', value: item.type },
+    { label: 'Source', value: item.source ?? 'library' },
+  ]
+
+  if (item.data && typeof item.data.description === 'string') {
+    summaryItems.push({ label: 'Description', value: item.data.description })
+  } else if (item.metadata && typeof item.metadata.description === 'string') {
+    summaryItems.push({ label: 'Description', value: item.metadata.description as string })
+  }
+
+  showSummaryBox('Details', summaryItems)
+
+  if (item.data) {
+    console.log('')
+    p.log.step('Definition')
+    p.log.message(JSON.stringify(item.data, null, 2))
+  } else if (item.body) {
+    console.log('')
+    p.log.step('Description')
+    p.log.message(item.body.trim() || '(empty)')
+  }
+
+  if (item.path) {
+    console.log('')
+    p.log.info(`Source: ${pc.dim(item.path)}`)
+  }
+
+  p.outro('Done')
+}
+
 export function registerInfo(program: Command): void {
   program
     .command('info <item>')
     .description('Show detailed information about a library item (agent, skill, template, rule, or MCP server)')
     .option('--json', 'Output as JSON')
     .action(async (item: string, opts: { json?: boolean }) => {
-      const libraryDir = resolveLibraryDir(path.dirname(import.meta.url))
+      const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
 
       const found = await findItem(libraryDir, item)
 
@@ -329,6 +389,13 @@ export function registerInfo(program: Command): void {
           break
         case 'cli-tool':
           displayCliToolInfo(found.name, found.metadata as unknown as CliTool)
+          break
+        case 'workflow':
+        case 'chain':
+        case 'team':
+        case 'domain':
+        case 'mode':
+          displayOrchestrationInfo(found)
           break
         default:
           displayMarkdownInfo(found)

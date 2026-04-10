@@ -2,8 +2,11 @@ import path from 'node:path'
 import * as files from '../utils/files.js'
 import {
   copyLibraryDirectory,
+  getOrchestratorSkillContent,
   installRootTemplateIfMissing,
   installToolContextFiles,
+  isOrchestratorEnabled,
+  writeContentWithRecord,
 } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
@@ -42,6 +45,15 @@ export class CodexAdapter implements ToolAdapter {
         return path.join(agentsDir, 'skills', name, 'SKILL.md')
       },
     })
+
+    if (isOrchestratorEnabled(ctx)) {
+      await writeContentWithRecord({
+        dest: path.join(agentsDir, 'skills', 'orchestrator', 'SKILL.md'),
+        content: getOrchestratorSkillContent(ctx),
+        ctx,
+        source: 'generated:orchestrator-skill',
+      })
+    }
 
     // Install context files (AGENTS.md references agents inline)
     await installToolContextFiles({

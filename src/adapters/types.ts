@@ -5,6 +5,7 @@ export interface AdapterContext {
   setupScope?: SetupScope
   libraryDir: string
   fileRecords: FileRecord[]
+  enableServers?: string[]
   force?: boolean | undefined
   dryRun?: boolean
   strategy?: ConflictStrategy

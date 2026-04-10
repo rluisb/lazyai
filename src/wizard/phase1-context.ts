@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -16,6 +17,26 @@ interface McpServerConfig {
 
 interface McpCliToolConfig {
   installHint?: string
+  enabled?: boolean
+}
+
+interface CliToolOption {
+  value: string
+  label: string
+  hint: string
+  isInstalled: boolean
+}
+
+/**
+ * Check if a CLI tool is installed by running `which` command
+ */
+function checkToolInstalled(toolName: string): boolean {
+  try {
+    execSync(`which ${toolName}`, { stdio: 'pipe' })
+    return true
+  } catch {
+    return false
+  }
 }
 
 interface McpCatalog {
@@ -35,26 +56,25 @@ export interface Phase1Result {
   enableServers?: string[]
 }
 
-function getCliToolOptions(_targetDir: string): Array<{ value: string; label: string; hint: string }> {
+function getCliToolOptions(_targetDir: string): CliToolOption[] {
   const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
   const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
   if (!fileExists(catalogPath)) return []
 
   try {
     const catalog = JSON.parse(readFile(catalogPath)) as McpCatalog
-    const options: Array<{ value: string; label: string; hint: string }> = []
+    const options: CliToolOption[] = []
 
-    for (const [name, server] of Object.entries(catalog.servers)) {
-      if (!server.requiresInstall) continue
-      const label = name.charAt(0).toUpperCase() + name.slice(1)
-      const hint = server.installHint ? `MCP server (${server.installHint})` : 'MCP server requiring local install'
-      options.push({ value: name, label, hint })
-    }
-
+    // Only include CLI tools (not MCP servers requiring install)
     for (const [name, tool] of Object.entries(catalog.cliTools ?? {})) {
       const label = name.toUpperCase()
-      const hint = tool.installHint ? `CLI tool (${tool.installHint})` : 'CLI tool requiring local install'
-      options.push({ value: name, label, hint })
+      const isInstalled = checkToolInstalled(name)
+      const hint = isInstalled
+        ? `✓ Already installed`
+        : tool.installHint
+          ? `Not installed (${tool.installHint})`
+          : 'CLI tool requiring local install'
+      options.push({ value: name, label, hint, isInstalled })
     }
 
     return options
@@ -171,14 +191,15 @@ function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string):
  */
 export async function runPhase1(opts: {
   interactive: boolean
-  prior: Partial<WizardSelections> & {
-    setupScope?: SetupScope
-    setupType?: SetupType
-    tools?: ToolId[]
-    projectName?: string
-    workspaceName?: string
-    planningRepoPath?: string
-  }
+    prior: Partial<WizardSelections> & {
+      setupScope?: SetupScope
+      setupType?: SetupType
+      tools?: ToolId[]
+      projectName?: string
+      workspaceName?: string
+      planningRepoPath?: string
+      enableServers?: string[]
+    }
   cliOverrides: {
     scope?: SetupScope
     type?: SetupType
@@ -208,7 +229,7 @@ export async function runPhase1(opts: {
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
     const cliTools = opts.cliOverrides.cliTools
-    const enableServers = opts.cliOverrides.enableServers
+    const enableServers = opts.cliOverrides.enableServers ?? opts.prior.enableServers
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
@@ -246,7 +267,9 @@ export async function runPhase1(opts: {
 
   // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let setupScope: SetupScope
+  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let tools: ToolId[]
+  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let projectName: string
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined
@@ -306,9 +329,15 @@ export async function runPhase1(opts: {
   if (!opts.cliOverrides.cliTools) {
     const cliToolOptions = getCliToolOptions(opts.targetDir)
     if (cliToolOptions.length > 0) {
+      // Pre-select already installed tools
+      const initialCliTools = cliToolOptions
+        .filter((opt) => opt.isInstalled)
+        .map((opt) => opt.value)
+
       const cliToolsResult = await p.multiselect({
-        message: 'Which CLI tools do you have installed? (optional, press Enter to skip)',
+        message: 'Which CLI tools do you have installed? (press space to select, enter to confirm or skip)',
         options: cliToolOptions,
+        initialValues: initialCliTools,
         required: false,
       })
 
@@ -322,13 +351,14 @@ export async function runPhase1(opts: {
   }
 
   // Prompt: External integrations (MCP servers like Atlassian)
-  let enableServers: string[] = opts.cliOverrides.enableServers ?? []
+  let enableServers: string[] = opts.cliOverrides.enableServers ?? opts.prior.enableServers ?? []
   if (!opts.cliOverrides.enableServers) {
     const integrationOptions = getIntegrationOptions(opts.targetDir)
     if (integrationOptions.length > 0) {
       const integrationsResult = await p.multiselect({
-        message: 'Enable external integrations? (optional, press Enter to skip)',
+        message: 'Enable external integrations? (press space to select, enter to confirm or skip)',
         options: integrationOptions,
+        initialValues: enableServers,
         required: false,
       })
 
@@ -459,6 +489,7 @@ export async function runPhase1(opts: {
         const wantsCustom = (reposResult as string[]).includes('__custom__')
 
         repos = selectedDirs
+          // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
           .map((dir) => detectRepoInfo(dir, planningRepoPath!))
           .map((info) => ({
             name: info.name,
@@ -481,7 +512,9 @@ export async function runPhase1(opts: {
             }
 
             if (customPath) {
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const resolved = path.resolve(planningRepoPath!, customPath)
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const info = detectRepoInfo(resolved, planningRepoPath!)
               repos.push({
                 name: info.name,
@@ -530,7 +563,9 @@ export async function runPhase1(opts: {
             }
 
             if (customPath) {
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const resolved = path.resolve(planningRepoPath!, customPath)
+              // biome-ignore lint/style/noNonNullAssertion: planningRepoPath is always set in workspace scope before this point
               const info = detectRepoInfo(resolved, planningRepoPath!)
               repos.push({
                 name: info.name,

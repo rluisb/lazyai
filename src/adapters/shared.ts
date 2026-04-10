@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { stripYamlFrontmatter } from '../utils/frontmatter.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
 import type { AdapterContext } from './types.js'
@@ -22,6 +23,16 @@ interface CopyLibraryDirectoryOptions {
   dryRun?: boolean
   warnOnSkip?: boolean
   transform?: (content: string) => string
+  includeFile?: (file: string) => boolean
+}
+
+interface WriteContentWithRecordOptions {
+  dest: string
+  content: string
+  ctx: AdapterContext
+  source: string
+  dryRun?: boolean
+  warnOnSkip?: boolean
 }
 
 interface ToolContextFilesOptions {
@@ -111,6 +122,8 @@ export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): P
   const sourceDir = path.join(opts.ctx.libraryDir, opts.sourceSubdir)
 
   for (const file of files.listDir(sourceDir)) {
+    if (opts.includeFile && !opts.includeFile(file)) continue
+
     const srcPath = path.join(sourceDir, file)
     if (files.isDirectory(srcPath)) continue
 
@@ -132,6 +145,48 @@ export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): P
 
     await copyWithRecord(copyOpts)
   }
+}
+
+export async function writeContentWithRecord(opts: WriteContentWithRecordOptions): Promise<void> {
+  const relPath = path.relative(opts.ctx.targetDir, opts.dest)
+  const dryRun = opts.dryRun ?? opts.ctx.dryRun === true
+  const effectiveStrategy = opts.ctx.perFileOverrides?.get(opts.dest) ?? opts.ctx.strategy
+
+  const resolution = await resolveConflict(opts.dest, relPath, {
+    force: opts.ctx.force,
+    ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
+  })
+
+  if (resolution === 'skip') {
+    if (opts.warnOnSkip) {
+      console.warn(`⚠️  Skipping existing file: ${relPath}`)
+    }
+    return
+  }
+
+  if (resolution === 'backup-and-overwrite' && !dryRun) {
+    files.backupFile(opts.dest, opts.ctx.targetDir)
+  }
+
+  if (dryRun) {
+    console.log(`[dry-run] Would create: ${relPath}`)
+    opts.ctx.fileRecords.push({
+      path: relPath,
+      hash: 'dry-run',
+      source: opts.source,
+      owner: 'library',
+    })
+    return
+  }
+
+  files.ensureDir(path.dirname(opts.dest))
+  files.writeFile(opts.dest, opts.content)
+  opts.ctx.fileRecords.push({
+    path: relPath,
+    hash: files.fileHash(opts.dest),
+    source: opts.source,
+    owner: 'library',
+  })
 }
 
 export async function installToolContextFiles(opts: ToolContextFilesOptions): Promise<void> {
@@ -196,4 +251,74 @@ export async function installRootTemplateIfMissing(opts: RootTemplateOptions): P
     source: opts.templateSource,
     owner: 'library',
   })
+}
+
+export function isOrchestratorEnabled(ctx: AdapterContext): boolean {
+  return ctx.enableServers?.includes('orchestrator') === true
+}
+
+function readOrchestratorAgentSource(ctx: AdapterContext): string {
+  const sourcePath = path.join(ctx.libraryDir, 'agents', 'orchestrator.md')
+  if (files.fileExists(sourcePath)) {
+    return files.readFile(sourcePath)
+  }
+
+  return [
+    '---',
+    'name: Orchestrator',
+    'model: opus',
+    '---',
+    '',
+    '# Orchestrator Agent',
+    '',
+    'Use the orchestration MCP runtime to coordinate multi-agent execution.',
+    '',
+    '- start_chain',
+    '- build_team',
+    '- get_status',
+  ].join('\n')
+}
+
+export function getOrchestratorAgentContent(ctx: AdapterContext): string {
+  return readOrchestratorAgentSource(ctx)
+}
+
+export function getOrchestratorSkillContent(ctx: AdapterContext): string {
+  const body = stripYamlFrontmatter(readOrchestratorAgentSource(ctx)).trim()
+
+  return [
+    '---',
+    'name: orchestrator',
+    'description: Orchestration MCP runtime guidance',
+    '---',
+    '',
+    '# Orchestrator Skill',
+    '',
+    body,
+    '',
+    '## MCP Runtime',
+    '',
+    'When orchestration is enabled, prefer the MCP runtime tools:',
+    '- start_chain',
+    '- build_team',
+    '- get_status',
+    '',
+  ].join('\n')
+}
+
+export function getOrchestratorPromptContent(): string {
+  return [
+    '---',
+    'mode: agent',
+    '---',
+    '',
+    '# Orchestrator Prompt',
+    '',
+    'Use the orchestration MCP runtime when coordinating multi-step or multi-agent work.',
+    '',
+    '- start_chain to launch a named chain or workflow',
+    '- build_team to assemble a review or synthesis team',
+    '- get_status to inspect active orchestration state',
+    '',
+  ].join('\n')
 }

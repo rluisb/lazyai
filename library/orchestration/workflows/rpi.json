@@ -1,0 +1,26 @@
+{
+  "kind": "workflow",
+  "name": "rpi",
+  "description": "Research, plan, and implement delivery workflow using the feature chain",
+  "version": "1.0.0",
+  "entry": "deliver_feature",
+  "phases": [
+    {
+      "id": "deliver_feature",
+      "kind": "chain",
+      "ref": "feature",
+      "on": {
+        "success": "complete",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "handoff",
+      "kind": "terminal"
+    },
+    {
+      "id": "complete",
+      "kind": "terminal"
+    }
+  ]
+}

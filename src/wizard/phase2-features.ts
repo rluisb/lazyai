@@ -45,13 +45,14 @@ const DEFAULT_FEATURES: FeatureFlags = {
 const DEFAULT_GIT_CONVENTIONS: GitConventions = {
   branchPattern: '{type}/{ticket}-{description}',
   commitPattern: '{type}({scope}): {description}',
-  types: ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'],
+  types: ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert', 'task', 'bug'],
   requireTicket: false,
   ticketPattern: '[A-Z]+-[0-9]+',
 }
 
 const BRANCH_PATTERN_OPTIONS = [
   { value: '{type}/{ticket}-{description}', label: 'Conventional', hint: 'feat/PROJ-123-add-login' },
+  { value: '{type}/{ticket}/{description}', label: 'Jira Style', hint: 'task/PBG-35/creator-billing-endpoints' },
   { value: '{type}/{description}', label: 'Simple Type', hint: 'feat/add-login' },
   { value: '{ticket}/{description}', label: 'Ticket First', hint: 'PROJ-123/add-login' },
   { value: '{description}', label: 'Description Only', hint: 'add-login' },

@@ -78,6 +78,7 @@ export const configSchema = z.object({
   setupType: setupTypeSchema.optional(),
   tools: toolIdSchema.array(),
   cliTools: z.array(z.string()).optional(),
+  enableServers: z.array(z.string()).optional(),
   projectName: z.string(),
   workspaceName: z.string().optional(),
   targetDir: z.string(),

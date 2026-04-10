@@ -1,7 +1,13 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
-import { copyLibraryDirectory, installToolContextFiles } from './shared.js'
+import {
+  copyLibraryDirectory,
+  copyWithRecord,
+  getOrchestratorAgentContent,
+  installToolContextFiles,
+  isOrchestratorEnabled,
+} from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class OpenCodeAdapter implements ToolAdapter {
@@ -50,7 +56,19 @@ export class OpenCodeAdapter implements ToolAdapter {
       toDestPath: (file) => path.join(ocDir, 'agents', file),
       warnOnSkip: true,
       transform: stripFrontmatterAndInjectModel,
+      includeFile: (file) => path.parse(file).name !== 'orchestrator',
     })
+
+    if (isOrchestratorEnabled(ctx)) {
+      const orchestratorSource = path.join(ctx.libraryDir, 'agents', 'orchestrator.md')
+      await copyWithRecord({
+        src: orchestratorSource,
+        dest: path.join(ocDir, 'agents', 'orchestrator.md'),
+        ctx,
+        warnOnSkip: true,
+        transform: () => stripFrontmatterAndInjectModel(getOrchestratorAgentContent(ctx)),
+      })
+    }
 
     await copyLibraryDirectory({
       ctx,

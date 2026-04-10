@@ -1,0 +1,26 @@
+{
+  "kind": "workflow",
+  "name": "tdd",
+  "description": "TDD workflow using the dedicated red-green-refactor chain",
+  "version": "1.0.0",
+  "entry": "deliver_with_tdd",
+  "phases": [
+    {
+      "id": "deliver_with_tdd",
+      "kind": "chain",
+      "ref": "tdd",
+      "on": {
+        "success": "complete",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "handoff",
+      "kind": "terminal"
+    },
+    {
+      "id": "complete",
+      "kind": "terminal"
+    }
+  ]
+}

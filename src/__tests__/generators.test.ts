@@ -4,6 +4,8 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { AgentGenerator } from '../generators/agent.js'
 import { CommandGenerator } from '../generators/command.js'
+import { DomainGenerator } from '../generators/domain.js'
+import { ModeGenerator } from '../generators/mode.js'
 import { PromptGenerator } from '../generators/prompt.js'
 import { GeneratorRegistry } from '../generators/registry.js'
 import { SkillGenerator } from '../generators/skill.js'
@@ -34,6 +36,8 @@ describe('generators', () => {
     expect(new PromptGenerator().type).toBe('prompt')
     expect(new TemplateGenerator().type).toBe('template')
     expect(new WorkflowGenerator().type).toBe('workflow')
+    expect(new DomainGenerator().type).toBe('domain')
+    expect(new ModeGenerator().type).toBe('mode')
   })
 
   it('all generators return prompt questions', () => {
@@ -44,6 +48,8 @@ describe('generators', () => {
       new PromptGenerator(),
       new TemplateGenerator(),
       new WorkflowGenerator(),
+      new DomainGenerator(),
+      new ModeGenerator(),
     ]
 
     for (const generator of generators) {
@@ -61,7 +67,9 @@ describe('generators', () => {
       { generator: new CommandGenerator(), expected: 'src/commands/my-command.ts' },
       { generator: new PromptGenerator(), expected: 'library/prompts/my-prompt.md' },
       { generator: new TemplateGenerator(), expected: 'library/templates/my-template.md' },
-      { generator: new WorkflowGenerator(), expected: 'library/workflows/my-workflow.md' },
+      { generator: new WorkflowGenerator(), expected: '.ai/orchestration/workflows/my-workflow.json' },
+      { generator: new DomainGenerator(), expected: '.ai/orchestration/skills/domains/my-domain.md' },
+      { generator: new ModeGenerator(), expected: '.ai/orchestration/skills/modes/my-mode.md' },
     ]
 
     for (const testCase of cases) {
@@ -145,7 +153,7 @@ describe('generators', () => {
     expect(content).toContain('## Done When')
   })
 
-  it('workflow generator emits step references', async () => {
+  it('workflow generator emits orchestration workflow JSON', async () => {
     const targetDir = makeTempDir('ai-setup-workflow-generator-')
     seedLibrary(targetDir)
 
@@ -153,22 +161,44 @@ describe('generators', () => {
       name: 'release-flow',
       targetDir,
       answers: {
-        steps: ['Research:agent=scout,skill=research', 'Plan:prompt=plan,template=task'],
+        chain: 'feature',
+        team: 'review-team',
       },
     })
 
-    const content = files[0]?.content ?? ''
-    expect(content).toContain('1. **Research**')
-    expect(content).toContain('../agents/scout.md')
-    expect(content).toContain('../skills/research.md')
-    expect(content).toContain('../prompts/plan.md')
-    expect(content).toContain('../templates/task.md')
+    const content = JSON.parse(files[0]?.content ?? '{}') as {
+      kind: string
+      phases: Array<{ kind: string; ref?: string }>
+    }
+    expect(content.kind).toBe('workflow')
+    expect(content.phases.some((phase) => phase.kind === 'chain' && phase.ref === 'feature')).toBe(true)
+    expect(content.phases.some((phase) => phase.kind === 'team' && phase.ref === 'review-team')).toBe(true)
   })
 
-  it('generator registry returns all six types', () => {
+  it('domain and mode generators emit orchestration skill frontmatter', async () => {
+    const targetDir = makeTempDir('ai-setup-orchestration-skill-generator-')
+
+    const domain = await new DomainGenerator().generate({
+      name: 'backend-go',
+      targetDir,
+    })
+    const mode = await new ModeGenerator().generate({
+      name: 'strict-review',
+      targetDir,
+    })
+
+    expect(domain[0]?.content).toContain('kind: domain-skill')
+    expect(domain[0]?.content).toContain('name: backend-go')
+    expect(mode[0]?.content).toContain('kind: mode-skill')
+    expect(mode[0]?.content).toContain('name: strict-review')
+  })
+
+  it('generator registry returns all eight types', () => {
     const registry = new GeneratorRegistry()
-    expect(registry.getTypes().sort()).toEqual(['agent', 'command', 'prompt', 'skill', 'template', 'workflow'])
+    expect(registry.getTypes().sort()).toEqual(['agent', 'command', 'domain', 'mode', 'prompt', 'skill', 'template', 'workflow'])
     expect(registry.get('agent')).toBeTruthy()
     expect(registry.get('workflow')).toBeTruthy()
+    expect(registry.get('domain')).toBeTruthy()
+    expect(registry.get('mode')).toBeTruthy()
   })
 })

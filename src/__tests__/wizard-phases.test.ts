@@ -46,6 +46,23 @@ describe('wizard phases 1 and 3', () => {
     })
   })
 
+  it('Phase 1: interactive can opt into orchestrator as an integration', async () => {
+    vi.mocked(p.select).mockResolvedValueOnce('project')
+    vi.mocked(p.multiselect)
+      .mockResolvedValueOnce(['opencode'])
+      .mockResolvedValueOnce(['orchestrator'])
+    vi.mocked(p.text).mockResolvedValueOnce('my-project')
+
+    const result = await runPhase1({
+      interactive: true,
+      prior: {},
+      cliOverrides: { cliTools: [] },
+      targetDir: process.cwd(),
+    })
+
+    expect(result.enableServers).toEqual(['orchestrator'])
+  })
+
   it('Phase 1: non-interactive with scope=global returns setupScope=global', async () => {
     const result = await runPhase1({
       interactive: false,

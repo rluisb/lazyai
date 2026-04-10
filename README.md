@@ -242,6 +242,49 @@ When `orchestrator` is enabled, `ai-setup` also generates tool-specific orchestr
 
 MCP server registration is compiled for tools that have project-local MCP config output. Codex still gets the orchestrator skill scaffold, but `ai-setup` does not generate a project-local Codex MCP config file.
 
+### How to use the orchestrator MCP in your CLI tool
+
+**General flow**
+
+1. Enable orchestration during setup:
+   ```bash
+   ai-setup init --enable-servers orchestrator
+   ```
+2. Start your coding-agent CLI from the project root so it can see the generated MCP config and orchestration guidance files.
+3. Ask the tool to use the orchestrator for a specific job, for example:
+   - `Use the orchestrator and start the feature chain for auth middleware`
+   - `Use the orchestrator to build a review team for this change`
+   - `Use the orchestrator to show workflow status and budget`
+4. The host CLI remains the execution surface. The MCP server manages chain/team/workflow state, while the CLI tool performs the actual reasoning and tool use.
+
+**Per-tool notes**
+
+- **Claude Code**
+  - Reads: `.mcp.json` + `.claude/agents/orchestrator.md`
+  - Best for: orchestrator agent + native subagent dispatch
+  - Example request: `Use the orchestrator agent and start the feature chain for the payments refactor.`
+
+- **OpenCode**
+  - Reads: `opencode.jsonc` + `.opencode/agents/orchestrator.md`
+  - Best for: orchestrator agent + task-based coordination
+  - Example request: `Use the orchestrator to start the bugfix chain for the login failure.`
+
+- **Gemini CLI**
+  - Reads: `.gemini/settings.json` + `.gemini/skills/orchestrator/SKILL.md`
+  - Best for: sequential orchestration guidance (Gemini has no native subagent concept)
+  - Example request: `Use the orchestrator skill to start the review chain for this change.`
+
+- **GitHub Copilot**
+  - Reads: `.vscode/mcp.json` + `.github/prompts/orchestrator.prompt.md`
+  - Best for: prompt-driven orchestration guidance inside the workspace
+  - Example request: `Use the orchestrator prompt and walk me through the code-review workflow.`
+
+- **Codex**
+  - Gets: `.agents/skills/orchestrator/SKILL.md`
+  - Important limitation: `ai-setup` does **not** generate a project-local Codex MCP config file.
+  - Practical meaning: the orchestrator skill is scaffolded, but you must connect the orchestrator MCP server through your Codex/global MCP configuration before Codex can call runtime tools.
+  - Example request after MCP is connected: `Use the orchestrator skill and start the refactor chain for the cache layer.`
+
 ### Docs + demo
 
 - Usage guide: [`docs/orchestration-usage.md`](docs/orchestration-usage.md)

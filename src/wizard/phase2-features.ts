@@ -3,6 +3,7 @@ import { Errors } from '../errors/index.js'
 import { defaultPresetForScope, PRESET_FEATURES, type PresetLevel, resolvePreset } from '../presets.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
 import type { SetupScope } from '../types.js'
+import { GO_BACK, isGoBack } from '../utils/ui.js'
 
 function cancelWizard(): never {
   p.cancel('Setup cancelled.')
@@ -103,6 +104,8 @@ function inferPresetFromFeatures(features?: Partial<FeatureFlags>): PresetLevel 
 /**
  * Run Phase 2 of the interactive wizard: gather planningDir, feature flags, and git conventions.
  * These control which XML-tagged prompt engineering blocks are embedded and how git operations are formatted.
+ *
+ * Returns GO_BACK sentinel if user selects "Back".
  */
 export async function runPhase2Features(opts: {
   interactive: boolean
@@ -120,7 +123,7 @@ export async function runPhase2Features(opts: {
     branchPattern?: string
     commitPattern?: string
   }
-}): Promise<Phase2Result> {
+}): Promise<Phase2Result | typeof GO_BACK> {
   // Non-interactive mode: use cliOverrides or defaults
   if (!opts.interactive) {
     const planningDir = opts.cliOverrides?.planningDir ?? opts.prior?.planningDir ?? '.planning'
@@ -191,9 +194,13 @@ export async function runPhase2Features(opts: {
   p.note('Configure prompt engineering features and git conventions for your AI tools.')
 
   // Prompt 1: Planning directory
-  const defaultDir = opts.prior?.planningDir ?? '.planning'
+  const priorDir = opts.prior?.planningDir
+  const defaultDir = priorDir ?? '.planning'
+  const planningDirMessage = priorDir
+    ? `Planning directory for specs, ADRs, and research? (previous: ${priorDir})`
+    : 'Planning directory for specs, ADRs, and research?'
   const planningDirResult = await p.text({
-    message: 'Planning directory for specs, ADRs, and research?',
+    message: planningDirMessage,
     placeholder: defaultDir,
     defaultValue: defaultDir,
     validate: (value) => {
@@ -209,8 +216,8 @@ export async function runPhase2Features(opts: {
 
   const planningDir = planningDirResult
 
-  // Prompt 2: Preset selection
-  const presetOptions: Array<{ value: PresetLevel; label: string; hint: string }> = [
+  // Prompt 2: Preset selection (with Back option)
+  const presetOptions: Array<{ value: PresetLevel | typeof GO_BACK; label: string; hint: string }> = [
     {
       value: 'minimal',
       label: 'Minimal',
@@ -231,19 +238,29 @@ export async function runPhase2Features(opts: {
       label: 'Custom',
       hint: 'Pick features individually.',
     },
+    { value: GO_BACK, label: '↩ Back', hint: 'Go back to Phase 1' },
   ]
+
+  const priorPresetValue = inferPresetFromFeatures(opts.prior?.features) ?? defaultPresetForScope(opts.setupScope ?? 'project')
+  const priorPresetLabel = presetOptions.find((o) => o.value === priorPresetValue)?.label ?? priorPresetValue
+  const presetMessage = opts.prior?.features
+    ? `Feature preset? (previous: ${priorPresetLabel})`
+    : 'Feature preset?'
 
   const presetResult =
     opts.cliOverrides?.preset ??
     (await p.select({
-      message: 'Feature preset?',
+      message: presetMessage,
       options: presetOptions,
-      initialValue:
-        inferPresetFromFeatures(opts.prior?.features) ?? defaultPresetForScope(opts.setupScope ?? 'project'),
+      initialValue: priorPresetValue as PresetLevel,
     }))
 
   if (p.isCancel(presetResult)) {
     cancelWizard()
+  }
+
+  if (isGoBack(presetResult)) {
+    return GO_BACK
   }
 
   const preset = presetResult as PresetLevel
@@ -288,11 +305,18 @@ export async function runPhase2Features(opts: {
     features = resolvePreset(preset) ?? { ...DEFAULT_FEATURES }
   }
 
-  // Prompt 4: Branch naming pattern
+  // Prompt 4: Branch naming pattern (with Back option)
   const priorBranch = opts.prior?.gitConventions?.branchPattern ?? DEFAULT_GIT_CONVENTIONS.branchPattern
+  const branchOptionsWithBack = [
+    ...BRANCH_PATTERN_OPTIONS,
+    { value: GO_BACK as string, label: '↩ Back', hint: 'Go back to preset selection' },
+  ]
+  const branchMessage = opts.prior?.gitConventions?.branchPattern
+    ? `Branch naming pattern? (previous: ${opts.prior.gitConventions.branchPattern})`
+    : 'Branch naming pattern?'
   const branchPatternResult = await p.select({
-    message: 'Branch naming pattern?',
-    options: BRANCH_PATTERN_OPTIONS,
+    message: branchMessage,
+    options: branchOptionsWithBack,
     initialValue:
       BRANCH_PATTERN_OPTIONS.find((o) => o.value === priorBranch)?.value ??
       BRANCH_PATTERN_OPTIONS[0]?.value ??
@@ -301,6 +325,10 @@ export async function runPhase2Features(opts: {
 
   if (p.isCancel(branchPatternResult)) {
     cancelWizard()
+  }
+
+  if (isGoBack(branchPatternResult)) {
+    return GO_BACK
   }
 
   let branchPattern = branchPatternResult as string
@@ -316,11 +344,18 @@ export async function runPhase2Features(opts: {
     branchPattern = customBranch
   }
 
-  // Prompt 5: Commit message pattern
+  // Prompt 5: Commit message pattern (with Back option)
   const priorCommit = opts.prior?.gitConventions?.commitPattern ?? DEFAULT_GIT_CONVENTIONS.commitPattern
+  const commitOptionsWithBack = [
+    ...COMMIT_PATTERN_OPTIONS,
+    { value: GO_BACK as string, label: '↩ Back', hint: 'Go back to branch pattern' },
+  ]
+  const commitMessage = opts.prior?.gitConventions?.commitPattern
+    ? `Commit message pattern? (previous: ${opts.prior.gitConventions.commitPattern})`
+    : 'Commit message pattern?'
   const commitPatternResult = await p.select({
-    message: 'Commit message pattern?',
-    options: COMMIT_PATTERN_OPTIONS,
+    message: commitMessage,
+    options: commitOptionsWithBack,
     initialValue:
       COMMIT_PATTERN_OPTIONS.find((o) => o.value === priorCommit)?.value ??
       COMMIT_PATTERN_OPTIONS[0]?.value ??
@@ -329,6 +364,10 @@ export async function runPhase2Features(opts: {
 
   if (p.isCancel(commitPatternResult)) {
     cancelWizard()
+  }
+
+  if (isGoBack(commitPatternResult)) {
+    return GO_BACK
   }
 
   let commitPattern = commitPatternResult as string
@@ -344,10 +383,14 @@ export async function runPhase2Features(opts: {
     commitPattern = customCommit
   }
 
-  // Prompt 6: Require ticket in branch/commit?
+  // Prompt 6: Require ticket in branch/commit? (with Back option — use confirm with hint)
+  const priorRequireTicket = opts.prior?.gitConventions?.requireTicket
+  const ticketMessage = priorRequireTicket !== undefined
+    ? `Require ticket ID in branches/commits? (previous: ${priorRequireTicket ? 'yes' : 'no'})`
+    : 'Require ticket ID in branches/commits?'
   const requireTicketResult = await p.confirm({
-    message: 'Require ticket ID in branches/commits?',
-    initialValue: opts.prior?.gitConventions?.requireTicket ?? false,
+    message: ticketMessage,
+    initialValue: priorRequireTicket ?? false,
   })
 
   if (p.isCancel(requireTicketResult)) {

@@ -16,14 +16,23 @@ export interface PhaseInfo {
 /**
  * Display a phase progress indicator
  *
- * Example output:
+ * Progress is based on COMPLETED phases, so starting Phase 1 shows 0%.
+ * After completing Phase 1 of 4, the next call shows 25%, etc.
+ *
+ * Example output (starting Phase 1):
  * ◇  Phase 1 of 4: Setup Context
- * │  ━━━━━━━━━━○○○○○○○○○○  25%
+ * │  ○○○○○○○○○○○○○○○○○○○○  0%
+ *
+ * Example output (starting Phase 2 after completing Phase 1):
+ * ◇  Phase 2 of 4: Features & Conventions
+ * │  ━━━○○○○○○○○○○○○○○○○○  5%
  */
 export function showPhaseProgress(phase: PhaseInfo): void {
-  const percent = Math.round((phase.current / phase.total) * 100)
+  // Show progress based on COMPLETED phases (current-1), not the one we're starting
+  const completed = phase.current - 1
+  const percent = Math.round((completed / phase.total) * 100)
   const barWidth = 20
-  const filled = Math.round((phase.current / phase.total) * barWidth)
+  const filled = Math.round((completed / phase.total) * barWidth)
   const empty = barWidth - filled
 
   const bar = '━'.repeat(filled) + '○'.repeat(empty)
@@ -32,10 +41,44 @@ export function showPhaseProgress(phase: PhaseInfo): void {
   p.log.message(`${bar}  ${percent}%`)
 }
 
+/**
+ * Display a completion progress indicator (all phases done, 100%)
+ *
+ * Example output:
+ * │  ━━━━━━━━━━━━━━━━━━━━  100%
+ */
+export function showPhaseComplete(_total: number): void {
+  const barWidth = 20
+  const bar = '━'.repeat(barWidth)
+  p.log.message(`${bar}  100%`)
+}
+
 /** Summary item for display */
 export interface SummaryItem {
   label: string
   value: string
+}
+
+/**
+ * Sentinel value for "Go Back" navigation in wizard prompts.
+ * When a user selects this in a p.select(), the wizard should
+ * navigate to the previous phase.
+ */
+export const GO_BACK = '__back__' as const
+
+/**
+ * Type guard to check if a select result is the "Go Back" action
+ */
+export function isGoBack(value: unknown): boolean {
+  return value === GO_BACK
+}
+
+/**
+ * Back navigation option for p.select() prompts.
+ * Add this to the end of the options array.
+ */
+export function backOption<T extends string>(): { value: T; label: string; hint: string } {
+  return { value: GO_BACK as T, label: '↩ Back', hint: 'Go back to previous step' }
 }
 
 /**

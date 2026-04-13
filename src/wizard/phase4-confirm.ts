@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { Errors } from '../errors/index.js'
 import type { SetupScope, ToolId, WizardConfig } from '../types.js'
-import { type SummaryItem, showSummaryBox } from '../utils/ui.js'
+import { GO_BACK, type SummaryItem, showSummaryBox } from '../utils/ui.js'
 import type { PlannedFile } from './planner.js'
 
 function formatTools(tools: ToolId[]): string {
@@ -28,7 +28,7 @@ export async function runPhase4(opts: {
   interactive: boolean
   plan: PlannedFile[]
   config?: WizardConfig
-}): Promise<boolean> {
+}): Promise<boolean | typeof GO_BACK> {
   // Non-interactive: always return true
   if (!opts.interactive) {
     return true
@@ -93,16 +93,25 @@ export async function runPhase4(opts: {
     p.note(lines.join('\n'), 'File Breakdown')
   }
 
-  // Confirm
-  const confirmed = await p.confirm({
+  // Confirm — use select instead of confirm to support Back navigation
+  const confirmedResult = await p.select({
     message: 'Proceed with installation?',
-    initialValue: true,
+    options: [
+      { value: 'yes', label: 'Yes, install', hint: 'Continue with the setup' },
+      { value: 'no', label: 'No, cancel', hint: 'Cancel the setup' },
+      { value: GO_BACK, label: '↩ Back', hint: 'Go back to conflict resolution' },
+    ],
+    initialValue: 'yes',
   })
 
-  if (p.isCancel(confirmed)) {
+  if (p.isCancel(confirmedResult)) {
     p.cancel('Setup cancelled.')
     throw Errors.userCancelled()
   }
 
-  return confirmed as boolean
+  if (confirmedResult === GO_BACK) {
+    return GO_BACK
+  }
+
+  return confirmedResult === 'yes'
 }

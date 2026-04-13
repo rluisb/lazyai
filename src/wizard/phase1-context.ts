@@ -8,6 +8,7 @@ import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.j
 import { fileExists, isDirectory, readFile, resolveLibraryDir } from '../utils/files.js'
 import { readManifest } from '../utils/manifest.js'
 import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
+import { GO_BACK, isGoBack } from '../utils/ui.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
 
 interface McpServerConfig {
@@ -188,6 +189,11 @@ function parseWorkspaceRepos(raw: string | undefined, planningRepoPath: string):
 /**
  * Run Phase 1 of the interactive wizard: gather setupScope, tools, and projectName.
  * Behavior depends on interactive mode and CLI overrides.
+ *
+ * When re-running, prior values are pre-filled as defaults so the user can
+ * just press Enter to keep them or change what they need.
+ *
+ * Returns GO_BACK sentinel if user selects "Back" (only for phases 2+).
  */
 export async function runPhase1(opts: {
   interactive: boolean
@@ -211,7 +217,8 @@ export async function runPhase1(opts: {
     enableServers?: string[]
   }
   targetDir: string
-}): Promise<Phase1Result> {
+  canGoBack?: boolean
+}): Promise<Phase1Result | typeof GO_BACK> {
   // Non-interactive mode: use cliOverrides or throw
   if (!opts.interactive) {
     const setupScope = opts.cliOverrides.scope ?? opts.cliOverrides.type
@@ -262,40 +269,72 @@ export async function runPhase1(opts: {
   // Check for existing manifest and show note if found
   const existingManifest = await readManifest(opts.targetDir)
   if (existingManifest) {
-    p.note('Re-running setup — previous selections will be pre-filled')
+    p.note('Re-running setup — previous selections will be pre-filled as defaults')
   }
 
-  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let setupScope: SetupScope
-  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
+  // biome-ignore lint/style/useConst: assigned after async prompt below
   let tools: ToolId[]
-  // biome-ignore lint/style/useConst: assigned after asynchronous prompt
   let projectName: string
   let workspaceName: string | undefined
   let planningRepoPath: string | undefined
   let repos: Array<{ name: string; path: string; type?: string; description?: string }> = []
   let cliTools: string[] = opts.cliOverrides.cliTools ?? []
 
-  // Prompt 1: Setup scope
-  const setupScopeResult =
-    opts.cliOverrides.scope ||
-    opts.cliOverrides.type ||
-    opts.prior.setupScope ||
-    opts.prior.setupType ||
-    (await p.select({
-      message: 'Setup scope:',
-      options: [
-        { value: 'global', label: 'Global', hint: 'Install to ~/.ai/ + native tool global paths' },
-        { value: 'workspace', label: 'Workspace', hint: 'Planning repo with multi-project management' },
-        { value: 'project', label: 'Project', hint: 'Self-contained single repository' },
-      ],
-    }))
+  // Resolve default values from CLI overrides or prior selections
+  const priorScope = opts.cliOverrides.scope ?? opts.cliOverrides.type ?? opts.prior.setupScope ?? opts.prior.setupType
+  const priorTools = opts.cliOverrides.tools ?? opts.prior.tools
+  const priorProjectName = opts.cliOverrides.name ?? opts.prior.projectName
 
-  if (p.isCancel(setupScopeResult)) {
-    p.cancel('Setup cancelled.')
-    process.exit(0)
+  // --- Prompt 1: Setup scope ---
+  // Always show the prompt (even on re-run), but pre-fill with prior value
+  const scopeOptions: Array<{ value: string; label: string; hint: string }> = [
+    { value: 'global', label: 'Global', hint: 'Install to ~/.ai/ + native tool global paths' },
+    { value: 'workspace', label: 'Workspace', hint: 'Planning repo with multi-project management' },
+    { value: 'project', label: 'Project', hint: 'Self-contained single repository' },
+  ]
+
+  if (opts.canGoBack) {
+    scopeOptions.push({ value: GO_BACK, label: '↩ Back', hint: 'Go back to previous step' })
   }
-  setupScope = setupScopeResult as SetupScope
+
+  if (!priorScope) {
+    // No prior: show normal prompt
+    const setupScopeResult = await p.select({
+      message: 'Setup scope:',
+      options: scopeOptions,
+    })
+
+    if (p.isCancel(setupScopeResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+
+    if (isGoBack(setupScopeResult)) {
+      return GO_BACK
+    }
+
+    setupScope = setupScopeResult as SetupScope
+  } else {
+    // Has prior: show prompt with prior pre-selected, indicate previous choice in message
+    const priorLabel = priorScope === 'global' ? 'Global' : priorScope === 'workspace' ? 'Workspace' : 'Project'
+    const setupScopeResult = await p.select({
+      message: `Setup scope: (previous: ${priorLabel})`,
+      options: scopeOptions,
+      initialValue: priorScope,
+    })
+
+    if (p.isCancel(setupScopeResult)) {
+      p.cancel('Setup cancelled.')
+      process.exit(0)
+    }
+
+    if (isGoBack(setupScopeResult)) {
+      return GO_BACK
+    }
+
+    setupScope = setupScopeResult as SetupScope
+  }
 
   if (setupScope === 'project' || setupScope === 'workspace') {
     const globalAiExists = fileExists(path.join(homedir(), '.ai'))
@@ -304,21 +343,26 @@ export async function runPhase1(opts: {
     }
   }
 
-  // Prompt 2: Tools selection
-  const toolsResult =
-    opts.cliOverrides.tools ||
-    opts.prior.tools ||
-    (await p.multiselect({
-      message: 'Which AI tools are you using?',
-      options: [
-        { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
-        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
-        { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
-        { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
-        { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
-      ],
-      required: true,
-    }))
+  // --- Prompt 2: Tools selection ---
+  // Always show the prompt, pre-fill with prior tools if available
+  const toolOptions = [
+    { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
+    { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
+    { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
+    { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
+    { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
+  ]
+
+  const toolsMessage = priorTools && priorTools.length > 0
+    ? `Which AI tools are you using? (previous: ${priorTools.join(', ')})`
+    : 'Which AI tools are you using?'
+
+  const toolsResult = await p.multiselect({
+    message: toolsMessage,
+    options: toolOptions,
+    initialValues: priorTools ?? [],
+    required: true,
+  })
 
   if (p.isCancel(toolsResult)) {
     p.cancel('Setup cancelled.')
@@ -373,16 +417,19 @@ export async function runPhase1(opts: {
 
   if (setupScope === 'workspace') {
     const defaultPlanningRepoPath = opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir
+    const priorWorkspaceName = opts.cliOverrides.name ?? opts.prior.workspaceName
 
-    const workspaceNameResult =
-      opts.cliOverrides.name ||
-      opts.prior.workspaceName ||
-      (await p.text({
-        message: 'Workspace name?',
-        placeholder: path.basename(opts.targetDir),
-        defaultValue: path.basename(opts.targetDir),
-        validate: (value) => validateFilesystemSafeName(value, 'Workspace name'),
-      }))
+    // Always show workspace name prompt, pre-fill with prior if available
+    const workspaceDefault = priorWorkspaceName ?? path.basename(opts.targetDir)
+    const workspaceMessage = priorWorkspaceName
+      ? `Workspace name? (previous: ${priorWorkspaceName})`
+      : 'Workspace name?'
+    const workspaceNameResult = await p.text({
+      message: workspaceMessage,
+      placeholder: workspaceDefault,
+      defaultValue: workspaceDefault,
+      validate: (value) => validateFilesystemSafeName(value, 'Workspace name'),
+    })
 
     if (p.isCancel(workspaceNameResult)) {
       p.cancel('Setup cancelled.')
@@ -392,8 +439,12 @@ export async function runPhase1(opts: {
 
     let planningRepoPathResolved: string
 
-    if (opts.cliOverrides.planningRepo || opts.prior.planningRepoPath) {
-      planningRepoPathResolved = path.resolve(opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir)
+    // Planning repo path: always show prompt but pre-fill with prior if available
+    const priorPlanningRepo = opts.cliOverrides.planningRepo ?? opts.prior.planningRepoPath
+    if (priorPlanningRepo) {
+      planningRepoPathResolved = path.resolve(priorPlanningRepo)
+      // Show a note about reusing the prior path
+      p.note(`Using planning repo from previous run: ${planningRepoPathResolved}`)
     } else {
       const subdirs = listSubdirectories(opts.targetDir)
       const dirOptions: Array<{ value: string; label: string; hint?: string }> = [
@@ -594,17 +645,18 @@ export async function runPhase1(opts: {
       }
     }
   } else {
-    // Prompt 3: Project name
+    // Prompt 3: Project name — always show, pre-fill with prior if available
     const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
-    const projectNameResult =
-      opts.cliOverrides.name ||
-      opts.prior.projectName ||
-      (await p.text({
-        message: 'Project name?',
-        placeholder: defaultName,
-        defaultValue: defaultName,
-        validate: (value) => validateFilesystemSafeName(value, 'Project name'),
-      }))
+    const nameDefault = priorProjectName ?? defaultName
+    const projectNameMessage = priorProjectName
+      ? `Project name? (previous: ${priorProjectName})`
+      : 'Project name?'
+    const projectNameResult = await p.text({
+      message: projectNameMessage,
+      placeholder: nameDefault,
+      defaultValue: nameDefault,
+      validate: (value) => validateFilesystemSafeName(value, 'Project name'),
+    })
 
     if (p.isCancel(projectNameResult)) {
       p.cancel('Setup cancelled.')

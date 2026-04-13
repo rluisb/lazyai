@@ -18,8 +18,18 @@ vi.mock('@clack/prompts', () => ({
 }))
 
 import * as p from '@clack/prompts'
+import { GO_BACK } from '../utils/ui.js'
 import { runPhase1 } from '../wizard/phase1-context.js'
 import { runPhase3 } from '../wizard/phase3-conflicts.js'
+
+/**
+ * Type-narrowing helper for Phase 1 results.
+ * Tests never trigger GO_BACK since they mock @clack/prompts.
+ */
+function unwrapPhase1(result: Awaited<ReturnType<typeof runPhase1>>) {
+  if (result === GO_BACK) throw new Error('Unexpected GO_BACK')
+  return result
+}
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
@@ -53,12 +63,12 @@ describe('wizard phases 1 and 3', () => {
       .mockResolvedValueOnce(['orchestrator'])
     vi.mocked(p.text).mockResolvedValueOnce('my-project')
 
-    const result = await runPhase1({
+    const result = unwrapPhase1(await runPhase1({
       interactive: true,
       prior: {},
       cliOverrides: { cliTools: [] },
       targetDir: process.cwd(),
-    })
+    }))
 
     expect(result.enableServers).toEqual(['orchestrator'])
   })
@@ -71,7 +81,7 @@ describe('wizard phases 1 and 3', () => {
       targetDir: '/tmp',
     })
 
-    expect(result.setupScope).toBe('global')
+    expect(unwrapPhase1(result).setupScope).toBe('global')
   })
 
   it('Phase 1: non-interactive with scope=global defaults projectName=global', async () => {
@@ -82,7 +92,7 @@ describe('wizard phases 1 and 3', () => {
       targetDir: '/tmp',
     })
 
-    expect(result.projectName).toBe('global')
+    expect(unwrapPhase1(result).projectName).toBe('global')
   })
 
   it('Phase 1: non-interactive with scope=workspace returns setupScope=workspace', async () => {
@@ -98,9 +108,10 @@ describe('wizard phases 1 and 3', () => {
       targetDir: '/tmp',
     })
 
-    expect(result.setupScope).toBe('workspace')
-    expect(result.planningRepoPath).toBe(path.resolve('/tmp/planning-repo'))
-    expect(result.projectName).toBe('planning-repo')
+    const unwrapped = unwrapPhase1(result)
+    expect(unwrapped.setupScope).toBe('workspace')
+    expect(unwrapped.planningRepoPath).toBe(path.resolve('/tmp/planning-repo'))
+    expect(unwrapped.projectName).toBe('planning-repo')
   })
 
   it('Phase 1: non-interactive workspace missing --planning-repo throws', async () => {
@@ -147,7 +158,7 @@ describe('wizard phases 1 and 3', () => {
       targetDir: workspaceRoot,
     })
 
-    expect(result.repos).toEqual([
+    expect(unwrapPhase1(result).repos).toEqual([
       { name: 'creator-checkout', path: '../creator-checkout', type: 'nextjs-typescript' },
       { name: 'fedora', path: '../fedora', type: 'ruby-rails' },
     ])
@@ -178,7 +189,7 @@ describe('wizard phases 1 and 3', () => {
       targetDir: workspaceRoot,
     })
 
-    expect(result.repos).toEqual([{ name: 'git-repo', path: '../git-repo', type: 'unknown' }])
+    expect(unwrapPhase1(result).repos).toEqual([{ name: 'git-repo', path: '../git-repo', type: 'unknown' }])
     expect(p.note).toHaveBeenCalledWith('Skipped non-git directories: not-a-repo')
 
     rmSync(workspaceRoot, { recursive: true, force: true })

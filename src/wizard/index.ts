@@ -48,7 +48,7 @@ import {
   resolveGlobalToolTargetDir,
 } from '../utils/global-paths.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
-import { showPhaseProgress } from '../utils/ui.js'
+import { GO_BACK, showPhaseComplete, showPhaseProgress } from '../utils/ui.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
 import { runPhase3 } from './phase3-conflicts.js'
@@ -96,6 +96,199 @@ function resolveTargetDirForScope(scope: SetupScope, targetDir: string, homeDir:
   return targetDir
 }
 
+/**
+ * Collected answers from the wizard phases.
+ * Used as mutable state during the phase loop — values accumulate
+ * as each phase completes and are available for re-derivation
+ * when the user navigates back.
+ */
+interface WizardState {
+  setupScope: SetupScope
+  tools: ToolId[]
+  projectName: string
+  workspaceName?: string
+  planningRepoPath?: string
+  repos?: Array<{ name: string; path: string; type?: string; description?: string }>
+  cliTools?: string[]
+  enableServers?: string[]
+  planningDir: string
+  features: FeatureFlags
+  gitConventions: GitConventions
+  preset: PresetLevel
+}
+
+/**
+ * Run Phases 1-2 of the wizard, supporting back navigation between them.
+ * Returns the accumulated state that Phase 1 and 2 produce.
+ */
+async function runPhase12Loop(opts: {
+  interactive: boolean
+  prior: Partial<WizardSelections> & {
+    setupScope?: SetupScope
+    setupType?: SetupType
+    tools?: ToolId[]
+    projectName?: string
+    workspaceName?: string
+    planningRepoPath?: string
+    planningDir?: string
+    enableServers?: string[]
+    features?: Partial<FeatureFlags>
+    gitConventions?: Partial<GitConventions>
+  }
+  cliOverrides: {
+    scope?: SetupScope
+    type?: SetupType
+    tools?: ToolId[]
+    cliTools?: string[]
+    name?: string
+    planningRepo?: string
+    repos?: string[]
+    planningDir?: string
+    preset?: PresetLevel
+    features?: string[]
+    disableFeatures?: string[]
+    branchPattern?: string
+    commitPattern?: string
+    enableServers?: string[]
+  }
+  targetDir: string
+}): Promise<WizardState> {
+  // Accumulated answers — start from prior manifest or defaults
+  let accSetupScope: SetupScope = opts.prior.setupScope ?? opts.prior.setupType ?? 'project'
+  let accTools: ToolId[] = opts.prior.tools ?? []
+  let accProjectName: string = opts.prior.projectName ?? ''
+  let accWorkspaceName: string | undefined = opts.prior.workspaceName
+  let accPlanningRepoPath: string | undefined = opts.prior.planningRepoPath
+  let accRepos: Array<{ name: string; path: string; type?: string; description?: string }> | undefined
+  let accCliTools: string[] | undefined
+  let accEnableServers: string[] | undefined = opts.prior.enableServers
+  let accPlanningDir: string = opts.prior.planningDir ?? '.planning'
+  let accFeatures: FeatureFlags = opts.prior.features as FeatureFlags | undefined ?? {
+      contextEngineering: true,
+      rpiWorkflow: true,
+      chainOfThought: true,
+      treeOfThoughts: true,
+      adrEnforcement: true,
+      qualityGates: true,
+      agentHarness: true,
+      bugResolution: true,
+      pivotHandling: true,
+    }
+  let accGitConventions: GitConventions = opts.prior.gitConventions as GitConventions | undefined ?? {
+      branchPattern: '{type}/{ticket}-{description}',
+      commitPattern: '{type}({scope}): {description}',
+      types: ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'],
+      requireTicket: false,
+      ticketPattern: '[A-Z]+-[0-9]+',
+    }
+  let accPreset: PresetLevel = 'standard'
+
+  let currentPhase = 1
+
+  // Loop until both phases complete without going back
+  while (currentPhase >= 1 && currentPhase <= 2) {
+    if (currentPhase === 1) {
+      if (opts.interactive) {
+        showPhaseProgress({ current: 1, total: 4, name: 'Setup Context' })
+      }
+
+      // Build prior for Phase 1 from accumulated state + original manifest prior
+      const phase1Prior: typeof opts.prior = {
+        ...opts.prior,
+        setupScope: accSetupScope,
+        tools: accTools,
+        projectName: accProjectName,
+        ...(accWorkspaceName != null ? { workspaceName: accWorkspaceName } : {}),
+        ...(accPlanningRepoPath != null ? { planningRepoPath: accPlanningRepoPath } : {}),
+        ...(accEnableServers != null ? { enableServers: accEnableServers } : {}),
+      }
+
+      const phase1Result = await runPhase1({
+        interactive: opts.interactive,
+        prior: phase1Prior,
+        cliOverrides: opts.cliOverrides,
+        targetDir: opts.targetDir,
+        canGoBack: false, // Phase 1 is the first phase
+      })
+
+      if (phase1Result === GO_BACK) {
+        // Can't go back from Phase 1 — just continue
+        continue
+      }
+
+      // Accumulate Phase 1 answers
+      accSetupScope = phase1Result.setupScope
+      accTools = phase1Result.tools
+      accProjectName = phase1Result.projectName
+      accWorkspaceName = phase1Result.workspaceName
+      accPlanningRepoPath = phase1Result.planningRepoPath
+      accRepos = phase1Result.repos
+      accCliTools = phase1Result.cliTools
+      accEnableServers = phase1Result.enableServers
+
+      currentPhase = 2
+    }
+
+    if (currentPhase === 2) {
+      if (opts.interactive) {
+        showPhaseProgress({ current: 2, total: 4, name: 'Features & Conventions' })
+      }
+
+      const phase2Prior: {
+        planningDir?: string
+        features?: Partial<FeatureFlags>
+        gitConventions?: Partial<GitConventions>
+      } = {
+        planningDir: accPlanningDir,
+        ...(accFeatures ? { features: accFeatures } : {}),
+        ...(accGitConventions ? { gitConventions: accGitConventions } : {}),
+      }
+
+      const phase2Result = await runPhase2Features({
+        interactive: opts.interactive,
+        setupScope: accSetupScope,
+        prior: phase2Prior,
+        cliOverrides: {
+          ...(opts.cliOverrides.planningDir != null ? { planningDir: opts.cliOverrides.planningDir } : {}),
+          ...(opts.cliOverrides.preset != null ? { preset: opts.cliOverrides.preset } : {}),
+          ...(opts.cliOverrides.features != null ? { features: opts.cliOverrides.features } : {}),
+          ...(opts.cliOverrides.disableFeatures != null ? { disableFeatures: opts.cliOverrides.disableFeatures } : {}),
+          ...(opts.cliOverrides.branchPattern != null ? { branchPattern: opts.cliOverrides.branchPattern } : {}),
+          ...(opts.cliOverrides.commitPattern != null ? { commitPattern: opts.cliOverrides.commitPattern } : {}),
+        },
+      })
+
+      if (phase2Result === GO_BACK) {
+        currentPhase = 1
+        continue
+      }
+
+      // Accumulate Phase 2 answers
+      accPlanningDir = phase2Result.planningDir
+      accFeatures = phase2Result.features
+      accGitConventions = phase2Result.gitConventions
+      accPreset = phase2Result.preset
+
+      currentPhase = 3 // Done with Phase 1-2
+    }
+  }
+
+  return {
+    setupScope: accSetupScope,
+    tools: accTools,
+    projectName: accProjectName,
+    ...(accWorkspaceName != null ? { workspaceName: accWorkspaceName } : {}),
+    ...(accPlanningRepoPath != null ? { planningRepoPath: accPlanningRepoPath } : {}),
+    ...(accRepos != null ? { repos: accRepos } : {}),
+    ...(accCliTools != null ? { cliTools: accCliTools } : {}),
+    ...(accEnableServers != null ? { enableServers: accEnableServers } : {}),
+    planningDir: accPlanningDir,
+    features: accFeatures,
+    gitConventions: accGitConventions,
+    preset: accPreset,
+  }
+}
+
 export async function runWizard(opts: {
   interactive: boolean
   force?: boolean
@@ -127,7 +320,6 @@ export async function runWizard(opts: {
 
     if (opts.interactive) {
       p.intro('ai-setup wizard')
-      showPhaseProgress({ current: 1, total: 4, name: 'Setup Context' })
     }
 
     const manifest = await readManifest(opts.targetDir)
@@ -160,424 +352,446 @@ export async function runWizard(opts: {
         }
       : {}
 
-    const { setupScope, tools, projectName, workspaceName, planningRepoPath, repos, cliTools, enableServers } = await runPhase1({
+    // --- Phase 1-2 Loop with Back Navigation ---
+    // This loop collects all Phase 1+2 answers. If user goes back from Phase 2,
+    // Phase 1 reruns with accumulated state pre-filled.
+    let state = await runPhase12Loop({
       interactive: opts.interactive,
       prior,
       cliOverrides: opts.cliOverrides,
       targetDir: opts.targetDir,
     })
 
-    // Phase 2: Planning directory, feature flags, and git conventions
-    if (opts.interactive) {
-      showPhaseProgress({ current: 2, total: 4, name: 'Features & Conventions' })
-    }
-    const { planningDir, features, gitConventions, preset } = await runPhase2Features({
-      interactive: opts.interactive,
-      setupScope,
-      prior: {
-        ...(prior.planningDir != null ? { planningDir: prior.planningDir } : {}),
-        ...(prior.features != null ? { features: prior.features } : {}),
-        ...(prior.gitConventions != null ? { gitConventions: prior.gitConventions } : {}),
-      },
-      cliOverrides: {
-        ...(opts.cliOverrides.planningDir != null ? { planningDir: opts.cliOverrides.planningDir } : {}),
-        ...(opts.cliOverrides.preset != null ? { preset: opts.cliOverrides.preset } : {}),
-        ...(opts.cliOverrides.features != null ? { features: opts.cliOverrides.features } : {}),
-        ...(opts.cliOverrides.disableFeatures != null ? { disableFeatures: opts.cliOverrides.disableFeatures } : {}),
-        ...(opts.cliOverrides.branchPattern != null ? { branchPattern: opts.cliOverrides.branchPattern } : {}),
-        ...(opts.cliOverrides.commitPattern != null ? { commitPattern: opts.cliOverrides.commitPattern } : {}),
-      },
-    })
-
-    const userHomeDir = opts.homeDir ?? homedir()
-    const effectiveTargetDir =
-      setupScope === 'workspace'
-        ? (() => {
-            if (!planningRepoPath) {
-              throw Errors.invalidInput('workspace setup requires planningRepoPath')
-            }
-            return path.resolve(planningRepoPath)
-          })()
-        : resolveTargetDirForScope(setupScope, opts.targetDir, userHomeDir)
-    const effectiveProjectName = projectName || (setupScope === 'global' ? 'global' : path.basename(effectiveTargetDir))
-    const globalRef = setupScope === 'workspace' && fileExists(path.join(userHomeDir, '.ai')) ? '~/.ai/' : undefined
-    const installableTools = setupScope === 'global' ? tools.filter(isGlobalSupportedTool) : tools
-    const specsDirs = specsDirsForPreset(preset)
-    const templateIds = templatesForPreset(preset)
-    const ruleIds = rulesForPreset(preset)
-
-    if (setupScope === 'workspace' && repos && repos.length > 0) {
-      for (const repo of repos) {
-        const absPath = path.resolve(effectiveTargetDir, repo.path)
-
-        if (!fileExists(absPath)) {
-          p.log.warn(`⚠️  Repo path not found: ${absPath} (${repo.name})`)
-          continue
-        }
-
-        if (!isDirectory(absPath)) {
-          p.log.warn(`⚠️  Path is not a directory: ${absPath} (${repo.name})`)
-          continue
-        }
-
-        try {
-          const testPath = path.join(absPath, '.ai-setup-write-test')
-          writeFile(testPath, '')
-          fs.unlinkSync(testPath)
-        } catch {
-          p.log.warn(`⚠️  No write permission: ${absPath} (${repo.name}) — AI tools may not be able to modify files`)
-        }
-      }
-    }
-
-    if (setupScope === 'global') {
-      for (const tool of tools) {
-        if (!isGlobalSupportedTool(tool)) {
-          logUnsupportedGlobalTool(tool)
-        }
-      }
-    }
-
-    const selections = {
-      ...buildDefaultSelections(effectiveTargetDir),
-      templates: templateIds,
-      rules: ruleIds,
-    }
-    const fileRecords: FileRecord[] = []
-
-    const migrationContext = {
-      sourcePath: effectiveTargetDir,
-      targetPath: effectiveTargetDir,
-      options: {
-        preview: false,
-        mergeStrategy: 'preserve' as const,
-        verbose: false,
-        skipBackup: true,
-        interactive: false,
-      },
-    }
-
-    const detections = await detectExistingSetup(migrationContext)
-    if (detections.length > 0) {
-      let shouldAbsorb = opts.absorb === true
-
-      if (!shouldAbsorb && opts.interactive) {
-        const detectionSummary = detections.map((item) => item.adapterName).join(', ')
-        const absorbAnswer = await p.confirm({
-          message: `Found existing tool setup (${detectionSummary}). Absorb into .ai/?`,
-          initialValue: true,
-        })
-
-        if (p.isCancel(absorbAnswer)) {
-          throw Errors.userCancelled()
-        }
-
-        shouldAbsorb = absorbAnswer === true
-      }
-
-      if (shouldAbsorb) {
-        const parsers = await getAllParsers(effectiveTargetDir)
-
-        for (const detection of detections) {
-          const parser = parsers.find((candidate) => candidate.id === detection.adapterId)
-          if (!parser) continue
-
-          const parsedSetup = await parser.parse(migrationContext)
-          await writeToCanonical({
-            targetDir: effectiveTargetDir,
-            parsedSetup,
-            fileRecords,
-          })
-        }
-      }
-    }
-
-    const config: WizardConfig = {
-      setupScope,
-      setupType: setupScope,
-      tools: installableTools,
-      projectName: effectiveProjectName,
-      ...(workspaceName ? { workspaceName } : {}),
-      targetDir: effectiveTargetDir,
-      ...(planningRepoPath ? { planningRepoPath } : {}),
-      ...(repos && repos.length > 0 ? { repos } : {}),
-      ...(globalRef ? { globalRef } : {}),
-      selections,
-      interactive: opts.interactive,
-      force: opts.force,
-    }
-
-    const plan = await computePlan(config, effectiveTargetDir, selections)
-
-    const plannedFiles = plan.map((file) => {
-      const destPath = path.join(effectiveTargetDir, file.destPath)
-
-      let srcContent = ''
-      if (!file.isNew && file.srcPath) {
-        srcContent = readFile(path.join(libraryDir, file.srcPath))
-      }
-
-      return {
-        destPath,
-        srcContent,
-      }
-    })
-
-    const phase3Opts = {
-      interactive: opts.interactive,
-      targetDir: effectiveTargetDir,
-      plannedFiles,
-      ...(opts.force !== undefined ? { force: opts.force } : {}),
-    }
-
-    if (opts.interactive) {
-      showPhaseProgress({ current: 3, total: 4, name: 'Conflict Resolution' })
-    }
-    const { strategy, perFileOverrides } = await runPhase3(phase3Opts)
-
-    if (opts.interactive) {
-      showPhaseProgress({ current: 4, total: 4, name: 'Review & Confirm' })
-    }
-    const phase4Opts = { interactive: opts.interactive, plan, config }
-    const confirmed = await runPhase4(phase4Opts)
-    if (!confirmed) return
-
-    if (opts.dryRun) {
-      let plannedCount = 0
-      for (const file of plan) {
-        console.log(`[dry-run] Would create: ${file.destPath}`)
-        plannedCount += 1
-      }
-      console.log(`Dry run complete. Would create ${plannedCount} files.`)
-      return
-    }
-
-    const installFiles = async (): Promise<void> => {
-      await scaffoldSpecs({
-        targetDir: effectiveTargetDir,
+    // --- Phases 3-4 with outer loop for back navigation ---
+    // Phase 4's "Back" returns to Phase 2, which requires re-running
+    // the Phase 1-2 loop and recomputing all derived values.
+    while (true) {
+      // Derive computed values from the current state
+      const {
         setupScope,
-        libraryDir,
-        specsDirs,
-        specsAgents: specsDirs,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:specs')
-
-      await scaffoldConstitution({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        projectName: effectiveProjectName,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:constitution')
-
-      await scaffoldMcp({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-        ...(cliTools ? { cliTools } : {}),
-        ...(enableServers ? { enableServers } : {}),
-      })
-      tracker.trackSuccess('scaffold:mcp')
-
-      if (enableServers?.includes('orchestrator')) {
-        await scaffoldOrchestration({
-          targetDir: effectiveTargetDir,
-          libraryDir,
-          fileRecords,
-          strategy,
-          perFileOverrides,
-        })
-        tracker.trackSuccess('scaffold:orchestration')
-      }
-
-      await scaffoldEnvExample({
-        targetDir: effectiveTargetDir,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:env-example')
-
-      await scaffoldTemplatesRules({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        templates: selections.templates,
-        rules: selections.rules,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:templates-rules')
-
-      await scaffoldInfra({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        infra: selections.infra,
-        projectName: effectiveProjectName,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-      })
-      tracker.trackSuccess('scaffold:infra')
-
-      await scaffoldCompiledRoot({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        tools: installableTools,
-        projectName: effectiveProjectName,
+        tools,
+        projectName,
+        workspaceName,
+        planningRepoPath,
+        repos,
+        cliTools,
+        enableServers,
         planningDir,
-        setupScope,
         features,
         gitConventions,
-        fileRecords,
-        strategy,
-        perFileOverrides,
-        ...(repos && repos.length > 0 ? { repos } : {}),
-      })
-      tracker.trackSuccess('scaffold:compiled-root')
+        preset,
+      } = state
 
-      await scaffoldAgentsSkillsPrompts({
-        targetDir: effectiveTargetDir,
-        libraryDir,
-        tools: installableTools,
-        agents: selections.agents,
-        skills: selections.skills,
-        prompts: selections.prompts,
-        ...(enableServers ? { enableServers } : {}),
-        fileRecords,
-        strategy,
-        perFileOverrides,
-        ...(opts.force !== undefined ? { force: opts.force } : {}),
-      })
-      tracker.trackSuccess('scaffold:agents-skills-prompts')
-
-      for (const tool of installableTools) {
-        await compileMcp({
-          canonicalDir: effectiveTargetDir,
-          toolTargetDir: effectiveTargetDir,
-          toolId: tool,
-          fileRecords,
-        })
-      }
-      tracker.trackSuccess('compile:mcp')
+      const userHomeDir = opts.homeDir ?? homedir()
+      const effectiveTargetDir =
+        setupScope === 'workspace'
+          ? (() => {
+              if (!planningRepoPath) {
+                throw Errors.invalidInput('workspace setup requires planningRepoPath')
+              }
+              return path.resolve(planningRepoPath)
+            })()
+          : resolveTargetDirForScope(setupScope, opts.targetDir, userHomeDir)
+      const effectiveProjectName = projectName || (setupScope === 'global' ? 'global' : path.basename(effectiveTargetDir))
+      const globalRef = setupScope === 'workspace' && fileExists(path.join(userHomeDir, '.ai')) ? '~/.ai/' : undefined
+      const installableTools = setupScope === 'global' ? tools.filter(isGlobalSupportedTool) : tools
+      const specsDirs = specsDirsForPreset(preset)
+      const templateIds = templatesForPreset(preset)
+      const ruleIds = rulesForPreset(preset)
 
       if (setupScope === 'workspace' && repos && repos.length > 0) {
-        // Ledgers are written in the workspace root (specs/memory/repos/), not in referenced repos
-        await scaffoldRepoLedgers({
-          planningRepoPath: effectiveTargetDir,
-          repos,
-          fileRecords,
-          strategy,
-          perFileOverrides,
-        })
-        tracker.trackSuccess('scaffold:repo-ledgers')
-      }
+        for (const repo of repos) {
+          const absPath = path.resolve(effectiveTargetDir, repo.path)
 
-      for (const [sourcePath, strategyOverride] of perFileOverrides.entries()) {
-        if (strategyOverride === 'backup-and-replace' || strategyOverride === 'align') {
-          tracker.registerBackup(sourcePath, `${sourcePath}.backup`)
+          if (!fileExists(absPath)) {
+            p.log.warn(`⚠️  Repo path not found: ${absPath} (${repo.name})`)
+            continue
+          }
+
+          if (!isDirectory(absPath)) {
+            p.log.warn(`⚠️  Path is not a directory: ${absPath} (${repo.name})`)
+            continue
+          }
+
+          try {
+            const testPath = path.join(absPath, '.ai-setup-write-test')
+            writeFile(testPath, '')
+            fs.unlinkSync(testPath)
+          } catch {
+            p.log.warn(`⚠️  No write permission: ${absPath} (${repo.name}) — AI tools may not be able to modify files`)
+          }
         }
       }
-    }
 
-    const installGlobalAdapters = async (): Promise<void> => {
-      if (setupScope !== 'global') return
-
-      const registry = new AdapterRegistry()
-      for (const tool of installableTools) {
-        const globalToolTargetDir = resolveGlobalToolTargetDir(tool, userHomeDir)
-        if (!globalToolTargetDir) continue
-
-        const adapter = registry.get(tool)
-        if (!adapter) continue
-
-        await adapter.install({
-          targetDir: globalToolTargetDir,
-          setupScope,
-          libraryDir,
-          fileRecords: [],
-          force: opts.force,
-          strategy,
-        })
-
-        await compileMcp({
-          canonicalDir: effectiveTargetDir,
-          toolTargetDir: globalToolTargetDir,
-          toolId: tool,
-          fileRecords: [],
-        })
+      if (setupScope === 'global') {
+        for (const tool of tools) {
+          if (!isGlobalSupportedTool(tool)) {
+            logUnsupportedGlobalTool(tool)
+          }
+        }
       }
-    }
 
-    if (opts.interactive) {
-      const s = p.spinner()
-      s.start('Installing files...')
-      await installFiles()
-      await installGlobalAdapters()
-      s.stop('Files installed successfully!')
-
-      // Show what was created
-      const createdCount = fileRecords.length
-      if (createdCount > 0) {
-        p.log.success(`Created ${createdCount} file${createdCount === 1 ? '' : 's'}`)
+      const selections = {
+        ...buildDefaultSelections(effectiveTargetDir),
+        templates: templateIds,
+        rules: ruleIds,
       }
-    } else {
-      await installFiles()
-      await installGlobalAdapters()
-    }
+      const fileRecords: FileRecord[] = []
 
-    const now = new Date().toISOString()
-    const storeData: StoreData = {
-      meta: {
-        schemaVersion: 1,
-        cliVersion,
-        installedAt: now,
-        lastUpdatedAt: now,
-      },
-      config: {
+      const migrationContext = {
+        sourcePath: effectiveTargetDir,
+        targetPath: effectiveTargetDir,
+        options: {
+          preview: false,
+          mergeStrategy: 'preserve' as const,
+          verbose: false,
+          skipBackup: true,
+          interactive: false,
+        },
+      }
+
+      const detections = await detectExistingSetup(migrationContext)
+      if (detections.length > 0) {
+        let shouldAbsorb = opts.absorb === true
+
+        if (!shouldAbsorb && opts.interactive) {
+          const detectionSummary = detections.map((item) => item.adapterName).join(', ')
+          const absorbAnswer = await p.confirm({
+            message: `Found existing tool setup (${detectionSummary}). Absorb into .ai/?`,
+            initialValue: true,
+          })
+
+          if (p.isCancel(absorbAnswer)) {
+            throw Errors.userCancelled()
+          }
+
+          shouldAbsorb = absorbAnswer === true
+        }
+
+        if (shouldAbsorb) {
+          const parsers = await getAllParsers(effectiveTargetDir)
+
+          for (const detection of detections) {
+            const parser = parsers.find((candidate) => candidate.id === detection.adapterId)
+            if (!parser) continue
+
+            const parsedSetup = await parser.parse(migrationContext)
+            await writeToCanonical({
+              targetDir: effectiveTargetDir,
+              parsedSetup,
+              fileRecords,
+            })
+          }
+        }
+      }
+
+      const config: WizardConfig = {
         setupScope,
-        setupType: setupScope === 'global' ? 'project' : setupScope,
+        setupType: setupScope,
         tools: installableTools,
-        ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
-        ...(enableServers && enableServers.length > 0 ? { enableServers } : {}),
         projectName: effectiveProjectName,
         ...(workspaceName ? { workspaceName } : {}),
         targetDir: effectiveTargetDir,
         ...(planningRepoPath ? { planningRepoPath } : {}),
         ...(repos && repos.length > 0 ? { repos } : {}),
         ...(globalRef ? { globalRef } : {}),
-        planningDir,
-      },
-      selections: {
-        ...selections,
-        features,
-        gitConventions,
-      },
-      files: fileRecords.map((file) => ({
-        ...file,
-        owner: file.owner ?? 'library',
-        status: 'installed',
-        installedAt: now,
-        lastCheckedAt: now,
-      })),
-      sync: {
-        lastSyncAt: now,
-        dirty: false,
-      },
-      operations: [],
-    }
+        selections,
+        interactive: opts.interactive,
+        force: opts.force,
+      }
 
-    await writeStore(effectiveTargetDir, storeData)
-    await appendOperation(effectiveTargetDir, tracker.toOperation())
-    checkGitignoreGuidance(effectiveTargetDir)
-    outroSuccess(config)
+      const plan = await computePlan(config, effectiveTargetDir, selections)
+
+      const plannedFiles = plan.map((file) => {
+        const destPath = path.join(effectiveTargetDir, file.destPath)
+
+        let srcContent = ''
+        if (!file.isNew && file.srcPath) {
+          srcContent = readFile(path.join(libraryDir, file.srcPath))
+        }
+
+        return {
+          destPath,
+          srcContent,
+        }
+      })
+
+      const phase3Opts = {
+        interactive: opts.interactive,
+        targetDir: effectiveTargetDir,
+        plannedFiles,
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
+      }
+
+      if (opts.interactive) {
+        showPhaseProgress({ current: 3, total: 4, name: 'Conflict Resolution' })
+      }
+      const { strategy, perFileOverrides } = await runPhase3(phase3Opts)
+
+      if (opts.interactive) {
+        showPhaseProgress({ current: 4, total: 4, name: 'Review & Confirm' })
+      }
+      const phase4Opts = { interactive: opts.interactive, plan, config }
+      const phase4Result = await runPhase4(phase4Opts)
+
+      if (phase4Result === GO_BACK) {
+        // Go back to Phase 2 — re-run the Phase 1-2 loop with current state
+        state = await runPhase12Loop({
+          interactive: opts.interactive,
+          prior,
+          cliOverrides: opts.cliOverrides,
+          targetDir: opts.targetDir,
+        })
+        // Loop back to recompute derived values and re-run Phase 3-4
+        continue
+      }
+
+      if (!phase4Result) return
+
+      // === Installation Phase (confirmed) ===
+
+      if (opts.dryRun) {
+        let plannedCount = 0
+        for (const file of plan) {
+          console.log(`[dry-run] Would create: ${file.destPath}`)
+          plannedCount += 1
+        }
+        console.log(`Dry run complete. Would create ${plannedCount} files.`)
+        return
+      }
+
+      const installFiles = async (): Promise<void> => {
+        await scaffoldSpecs({
+          targetDir: effectiveTargetDir,
+          setupScope,
+          libraryDir,
+          specsDirs,
+          specsAgents: specsDirs,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:specs')
+
+        await scaffoldConstitution({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          projectName: effectiveProjectName,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:constitution')
+
+        await scaffoldMcp({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+          ...(cliTools ? { cliTools } : {}),
+          ...(enableServers ? { enableServers } : {}),
+        })
+        tracker.trackSuccess('scaffold:mcp')
+
+        if (enableServers?.includes('orchestrator')) {
+          await scaffoldOrchestration({
+            targetDir: effectiveTargetDir,
+            libraryDir,
+            fileRecords,
+            strategy,
+            perFileOverrides,
+          })
+          tracker.trackSuccess('scaffold:orchestration')
+        }
+
+        await scaffoldEnvExample({
+          targetDir: effectiveTargetDir,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:env-example')
+
+        await scaffoldTemplatesRules({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          templates: selections.templates,
+          rules: selections.rules,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:templates-rules')
+
+        await scaffoldInfra({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          infra: selections.infra,
+          projectName: effectiveProjectName,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+        })
+        tracker.trackSuccess('scaffold:infra')
+
+        await scaffoldCompiledRoot({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          tools: installableTools,
+          projectName: effectiveProjectName,
+          planningDir,
+          setupScope,
+          features,
+          gitConventions,
+          fileRecords,
+          strategy,
+          perFileOverrides,
+          ...(repos && repos.length > 0 ? { repos } : {}),
+        })
+        tracker.trackSuccess('scaffold:compiled-root')
+
+        await scaffoldAgentsSkillsPrompts({
+          targetDir: effectiveTargetDir,
+          libraryDir,
+          tools: installableTools,
+          agents: selections.agents,
+          skills: selections.skills,
+          prompts: selections.prompts,
+          ...(enableServers ? { enableServers } : {}),
+          fileRecords,
+          strategy,
+          perFileOverrides,
+          ...(opts.force !== undefined ? { force: opts.force } : {}),
+        })
+        tracker.trackSuccess('scaffold:agents-skills-prompts')
+
+        for (const tool of installableTools) {
+          await compileMcp({
+            canonicalDir: effectiveTargetDir,
+            toolTargetDir: effectiveTargetDir,
+            toolId: tool,
+            fileRecords,
+          })
+        }
+        tracker.trackSuccess('compile:mcp')
+
+        if (setupScope === 'workspace' && repos && repos.length > 0) {
+          // Ledgers are written in the workspace root (specs/memory/repos/), not in referenced repos
+          await scaffoldRepoLedgers({
+            planningRepoPath: effectiveTargetDir,
+            repos,
+            fileRecords,
+            strategy,
+            perFileOverrides,
+          })
+          tracker.trackSuccess('scaffold:repo-ledgers')
+        }
+
+        for (const [sourcePath, strategyOverride] of perFileOverrides.entries()) {
+          if (strategyOverride === 'backup-and-replace' || strategyOverride === 'align') {
+            tracker.registerBackup(sourcePath, `${sourcePath}.backup`)
+          }
+        }
+      }
+
+      const installGlobalAdapters = async (): Promise<void> => {
+        if (setupScope !== 'global') return
+
+        const registry = new AdapterRegistry()
+        for (const tool of installableTools) {
+          const globalToolTargetDir = resolveGlobalToolTargetDir(tool, userHomeDir)
+          if (!globalToolTargetDir) continue
+
+          const adapter = registry.get(tool)
+          if (!adapter) continue
+
+          await adapter.install({
+            targetDir: globalToolTargetDir,
+            setupScope,
+            libraryDir,
+            fileRecords: [],
+            force: opts.force,
+            strategy,
+          })
+
+          await compileMcp({
+            canonicalDir: effectiveTargetDir,
+            toolTargetDir: globalToolTargetDir,
+            toolId: tool,
+            fileRecords: [],
+          })
+        }
+      }
+
+      if (opts.interactive) {
+        const s = p.spinner()
+        s.start('Installing files...')
+        await installFiles()
+        await installGlobalAdapters()
+        s.stop('Files installed successfully!')
+
+        // Show what was created
+        const createdCount = fileRecords.length
+        if (createdCount > 0) {
+          p.log.success(`Created ${createdCount} file${createdCount === 1 ? '' : 's'}`)
+        }
+
+        showPhaseComplete(4)
+      } else {
+        await installFiles()
+        await installGlobalAdapters()
+      }
+
+      const now = new Date().toISOString()
+      const storeData: StoreData = {
+        meta: {
+          schemaVersion: 1,
+          cliVersion,
+          installedAt: now,
+          lastUpdatedAt: now,
+        },
+        config: {
+          setupScope,
+          setupType: setupScope === 'global' ? 'project' : setupScope,
+          tools: installableTools,
+          ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
+          ...(enableServers && enableServers.length > 0 ? { enableServers } : {}),
+          projectName: effectiveProjectName,
+          ...(workspaceName ? { workspaceName } : {}),
+          targetDir: effectiveTargetDir,
+          ...(planningRepoPath ? { planningRepoPath } : {}),
+          ...(repos && repos.length > 0 ? { repos } : {}),
+          ...(globalRef ? { globalRef } : {}),
+          planningDir,
+        },
+        selections: {
+          ...selections,
+          features,
+          gitConventions,
+        },
+        files: fileRecords.map((file) => ({
+          ...file,
+          owner: file.owner ?? 'library',
+          status: 'installed',
+          installedAt: now,
+          lastCheckedAt: now,
+        })),
+        sync: {
+          lastSyncAt: now,
+          dirty: false,
+        },
+        operations: [],
+      }
+
+      await writeStore(effectiveTargetDir, storeData)
+      await appendOperation(effectiveTargetDir, tracker.toOperation())
+      checkGitignoreGuidance(effectiveTargetDir)
+      outroSuccess(config)
+
+      // Break out of the outer while(true) loop — installation complete
+      break
+    }
   } catch (error) {
     if (p.isCancel(error)) {
       throw Errors.userCancelled()

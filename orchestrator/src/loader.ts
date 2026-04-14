@@ -117,6 +117,7 @@ function loadSkills(
 
   for (const fileName of fs.readdirSync(dirPath)) {
     if (!fileName.endsWith('.md')) continue
+    if (fileName === 'AGENTS.md' || fileName === 'AGENT.md' || fileName.startsWith('_')) continue
 
     const absolutePath = path.join(dirPath, fileName)
     const raw = fs.readFileSync(absolutePath, 'utf-8')
@@ -152,6 +153,7 @@ function loadAgents(dirPath: string, source: DefinitionSource): Record<string, B
 
   for (const fileName of fs.readdirSync(dirPath)) {
     if (!fileName.endsWith('.md')) continue
+    if (fileName === 'AGENTS.md' || fileName === 'AGENT.md' || fileName.startsWith('_')) continue
 
     const absolutePath = path.join(dirPath, fileName)
     const raw = fs.readFileSync(absolutePath, 'utf-8')

@@ -135,6 +135,9 @@ export class GeminiParser extends BaseParser {
       });
 
       for (const file of agentFiles) {
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
+        
         try {
           const fullPath = path.join(context.sourcePath, file);
           const content = await fs.readFile(fullPath, 'utf-8');
@@ -169,6 +172,9 @@ export class GeminiParser extends BaseParser {
       });
 
       for (const file of skillFiles) {
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
+        
         try {
           const fullPath = path.join(context.sourcePath, file);
           const content = await fs.readFile(fullPath, 'utf-8');
@@ -201,6 +207,9 @@ export class GeminiParser extends BaseParser {
       });
 
       for (const file of templateFiles) {
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
+        
         try {
           const fullPath = path.join(context.sourcePath, file);
           const content = await fs.readFile(fullPath, 'utf-8');

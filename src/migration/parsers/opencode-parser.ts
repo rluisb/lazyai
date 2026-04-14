@@ -141,7 +141,8 @@ export class OpenCodeParser extends BaseParser {
       });
 
       for (const file of agentFiles) {
-        if (path.basename(file) === 'AGENTS.md') continue;
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
         
         try {
           const fullPath = path.join(context.sourcePath, file);
@@ -180,7 +181,8 @@ export class OpenCodeParser extends BaseParser {
       });
 
       for (const file of commandFiles) {
-        if (path.basename(file) === 'AGENTS.md') continue;
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
         
         try {
           const fullPath = path.join(context.sourcePath, file);
@@ -214,7 +216,8 @@ export class OpenCodeParser extends BaseParser {
       });
 
       for (const file of templateFiles) {
-        if (path.basename(file) === 'AGENTS.md') continue;
+        const basename = path.basename(file);
+        if (basename === 'AGENTS.md' || basename === 'AGENT.md' || basename.startsWith('_')) continue;
         
         try {
           const fullPath = path.join(context.sourcePath, file);

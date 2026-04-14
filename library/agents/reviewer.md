@@ -1,6 +1,7 @@
 ---
 name: Reviewer
 model: opus
+tools: ripgrep memoria memory
 ---
 
 # Reviewer Agent

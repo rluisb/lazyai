@@ -8,7 +8,11 @@ dist/
 .ai/
 .opencode/
 .pi/
+.agents/
 .ai-setup-backup/
+
+# git worktrees
+.worktrees/
 AGENTS.md
 INSTRUCTIONS.md
 KNOWLEDGE_MAP.md

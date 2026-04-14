@@ -10,18 +10,6 @@
         "@modelcontextprotocol/server-memory"
       ]
     },
-    "github": {
-      "type": "local",
-      "enabled": true,
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "environment": {
-        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
-      }
-    },
     "filesystem": {
       "type": "local",
       "enabled": true,
@@ -52,7 +40,7 @@
     },
     "codegraph": {
       "type": "local",
-      "enabled": true,
+      "enabled": false,
       "command": [
         "codegraph",
         "serve",
@@ -61,7 +49,7 @@
     },
     "qmd": {
       "type": "local",
-      "enabled": true,
+      "enabled": false,
       "command": [
         "qmd",
         "mcp"
@@ -69,7 +57,7 @@
     },
     "playwright": {
       "type": "local",
-      "enabled": false,
+      "enabled": true,
       "command": [
         "npx",
         "-y",
@@ -79,7 +67,7 @@
     },
     "context7": {
       "type": "remote",
-      "enabled": false,
+      "enabled": true,
       "url": "https://mcp.context7.com/mcp",
       "headers": {
         "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
@@ -87,7 +75,7 @@
     },
     "atlassian": {
       "type": "local",
-      "enabled": false,
+      "enabled": true,
       "command": [
         "npx",
         "-y",
@@ -109,11 +97,20 @@
     },
     "fetch": {
       "type": "local",
-      "enabled": false,
+      "enabled": true,
       "command": [
         "npx",
         "-y",
         "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "orchestrator": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "npx",
+        "-y",
+        "@ai-setup/orchestrator"
       ]
     }
   }

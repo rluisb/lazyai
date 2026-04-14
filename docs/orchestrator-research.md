@@ -1,5 +1,7 @@
 # Orchestrator Research — Consolidated Findings
 
+> **⚠ Scope note — research vs. shipped.** This document captures research findings and tool-surface proposals made during the R phase. Many of the tool names referenced below — `build_team`, `start_workflow`, `assign_task`, `complete_task`, `list_agents`, `list_skills` — are **not** in the shipped Phase 2 server. The actual registered tools in [`orchestrator/src/server.ts`](../orchestrator/src/server.ts) are: `list_catalog`, `compose_agent`, `start_chain`, `advance_chain`, `get_status`, `get_budget`, `retry_step`, `escalate_step`, `handoff`. This research is preserved as historical context for design decisions, not as a description of what works today.
+
 > All research conducted during R phase for the ai-setup orchestration layer.
 > This document consolidates findings from 9 research notes (Obsidian #15–#23) and the blueprint.
 

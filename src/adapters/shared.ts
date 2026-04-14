@@ -1,8 +1,20 @@
 import path from 'node:path'
-import { stripYamlFrontmatter } from '../utils/frontmatter.js'
+import { extractTools, normalizeToolsFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
 import type { AdapterContext } from './types.js'
+
+const FALLBACK_ORCHESTRATOR_TOOLS = [
+  'list_catalog',
+  'compose_agent',
+  'start_chain',
+  'advance_chain',
+  'get_status',
+  'get_budget',
+  'retry_step',
+  'escalate_step',
+  'handoff',
+] as const
 
 type SelectionKey = 'agents' | 'skills' | 'prompts'
 
@@ -267,24 +279,37 @@ function readOrchestratorAgentSource(ctx: AdapterContext): string {
     '---',
     'name: Orchestrator',
     'model: opus',
+    `tools: ${FALLBACK_ORCHESTRATOR_TOOLS.join(' ')}`,
     '---',
     '',
     '# Orchestrator Agent',
     '',
     'Use the orchestration MCP runtime to coordinate multi-agent execution.',
-    '',
-    '- start_chain',
-    '- build_team',
-    '- get_status',
   ].join('\n')
 }
 
+export function readOrchestratorTools(ctx: AdapterContext): string[] {
+  const source = readOrchestratorAgentSource(ctx)
+  const tools = extractTools(source)
+  return tools.length > 0 ? tools : [...FALLBACK_ORCHESTRATOR_TOOLS]
+}
+
+export function formatAllowedToolsSection(tools: string[]): string {
+  if (tools.length === 0) return ''
+  const lines = ['## Allowed MCP Tools', '']
+  for (const tool of tools) {
+    lines.push(`- ${tool}`)
+  }
+  return lines.join('\n')
+}
+
 export function getOrchestratorAgentContent(ctx: AdapterContext): string {
-  return readOrchestratorAgentSource(ctx)
+  return normalizeToolsFrontmatter(readOrchestratorAgentSource(ctx), 'comma')
 }
 
 export function getOrchestratorSkillContent(ctx: AdapterContext): string {
   const body = stripYamlFrontmatter(readOrchestratorAgentSource(ctx)).trim()
+  const tools = readOrchestratorTools(ctx)
 
   return [
     '---',
@@ -296,17 +321,15 @@ export function getOrchestratorSkillContent(ctx: AdapterContext): string {
     '',
     body,
     '',
-    '## MCP Runtime',
-    '',
-    'When orchestration is enabled, prefer the MCP runtime tools:',
-    '- start_chain',
-    '- build_team',
-    '- get_status',
+    formatAllowedToolsSection(tools),
     '',
   ].join('\n')
 }
 
-export function getOrchestratorPromptContent(): string {
+export function getOrchestratorPromptContent(ctx: AdapterContext): string {
+  const body = stripYamlFrontmatter(readOrchestratorAgentSource(ctx)).trim()
+  const tools = readOrchestratorTools(ctx)
+
   return [
     '---',
     'mode: agent',
@@ -314,11 +337,9 @@ export function getOrchestratorPromptContent(): string {
     '',
     '# Orchestrator Prompt',
     '',
-    'Use the orchestration MCP runtime when coordinating multi-step or multi-agent work.',
+    body,
     '',
-    '- start_chain to launch a named chain or workflow',
-    '- build_team to assemble a review or synthesis team',
-    '- get_status to inspect active orchestration state',
+    formatAllowedToolsSection(tools),
     '',
   ].join('\n')
 }

@@ -1,0 +1,40 @@
+name: Go CI
+
+on:
+  push:
+    branches: [feature/go-migration]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.24', '1.25']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Build
+        run: go build -o ai-setup .
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./... -v -count=1 -timeout 120s
+      - name: Build cross-platform
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o /dev/null .
+          GOOS=linux GOARCH=amd64 go build -o /dev/null .
+          GOOS=windows GOARCH=amd64 go build -o /dev/null .

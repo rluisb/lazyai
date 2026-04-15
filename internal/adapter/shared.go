@@ -1,0 +1,667 @@
+// Package adapter provides shared helper functions used by all tool adapters.
+// Ported from the TypeScript shared.ts utilities.
+package adapter
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"path/filepath"
+	"strings"
+
+	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
+	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/frontmatter"
+	"github.com/ricardoborges-teachable/ai-setup/internal/types"
+)
+
+// selectionSet returns a set (map[T]bool) for the given slice, or nil if the
+// slice is empty (meaning "install everything").
+func selectionSet[T ~string](items []T) map[T]bool {
+	if len(items) == 0 {
+		return nil
+	}
+	m := make(map[T]bool, len(items))
+	for _, item := range items {
+		m[item] = true
+	}
+	return m
+}
+
+// CopyWithRecord copies a file from src to dest, records it in ctx.FileRecords,
+// and handles conflict resolution. If transform is non-nil, it is applied to
+// the file content before writing.
+func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte) error {
+	relPath, err := filepath.Rel(ctx.TargetDir, dest)
+	if err != nil {
+		relPath = dest
+	}
+
+	effectiveStrategy := ctx.Strategy
+	if override, ok := ctx.PerFileOverrides[dest]; ok {
+		effectiveStrategy = override
+	}
+
+	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
+		Force:    ctx.Force,
+		Strategy: effectiveStrategy,
+	})
+	if err != nil {
+		return err
+	}
+
+	if action == conflict.ActionSkip {
+		if warnOnSkip {
+			log.Printf("Skipping existing file: %s", relPath)
+		}
+		return nil
+	}
+
+	// Backup if replacing
+	if action == conflict.ActionReplace && files.FileExists(dest) {
+		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
+			return fmt.Errorf("backup %s: %w", dest, err)
+		}
+	}
+
+	if ctx.DryRun {
+		log.Printf("[dry-run] Would create: %s", relPath)
+		source, _ := filepath.Rel(ctx.LibraryDir, src)
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path:   relPath,
+			Hash:   "dry-run",
+			Source: source,
+			Owner:  types.FileOwnerLibrary,
+		})
+		return nil
+	}
+
+	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
+		return err
+	}
+
+	var content []byte
+	if transform != nil {
+		data, err := files.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		content = transform(data)
+		if err := files.WriteFile(dest, content, 0o644); err != nil {
+			return err
+		}
+	} else {
+		if err := files.CopyFile(src, dest); err != nil {
+			return err
+		}
+	}
+
+	hash, _ := files.FileHash(dest)
+	source, _ := filepath.Rel(ctx.LibraryDir, src)
+	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+		Path:   relPath,
+		Hash:   hash,
+		Source: source,
+		Owner:  types.FileOwnerLibrary,
+	})
+	return nil
+}
+
+// WriteContentWithRecord writes content to dest and records it in ctx.FileRecords.
+func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, source string, warnOnSkip bool) error {
+	relPath, err := filepath.Rel(ctx.TargetDir, dest)
+	if err != nil {
+		relPath = dest
+	}
+
+	effectiveStrategy := ctx.Strategy
+	if override, ok := ctx.PerFileOverrides[dest]; ok {
+		effectiveStrategy = override
+	}
+
+	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
+		Force:    ctx.Force,
+		Strategy: effectiveStrategy,
+	})
+	if err != nil {
+		return err
+	}
+
+	if action == conflict.ActionSkip {
+		if warnOnSkip {
+			log.Printf("Skipping existing file: %s", relPath)
+		}
+		return nil
+	}
+
+	if action == conflict.ActionReplace && files.FileExists(dest) {
+		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
+			return fmt.Errorf("backup %s: %w", dest, err)
+		}
+	}
+
+	if ctx.DryRun {
+		log.Printf("[dry-run] Would create: %s", relPath)
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path:   relPath,
+			Hash:   "dry-run",
+			Source: source,
+			Owner:  types.FileOwnerLibrary,
+		})
+		return nil
+	}
+
+	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
+		return err
+	}
+	if err := files.WriteFile(dest, content, 0o644); err != nil {
+		return err
+	}
+
+	hash, _ := files.FileHash(dest)
+	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+		Path:   relPath,
+		Hash:   hash,
+		Source: source,
+		Owner:  types.FileOwnerLibrary,
+	})
+	return nil
+}
+
+// CopyLibraryDirectoryOption holds options for CopyLibraryDirectory.
+type CopyLibraryDirectoryOption struct {
+	Ctx          *AdapterContext
+	SourceSubdir string // subdirectory under LibraryDir (e.g. "agents", "skills")
+	SelectionKey string // "agents", "skills", or "prompts"
+	ToDestPath   func(file string) string
+	WarnOnSkip   bool
+	Transform    func(content []byte) []byte
+	IncludeFile  func(file string) bool
+}
+
+// CopyLibraryDirectory copies all files from the library subdirectory,
+// applying selection filtering and conflict resolution.
+func CopyLibraryDirectory(opts CopyLibraryDirectoryOption) error {
+	sourceDir := filepath.Join(opts.Ctx.LibraryDir, opts.SourceSubdir)
+	if !files.DirExists(sourceDir) {
+		return nil // directory doesn't exist, nothing to copy
+	}
+
+	// Build selection set based on the selection key.
+	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
+	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
+	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
+
+	for _, file := range files.ListDir(sourceDir) {
+		if opts.IncludeFile != nil && !opts.IncludeFile(file) {
+			continue
+		}
+
+		srcPath := filepath.Join(sourceDir, file)
+		if files.IsDirectory(srcPath) {
+			continue
+		}
+
+		// Extract file ID (filename without extension) for selection filtering.
+		fileID := strings.TrimSuffix(file, filepath.Ext(file))
+		switch opts.SelectionKey {
+		case "agents":
+			if selectedAgents != nil && !selectedAgents[types.AgentId(fileID)] {
+				continue
+			}
+		case "skills":
+			if selectedSkills != nil && !selectedSkills[types.SkillId(fileID)] {
+				continue
+			}
+		case "prompts":
+			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileID)] {
+				continue
+			}
+		}
+
+		dest := opts.ToDestPath(file)
+		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InstallToolContextFilesOption holds options for InstallToolContextFiles.
+type InstallToolContextFilesOption struct {
+	Ctx              *AdapterContext
+	ToolDir          string
+	ContextFileName  string
+	AgentsDestDir    string
+	SkillsDestDir    string
+	TemplatesDestDir string
+	WarnOnSkip       bool
+}
+
+// InstallToolContextFiles copies the tool-agents context files (agents-dir.md,
+// skills-dir.md, root-dir.md) into the appropriate directories.
+func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
+	toolAgentsDir := filepath.Join(opts.Ctx.LibraryDir, "tool-agents")
+
+	// agents directory context file
+	if err := CopyWithRecord(
+		filepath.Join(toolAgentsDir, "agents-dir.md"),
+		filepath.Join(opts.ToolDir, opts.AgentsDestDir, opts.ContextFileName),
+		opts.Ctx, opts.WarnOnSkip, nil,
+	); err != nil {
+		return err
+	}
+
+	// skills directory context file
+	if opts.SkillsDestDir != "" {
+		if err := CopyWithRecord(
+			filepath.Join(toolAgentsDir, "skills-dir.md"),
+			filepath.Join(opts.ToolDir, opts.SkillsDestDir, opts.ContextFileName),
+			opts.Ctx, opts.WarnOnSkip, nil,
+		); err != nil {
+			return err
+		}
+	}
+
+	// templates directory context file
+	if opts.TemplatesDestDir != "" {
+		if err := CopyWithRecord(
+			filepath.Join(toolAgentsDir, "templates-dir.md"),
+			filepath.Join(opts.ToolDir, opts.TemplatesDestDir, opts.ContextFileName),
+			opts.Ctx, opts.WarnOnSkip, nil,
+		); err != nil {
+			return err
+		}
+	}
+
+	// root directory context file
+	return CopyWithRecord(
+		filepath.Join(toolAgentsDir, "root-dir.md"),
+		filepath.Join(opts.ToolDir, opts.ContextFileName),
+		opts.Ctx, opts.WarnOnSkip, nil,
+	)
+}
+
+// InstallRootTemplateIfMissing installs a root template file if it hasn't
+// already been created during this installation session.
+func InstallRootTemplateIfMissing(ctx *AdapterContext, recordPath, destPath, templateSource string) error {
+	// Check if already created in this session.
+	for _, r := range ctx.FileRecords {
+		if r.Path == recordPath {
+			return nil
+		}
+	}
+
+	templatePath := filepath.Join(ctx.LibraryDir, templateSource)
+	if !files.FileExists(templatePath) {
+		return nil
+	}
+
+	effectiveStrategy := ctx.Strategy
+	if override, ok := ctx.PerFileOverrides[destPath]; ok {
+		effectiveStrategy = override
+	}
+
+	action, err := conflict.ResolveConflictWithOptions(destPath, recordPath, conflict.ConflictOptions{
+		Force:    ctx.Force,
+		Strategy: effectiveStrategy,
+	})
+	if err != nil {
+		return err
+	}
+	if action == conflict.ActionSkip {
+		return nil
+	}
+
+	if action == conflict.ActionReplace && files.FileExists(destPath) {
+		if _, err := files.BackupFile(destPath, ctx.TargetDir); err != nil {
+			return err
+		}
+	}
+
+	data, err := files.ReadFile(templatePath)
+	if err != nil {
+		return err
+	}
+	if err := files.WriteFile(destPath, data, 0o644); err != nil {
+		return err
+	}
+
+	hash, _ := files.FileHash(destPath)
+	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+		Path:   recordPath,
+		Hash:   hash,
+		Source: templateSource,
+		Owner:  types.FileOwnerLibrary,
+	})
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator helpers
+// ---------------------------------------------------------------------------
+
+// Fallback orchestrator tool names when the agent source file is unavailable.
+var fallbackOrchestratorTools = []string{
+	"list_catalog",
+	"compose_agent",
+	"start_chain",
+	"advance_chain",
+	"get_status",
+	"get_budget",
+	"retry_step",
+	"escalate_step",
+	"handoff",
+}
+
+// IsOrchestratorEnabled reports whether the orchestrator MCP server is enabled.
+func IsOrchestratorEnabled(ctx *AdapterContext) bool {
+	for _, s := range ctx.EnableServers {
+		if s == "orchestrator" {
+			return true
+		}
+	}
+	return false
+}
+
+// readOrchestratorAgentSource reads the orchestrator agent source file,
+// falling back to a hardcoded default if the file is missing.
+func readOrchestratorAgentSource(ctx *AdapterContext) string {
+	sourcePath := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
+	if files.FileExists(sourcePath) {
+		data, err := files.ReadFile(sourcePath)
+		if err == nil {
+			return string(data)
+		}
+	}
+
+	// Fallback
+	lines := []string{
+		"---",
+		"name: Orchestrator",
+		"model: opus",
+		fmt.Sprintf("tools: %s", strings.Join(fallbackOrchestratorTools, " ")),
+		"---",
+		"",
+		"# Orchestrator Agent",
+		"",
+		"Use the orchestration MCP runtime to coordinate multi-agent execution.",
+	}
+	return strings.Join(lines, "\n")
+}
+
+// ExtractTools parses the tools list from YAML frontmatter in content.
+func ExtractTools(content string) []string {
+	fm, _, err := frontmatter.ExtractFrontmatter([]byte(content))
+	if err != nil || fm == nil {
+		return nil
+	}
+	toolsVal, ok := fm["tools"]
+	if !ok {
+		return nil
+	}
+
+	switch v := toolsVal.(type) {
+	case string:
+		parts := strings.Fields(v)
+		var result []string
+		for _, p := range parts {
+			p = strings.TrimRight(p, ",")
+			if p != "" {
+				result = append(result, p)
+			}
+		}
+		return result
+	case []any:
+		var result []string
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				result = append(result, s)
+			}
+		}
+		return result
+	}
+	return nil
+}
+
+// ReadOrchestratorTools returns the tools list from the orchestrator agent.
+func ReadOrchestratorTools(ctx *AdapterContext) []string {
+	source := readOrchestratorAgentSource(ctx)
+	tools := ExtractTools(source)
+	if len(tools) > 0 {
+		return tools
+	}
+	result := make([]string, len(fallbackOrchestratorTools))
+	copy(result, fallbackOrchestratorTools)
+	return result
+}
+
+// StripFrontmatterAndInjectModel strips YAML frontmatter and injects the model
+// and tools as HTML comments at the top of the content (for OpenCode format).
+func StripFrontmatterAndInjectModel(content []byte) []byte {
+	str := string(content)
+	_, body := frontmatter.SplitYamlFrontmatter(str)
+	fm, fmBody, _ := frontmatter.ExtractFrontmatter(content)
+
+	var comments []string
+	if fm != nil {
+		if model, ok := fm["model"].(string); ok && model != "" {
+			comments = append(comments, fmt.Sprintf("<!-- Recommended model: %s -->", model))
+		}
+		tools := ExtractTools(string(fmBody))
+		if len(tools) > 0 {
+			comments = append(comments, fmt.Sprintf("<!-- allowed-tools: %s -->", strings.Join(tools, ", ")))
+		}
+	}
+
+	bodyStr := strings.TrimLeft(body, "\n")
+	if len(comments) == 0 {
+		return []byte(bodyStr)
+	}
+	return []byte(strings.Join(comments, "\n") + "\n\n" + bodyStr)
+}
+
+// NormalizeToolsFrontmatter rewrites the tools line in frontmatter to use the
+// given delimiter format.
+func NormalizeToolsFrontmatter(content string, delimiter string) string {
+	fmBody, body := frontmatter.SplitYamlFrontmatter(content)
+	if fmBody == "" {
+		return content
+	}
+
+	tools := parseToolsFromFrontmatterBody(fmBody)
+	if len(tools) == 0 {
+		return content
+	}
+
+	var joined string
+	switch delimiter {
+	case "comma":
+		joined = strings.Join(tools, ", ")
+	default:
+		joined = strings.Join(tools, " ")
+	}
+
+	rebuilt := rewriteToolsLine(fmBody, joined)
+	bodyStr := body
+	if !strings.HasPrefix(bodyStr, "\n") {
+		bodyStr = "\n" + bodyStr
+	}
+	return "---\n" + rebuilt + "\n---\n" + bodyStr
+}
+
+// EnsureModeAgentFrontmatter ensures the content has mode: agent in its frontmatter.
+func EnsureModeAgentFrontmatter(content string) string {
+	fmBody, body := frontmatter.SplitYamlFrontmatter(content)
+	if fmBody == "" {
+		return "---\nmode: agent\n---\n\n" + content
+	}
+
+	lines := strings.Split(fmBody, "\n")
+	replaced := false
+	for i, line := range lines {
+		if strings.HasPrefix(line, "mode:") {
+			lines[i] = "mode: agent"
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		lines = append(lines, "mode: agent")
+	}
+
+	bodyStr := body
+	if !strings.HasPrefix(bodyStr, "\n") {
+		bodyStr = "\n" + bodyStr
+	}
+	return "---\n" + strings.Join(lines, "\n") + "\n---\n" + bodyStr
+}
+
+// GetOrchestratorAgentContent returns the orchestrator agent content with
+// comma-delimited tools in the frontmatter.
+func GetOrchestratorAgentContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	return []byte(NormalizeToolsFrontmatter(source, "comma"))
+}
+
+// GetOrchestratorSkillContent returns the orchestrator as a skill file.
+func GetOrchestratorSkillContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	_, body := frontmatter.SplitYamlFrontmatter(source)
+	tools := ReadOrchestratorTools(ctx)
+
+	lines := []string{
+		"---",
+		"name: orchestrator",
+		"description: Orchestration MCP runtime guidance",
+		"---",
+		"",
+		"# Orchestrator Skill",
+		"",
+		strings.TrimSpace(body),
+		"",
+		formatAllowedToolsSection(tools),
+		"",
+	}
+	return []byte(strings.Join(lines, "\n"))
+}
+
+// GetOrchestratorPromptContent returns the orchestrator as a prompt file.
+func GetOrchestratorPromptContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	_, body := frontmatter.SplitYamlFrontmatter(source)
+	tools := ReadOrchestratorTools(ctx)
+
+	lines := []string{
+		"---",
+		"mode: agent",
+		"---",
+		"",
+		"# Orchestrator Prompt",
+		"",
+		strings.TrimSpace(body),
+		"",
+		formatAllowedToolsSection(tools),
+		"",
+	}
+	return []byte(strings.Join(lines, "\n"))
+}
+
+func formatAllowedToolsSection(tools []string) string {
+	if len(tools) == 0 {
+		return ""
+	}
+	lines := []string{"## Allowed MCP Tools", ""}
+	for _, tool := range tools {
+		lines = append(lines, "- "+tool)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// parseToolsFromFrontmatterBody extracts tool names from a YAML frontmatter body.
+func parseToolsFromFrontmatterBody(body string) []string {
+	lines := strings.Split(body, "\n")
+	toolsLineIdx := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, "tools:") {
+			toolsLineIdx = i
+			break
+		}
+	}
+	if toolsLineIdx == -1 {
+		return nil
+	}
+
+	afterColon := strings.TrimSpace(strings.TrimPrefix(lines[toolsLineIdx], "tools:"))
+	if afterColon != "" {
+		return splitToolList(afterColon)
+	}
+
+	// Parse YAML list items (- item)
+	var result []string
+	for i := toolsLineIdx + 1; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "- ") {
+			break
+		}
+		item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
+		if item != "" {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func splitToolList(value string) []string {
+	var result []string
+	for _, part := range strings.FieldsFunc(value, func(r rune) bool {
+		return r == ' ' || r == ',' || r == '\t'
+	}) {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
+}
+
+func rewriteToolsLine(frontmatterBody, joined string) string {
+	lines := strings.Split(frontmatterBody, "\n")
+	toolsLineIdx := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, "tools:") {
+			toolsLineIdx = i
+			break
+		}
+	}
+	if toolsLineIdx == -1 {
+		return frontmatterBody
+	}
+
+	var result []string
+	result = append(result, lines[:toolsLineIdx]...)
+	result = append(result, "tools: "+joined)
+
+	// Skip YAML list items after tools:
+	i := toolsLineIdx + 1
+	for i < len(lines) {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "- ") {
+			i++
+			continue
+		}
+		break
+	}
+	result = append(result, lines[i:]...)
+	return strings.Join(result, "\n")
+}
+
+// WriteJSONFile writes a JSON-marshaled struct to a file with indentation.
+func WriteJSONFile(path string, data any) error {
+	content, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	content = append(content, '\n')
+	return files.WriteFile(path, content, 0o644)
+}

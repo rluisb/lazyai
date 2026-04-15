@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
 )
@@ -116,9 +118,80 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	if len(config.CLITools) == 0 {
 		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
 	}
+	if config.CLIName == "" {
+		// Default project name to directory name.
+		dir, _ := os.Getwd()
+		if dir != "" {
+			config.CLIName = filepath.Base(dir)
+		} else {
+			config.CLIName = "my-project"
+		}
+	}
 
-	// Run the wizard in non-interactive mode — it will use defaults from config.
-	result, err := wizard.RunWizard(config)
+	// Determine preset.
+	presetLevel := config.CLIPreset
+	if presetLevel == "" {
+		presetLevel = types.PresetLevelStandard
+	}
+
+	// Create Phase1 result from CLI flags.
+	phase1 := &wizard.Phase1Result{
+		Scope:       config.CLIScope,
+		Tools:       config.CLITools,
+		ProjectName: config.CLIName,
+	}
+
+	// Create Phase2 result from preset + features.
+	features := types.DefaultFeatureFlags()
+	resolved := preset.ResolvePreset(presetLevel)
+	if resolved != nil {
+		features = *resolved
+	}
+	// Apply CLI feature overrides.
+	for _, f := range config.CLIFeatures {
+		switch f {
+		case "contextEngineering":
+			features.ContextEngineering = true
+		case "rpiWorkflow":
+			features.RPIWorkflow = true
+		case "chainOfThought":
+			features.ChainOfThought = true
+		case "treeOfThoughts":
+			features.TreeOfThoughts = true
+		case "adrEnforcement":
+			features.ADREnforcement = true
+		case "qualityGates":
+			features.QualityGates = true
+		case "agentHarness":
+			features.AgentHarness = true
+		case "bugResolution":
+			features.BugResolution = true
+		case "pivotHandling":
+			features.PivotHandling = true
+		}
+	}
+	gitConvs := types.DefaultGitConventions()
+	if config.CLIBranch != "" {
+		gitConvs.BranchPattern = config.CLIBranch
+	}
+	if config.CLICommit != "" {
+		gitConvs.CommitPattern = config.CLICommit
+	}
+
+	phase2 := &wizard.Phase2Result{
+		Preset:   presetLevel,
+		Features: &features,
+		GitConv:  &gitConvs,
+	}
+
+	// Build WizardResult with pre-computed phases.
+	wizardDefaults := &wizard.WizardResult{
+		Phase1: phase1,
+		Phase2: phase2,
+	}
+
+	// Run the wizard in non-interactive mode — it will use the defaults we provided.
+	result, err := wizard.RunWizardWithDefaults(config, wizardDefaults)
 	if err != nil {
 		return fmt.Errorf("non-interactive setup failed: %w", err)
 	}

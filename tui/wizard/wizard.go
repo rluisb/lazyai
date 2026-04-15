@@ -68,10 +68,27 @@ type WizardResult struct {
 // Returns the final WizardResult or an error if the wizard is cancelled
 // or fails.
 func RunWizard(config *WizardConfig) (*WizardResult, error) {
+	return RunWizardWithDefaults(config, nil)
+}
+
+// RunWizardWithDefaults executes the full 4-phase wizard with optional pre-filled defaults.
+//
+// The defaults are used when re-running phases (e.g., when the user goes back).
+// If defaults are nil, no pre-filling occurs.
+func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*WizardResult, error) {
 	result := &WizardResult{}
 
+	// Seed result from defaults.
+	var phase2Defaults *Phase2Result
+	if defaults != nil {
+		if defaults.Phase1 != nil {
+			result.Phase1 = defaults.Phase1
+		}
+		phase2Defaults = defaults.Phase2
+	}
+
 	// Run the Phase 1-2 loop. Returns when both phases are complete.
-	result, err := runPhase12Loop(config, result, nil)
+	result, err := runPhase12Loop(config, result, phase2Defaults)
 	if err != nil {
 		return nil, err
 	}

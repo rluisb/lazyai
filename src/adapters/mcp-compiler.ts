@@ -1,6 +1,7 @@
 import path from 'node:path'
 import type { FileRecord, ToolId } from '../types.js'
 import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
+import { stripJsonComments } from '../utils/jsonc.js'
 
 interface McpServer {
   description?: string
@@ -153,8 +154,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       if (fileExists(configPath)) {
         try {
           const raw = readFile(configPath)
-          const stripped = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
-          existingConfig = JSON.parse(stripped) as Record<string, unknown>
+          existingConfig = JSON.parse(stripJsonComments(raw)) as Record<string, unknown>
         } catch {
           // If parse fails, start fresh
         }

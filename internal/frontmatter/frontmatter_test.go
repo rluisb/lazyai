@@ -121,3 +121,29 @@ func TestSplitYamlFrontmatter_NoFrontmatter(t *testing.T) {
 		t.Errorf("body = %q, want %q", body, content)
 	}
 }
+
+func TestExtractSchemaVersion(t *testing.T) {
+	t.Parallel()
+
+	version, err := ExtractSchemaVersion([]byte("---\nschema_version: 1\nartifact_type: spec_plan\n---\nbody\n"))
+	if err != nil {
+		t.Fatalf("ExtractSchemaVersion: %v", err)
+	}
+	if version != 1 {
+		t.Fatalf("schema version = %d, want 1", version)
+	}
+}
+
+func TestHasSpec006Metadata(t *testing.T) {
+	t.Parallel()
+
+	withMetadata := []byte("---\nschema_version: 1\nartifact_type: spec_plan\n---\nbody\n")
+	withoutMetadata := []byte("---\ntitle: Test\n---\nbody\n")
+
+	if !HasSpec006Metadata(withMetadata) {
+		t.Fatal("expected HasSpec006Metadata to return true")
+	}
+	if HasSpec006Metadata(withoutMetadata) {
+		t.Fatal("expected HasSpec006Metadata to return false")
+	}
+}

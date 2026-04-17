@@ -4,6 +4,43 @@ import (
 	"testing"
 )
 
+func TestValidateSpec006Metadata(t *testing.T) {
+	t.Parallel()
+
+	valid := map[string]any{
+		"schema_version":        1,
+		"artifact_type":         "spec_plan",
+		"id":                    "spec-006-plan",
+		"title":                 "Spec 006 Plan",
+		"created_at":            "2026-04-17T10:00:00Z",
+		"updated_at":            "2026-04-17T10:05:00Z",
+		"created_by":            "planner",
+		"updated_by":            "planner",
+		"workflow_id":           "rpi",
+		"workflow_run_id":       "run-1",
+		"related_document_refs": []any{"specs/006/plan.md"},
+	}
+
+	if issues := ValidateSpec006Metadata(valid); len(issues) != 0 {
+		t.Fatalf("expected no issues, got %v", issues)
+	}
+
+	invalid := map[string]any{
+		"schema_version":        1,
+		"created_at":            "bad-date",
+		"updated_at":            "2026-04-16T10:00:00Z",
+		"created_by":            "planner",
+		"updated_by":            "planner",
+		"workflow_run_id":       "run-1",
+		"related_document_refs": []any{"/absolute/path.md"},
+	}
+
+	issues := ValidateSpec006Metadata(invalid)
+	if len(issues) < 4 {
+		t.Fatalf("expected multiple issues, got %v", issues)
+	}
+}
+
 func TestValidateArtifactName_AcceptsValidNames(t *testing.T) {
 	t.Parallel()
 

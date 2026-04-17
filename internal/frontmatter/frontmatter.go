@@ -3,6 +3,7 @@
 package frontmatter
 
 import (
+	"fmt"
 	"regexp"
 
 	"gopkg.in/yaml.v3"
@@ -88,4 +89,38 @@ func ParseYamlFrontmatter(content string) (map[string]any, string, error) {
 	}
 
 	return fm, body, nil
+}
+
+// ExtractSchemaVersion returns the schema_version from YAML frontmatter when present.
+func ExtractSchemaVersion(content []byte) (int, error) {
+	fm, _, err := ExtractFrontmatter(content)
+	if err != nil {
+		return 0, err
+	}
+	value, ok := fm["schema_version"]
+	if !ok {
+		return 0, fmt.Errorf("schema_version not found")
+	}
+
+	switch typed := value.(type) {
+	case int:
+		return typed, nil
+	case int64:
+		return int(typed), nil
+	case float64:
+		return int(typed), nil
+	default:
+		return 0, fmt.Errorf("schema_version must be numeric")
+	}
+}
+
+// HasSpec006Metadata reports whether the content contains Spec 006 metadata markers.
+func HasSpec006Metadata(content []byte) bool {
+	fm, _, err := ExtractFrontmatter(content)
+	if err != nil {
+		return false
+	}
+	_, hasSchemaVersion := fm["schema_version"]
+	_, hasArtifactType := fm["artifact_type"]
+	return hasSchemaVersion || hasArtifactType
 }

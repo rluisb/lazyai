@@ -1,6 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { ChainState, ExecutionPlan, HandoffDocument, TeamState, WorkflowState } from './types.js'
+import type {
+  ChainState,
+  ExecutionPlan,
+  HandoffDocument,
+  MaintenanceContractRecord,
+  SyncStateSnapshot,
+  TeamState,
+  WorkflowState,
+} from './types.js'
 
 export function ensureStateDir(projectRoot: string): string {
   const stateRoot = getStateRoot(projectRoot)
@@ -39,6 +47,40 @@ export function getHandoffPath(projectRoot: string, handoffId: string): string {
 export function getErrorJournalPath(projectRoot: string): string {
   return path.join(getStateRoot(projectRoot), 'error-journal.jsonl')
 }
+
+export function getHousekeepingRoot(projectRoot: string): string {
+  return path.join(projectRoot, '.ai', 'housekeeping')
+}
+
+export function getSyncStatePath(projectRoot: string): string {
+  return path.join(getHousekeepingRoot(projectRoot), 'sync-state.json')
+}
+
+export function getContractsRoot(projectRoot: string): string {
+  return path.join(getHousekeepingRoot(projectRoot), 'contracts')
+}
+
+export function readSyncState(projectRoot: string): SyncStateSnapshot | null {
+  const filePath = getSyncStatePath(projectRoot)
+  if (!fs.existsSync(filePath)) return null
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as SyncStateSnapshot
+}
+
+export function writeSyncState(projectRoot: string, state: SyncStateSnapshot): void {
+  fs.mkdirSync(getHousekeepingRoot(projectRoot), { recursive: true })
+  fs.writeFileSync(getSyncStatePath(projectRoot), JSON.stringify(state, null, 2), 'utf-8')
+}
+
+export function readMaintenanceContracts(projectRoot: string, now = new Date().toISOString()): MaintenanceContractRecord[] {
+  const contractsRoot = getContractsRoot(projectRoot)
+  if (!fs.existsSync(contractsRoot)) return []
+
+  return fs
+    .readdirSync(contractsRoot)
+    .filter((entry) => entry.endsWith('.json'))
+    .map((entry) => JSON.parse(fs.readFileSync(path.join(contractsRoot, entry), 'utf-8')) as MaintenanceContractRecord)
+    .filter((contract) => !contract.approvalExpiresAt || contract.approvalExpiresAt >= now)
+ }
 
 export function saveChainState(projectRoot: string, state: ChainState): void {
   ensureStateDir(projectRoot)

@@ -5,10 +5,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   loadTeamState,
   loadWorkflowState,
+  readMaintenanceContracts,
+  readSyncState,
   saveTeamState,
   saveWorkflowState,
+  writeSyncState,
 } from '../persistence.js'
-import type { TeamState, WorkflowState } from '../types.js'
+import type { SyncStateSnapshot, TeamState, WorkflowState } from '../types.js'
 
 const tempDirs: string[] = []
 
@@ -85,5 +88,43 @@ describe('persistence', () => {
 
     expect(loadTeamState(projectRoot, 'team-1')).toEqual(teamState)
     expect(loadWorkflowState(projectRoot, 'workflow-1')).toEqual(workflowState)
+  })
+
+  it('persists sync state and filters expired maintenance contracts', () => {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orchestrator-persistence-housekeeping-'))
+    tempDirs.push(projectRoot)
+
+    const syncState: SyncStateSnapshot = {
+      schemaVersion: 1,
+      updatedAt: '2026-04-17T00:00:00Z',
+      qmd: { enabled: true, driftStatus: 'fresh' },
+      codegraph: { enabled: false, driftStatus: 'disabled' },
+      staleAcked: { qmd: [], codegraph: [] },
+      repairProposals: [],
+    }
+
+    writeSyncState(projectRoot, syncState)
+    fs.mkdirSync(path.join(projectRoot, '.ai', 'housekeeping', 'contracts'), { recursive: true })
+    fs.writeFileSync(
+      path.join(projectRoot, '.ai', 'housekeeping', 'contracts', 'active.json'),
+      JSON.stringify({
+        id: 'active',
+        approvalScope: 'task_scoped',
+        permittedActions: ['memory_write'],
+        approvalExpiresAt: '2026-05-01T00:00:00Z',
+      }),
+    )
+    fs.writeFileSync(
+      path.join(projectRoot, '.ai', 'housekeeping', 'contracts', 'expired.json'),
+      JSON.stringify({
+        id: 'expired',
+        approvalScope: 'standing',
+        permittedActions: ['memory_write'],
+        approvalExpiresAt: '2026-04-01T00:00:00Z',
+      }),
+    )
+
+    expect(readSyncState(projectRoot)).toEqual(syncState)
+    expect(readMaintenanceContracts(projectRoot, '2026-04-17T00:00:00Z').map((contract) => contract.id)).toEqual(['active'])
   })
 })

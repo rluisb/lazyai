@@ -5,6 +5,8 @@
 package scaffold
 
 import (
+	"io/fs"
+
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -26,6 +28,8 @@ type ScaffoldContext struct {
 	PlanningDir string
 	// SetupScope is the installation scope.
 	SetupScope types.SetupScope
+	// HomeDir is the user's home directory for global scope resolution.
+	HomeDir string
 	// Features controls which features are compiled into root files.
 	Features *types.FeatureFlags
 	// GitConventions defines branch and commit conventions.
@@ -52,12 +56,14 @@ type ScaffoldContext struct {
 	Infra []types.InfraId
 	// SpecsDirs lists specs subdirectories to create.
 	SpecsDirs []string
-	// SpecsAgents lists specs directories that should get an AGENTS.md.
-	SpecsAgents []string
+	// Housekeeping config controls optional memory/bootstrap scaffolding.
+	Housekeeping *types.HousekeepingConfig
 	// Repos lists workspace repos for workspace scope.
 	Repos []types.RepoInfo
 	// PlanningRepoPath is the path to the planning repo (for workspace scope).
 	PlanningRepoPath string
+	// LibraryFS is the filesystem for reading library data (embedded or disk).
+	LibraryFS fs.FS
 	// Optional context overrides for compiled root.
 	PrimaryLanguage     string
 	Framework           string

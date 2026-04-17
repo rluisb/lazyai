@@ -1,4 +1,4 @@
-// Package wizard provides the interactive 4-phase setup wizard for ai-setup,
+// Package wizard provides the interactive 5-phase setup wizard for ai-setup,
 // built on top of the Charm Bracelet TUI stack (bubbletea, lipgloss, huh).
 package wizard
 
@@ -40,24 +40,34 @@ type WizardConfig struct {
 	TargetDir string
 
 	// CLI overrides (populated from flags).
-	CLIScope    types.SetupScope
-	CLITools    []types.ToolId
-	CLIName     string
-	CLIPreset   types.PresetLevel
-	CLIFeatures []string
-	CLIBranch   string
-	CLICommit   string
+	CLIScope             types.SetupScope
+	CLITools             []types.ToolId
+	CLIName              string
+	CLIPreset            types.PresetLevel
+	CLIFeatures          []string
+	CLIBranch            string
+	CLICommit            string
+	CLICliTools          []string
+	CLIEnableServers     []string
+	CLIMemoryPath        string
+	CLIEnableObsidian    bool
+	CLIObsidianVaultPath string
+	CLIEnableQmd         bool
+	CLIQmdIndexPath      string
+	CLIEnableCodegraph   bool
+	CLICodegraphDataPath string
 }
 
-// WizardResult aggregates the results from all four phases.
+// WizardResult aggregates the results from all five phases.
 type WizardResult struct {
 	Phase1 *Phase1Result
 	Phase2 *Phase2Result
 	Phase3 *Phase3Result
 	Phase4 *Phase4Result
+	Phase5 *Phase5Result
 }
 
-// RunWizard executes the full 4-phase wizard.
+// RunWizard executes the full 5-phase wizard.
 //
 // It runs phases in sequence with back-navigation support:
 //   - Phase 1 → if back, re-run Phase 1
@@ -93,7 +103,7 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 		return nil, err
 	}
 
-	// --- Phases 3-4 with outer loop for back navigation ---
+	// --- Phases 3-5 with outer loop for back navigation ---
 	for {
 		// Compute the install plan from Phase 1+2 results.
 		plan, err := ComputePlan(config)
@@ -127,6 +137,25 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 			result.Phase3 = &Phase3Result{
 				Strategy: types.ConflictStrategySkip,
 			}
+		}
+
+		phase5, action, err := RunPhase5(result.Phase5, !config.Interactive)
+		if err != nil {
+			return nil, err
+		}
+		if action == PhaseCancel {
+			return nil, ErrUserCancelled
+		}
+		result.Phase5 = phase5
+		if action == PhaseBack {
+			if len(conflicts) > 0 {
+				continue
+			}
+			result, err = runPhase12Loop(config, result, result.Phase2)
+			if err != nil {
+				return nil, err
+			}
+			continue
 		}
 
 		// Phase 4: confirm

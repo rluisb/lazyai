@@ -19,41 +19,49 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	fileRecords := &result.Files
+	libFS := ctx.LibraryFS
+	if libFS == nil {
+		return nil, fmt.Errorf("scaffold context has no LibraryFS — call library.GetLibraryFS() to set it")
+	}
 
 	// Step 1: Constitution files.
-	if err := ScaffoldConstitution(ctx.TargetDir, ctx.LibraryDir, ctx.ProjectName, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldConstitution(ctx.TargetDir, libFS, ctx.ProjectName, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("constitution: %w", err))
 	}
 
 	// Step 2: MCP configuration.
-	if err := ScaffoldMcp(ctx.TargetDir, ctx.LibraryDir, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldMcp(ctx.TargetDir, libFS, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("mcp: %w", err))
 	}
 
 	// Step 3: Orchestration definitions.
-	if err := ScaffoldOrchestration(ctx.TargetDir, ctx.LibraryDir, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldOrchestration(ctx.TargetDir, libFS, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("orchestration: %w", err))
 	}
 
 	// Step 4: Specs directory structure.
-	if err := ScaffoldSpecs(ctx.TargetDir, ctx.SetupScope, ctx.LibraryDir, ctx.SpecsDirs, ctx.SpecsAgents, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldSpecs(ctx.TargetDir, ctx.SetupScope, libFS, ctx.SpecsDirs, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("specs: %w", err))
 	}
 
+	if err := ScaffoldHousekeeping(ctx.TargetDir, ctx.Housekeeping); err != nil {
+		result.Errors = append(result.Errors, fmt.Errorf("housekeeping: %w", err))
+	}
+
 	// Step 5: Templates and rules.
-	if err := ScaffoldTemplatesRules(ctx.TargetDir, ctx.LibraryDir, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldTemplatesRules(ctx.TargetDir, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("templates-rules: %w", err))
 	}
 
 	// Step 6: Infrastructure files.
-	if err := ScaffoldInfra(ctx.TargetDir, ctx.LibraryDir, ctx.ProjectName, ctx.Infra, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldInfra(ctx.TargetDir, libFS, ctx.ProjectName, ctx.Infra, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("infra: %w", err))
 	}
 
 	// Step 7: Compiled root files.
 	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
 		TargetDir:           ctx.TargetDir,
-		LibraryDir:          ctx.LibraryDir,
+		LibraryFS:           libFS,
 		Tools:               ctx.Tools,
 		ProjectName:         ctx.ProjectName,
 		PlanningDir:         ctx.PlanningDir,

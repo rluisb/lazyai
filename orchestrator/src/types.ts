@@ -44,6 +44,8 @@ export type WorkflowPhaseLifecycleState =
 export type BudgetHealth = 'ok' | 'warning' | 'limit_reached'
 export type ErrorCategory = 'transient' | 'logical' | 'budget' | 'permission' | 'validation' | 'fatal'
 export type StepType = 'research' | 'plan' | 'implement' | 'review' | 'document' | 'custom'
+export type DriftStatus = 'fresh' | 'stale' | 'stale_acked' | 'disabled' | 'unavailable' | 'unknown'
+export type MaintenanceApprovalScope = 'per_action' | 'task_scoped' | 'session_scoped' | 'standing'
 
 export interface DefinitionMetadata {
   name: string
@@ -79,6 +81,7 @@ export interface ChainStepDefinition {
   agent: string
   skills: string[]
   description: string
+  taskType?: string
   gate?: 'user_approval' | 'severity_confirmation' | 'cost_confirmation'
   prompt?: string
   transitions: Record<string, StepTransition>
@@ -145,6 +148,63 @@ export interface PromptLayer {
   modelHint?: string
   constraints?: string[]
   approvalPolicy?: ApprovalPolicy
+}
+
+export interface MaintenanceContractRecord {
+  id: string
+  status?: string
+  approvalScope: MaintenanceApprovalScope
+  approvalExpiresAt?: string
+  permittedActions: string[]
+  workflowRunId?: string
+  chainId?: string
+}
+
+export interface SyncToolSnapshot {
+  enabled: boolean
+  indexPath?: string
+  dataPath?: string
+  lastIndexTime?: string
+  sourceFingerprint?: string
+  driftStatus?: DriftStatus
+}
+
+export interface SyncStateSnapshot {
+  schemaVersion: number
+  updatedAt: string
+  qmd: SyncToolSnapshot
+  codegraph: SyncToolSnapshot
+  staleAcked: {
+    qmd: Array<{ fingerprint: string; ackedAt: string; reason?: string }>
+    codegraph: Array<{ fingerprint: string; ackedAt: string; reason?: string }>
+  }
+  repairProposals: Array<{ tool: string; proposalId: string; status: string; createdAt: string; reason: string }>
+}
+
+export interface BootstrapReport {
+  memoryPath: string
+  specsAvailable: boolean
+  syncStatePresent: boolean
+  qmdStatus: DriftStatus
+  codegraphStatus: DriftStatus
+  contractStatus: 'active' | 'expired' | 'missing'
+  contractScope?: MaintenanceApprovalScope
+  approvalsRequested: string[]
+  contextLoaded: string[]
+  deferredMaintenance: string[]
+  warnings: string[]
+}
+
+export interface HousekeepingReport {
+  phase: 'pre' | 'inline' | 'post' | 'combined'
+  contractStatus: 'active' | 'expired' | 'missing'
+  approvalsRequested: string[]
+  contextLoaded: string[]
+  stagedMemoryEntries: string[]
+  deferredMaintenance: string[]
+  qmdStatus: DriftStatus
+  codegraphStatus: DriftStatus
+  warnings: string[]
 }
 
 export interface RootContextLayer {
@@ -326,6 +386,7 @@ export interface CompiledStepPlan {
   kind: 'step'
   agent: string
   skills: string[]
+  taskType?: string
   stepType: StepType
   domainSkill?: string
   modeSkill?: string
@@ -379,6 +440,7 @@ export interface StepState {
   lastOutcome?: string
   error?: StructuredError
   nextStepId?: string
+  housekeepingReport?: HousekeepingReport
 }
 
 export interface ChainState {
@@ -396,6 +458,7 @@ export interface ChainState {
   createdAt: string
   updatedAt: string
   handoffPath?: string
+  bootstrapReport?: BootstrapReport
 }
 
 export interface StartChainInput {

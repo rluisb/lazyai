@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	aierror "github.com/ricardoborges-teachable/ai-setup/internal/error"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -99,4 +100,107 @@ func ValidateFilesystemSafeName(value string, fieldLabel string) error {
 		return aierror.InvalidInput(fmt.Sprintf("%s contains invalid filesystem characters", fieldLabel), nil)
 	}
 	return nil
+}
+
+// ValidateSpec006Metadata validates Spec 006 frontmatter fields.
+// It returns human-readable issues; callers decide whether they are warnings or errors.
+func ValidateSpec006Metadata(fm map[string]any) []string {
+	issues := []string{}
+	required := []string{"schema_version", "artifact_type", "id", "created_at", "updated_at", "created_by", "updated_by"}
+
+	for _, field := range required {
+		if isZeroFrontmatterValue(fm[field]) {
+			issues = append(issues, fmt.Sprintf("missing required field: %s", field))
+		}
+	}
+
+	if title, ok := fm["title"]; ok {
+		if _, ok := title.(string); !ok {
+			issues = append(issues, "field title must be a string")
+		}
+	}
+
+	createdAt, createdOk := asFrontmatterString(fm["created_at"])
+	updatedAt, updatedOk := asFrontmatterString(fm["updated_at"])
+	workflowID, workflowIDOk := asFrontmatterString(fm["workflow_id"])
+	workflowRunID, workflowRunIDOk := asFrontmatterString(fm["workflow_run_id"])
+
+	var createdTime time.Time
+	var updatedTime time.Time
+	if createdOk {
+		parsed, err := time.Parse(time.RFC3339, createdAt)
+		if err != nil {
+			issues = append(issues, "field created_at must be an ISO-8601 UTC datetime")
+		} else {
+			createdTime = parsed
+		}
+	}
+	if updatedOk {
+		parsed, err := time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			issues = append(issues, "field updated_at must be an ISO-8601 UTC datetime")
+		} else {
+			updatedTime = parsed
+		}
+	}
+	if !createdTime.IsZero() && !updatedTime.IsZero() && updatedTime.Before(createdTime) {
+		issues = append(issues, "updated_at must be greater than or equal to created_at")
+	}
+
+	if workflowRunIDOk && workflowRunID != "" && (!workflowIDOk || workflowID == "") {
+		issues = append(issues, "workflow_run_id requires workflow_id")
+	}
+
+	if refs, ok := fm["related_document_refs"]; ok {
+		if invalid := validateRelativeRefs(refs); len(invalid) > 0 {
+			issues = append(issues, invalid...)
+		}
+	}
+
+	return issues
+}
+
+func isZeroFrontmatterValue(value any) bool {
+	if value == nil {
+		return true
+	}
+	if s, ok := value.(string); ok {
+		return strings.TrimSpace(s) == ""
+	}
+	return false
+}
+
+func asFrontmatterString(value any) (string, bool) {
+	s, ok := value.(string)
+	if !ok {
+		return "", false
+	}
+	return strings.TrimSpace(s), true
+}
+
+func validateRelativeRefs(value any) []string {
+	items, ok := value.([]any)
+	if !ok {
+		if refs, ok := value.([]string); ok {
+			items = make([]any, 0, len(refs))
+			for _, ref := range refs {
+				items = append(items, ref)
+			}
+		} else {
+			return []string{"field related_document_refs must be an array of repo-relative paths"}
+		}
+	}
+
+	issues := []string{}
+	for _, item := range items {
+		ref, ok := item.(string)
+		if !ok || strings.TrimSpace(ref) == "" {
+			issues = append(issues, "field related_document_refs must contain only strings")
+			continue
+		}
+		if strings.HasPrefix(ref, "/") || strings.Contains(ref, `:\\`) {
+			issues = append(issues, fmt.Sprintf("related_document_refs must be repo-relative: %s", ref))
+		}
+	}
+	return issues
 }

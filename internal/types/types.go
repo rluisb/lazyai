@@ -118,15 +118,119 @@ const (
 type ArtifactType string
 
 const (
-	ArtifactTypeAgent    ArtifactType = "agent"
-	ArtifactTypeSkill    ArtifactType = "skill"
-	ArtifactTypeCommand  ArtifactType = "command"
-	ArtifactTypePrompt   ArtifactType = "prompt"
-	ArtifactTypeTemplate ArtifactType = "template"
-	ArtifactTypeWorkflow ArtifactType = "workflow"
-	ArtifactTypeDomain   ArtifactType = "domain"
-	ArtifactTypeMode     ArtifactType = "mode"
+	ArtifactTypeAgent               ArtifactType = "agent"
+	ArtifactTypeSkill               ArtifactType = "skill"
+	ArtifactTypeCommand             ArtifactType = "command"
+	ArtifactTypePrompt              ArtifactType = "prompt"
+	ArtifactTypeTemplate            ArtifactType = "template"
+	ArtifactTypeWorkflow            ArtifactType = "workflow"
+	ArtifactTypeDomain              ArtifactType = "domain"
+	ArtifactTypeMode                ArtifactType = "mode"
+	ArtifactTypeMemoryNote          ArtifactType = "memory_note"
+	ArtifactTypeMaintenanceContract ArtifactType = "maintenance_contract"
+	ArtifactTypeSyncStateSnapshot   ArtifactType = "sync_state_snapshot"
 )
+
+// ApprovalScope defines the persistence scope for maintenance approvals.
+type ApprovalScope string
+
+const (
+	ApprovalScopePerAction     ApprovalScope = "per_action"
+	ApprovalScopeTaskScoped    ApprovalScope = "task_scoped"
+	ApprovalScopeSessionScoped ApprovalScope = "session_scoped"
+	ApprovalScopeStanding      ApprovalScope = "standing"
+)
+
+// Spec006Metadata captures the standardized metadata schema introduced by Spec 006.
+type Spec006Metadata struct {
+	SchemaVersion       int           `json:"schemaVersion" yaml:"schema_version"`
+	ArtifactType        ArtifactType  `json:"artifactType" yaml:"artifact_type"`
+	ID                  string        `json:"id" yaml:"id"`
+	Title               string        `json:"title,omitempty" yaml:"title,omitempty"`
+	TicketNumber        *string       `json:"ticketNumber,omitempty" yaml:"ticket_number,omitempty"`
+	Status              string        `json:"status,omitempty" yaml:"status,omitempty"`
+	CreatedAt           string        `json:"createdAt" yaml:"created_at"`
+	UpdatedAt           string        `json:"updatedAt" yaml:"updated_at"`
+	CreatedBy           string        `json:"createdBy" yaml:"created_by"`
+	UpdatedBy           string        `json:"updatedBy" yaml:"updated_by"`
+	RiskLevel           string        `json:"riskLevel,omitempty" yaml:"risk_level,omitempty"`
+	SizePoints          *int          `json:"sizePoints,omitempty" yaml:"size_points,omitempty"`
+	ComplexityLevel     *string       `json:"complexityLevel,omitempty" yaml:"complexity_level,omitempty"`
+	SessionID           *string       `json:"sessionId,omitempty" yaml:"session_id,omitempty"`
+	WorkflowID          *string       `json:"workflowId,omitempty" yaml:"workflow_id,omitempty"`
+	WorkflowRunID       *string       `json:"workflowRunId,omitempty" yaml:"workflow_run_id,omitempty"`
+	TeamID              *string       `json:"teamId,omitempty" yaml:"team_id,omitempty"`
+	ChainID             *string       `json:"chainId,omitempty" yaml:"chain_id,omitempty"`
+	OwnerAgent          *string       `json:"ownerAgent,omitempty" yaml:"owner_agent,omitempty"`
+	Assignee            *string       `json:"assignee,omitempty" yaml:"assignee,omitempty"`
+	StepIDs             []string      `json:"stepIds,omitempty" yaml:"step_ids,omitempty"`
+	WorkflowSteps       []string      `json:"workflowSteps,omitempty" yaml:"workflow_steps,omitempty"`
+	RelatedDocumentRefs []string      `json:"relatedDocumentRefs,omitempty" yaml:"related_document_refs,omitempty"`
+	ApprovalScope       ApprovalScope `json:"approvalScope,omitempty" yaml:"approval_scope,omitempty"`
+	ApprovalExpiresAt   *string       `json:"approvalExpiresAt,omitempty" yaml:"approval_expires_at,omitempty"`
+	LegacyMetadataGaps  []string      `json:"legacyMetadataGaps,omitempty" yaml:"legacy_metadata_gaps,omitempty"`
+	MigrationNotes      []string      `json:"migrationNotes,omitempty" yaml:"migration_notes,omitempty"`
+}
+
+type MemoryEntry struct {
+	EntryID             string   `json:"entryId" yaml:"entry_id"`
+	Timestamp           string   `json:"timestamp" yaml:"timestamp"`
+	Author              string   `json:"author" yaml:"author"`
+	EntryType           string   `json:"entryType" yaml:"entry_type"`
+	Supersedes          *string  `json:"supersedes,omitempty" yaml:"supersedes,omitempty"`
+	RelatedDocumentRefs []string `json:"relatedDocumentRefs,omitempty" yaml:"related_document_refs,omitempty"`
+	Content             string   `json:"content" yaml:"content"`
+}
+
+type MaintenanceContract struct {
+	Spec006Metadata
+	PermittedActions []string `json:"permittedActions" yaml:"permitted_actions"`
+}
+
+type SyncAcknowledgement struct {
+	Fingerprint string `json:"fingerprint"`
+	AckedAt     string `json:"ackedAt"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+type RepairProposal struct {
+	Tool       string `json:"tool"`
+	ProposalID string `json:"proposalId"`
+	Status     string `json:"status"`
+	CreatedAt  string `json:"createdAt"`
+	Reason     string `json:"reason"`
+}
+
+type ToolSyncState struct {
+	Enabled           bool   `json:"enabled"`
+	IndexPath         string `json:"indexPath,omitempty"`
+	DataPath          string `json:"dataPath,omitempty"`
+	LastIndexTime     string `json:"lastIndexTime,omitempty"`
+	SourceFingerprint string `json:"sourceFingerprint,omitempty"`
+	DriftStatus       string `json:"driftStatus,omitempty"`
+}
+
+type SyncState struct {
+	SchemaVersion int           `json:"schemaVersion"`
+	UpdatedAt     string        `json:"updatedAt"`
+	QMD           ToolSyncState `json:"qmd"`
+	Codegraph     ToolSyncState `json:"codegraph"`
+	StaleAcked    struct {
+		QMD       []SyncAcknowledgement `json:"qmd"`
+		Codegraph []SyncAcknowledgement `json:"codegraph"`
+	} `json:"staleAcked"`
+	RepairProposals []RepairProposal `json:"repairProposals,omitempty"`
+}
+
+type HousekeepingConfig struct {
+	MemoryPath        string `json:"memoryPath,omitempty"`
+	EnableObsidian    bool   `json:"enableObsidian,omitempty"`
+	ObsidianVaultPath string `json:"obsidianVaultPath,omitempty"`
+	EnableQmd         bool   `json:"enableQmd,omitempty"`
+	QmdIndexPath      string `json:"qmdIndexPath,omitempty"`
+	EnableCodegraph   bool   `json:"enableCodegraph,omitempty"`
+	CodegraphDataPath string `json:"codegraphDataPath,omitempty"`
+}
 
 // PresetLevel defines the preset density level.
 type PresetLevel string
@@ -320,17 +424,18 @@ type RepoInfo struct {
 
 // Config holds the core configuration for an ai-setup installation.
 type Config struct {
-	SetupScope       SetupScope `json:"setupScope"`
-	Tools            []ToolId   `json:"tools"`
-	CLITools         []string   `json:"cliTools,omitempty"`
-	EnableServers    []string   `json:"enableServers,omitempty"`
-	ProjectName      string     `json:"projectName"`
-	WorkspaceName    string     `json:"workspaceName,omitempty"`
-	TargetDir        string     `json:"targetDir"`
-	PlanningDir      string     `json:"planningDir,omitempty"`
-	PlanningRepoPath string     `json:"planningRepoPath,omitempty"`
-	Repos            []RepoInfo `json:"repos,omitempty"`
-	GlobalRef        string     `json:"globalRef,omitempty"`
+	SetupScope       SetupScope          `json:"setupScope"`
+	Tools            []ToolId            `json:"tools"`
+	CLITools         []string            `json:"cliTools,omitempty"`
+	EnableServers    []string            `json:"enableServers,omitempty"`
+	ProjectName      string              `json:"projectName"`
+	WorkspaceName    string              `json:"workspaceName,omitempty"`
+	TargetDir        string              `json:"targetDir"`
+	PlanningDir      string              `json:"planningDir,omitempty"`
+	PlanningRepoPath string              `json:"planningRepoPath,omitempty"`
+	Repos            []RepoInfo          `json:"repos,omitempty"`
+	GlobalRef        string              `json:"globalRef,omitempty"`
+	Housekeeping     *HousekeepingConfig `json:"housekeeping,omitempty"`
 }
 
 // WizardSelections stores the choices made during the setup wizard.

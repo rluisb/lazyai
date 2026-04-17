@@ -20,6 +20,29 @@ export interface LoaderOptions {
   libraryAgentsRoot?: string
 }
 
+const SPEC_AGENT_FILE_ALIASES: Record<string, string> = {
+  adr: 'adrs.md',
+  adrs: 'adrs.md',
+  feature: 'features.md',
+  features: 'features.md',
+  bugfix: 'bugfixes.md',
+  bugfixes: 'bugfixes.md',
+  refactor: 'refactors.md',
+  refactors: 'refactors.md',
+  'tech-debt': 'tech-debt.md',
+  workflow: 'workflows.md',
+  workflows: 'workflows.md',
+  memory: 'memory.md',
+  prompt: 'prompts.md',
+  prompts: 'prompts.md',
+  rule: 'rules.md',
+  rules: 'rules.md',
+  standard: 'standards.md',
+  standards: 'standards.md',
+  template: 'templates.md',
+  templates: 'templates.md',
+}
+
 interface ParsedFrontmatter {
   attributes: Record<string, unknown>
   body: string
@@ -68,6 +91,19 @@ export function loadCatalog(options: LoaderOptions): OrchestrationCatalog {
       loadJsonDefinitions<WorkflowDefinition>(path.join(projectOrchestrationRoot, 'workflows'), 'project'),
     ),
   }
+}
+
+export function resolveSpecAgentContent(taskType: string | undefined, specsAgentsRoot?: string): string {
+  if (!taskType) return ''
+
+  const defaults = getDefaultLibraryRoots()
+  const root = specsAgentsRoot ?? path.join(path.dirname(defaults.orchestrationRoot), 'specs-agents')
+  const normalized = taskType.trim().toLowerCase()
+  const fileName = SPEC_AGENT_FILE_ALIASES[normalized] ?? `${normalized}.md`
+  const filePath = path.join(root, fileName)
+
+  if (!fs.existsSync(filePath)) return ''
+  return fs.readFileSync(filePath, 'utf-8').trim()
 }
 
 function mergeMaps<T>(base: Record<string, T>, overrides: Record<string, T>): Record<string, T> {

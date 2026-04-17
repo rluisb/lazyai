@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
+	"github.com/ricardoborges-teachable/ai-setup/internal/globalpaths"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/diffviewer"
 )
@@ -47,7 +48,12 @@ func ComputePlan(config *WizardConfig) (*InstallPlan, error) {
 	// Derive target dir from scope.
 	targetDir := config.TargetDir
 	if config.CLIScope == types.SetupScopeGlobal && config.HomeDir != "" {
-		targetDir = filepath.Join(config.HomeDir, ".ai")
+		globalPath, err := globalpaths.ResolveGlobalToolTargetDir(types.ToolIdOpenCode, config.HomeDir)
+		if err == nil {
+			targetDir = globalPath
+		} else {
+			targetDir = filepath.Join(config.HomeDir, ".config", "opencode")
+		}
 	}
 
 	// Build file list based on tools and preset.

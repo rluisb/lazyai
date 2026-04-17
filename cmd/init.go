@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
+	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
 )
@@ -31,6 +33,13 @@ func init() {
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
+	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
+	initCmd.Flags().Bool("enable-obsidian", false, "Enable Obsidian integration")
+	initCmd.Flags().String("obsidian-vault-path", "", "Obsidian vault path")
+	initCmd.Flags().Bool("enable-qmd", false, "Enable qmd markdown retrieval")
+	initCmd.Flags().String("qmd-index-path", "", "Project-local qmd index path")
+	initCmd.Flags().Bool("enable-codegraph", false, "Enable codegraph analysis")
+	initCmd.Flags().String("codegraph-data-path", "", "Project-local codegraph data path")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -43,6 +52,13 @@ func runInit(cmd *cobra.Command, args []string) error {
 	nameStr, _ := cmd.Flags().GetString("name")
 	branchPattern, _ := cmd.Flags().GetString("branch-pattern")
 	commitPattern, _ := cmd.Flags().GetString("commit-pattern")
+	memoryPath, _ := cmd.Flags().GetString("memory-path")
+	enableObsidian, _ := cmd.Flags().GetBool("enable-obsidian")
+	obsidianVaultPath, _ := cmd.Flags().GetString("obsidian-vault-path")
+	enableQmd, _ := cmd.Flags().GetBool("enable-qmd")
+	qmdIndexPath, _ := cmd.Flags().GetString("qmd-index-path")
+	enableCodegraph, _ := cmd.Flags().GetBool("enable-codegraph")
+	codegraphDataPath, _ := cmd.Flags().GetString("codegraph-data-path")
 	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -62,18 +78,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 	targetDir, _ := os.Getwd()
 
 	config := &wizard.WizardConfig{
-		Interactive: !nonInteractive,
-		Force:       force,
-		DryRun:      dryRun,
-		HomeDir:     homeDir,
-		TargetDir:   targetDir,
-		CLIScope:    types.SetupScope(scopeStr),
-		CLITools:    tools,
-		CLIName:     nameStr,
-		CLIPreset:   preset,
-		CLIFeatures: featuresStr,
-		CLIBranch:   branchPattern,
-		CLICommit:   commitPattern,
+		Interactive:          !nonInteractive,
+		Force:                force,
+		DryRun:               dryRun,
+		HomeDir:              homeDir,
+		TargetDir:            targetDir,
+		CLIScope:             types.SetupScope(scopeStr),
+		CLITools:             tools,
+		CLIName:              nameStr,
+		CLIPreset:            preset,
+		CLIFeatures:          featuresStr,
+		CLIBranch:            branchPattern,
+		CLICommit:            commitPattern,
+		CLIMemoryPath:        memoryPath,
+		CLIEnableObsidian:    enableObsidian,
+		CLIObsidianVaultPath: obsidianVaultPath,
+		CLIEnableQmd:         enableQmd,
+		CLIQmdIndexPath:      qmdIndexPath,
+		CLIEnableCodegraph:   enableCodegraph,
+		CLICodegraphDataPath: codegraphDataPath,
 	}
 
 	if nonInteractive {
@@ -98,14 +121,38 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 		return nil
 	}
 
-	// TODO: Implement the actual scaffolding once the scaffold packages are ported.
-	// This is where we would call the scaffold functions based on the wizard results.
-	fmt.Println("\n✅ Setup confirmed! (Scaffolding not yet implemented in Go)")
-	fmt.Printf("  Scope: %s\n", result.Phase1.Scope)
-	fmt.Printf("  Tools: %v\n", result.Phase1.Tools)
-	fmt.Printf("  Project: %s\n", result.Phase1.ProjectName)
-	fmt.Printf("  Preset: %s\n", result.Phase2.Preset)
+	// Build scaffold context from wizard results.
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		return fmt.Errorf("building scaffold context: %w", err)
+	}
 
+	// Run the scaffold pipeline.
+	scaffoldResult, err := scaffold.ScaffoldAll(ctx)
+	if err != nil {
+		return fmt.Errorf("scaffold failed: %w", err)
+	}
+
+	// Persist results to the SQLite store.
+	database, err := openStore(config.TargetDir)
+	if err != nil {
+		return fmt.Errorf("opening store: %w", err)
+	}
+	defer database.Close()
+
+	presetLevel := result.Phase2.Preset
+	if presetLevel == "" {
+		presetLevel = preset.DefaultPresetForScope(result.Phase1.Scope)
+	}
+
+	if err := writeStoreFromScaffoldResult(database, ctx, presetLevel, scaffoldResult); err != nil {
+		return fmt.Errorf("writing store data: %w", err)
+	}
+
+	// Print summary.
+	fmt.Println()
+	printScaffoldSummary(scaffoldResult, ctx)
+	fmt.Println()
 	return nil
 }
 
@@ -188,6 +235,15 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	wizardDefaults := &wizard.WizardResult{
 		Phase1: phase1,
 		Phase2: phase2,
+		Phase5: &wizard.Phase5Result{
+			MemoryPath:        config.CLIMemoryPath,
+			EnableObsidian:    config.CLIEnableObsidian,
+			ObsidianVaultPath: config.CLIObsidianVaultPath,
+			EnableQmd:         config.CLIEnableQmd,
+			QmdIndexPath:      config.CLIQmdIndexPath,
+			EnableCodegraph:   config.CLIEnableCodegraph,
+			CodegraphDataPath: config.CLICodegraphDataPath,
+		},
 	}
 
 	// Run the wizard in non-interactive mode — it will use the defaults we provided.
@@ -202,8 +258,69 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return nil
 	}
 
-	// TODO: Implement the actual scaffolding once the scaffold packages are ported.
-	fmt.Println("Setup complete! (Scaffolding not yet implemented in Go)")
+	// Build scaffold context from wizard results.
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		return fmt.Errorf("building scaffold context: %w", err)
+	}
 
+	// Run the scaffold pipeline.
+	scaffoldResult, err := scaffold.ScaffoldAll(ctx)
+	if err != nil {
+		return fmt.Errorf("scaffold failed: %w", err)
+	}
+
+	// Persist results to the SQLite store.
+	database, err := openStore(config.TargetDir)
+	if err != nil {
+		return fmt.Errorf("opening store: %w", err)
+	}
+	defer database.Close()
+
+	if err := writeStoreFromScaffoldResult(database, ctx, presetLevel, scaffoldResult); err != nil {
+		return fmt.Errorf("writing store data: %w", err)
+	}
+
+	// Print summary.
+	fmt.Println()
+	printScaffoldSummary(scaffoldResult, ctx)
+	fmt.Println()
 	return nil
+}
+
+// printScaffoldSummary prints a human-readable summary of the scaffold results.
+func printScaffoldSummary(result *scaffold.ScaffoldResult, ctx *scaffold.ScaffoldContext) {
+	style := headerStyle()
+	greenStyle := successStyle()
+
+	fmt.Println(style.Render("✅ Setup complete!"))
+	fmt.Println()
+	fmt.Printf("  %s Scope: %s\n", greenStyle.Render("•"), ctx.SetupScope)
+	fmt.Printf("  %s Tools: %v\n", greenStyle.Render("•"), ctx.Tools)
+	fmt.Printf("  %s Project: %s\n", greenStyle.Render("•"), ctx.ProjectName)
+	fmt.Printf("  %s Files installed: %d\n", greenStyle.Render("•"), len(result.Files))
+
+	if len(result.Errors) > 0 {
+		warnStyle := warningStyle()
+		fmt.Println()
+		fmt.Println(warnStyle.Render(fmt.Sprintf("⚠ %d warnings:", len(result.Errors))))
+		for _, e := range result.Errors {
+			fmt.Printf("  • %v\n", e)
+		}
+	}
+}
+
+// headerStyle returns a bold styled header with the primary color.
+func headerStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+}
+
+// successStyle returns a green colored style for success indicators.
+func successStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+}
+
+// warningStyle returns an orange colored style for warnings.
+func warningStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
 }

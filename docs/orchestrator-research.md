@@ -194,7 +194,7 @@ No programmatic orchestration capability. Gemini has basic CLI; Copilot is VS Co
 | Tool | Agent Location | Dispatch Mechanism | MCP Config |
 |------|---------------|-------------------|------------|
 | Claude Code | `.claude/agents/orchestrator.md` | Task tool for subagents | `.mcp.json` |
-| OpenCode | `.opencode/agents/orchestrator.md` | Task tool with subagent_type | `opencode.jsonc` |
+| OpenCode | `.opencode/agents/orchestrator.md` | Task tool with subagent_type | `.opencode/opencode.jsonc` |
 | Codex | `.codex/agents/orchestrator.toml` | Native subagent system | MCP config |
 | Gemini | `.gemini/skills/orchestrator/SKILL.md` | Instructions only (no dispatch) | MCP config |
 | Copilot | Orchestrator as prompt (limited) | None | `.vscode/mcp.json` |

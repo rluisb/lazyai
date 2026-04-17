@@ -442,7 +442,7 @@ Ensure the Go CLI correctly:
 
 **Verification:**
 - End-to-end: `ai-setup init → ai-setup server add orchestrator → ai-setup compile`
-- Verify `.mcp.json` and `opencode.jsonc` contain correct orchestrator config
+- Verify `.mcp.json` and `.opencode/opencode.jsonc` contain correct orchestrator config
 - Start an AI tool with the orchestrator MCP enabled — it connects successfully
 
 > **MILESTONE M6:** Migration system works. Orchestrator MCP integration verified end-to-end.

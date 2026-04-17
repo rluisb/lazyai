@@ -72,7 +72,7 @@ This data is already passed to `FragmentContext` and used in compiled root files
 **Canonical store:** `.ai/mcp.json` — contains ALL servers with `enabled: true/false`
 **Compilation:** `src/adapters/mcp-compiler.ts` reads canonical, filters enabled, writes tool-native formats:
 - Claude Code / Pi → `.mcp.json` (standard MCP format)
-- OpenCode → `opencode.jsonc` (merged into existing config)
+- OpenCode → `.opencode/opencode.jsonc` in project scope (merged into existing config); `opencode.jsonc` in global OpenCode scope
 - Copilot → `.vscode/mcp.json` (stdio/sse format)
 - Gemini → `.gemini/settings.json` (no remote server support)
 

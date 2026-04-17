@@ -2,6 +2,7 @@ package scaffold
 
 import (
 	"encoding/json"
+	"io/fs"
 	"log"
 	"path/filepath"
 
@@ -23,14 +24,14 @@ type mcpServer struct {
 
 // ScaffoldMcp scaffolds .ai/mcp.json from the library catalog, enabling
 // selected servers. Ported from src/scaffold/mcp.ts.
-func ScaffoldMcp(targetDir, libraryDir string, cliTools, enableServers []string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldMcp(targetDir string, libFS fs.FS, cliTools, enableServers []string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	aiDir := filepath.Join(targetDir, ".ai")
 	if err := files.EnsureDir(aiDir); err != nil {
 		return err
 	}
 
-	catalogPath := filepath.Join(libraryDir, "mcp", "catalog.json")
-	if !files.FileExists(catalogPath) {
+	catalogRelPath := "mcp/catalog.json"
+	if !files.ExistsFS(libFS, catalogRelPath) {
 		return nil
 	}
 
@@ -49,7 +50,7 @@ func ScaffoldMcp(targetDir, libraryDir string, cliTools, enableServers []string,
 		return nil
 	}
 
-	data, err := files.ReadFile(catalogPath)
+	data, err := files.ReadFS(libFS, catalogRelPath)
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func ScaffoldMcp(targetDir, libraryDir string, cliTools, enableServers []string,
 	*fileRecords = append(*fileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
-		Source: "mcp/catalog.json",
+		Source: catalogRelPath,
 		Owner:  types.FileOwnerLibrary,
 	})
 

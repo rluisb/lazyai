@@ -5,14 +5,17 @@ import (
 
 	"charm.land/huh/v2"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
 // Phase1Result holds the collected context from the first wizard phase.
 type Phase1Result struct {
-	Scope       types.SetupScope
-	Tools       []types.ToolId
-	ProjectName string
+	Scope         types.SetupScope
+	Tools         []types.ToolId
+	ProjectName   string
+	CliTools      []string
+	EnableServers []string
 }
 
 // RunPhase1 runs the context collection phase.
@@ -82,7 +85,7 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	scopeSelect := huh.NewSelect[string]().
 		Title("Setup scope:").
 		Options(
-			huh.NewOption("Global  — Install to ~/.ai/ + native tool global paths", "global"),
+			huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
 			huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
 			huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
 		).
@@ -115,7 +118,25 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 			return nil
 		})
 
-	group := huh.NewGroup(scopeSelect, toolsMulti, nameInput).Title("Phase 1/4: Setup Context")
+	// --- CLI Tools multi-select ---
+	var cliToolsValue []string
+	if defaults != nil {
+		cliToolsValue = defaults.CliTools
+	}
+	cliToolsSelect := NewCliToolsSelect(cliToolsValue)
+	var selectedCliTools []string
+	cliToolsSelect.Value(&selectedCliTools)
+
+	// --- MCP Servers multi-select ---
+	var serversValue []string
+	if defaults != nil {
+		serversValue = defaults.EnableServers
+	}
+	serversSelect := NewMcpServersSelect(serversValue)
+	var selectedServers []string
+	serversSelect.Value(&selectedServers)
+
+	group := huh.NewGroup(scopeSelect, toolsMulti, nameInput, cliToolsSelect, serversSelect).Title("Phase 1/4: Setup Context")
 
 	form := huh.NewForm(group)
 	if err := form.Run(); err != nil {
@@ -129,6 +150,30 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	for i, t := range selectedTools {
 		result.Tools[i] = types.ToolId(t)
 	}
+	result.CliTools = selectedCliTools
+	result.EnableServers = selectedServers
+
+	// If codex was selected, check installation and show hint if missing.
+	if containsTool(result.Tools, "codex") && !detect.IsCodexInstalled() {
+		hint := detect.CodexInstallHint()
+		confirm := false
+		_ = huh.NewConfirm().
+			Title(fmt.Sprintf("Codex CLI is not installed.\n\n%s\n\nContinue anyway?", hint)).
+			Affirmative("Continue").
+			Negative("Remove codex from selection").
+			Value(&confirm).
+			Run()
+		if !confirm {
+			// Remove codex from the tools list.
+			filtered := make([]types.ToolId, 0, len(result.Tools))
+			for _, t := range result.Tools {
+				if t != "codex" {
+					filtered = append(filtered, t)
+				}
+			}
+			result.Tools = filtered
+		}
+	}
 
 	// If scope is global, force project name to "global"
 	if result.Scope == types.SetupScopeGlobal {
@@ -136,4 +181,14 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	}
 
 	return result, PhaseContinue, nil
+}
+
+// containsTool reports whether the given tool ID is present in the list.
+func containsTool(tools []types.ToolId, id string) bool {
+	for _, t := range tools {
+		if string(t) == id {
+			return true
+		}
+	}
+	return false
 }

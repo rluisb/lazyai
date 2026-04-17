@@ -3,9 +3,13 @@
 package adapter
 
 import (
+	"context"
 	"log"
+	"os/exec"
 	"path/filepath"
+	"time"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -24,6 +28,9 @@ func (a *CodexAdapter) Name() string      { return "Codex CLI" }
 func (a *CodexAdapter) ConfigDir() string { return ".agents" }
 
 func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
+	// Check if Codex is installed; print a non-fatal warning if not.
+	_ = detect.EnsureCodexOrPrompt()
+
 	isGlobal := ctx.SetupScope == types.SetupScopeGlobal
 	agentsDir := filepath.Join(ctx.TargetDir, ".agents")
 	if isGlobal {
@@ -83,4 +90,34 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 func (a *CodexAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
 	// Codex has no MCP config file format — nothing to compile.
 	return fileRecords, nil
+}
+
+func (a *CodexAdapter) CanRunHeadless() bool { return true }
+
+func (a *CodexAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
+	_, err := exec.LookPath("codex")
+	if err != nil {
+		log.Printf("[codex] codex not on PATH, skipping headless validation")
+		return nil
+	}
+
+	log.Printf("[codex] running headless validation: codex exec \"check .agents/ structure\"")
+	execCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(execCtx, "codex", "exec", "check .agents/ structure")
+	cmd.Dir = ctx.TargetDir
+	cmd.Stdin = nil // pipe /dev/null equivalent — no interactive input
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("[codex] headless validation completed with warning: %v", err)
+		if len(output) > 0 {
+			log.Printf("[codex] output: %s", string(output))
+		}
+		return nil // non-fatal
+	}
+
+	log.Printf("[codex] headless validation succeeded")
+	return nil
 }

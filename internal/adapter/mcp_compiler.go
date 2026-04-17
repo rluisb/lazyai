@@ -102,7 +102,12 @@ func getEnabledServers(catalog *McpCatalog) map[string]McpServer {
 // ---------------------------------------------------------------------------
 
 func compileOpenCodeMCP(targetDir string, catalog *McpCatalog, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	configPath := filepath.Join(targetDir, "opencode.jsonc")
+	// In global scope, targetDir is already ~/.config/opencode, so write directly.
+	// In project scope, targetDir is the project root, so write to .opencode/.
+	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	if isGlobalOpenCodeDir(targetDir) {
+		configPath = filepath.Join(targetDir, "opencode.jsonc")
+	}
 	ocMcp := toOpenCodeMcp(catalog.Servers)
 
 	// Read existing config and merge.
@@ -125,8 +130,12 @@ func compileOpenCodeMCP(targetDir string, catalog *McpCatalog, fileRecords []typ
 	}
 
 	hash, _ := files.FileHash(configPath)
+	recordPath := ".opencode/opencode.jsonc"
+	if isGlobalOpenCodeDir(targetDir) {
+		recordPath = "opencode.jsonc"
+	}
 	fileRecords = append(fileRecords, types.TrackedFile{
-		Path: "opencode.jsonc", Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
+		Path: recordPath, Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
 	})
 	return fileRecords, nil
 }
@@ -303,6 +312,12 @@ func transformEnvSyntax(envObj map[string]string, targetPattern string) map[stri
 		result[key] = envPattern.ReplaceAllString(value, targetPattern)
 	}
 	return result
+}
+
+// isGlobalOpenCodeDir returns true if the given directory looks like the global
+// OpenCode config directory (~/.config/opencode).
+func isGlobalOpenCodeDir(dir string) bool {
+	return filepath.Base(dir) == "opencode" && filepath.Base(filepath.Dir(dir)) == ".config"
 }
 
 // Ensure all format strings with %s in log statements are correct.

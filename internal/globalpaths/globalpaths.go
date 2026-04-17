@@ -11,11 +11,11 @@ import (
 )
 
 // GlobalConfigDir returns the directory for global ai-setup configuration.
-// Uses XDG_CONFIG_HOME if set, otherwise falls back to ~/.config/ai-setup/.
+// Uses XDG_CONFIG_HOME if set, otherwise falls back to ~/.config/opencode/.
 func GlobalConfigDir() (string, error) {
 	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfig != "" {
-		return filepath.Join(xdgConfig, "ai-setup"), nil
+		return filepath.Join(xdgConfig, "opencode"), nil
 	}
 
 	home, err := os.UserHomeDir()
@@ -23,7 +23,7 @@ func GlobalConfigDir() (string, error) {
 		return "", fmt.Errorf("could not determine home directory: %w", err)
 	}
 
-	return filepath.Join(home, ".config", "ai-setup"), nil
+	return filepath.Join(home, ".config", "opencode"), nil
 }
 
 // GlobalSetupDir returns the directory for global-scope ai-setup installs.

@@ -228,7 +228,7 @@ When user runs `ai-setup init --enable-servers orchestrator` (or checks the box 
 │       └── orchestrator/
 │           └── SKILL.md                    🟡 Orchestrator as skill for Codex
 │
-├── opencode.jsonc                          🟡 orchestrator MCP server added
+├── .opencode/opencode.jsonc               🟡 orchestrator MCP server added
 ├── .mcp.json                              🟡 orchestrator MCP server added
 └── .vscode/mcp.json                       🟡 orchestrator MCP server added
 ```

@@ -268,7 +268,7 @@ Use the orchestrator agent and start the feature chain for the payments refactor
 ### OpenCode
 
 **What ai-setup generates**
-- MCP config: `opencode.jsonc`
+- MCP config: `.opencode/opencode.jsonc`
 - Orchestrator guidance: `.opencode/agents/orchestrator.md`
 
 **How to use it**

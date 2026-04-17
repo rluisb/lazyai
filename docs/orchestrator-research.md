@@ -1373,7 +1373,7 @@ Per-tool output also generated:
 ├── .opencode/agents/orchestrator.md        Enhanced with MCP tool instructions
 ├── .claude/agents/orchestrator.md          Enhanced with MCP tool instructions
 ├── .agents/skills/orchestrator/SKILL.md    Orchestrator as skill for Codex
-├── opencode.jsonc                          orchestrator MCP server added
+├── .opencode/opencode.jsonc              orchestrator MCP server added
 ├── .mcp.json                               orchestrator MCP server added
 └── .vscode/mcp.json                        orchestrator MCP server added
 ```

@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -33,10 +32,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 	setVersionSQL        = `INSERT OR REPLACE INTO schema_migrations (version, dirty) VALUES (?, 0)`
 )
 
-// RunMigrations runs all pending schema migrations on db.
+// RunMigrations runs all pending schema migrations on the database.
 // It uses a simple version-tracking approach instead of the golang-migrate
 // library to avoid pulling in the CGO-dependent mattn/go-sqlite3 driver.
-func RunMigrations(db *sql.DB) error {
+func RunMigrations(database *DB) error {
+	db := database.DB
 	// Ensure the migrations tracking table exists.
 	if _, err := db.Exec(createMigrationsTableSQL); err != nil {
 		return fmt.Errorf("create schema_migrations table: %w", err)

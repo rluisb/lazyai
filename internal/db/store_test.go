@@ -24,7 +24,7 @@ func openTestDB(t *testing.T) *DB {
 func setupStore(t *testing.T) *Store {
 	t.Helper()
 	db := openTestDB(t)
-	if err := RunMigrations(db.DB); err != nil {
+	if err := RunMigrations(db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
 	store := NewStore(db)
@@ -46,7 +46,7 @@ func TestOpen_InMemory(t *testing.T) {
 
 func TestRunMigrations_CreatesAllTables(t *testing.T) {
 	db := openTestDB(t)
-	if err := RunMigrations(db.DB); err != nil {
+	if err := RunMigrations(db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
 
@@ -65,10 +65,10 @@ func TestRunMigrations_CreatesAllTables(t *testing.T) {
 
 func TestRunMigrations_Idempotent(t *testing.T) {
 	db := openTestDB(t)
-	if err := RunMigrations(db.DB); err != nil {
+	if err := RunMigrations(db); err != nil {
 		t.Fatalf("first RunMigrations: %v", err)
 	}
-	if err := RunMigrations(db.DB); err != nil {
+	if err := RunMigrations(db); err != nil {
 		t.Fatalf("second RunMigrations: %v", err)
 	}
 }

@@ -5,17 +5,22 @@ package compiler
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+// SharedRootTemplatePath is the path to the shared root template relative to the library dir.
+var SharedRootTemplatePath = filepath.Join("tool-templates", "shared", "root.template.md")
+
 // CompilerConfig holds the configuration for template compilation.
 type CompilerConfig struct {
 	LibraryDir string
+	LibraryFS  fs.FS // Optional: when set, takes precedence over LibraryDir for reads
 	OutputDir  string
-	Tool       string
-	Context    FragmentContext
+	Tool        string
+	Context     FragmentContext
 }
 
 // TemplateCompiler compiles templates for a specific tool by resolving
@@ -29,17 +34,17 @@ type TemplateCompiler struct {
 func NewTemplateCompiler(config CompilerConfig) *TemplateCompiler {
 	return &TemplateCompiler{
 		config:   config,
-		resolver: NewFragmentResolver(config.LibraryDir),
+		resolver: NewFragmentResolver(config.LibraryDir, config.LibraryFS),
 	}
 }
 
 // Compile compiles all templates for the configured tool and returns the output.
 func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
-	toolTemplateDir := filepath.Join(tc.config.LibraryDir, "tool-templates", tc.config.Tool)
-	sharedRootTemplate := filepath.Join(tc.config.LibraryDir, SharedRootTemplatePath)
+	toolTemplateDir := filepath.Join("tool-templates", tc.config.Tool)
+	sharedRootTemplate := SharedRootTemplatePath
 
-	hasSharedRootTemplate := fileExists(sharedRootTemplate)
-	hasToolTemplateDir := dirExists(toolTemplateDir)
+	hasSharedRootTemplate := tc.fileExistsFS(sharedRootTemplate)
+	hasToolTemplateDir := tc.dirExistsFS(toolTemplateDir)
 
 	if !hasSharedRootTemplate && !hasToolTemplateDir {
 		return nil, fmt.Errorf("tool template directory not found: %s", toolTemplateDir)
@@ -50,7 +55,7 @@ func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
 
 	// Process shared root template.
 	if hasSharedRootTemplate {
-		content, err := os.ReadFile(sharedRootTemplate)
+		content, err := tc.readFileFS(sharedRootTemplate)
 		if err != nil {
 			return nil, fmt.Errorf("read shared root template: %w", err)
 		}
@@ -60,7 +65,7 @@ func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
 
 	// Process tool-specific templates.
 	if hasToolTemplateDir {
-		templateFiles := findTemplateFiles(toolTemplateDir)
+		templateFiles := tc.findTemplateFilesFS(toolTemplateDir)
 		for _, templateFile := range templateFiles {
 			// Skip root template if shared root template was already processed.
 			baseName := filepath.Base(templateFile)
@@ -68,7 +73,7 @@ func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
 				continue
 			}
 
-			content, err := os.ReadFile(templateFile)
+			content, err := tc.readFileFS(templateFile)
 			if err != nil {
 				return nil, fmt.Errorf("read template %s: %w", templateFile, err)
 			}
@@ -123,12 +128,13 @@ func (tc *TemplateCompiler) getContextWithToolOverrides() FragmentContext {
 }
 
 // CompileForTools compiles templates for multiple tools and returns a map of results.
-func CompileForTools(tools []string, libraryDir, outputDir string, context FragmentContext) (map[string]*CompiledOutput, error) {
+func CompileForTools(tools []string, libraryDir string, libFS fs.FS, outputDir string, context FragmentContext) (map[string]*CompiledOutput, error) {
 	results := make(map[string]*CompiledOutput)
 
 	for _, tool := range tools {
 		compiler := NewTemplateCompiler(CompilerConfig{
 			LibraryDir: libraryDir,
+			LibraryFS:  libFS,
 			OutputDir:  outputDir,
 			Tool:       tool,
 			Context:    context,
@@ -144,12 +150,95 @@ func CompileForTools(tools []string, libraryDir, outputDir string, context Fragm
 	return results, nil
 }
 
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
+// --- fs.FS helper methods ---
+
+// fileExistsFS checks if a file exists in the library FS (or disk).
+func (tc *TemplateCompiler) fileExistsFS(path string) bool {
+	if tc.config.LibraryFS != nil {
+		_, err := fs.Stat(tc.config.LibraryFS, path)
+		return err == nil
+	}
+	fullPath := filepath.Join(tc.config.LibraryDir, path)
+	_, err := os.Stat(fullPath)
 	return err == nil
 }
 
-func dirExists(path string) bool {
-	info, err := os.Stat(path)
+// dirExistsFS checks if a directory exists in the library FS (or disk).
+func (tc *TemplateCompiler) dirExistsFS(path string) bool {
+	if tc.config.LibraryFS != nil {
+		info, err := fs.Stat(tc.config.LibraryFS, path)
+		return err == nil && info.IsDir()
+	}
+	fullPath := filepath.Join(tc.config.LibraryDir, path)
+	info, err := os.Stat(fullPath)
 	return err == nil && info.IsDir()
+}
+
+// readFileFS reads a file from the library FS (or disk).
+func (tc *TemplateCompiler) readFileFS(path string) ([]byte, error) {
+	if tc.config.LibraryFS != nil {
+		return fs.ReadFile(tc.config.LibraryFS, path)
+	}
+	fullPath := filepath.Join(tc.config.LibraryDir, path)
+	return os.ReadFile(fullPath)
+}
+
+// findTemplateFilesFS recursively finds all template files in a directory.
+func (tc *TemplateCompiler) findTemplateFilesFS(dir string) []string {
+	if tc.config.LibraryFS != nil {
+		return findTemplateFilesInFS(tc.config.LibraryFS, dir)
+	}
+	return findTemplateFiles(filepath.Join(tc.config.LibraryDir, dir))
+}
+
+// findTemplateFilesInFS recursively finds template files in an fs.FS.
+func findTemplateFilesInFS(fsys fs.FS, dir string) []string {
+	var result []string
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return result
+	}
+	for _, entry := range entries {
+		fullPath := dir + "/" + entry.Name()
+		if entry.IsDir() {
+			result = append(result, findTemplateFilesInFS(fsys, fullPath)...)
+		} else if containsTemplate(entry.Name()) {
+			result = append(result, fullPath)
+		}
+	}
+	return result
+}
+
+// findTemplateFiles recursively finds all files containing ".template." in their name on disk.
+func findTemplateFiles(dir string) []string {
+	var result []string
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return result
+	}
+
+	for _, entry := range entries {
+		fullPath := filepath.Join(dir, entry.Name())
+		if entry.IsDir() {
+			result = append(result, findTemplateFiles(fullPath)...)
+		} else if containsTemplate(entry.Name()) {
+			result = append(result, fullPath)
+		}
+	}
+	return result
+}
+
+func containsTemplate(name string) bool {
+	return filepath.Ext(name) != "" && len(name) > 10 &&
+		(name[len(name)-len(".template.md"):] == ".template.md" ||
+			containsDotTemplate(name))
+}
+
+func containsDotTemplate(name string) bool {
+	for i := 0; i < len(name)-len(".template."); i++ {
+		if name[i:i+len(".template.")] == ".template." {
+			return true
+		}
+	}
+	return false
 }

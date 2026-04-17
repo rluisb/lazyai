@@ -1,13 +1,13 @@
 package migration
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/manifest"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -23,7 +23,7 @@ func Execute(plan *MigrationPlan, ctx *MigrationContext) (*MigrationResult, erro
 	var err error
 
 	// Step 1: Create backup directory.
-	if !ctx.Options.SkipBackup {
+	if !ctx.Options.SkipBackup && !ctx.Options.Preview {
 		backupPath, err = createBackupDir(ctx.TargetPath)
 		if err != nil {
 			return nil, fmt.Errorf("create backup dir: %w", err)
@@ -73,7 +73,7 @@ func Execute(plan *MigrationPlan, ctx *MigrationContext) (*MigrationResult, erro
 	}
 
 	// Step 4: Update the manifest.
-	if err := updateManifest(ctx, plan, executedActions); err != nil {
+	if err := updateManifest(ctx, plan, nil); err != nil {
 		warnings = append(warnings, fmt.Sprintf("Failed to update manifest: %s", err))
 	}
 
@@ -100,7 +100,7 @@ func ExecuteToCanonical(ctx *MigrationContext, plan *MigrationPlan, parsedSetups
 	var backupPath string
 	var err error
 
-	if !ctx.Options.SkipBackup {
+	if !ctx.Options.SkipBackup && !ctx.Options.Preview {
 		backupPath, err = createBackupDir(ctx.TargetPath)
 		if err != nil {
 			return nil, fmt.Errorf("create backup dir: %w", err)
@@ -164,12 +164,23 @@ func ExecuteToCanonical(ctx *MigrationContext, plan *MigrationPlan, parsedSetups
 				Reason:      fmt.Sprintf("Canonical migration from %s", parsed.Metadata["adapter"]),
 			})
 		}
+		if result.RootConfig != "" {
+			executedActions = append(executedActions, MigrationAction{
+				Type:        ActionTypeCreate,
+				TargetPath:  result.RootConfig,
+				Description: fmt.Sprintf("Create %s", result.RootConfig),
+				Reason:      fmt.Sprintf("Canonical migration from %s", parsed.Metadata["adapter"]),
+			})
+		}
 
 		stats.FilesCreated += len(result.Agents) + len(result.Skills) + len(result.Prompts) + len(result.Rules)
+		if result.RootConfig != "" {
+			stats.FilesCreated++
+		}
 		stats.FilesSkipped += len(result.Skipped)
 	}
 
-	if err := updateManifest(ctx, plan, executedActions); err != nil {
+	if err := updateManifest(ctx, plan, fileRecords); err != nil {
 		warnings = append(warnings, fmt.Sprintf("Failed to update manifest: %s", err))
 	}
 
@@ -225,80 +236,80 @@ func executeModifyAction(action MigrationAction, ctx *MigrationContext) error {
 }
 
 // updateManifest creates or updates .ai-setup.json with migrated file records.
-func updateManifest(ctx *MigrationContext, plan *MigrationPlan, executedActions []MigrationAction) error {
-	manifestPath := filepath.Join(ctx.TargetPath, ".ai-setup.json")
-
-	// Read or create manifest.
-	manifest := readOrCreateManifest()
-
-	if data, err := files.ReadFile(manifestPath); err == nil {
-		_ = json.Unmarshal(data, &manifest)
+func updateManifest(ctx *MigrationContext, plan *MigrationPlan, fileRecords []types.TrackedFile) error {
+	if ctx.Options.Preview {
+		return nil
 	}
 
-	// Update tools from adapters.
-	manifestTools := make(map[string]bool)
-	for _, t := range manifest.Tools {
-		manifestTools[t] = true
-	}
-	for _, adapter := range plan.Adapters {
-		if !manifestTools[adapter] {
-			manifest.Tools = append(manifest.Tools, adapter)
-		}
-	}
-
-	// Track migrated files.
-	existingPaths := make(map[string]bool)
-	for i, f := range manifest.Files {
-		existingPaths[f.Path] = true
-		_ = i
-	}
-	for _, action := range executedActions {
-		if action.Type == ActionTypeCreate || action.Type == ActionTypeModify {
-			if !existingPaths[action.TargetPath] {
-				manifest.Files = append(manifest.Files, manifestFile{
-					Path:   action.TargetPath,
-					Hash:   "migrated",
-					Source: "migration",
-				})
-				existingPaths[action.TargetPath] = true
-			}
-		}
-	}
-
-	data, err := json.MarshalIndent(manifest, "", "  ")
+	store, err := manifest.ReadManifestOptional(ctx.TargetPath)
 	if err != nil {
 		return err
 	}
+	if store == nil || store.Meta.SchemaVersion == 0 {
+		defaults := types.DefaultStoreData()
+		defaults.Config.SetupScope = types.SetupScopeProject
+		defaults.Config.TargetDir = ctx.TargetPath
+		defaults.Config.ProjectName = filepath.Base(ctx.TargetPath)
+		store = &defaults
+	}
 
-	return files.WriteFile(manifestPath, data, 0o644)
-}
-
-type manifestFile struct {
-	Path   string `json:"path"`
-	Hash   string `json:"hash"`
-	Source string `json:"source"`
-}
-
-type manifestShape struct {
-	Version     string         `json:"version"`
-	SetupScope  string         `json:"setupScope"`
-	SetupType   string         `json:"setupType"`
-	Tools       []string       `json:"tools"`
-	ProjectName string         `json:"projectName"`
-	InstalledAt string         `json:"installedAt"`
-	Files       []manifestFile `json:"files"`
-}
-
-func readOrCreateManifest() manifestShape {
 	now := time.Now().UTC().Format(time.RFC3339)
-	return manifestShape{
-		Version:     "0.1.0",
-		SetupScope:  "project",
-		SetupType:   "project",
-		Tools:       []string{},
-		ProjectName: "Migrated Project",
-		InstalledAt: now,
-		Files:       []manifestFile{},
+	store.Meta.LastUpdatedAt = now
+	if store.Config.TargetDir == "" {
+		store.Config.TargetDir = ctx.TargetPath
+	}
+	if store.Config.ProjectName == "" {
+		store.Config.ProjectName = filepath.Base(ctx.TargetPath)
+	}
+
+	existingTools := map[types.ToolId]bool{}
+	for _, tool := range store.Config.Tools {
+		existingTools[tool] = true
+	}
+	for _, adapter := range plan.Adapters {
+		toolID, ok := adapterToToolID(adapter)
+		if ok && !existingTools[toolID] {
+			store.Config.Tools = append(store.Config.Tools, toolID)
+			existingTools[toolID] = true
+		}
+	}
+
+	existingFiles := map[string]int{}
+	for i, tracked := range store.Files {
+		existingFiles[tracked.Path] = i
+	}
+	for _, record := range fileRecords {
+		record.Status = types.FileStatusInstalled
+		record.LastCheckedAt = now
+		if record.InstalledAt == "" {
+			record.InstalledAt = now
+		}
+		if idx, ok := existingFiles[record.Path]; ok {
+			store.Files[idx] = record
+			continue
+		}
+		store.Files = append(store.Files, record)
+		existingFiles[record.Path] = len(store.Files) - 1
+	}
+
+	store.Sync.LastSyncAt = now
+	store.Sync.Dirty = false
+
+	return manifest.WriteManifest(ctx.TargetPath, store)
+}
+
+func adapterToToolID(adapter string) (types.ToolId, bool) {
+	switch adapter {
+	case "opencode":
+		return types.ToolIdOpenCode, true
+	case "claude-code":
+		return types.ToolIdClaudeCode, true
+	case "gemini":
+		return types.ToolIdGemini, true
+	case "copilot":
+		return types.ToolIdCopilot, true
+	default:
+		return "", false
 	}
 }
 

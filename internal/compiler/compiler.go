@@ -2,14 +2,6 @@
 // Ported from the TypeScript compiler/ module.
 package compiler
 
-import (
-	"os"
-	"path/filepath"
-)
-
-// SharedRootTemplatePath is the path to the shared root template relative to the library dir.
-var SharedRootTemplatePath = filepath.Join("tool-templates", "shared", "root.template.md")
-
 // ToolOverrides contains per-tool template metadata.
 type ToolOverrides struct {
 	Description string
@@ -74,38 +66,4 @@ type CompiledFile struct {
 type CompiledOutput struct {
 	Tool  string
 	Files []CompiledFile
-}
-
-// findTemplateFiles recursively finds all files containing ".template." in their name.
-func findTemplateFiles(dir string) []string {
-	var result []string
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return result
-	}
-
-	for _, entry := range entries {
-		fullPath := filepath.Join(dir, entry.Name())
-		if entry.IsDir() {
-			result = append(result, findTemplateFiles(fullPath)...)
-		} else if containsTemplate(entry.Name()) {
-			result = append(result, fullPath)
-		}
-	}
-	return result
-}
-
-func containsTemplate(name string) bool {
-	return filepath.Ext(name) != "" && len(name) > 10 &&
-		(name[len(name)-len(".template.md"):] == ".template.md" ||
-			containsDotTemplate(name))
-}
-
-func containsDotTemplate(name string) bool {
-	for i := 0; i < len(name)-len(".template."); i++ {
-		if name[i:i+len(".template.")] == ".template." {
-			return true
-		}
-	}
-	return false
 }

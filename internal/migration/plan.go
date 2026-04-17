@@ -71,6 +71,47 @@ func BuildPlan(ctx *MigrationContext, detections []DetectionResult) (*MigrationP
 	}, nil
 }
 
+// BuildCanonicalPlan creates a migration plan based on parsed canonical outputs.
+func BuildCanonicalPlan(ctx *MigrationContext, detections []DetectionResult, parsedSetups []ParsedSetup) (*MigrationPlan, error) {
+	var actions []MigrationAction
+	var adapters []string
+	existingFiles := getExistingAiSetupFiles(ctx.TargetPath)
+
+	for _, detection := range detections {
+		adapters = append(adapters, detection.AdapterID)
+	}
+
+	for _, parsed := range parsedSetups {
+		for _, target := range PlannedCanonicalTargets(&parsed) {
+			actionType := ActionTypeCreate
+			description := fmt.Sprintf("Create %s", target.TargetPath)
+			if existingFiles[target.TargetPath] {
+				actionType = ActionTypeModify
+				description = fmt.Sprintf("Update %s", target.TargetPath)
+			}
+
+			actions = append(actions, MigrationAction{
+				Type:        actionType,
+				SourcePath:  target.SourcePath,
+				TargetPath:  target.TargetPath,
+				Description: description,
+				Reason:      fmt.Sprintf("Canonical migration from %s", parsed.Metadata["adapter"]),
+			})
+		}
+	}
+
+	return &MigrationPlan{
+		SourcePath:         ctx.SourcePath,
+		TargetPath:         ctx.TargetPath,
+		Adapters:           adapters,
+		Actions:            actions,
+		Conflicts:          []MergeConflict{},
+		EstimatedFiles:     countNonSkipActions(actions),
+		EstimatedConflicts: 0,
+		CanProceed:         true,
+	}, nil
+}
+
 // FormatPlan renders a MigrationPlan as a human-readable string.
 // Ported from formatPlan in src/migration/plan.ts.
 func FormatPlan(plan *MigrationPlan) string {

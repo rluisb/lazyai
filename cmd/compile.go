@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,8 +11,9 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/ricardoborges-teachable/ai-setup/internal/files"
-	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
+	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
+	"github.com/ricardoborges-teachable/ai-setup/internal/db"
+	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
 var compileCmd = &cobra.Command{
@@ -26,13 +29,10 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 }
 
-// Per-tool MCP config file mapping (from TypeScript PER_TOOL_MCP_CONFIG)
-var perToolMCPConfig = map[string]string{
-	"opencode":    "opencode.jsonc",
-	"claude-code": ".mcp.json",
-	"copilot":     ".vscode/mcp.json",
-	"gemini":      ".gemini/settings.json",
-	"codex":       "",
+// fileExists returns true if the given path exists.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func runCompile(cmd *cobra.Command, args []string) error {
@@ -44,41 +44,72 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
-	if !files.FileExists(mcpConfigPath) {
+	if !fileExists(mcpConfigPath) {
 		// Also try .ai/mcp.jsonc
 		mcpConfigPath = filepath.Join(dir, ".ai", "mcp.jsonc")
-		if !files.FileExists(mcpConfigPath) {
+		if !fileExists(mcpConfigPath) {
 			return fmt.Errorf("no MCP config found at .ai/mcp.json. Run 'ai-setup init' first")
 		}
 	}
 
-	// Read the MCP config (supports JSONC)
-	mcpData, err := jsonc.ReadJSONCFile(mcpConfigPath)
+	// Open the store database (similar to helpers.go openStore)
+	dbPath := filepath.Join(dir, ".ai-setup.db")
+	database, err := db.Open(dbPath)
 	if err != nil {
-		return fmt.Errorf("failed to read MCP config: %w", err)
+		return fmt.Errorf("opening database: %w", err)
+	}
+	defer database.Close()
+
+	// Run migrations.
+	if err := db.RunMigrations(database); err != nil {
+		database.Close()
+		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	// Extract MCP servers from the config
-	mcpServers, ok := mcpData["mcpServers"].(map[string]any)
-	if !ok {
-		// Try "servers" key as alternative
-		if servers, ok := mcpData["servers"].(map[string]any); ok {
-			mcpServers = servers
+	// Auto-import from JSON if DB is new.
+	imported, err := db.AutoImportJSON(dir, database)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  Warning: JSON import failed: %v\n", err)
+	}
+	if imported {
+		fmt.Println("  Imported existing .ai-setup.json → SQLite")
+	}
+
+	store := db.NewStore(database)
+	storeData, err := store.ReadStoreData()
+	if err != nil {
+		// If the DB exists but has no initialized store rows yet, use defaults
+		if errors.Is(err, sql.ErrNoRows) {
+			defaults := types.DefaultStoreData()
+			storeData = &defaults
 		} else {
-			mcpServers = map[string]any{}
+			return fmt.Errorf("reading store data: %w", err)
 		}
 	}
 
 	// Determine which tools to compile for
-	var tools []string
+	var tools []types.ToolId
 	if toolFilter != "" {
-		tools = []string{toolFilter}
+		// Single tool requested via flag
+		tools = []types.ToolId{types.ToolId(toolFilter)}
 	} else {
-		// Compile for all tools with known config paths
-		for tool := range perToolMCPConfig {
-			tools = append(tools, tool)
+		// Use tools from store configuration
+		tools = storeData.Config.Tools
+		// If store is empty, fall back to all known tools
+		if len(tools) == 0 {
+			// Get all registered tools from adapter registry
+			reg := adapter.NewRegistry()
+			for _, t := range reg.List() {
+				tools = append(tools, t)
+			}
 		}
 	}
+
+	// Get adapter registry
+	reg := adapter.NewRegistry()
+
+	// Track new file records from compilation
+	newFileRecords := []types.TrackedFile{}
 
 	// Styled output
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
@@ -91,54 +122,104 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	fmt.Println(headerStyle.Render("⚙️  Compile MCP Config"))
 	fmt.Println()
 
+	// Read MCP source once
+	mcpData, err := os.ReadFile(mcpConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to read MCP config: %w", err)
+	}
+	var dataMap map[string]any
+	if err := json.Unmarshal(mcpData, &dataMap); err != nil {
+		return fmt.Errorf("failed to parse MCP config: %w", err)
+	}
+
+	// Extract MCP servers from the config
+	mcpServers, ok := dataMap["mcpServers"].(map[string]any)
+	if !ok {
+		// Try "servers" key as alternative
+		if servers, ok := dataMap["servers"].(map[string]any); ok {
+			mcpServers = servers
+		} else {
+			mcpServers = map[string]any{}
+		}
+	}
+
 	printKV("  Source", mcpConfigPath, labelStyle, lipgloss.NewStyle())
 	printKV("  Servers", fmt.Sprintf("%d configured", len(mcpServers)), labelStyle, lipgloss.NewStyle())
 	fmt.Println()
 
 	// Compile for each tool
 	compiledCount := 0
-	for _, tool := range tools {
-		configFile := perToolMCPConfig[tool]
-		if configFile == "" {
-			fmt.Printf("  %s %s — no config path defined (stub for Wave 3)\n", dimStyle.Render("○"), tool)
+	for _, toolId := range tools {
+		// Get adapter for this tool
+		adapt, err := reg.Get(toolId)
+		if err != nil {
+			fmt.Printf("    %s Skipping %s: %v\n", dimStyle.Render("○"), toolId, err)
 			continue
 		}
 
-		targetPath := filepath.Join(dir, configFile)
-		printKV("  Tool", tool, labelStyle, lipgloss.NewStyle())
-		printKV("  Target", targetPath, labelStyle, lipgloss.NewStyle())
+		// Get adapter name for display
+		toolName := adapt.Name()
 
+		// Compile MCP config for this tool
+		var toolRecords []types.TrackedFile
 		if dryRun {
-			fmt.Printf("    %s Would compile %d servers -> %s\n", cyanStyle.Render("[dry-run]"), len(mcpServers), targetPath)
-		} else {
-			// Build per-tool MCP config
-			toolConfig := map[string]any{
-				"mcpServers": mcpServers,
-			}
-
-			configData, err := json.MarshalIndent(toolConfig, "", "  ")
-			if err != nil {
-				fmt.Printf("    %s Failed to serialize config: %v\n", dimStyle.Render("✗"), err)
-				continue
-			}
-
-			if err := files.WriteFile(targetPath, configData, 0o644); err != nil {
-				fmt.Printf("    %s Failed to write config: %v\n", dimStyle.Render("✗"), err)
-				continue
-			}
-
-			fmt.Printf("    %s Compiled %d servers -> %s\n", greenStyle.Render("✓"), len(mcpServers), targetPath)
+			// For dry-run, we'd need to simulate compilation, but for now just show what we would do
+			fmt.Printf("    %s Would compile MCP config for %s\n", cyanStyle.Render("[dry-run]"), toolName)
 			compiledCount++
+			continue
 		}
-		fmt.Println()
+
+		// Actually compile
+		toolRecords, err = adapt.CompileMCP(dir, newFileRecords)
+		if err != nil {
+			fmt.Printf("    %s Failed to compile %s: %v\n", dimStyle.Render("✗"), toolName, err)
+			continue
+		}
+
+		// Check if any new files were generated
+		if len(toolRecords) > 0 {
+			// Add new records to our collection
+			newFileRecords = append(newFileRecords, toolRecords...)
+
+			// Get the primary config file path for this tool (first record)
+			if len(toolRecords) > 0 {
+				targetPath := toolRecords[0].Path
+				fmt.Printf("    %s Compiled MCP config for %s -> %s\n", greenStyle.Render("✓"), toolName, targetPath)
+			} else {
+				fmt.Printf("    %s Compiled MCP config for %s (no files)\n", greenStyle.Render("✓"), toolName)
+			}
+			compiledCount++
+		} else {
+			fmt.Printf("    %s No MCP config generated for %s\n", dimStyle.Render("○"), toolName)
+		}
 	}
+	fmt.Println()
 
 	if dryRun {
 		fmt.Printf("  %s Dry run complete. Would compile %d tool(s).\n", cyanStyle.Render("[dry-run]"), len(tools))
 	} else {
+		// If we compiled any new records, update the store
+		if len(newFileRecords) > 0 {
+			// Merge new file records with existing ones
+			allRecords := append(storeData.Files, newFileRecords...)
+			storeData.Files = allRecords
+
+			// Write back to store
+			if err := store.WriteStoreData(storeData); err != nil {
+				return fmt.Errorf("writing updated store: %w", err)
+			}
+		}
 		fmt.Printf("  %s Compiled %d tool(s).\n", greenStyle.Render("✓"), compiledCount)
 	}
 	fmt.Println()
 
 	return nil
+}
+
+// printKV is a helper for printing key-value pairs with styling
+func printKV(label string, value string, labelStyle lipgloss.Style, valueStyle lipgloss.Style) {
+	if value == "" {
+		value = "-"
+	}
+	fmt.Printf("    %s %s\n", labelStyle.Render(label+":"), valueStyle.Render(value))
 }

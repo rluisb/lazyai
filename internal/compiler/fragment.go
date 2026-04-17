@@ -4,6 +4,7 @@ package compiler
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,7 +38,7 @@ type FeatureFlags struct {
 	ContextEngineering *bool
 	RPIWorkflow        *bool
 	ChainOfThought     *bool
-	TreeOfThoughts     *bool
+	TreeOfThoughts      *bool
 	ADREnforcement     *bool
 	QualityGates       *bool
 	AgentHarness       *bool
@@ -50,26 +51,32 @@ type FeatureFlags struct {
 	RPIWorkflow_        *bool
 	ChainOfThought_     *bool
 	TreeOfThoughts_     *bool
-	ADREnforcement_     *bool
-	QualityGates_       *bool
-	AgentHarness_       *bool
-	BugResolution_      *bool
-	PivotHandling_      *bool
-	GitConventions_     *bool
+	ADREnforcement_    *bool
+	QualityGates_      *bool
+	AgentHarness_      *bool
+	BugResolution_    *bool
+	PivotHandling_     *bool
+	GitConventions_   *bool
 }
 
 // FragmentResolver resolves XML fragments and variable interpolation in templates.
 type FragmentResolver struct {
 	libraryDir    string
+	libFS         fs.FS
 	fragmentCache map[string]string
 }
 
 // NewFragmentResolver creates a new FragmentResolver for the given library directory.
-func NewFragmentResolver(libraryDir string) *FragmentResolver {
-	return &FragmentResolver{
+// When libFS is nil, it falls back to reading from the filesystem using libraryDir.
+func NewFragmentResolver(libraryDir string, libFS ...fs.FS) *FragmentResolver {
+	r := &FragmentResolver{
 		libraryDir:    libraryDir,
 		fragmentCache: make(map[string]string),
 	}
+	if len(libFS) > 0 && libFS[0] != nil {
+		r.libFS = libFS[0]
+	}
+	return r
 }
 
 // Resolve resolves all fragments, conditionals, and variables in the template content.
@@ -167,8 +174,16 @@ func (r *FragmentResolver) loadFragment(fragmentPath string) string {
 		return cached
 	}
 
-	fullPath := filepath.Join(r.libraryDir, fragmentPath)
-	data, err := os.ReadFile(fullPath)
+	var data []byte
+	var err error
+
+	if r.libFS != nil {
+		data, err = fs.ReadFile(r.libFS, fragmentPath)
+	} else {
+		fullPath := filepath.Join(r.libraryDir, fragmentPath)
+		data, err = os.ReadFile(fullPath)
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fragment not found: %s\n", fragmentPath)
 		return fmt.Sprintf("<!-- Fragment not found: %s -->", fragmentPath)

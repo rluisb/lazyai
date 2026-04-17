@@ -128,22 +128,39 @@ Currently these packages read from filesystem:
 
 **Migration strategy:** Each function that currently takes `libraryDir string` should also accept `embed.FS` or `fs.FS`. Add a parameter that defaults to the embedded FS when empty.
 
-#### 2.4 Update `libraryFindDir` fallback
-When running from source (development), prefer the filesystem `library/` directory for live editing. When running from installed binary, use `embed.FS`.
+#### 2.4 LibraryDir Dual-Path Design
 
-Pattern:
+**Design intent:**
+- `LibraryDir` is **optional runtime state** — set in disk/dev mode, intentionally empty in embedded/prod mode.
+- `LibraryFS` / `GetLibraryFS()` is the **source of truth for all reads**.
+- `FindLibraryDir()` **failing is expected** in production and must fall back to embedded assets.
+
+**Modes:**
+
+| Mode | LibraryDir | LibraryFS source | Use case |
+|------|-----------|------------------|----------|
+| Disk/Dev | Set (path to `library/`) | `os.DirFS(LibraryDir)` | Live repo editing, fast iteration |
+| Embedded/Prod | Empty | embedded `fs.FS` returned by `GetLibraryFS()` | Self-contained binary, no external files |
+
+**Implementation:**
 ```go
 func GetLibraryFS() fs.FS {
-    // If library/ exists on filesystem (dev mode), use it
-    if dir, err := FindLibraryDir(); err == nil {
+    dir, err := FindLibraryDir()
+    if err == nil && dir != "" {
         return os.DirFS(dir)
     }
-    // Otherwise use embedded FS (production)
-    return library.FS
+    if embeddedFS != nil {
+        return embeddedFS
+    }
+    return os.DirFS(".")
 }
 ```
 
-#### 2.5 Test embed in production mode
+`FindLibraryDir()` returning an error is not a failure — it simply means the binary is running in embedded/prod mode with no filesystem access to library assets.
+
+**Rationale:** Enables developers to edit library files on disk during development while still producing a self-contained binary for production. No conditional logic needed at call sites — all reads go through `GetLibraryFS()`.
+
+#### 2.6 Test embed in production mode
 ```bash
 go build -o /tmp/ai-setup-test .
 cd /tmp/empty-dir

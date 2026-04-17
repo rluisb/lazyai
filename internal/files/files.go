@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -234,4 +235,35 @@ func BackupFile(filePath string, targetDir string) (string, error) {
 // startsDotDot reports whether a path starts with "..".
 func startsDotDot(p string) bool {
 	return len(p) >= 2 && p[0] == '.' && p[1] == '.'
+}
+
+// ---------------------------------------------------------------------------
+// fs.FS-based helpers — for reading from embedded or in-memory filesystems
+// ---------------------------------------------------------------------------
+
+// ReadFS reads the contents of a file from an fs.FS filesystem.
+func ReadFS(fsys fs.FS, path string) ([]byte, error) {
+	data, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, aierror.FileNotFound(path)
+		}
+		return nil, aierror.FileCorrupt(path, err)
+	}
+	return data, nil
+}
+
+// ExistsFS reports whether a file (or directory) exists in an fs.FS filesystem.
+func ExistsFS(fsys fs.FS, path string) bool {
+	_, err := fs.Stat(fsys, path)
+	return err == nil
+}
+
+// ReadDirFS returns directory entries from an fs.FS filesystem.
+func ReadDirFS(fsys fs.FS, path string) ([]fs.DirEntry, error) {
+	entries, err := fs.ReadDir(fsys, path)
+	if err != nil {
+		return nil, aierror.FilePermission(path, "readdir")
+	}
+	return entries, nil
 }

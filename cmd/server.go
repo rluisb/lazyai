@@ -14,6 +14,7 @@ import (
 	aierror "github.com/ricardoborges-teachable/ai-setup/internal/error"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
+	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 )
 
 // ---------------------------------------------------------------------------
@@ -125,52 +126,11 @@ func init() {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// findLibraryDir walks up from the executable and then from the current working
-// directory to find a directory containing library/mcp/catalog.json.
-func findLibraryDir() (string, error) {
-	// Try relative to executable first.
-	if exe, err := os.Executable(); err == nil {
-		dir := filepath.Dir(exe)
-		for i := 0; i < 10; i++ {
-			if files.FileExists(filepath.Join(dir, "library", "mcp", "catalog.json")) {
-				return dir, nil
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-
-	// Walk up from CWD.
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for i := 0; i < 10; i++ {
-		if files.FileExists(filepath.Join(dir, "library", "mcp", "catalog.json")) {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	return "", fmt.Errorf("library/mcp/catalog.json not found — searched from executable dir and current directory")
-}
-
 // readCatalog reads and parses library/mcp/catalog.json.
 func readCatalog() (*Catalog, error) {
-	libDir, err := findLibraryDir()
-	if err != nil {
-		return nil, err
-	}
-	catalogPath := filepath.Join(libDir, "library", "mcp", "catalog.json")
+	libFS := library.GetLibraryFS()
 
-	data, err := files.ReadFile(catalogPath)
+	data, err := files.ReadFS(libFS, "mcp/catalog.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read catalog: %w", err)
 	}

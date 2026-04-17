@@ -22,7 +22,9 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 		adapterCtx := &adapter.AdapterContext{
 			TargetDir:        ctx.TargetDir,
 			SetupScope:       ctx.SetupScope,
+			HomeDir:          ctx.HomeDir,
 			LibraryDir:       ctx.LibraryDir,
+			LibraryFS:        ctx.LibraryFS,
 			FileRecords:      []types.TrackedFile{},
 			EnableServers:    ctx.EnableServers,
 			Force:            ctx.Force,

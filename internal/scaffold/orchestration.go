@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io/fs"
 	"log"
 	"path/filepath"
 
@@ -12,9 +13,8 @@ import (
 // ScaffoldOrchestration installs orchestration definitions (chains, teams,
 // workflows, skills) to .ai/orchestration/.
 // Ported from src/scaffold/orchestration.ts.
-func ScaffoldOrchestration(targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	sourceRoot := filepath.Join(libraryDir, "orchestration")
-	if !files.FileExists(sourceRoot) {
+func ScaffoldOrchestration(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	if !files.ExistsFS(libFS, "orchestration") {
 		return nil
 	}
 
@@ -23,22 +23,25 @@ func ScaffoldOrchestration(targetDir, libraryDir string, fileRecords *[]types.Tr
 		return err
 	}
 
-	return copyOrchestrationTree(sourceRoot, targetRoot, targetDir, libraryDir, fileRecords, strategy, perFileOverrides)
+	return copyOrchestrationTreeFS(libFS, "orchestration", targetRoot, targetDir, fileRecords, strategy, perFileOverrides)
 }
 
-// copyOrchestrationTree recursively copies files from sourceRoot to targetRoot.
-func copyOrchestrationTree(currentSourceDir, currentTargetDir, targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	entries := files.ListDir(currentSourceDir)
+// copyOrchestrationTreeFS recursively copies files from the library FS to the target directory.
+func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	entries, err := files.ReadDirFS(libFS, sourceRelDir)
+	if err != nil {
+		return nil // directory doesn't exist in FS, skip
+	}
 
 	for _, entry := range entries {
-		sourcePath := filepath.Join(currentSourceDir, entry)
-		targetPath := filepath.Join(currentTargetDir, entry)
+		sourceRelPath := sourceRelDir + "/" + entry.Name()
+		targetPath := filepath.Join(currentTargetDir, entry.Name())
 
-		if files.IsDirectory(sourcePath) {
+		if entry.IsDir() {
 			if err := files.EnsureDir(targetPath); err != nil {
 				return err
 			}
-			if err := copyOrchestrationTree(sourcePath, targetPath, targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyOrchestrationTreeFS(libFS, sourceRelPath, targetPath, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 			continue
@@ -58,16 +61,22 @@ func copyOrchestrationTree(currentSourceDir, currentTargetDir, targetDir, librar
 			continue
 		}
 
-		if err := files.CopyFile(sourcePath, targetPath); err != nil {
+		// Read from library FS and write to target.
+		data, err := files.ReadFS(libFS, sourceRelPath)
+		if err != nil {
+			log.Printf("Warning: could not read %s: %v", sourceRelPath, err)
+			continue
+		}
+
+		if err := files.WriteFile(targetPath, data, 0o644); err != nil {
 			return err
 		}
 
 		hash, _ := files.FileHash(targetPath)
-		source, _ := filepath.Rel(libraryDir, sourcePath)
 		*fileRecords = append(*fileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   hash,
-			Source: source,
+			Source: sourceRelPath,
 			Owner:  types.FileOwnerLibrary,
 		})
 	}

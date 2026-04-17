@@ -3,8 +3,11 @@
 package adapter
 
 import (
+	"context"
 	"log"
+	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -88,9 +91,8 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	// Orchestrator agent if enabled.
 	if !isGlobal && IsOrchestratorEnabled(ctx) {
-		orchestratorSource := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
 		content := GetOrchestratorAgentContent(ctx)
-		if err := CopyWithRecord(orchestratorSource,
+		if err := CopyWithRecord("agents/orchestrator.md",
 			filepath.Join(claudeDir, "agents", "orchestrator.md"),
 			ctx, false,
 			func([]byte) []byte { return content },
@@ -142,4 +144,34 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 func (a *ClaudeCodeAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
 	return CompileMCPForTool(types.ToolIdClaudeCode, targetDir, fileRecords)
+}
+
+func (a *ClaudeCodeAdapter) CanRunHeadless() bool { return true }
+
+func (a *ClaudeCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
+	_, err := exec.LookPath("claude")
+	if err != nil {
+		log.Printf("[claude-code] claude not on PATH, skipping headless validation")
+		return nil
+	}
+
+	log.Printf("[claude-code] running headless validation: claude -p \"verify setup structure\"")
+	execCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(execCtx, "claude", "-p", "verify setup structure")
+	cmd.Dir = ctx.TargetDir
+	cmd.Stdin = nil // pipe /dev/null equivalent — no interactive input
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("[claude-code] headless validation completed with warning: %v", err)
+		if len(output) > 0 {
+			log.Printf("[claude-code] output: %s", string(output))
+		}
+		return nil // non-fatal
+	}
+
+	log.Printf("[claude-code] headless validation succeeded")
+	return nil
 }

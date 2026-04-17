@@ -2,6 +2,7 @@ package scaffold
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"path/filepath"
 	"strings"
@@ -130,20 +131,20 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 			continue
 		}
 
-		// Read the tool-specific root template.
-		templatePath := filepath.Join(opts.LibraryDir, "root", outputFile+".template.md")
-		if !files.FileExists(templatePath) {
+		// Read the tool-specific root template from the library FS.
+		templateRelPath := "root/" + outputFile + ".template.md"
+		if !files.ExistsFS(opts.LibraryFS, templateRelPath) {
 			// Try alternative naming: AGENTS.template.md, CLAUDE.template.md, etc.
 			baseName := strings.TrimSuffix(outputFile, filepath.Ext(outputFile))
-			templatePath = filepath.Join(opts.LibraryDir, "root", baseName+".template.md")
-			if !files.FileExists(templatePath) {
+			templateRelPath = "root/" + baseName + ".template.md"
+			if !files.ExistsFS(opts.LibraryFS, templateRelPath) {
 				continue
 			}
 		}
 
-		data, err := files.ReadFile(templatePath)
+		data, err := files.ReadFS(opts.LibraryFS, templateRelPath)
 		if err != nil {
-			log.Printf("Warning: could not read root template %s: %v", templatePath, err)
+			log.Printf("Warning: could not read root template %s: %v", templateRelPath, err)
 			continue
 		}
 
@@ -201,7 +202,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 // ScaffoldCompiledRootOptions holds the options for compiling root files.
 type ScaffoldCompiledRootOptions struct {
 	TargetDir        string
-	LibraryDir       string
+	LibraryFS        fs.FS
 	Tools            []types.ToolId
 	ProjectName      string
 	PlanningDir      string

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 
+	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 )
 
@@ -26,5 +27,7 @@ func init() {
 }
 
 func Execute(ctx context.Context) error {
-	return rootCmd.ExecuteContext(ctx)
+	return fang.Execute(ctx, rootCmd,
+		fang.WithVersion(Version),
+	)
 }

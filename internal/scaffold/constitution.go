@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io/fs"
 	"log"
 	"path/filepath"
 	"strings"
@@ -20,21 +21,21 @@ var ConstitutionFiles = []string{
 
 // ScaffoldConstitution installs constitution files to .ai/constitution/.
 // Ported from src/scaffold/constitution.ts.
-func ScaffoldConstitution(targetDir, libraryDir, projectName string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldConstitution(targetDir string, libFS fs.FS, projectName string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	constitutionDir := filepath.Join(targetDir, ".ai", "constitution")
 	if err := files.EnsureDir(constitutionDir); err != nil {
 		return err
 	}
 
 	for _, file := range ConstitutionFiles {
-		templatePath := filepath.Join(libraryDir, "constitution", file+".template.md")
-		if !files.FileExists(templatePath) {
+		templateRelPath := "constitution/" + file + ".template.md"
+		if !files.ExistsFS(libFS, templateRelPath) {
 			continue
 		}
 
-		data, err := files.ReadFile(templatePath)
+		data, err := files.ReadFS(libFS, templateRelPath)
 		if err != nil {
-			log.Printf("Warning: could not read template %s: %v", templatePath, err)
+			log.Printf("Warning: could not read template %s: %v", templateRelPath, err)
 			continue
 		}
 
@@ -62,7 +63,7 @@ func ScaffoldConstitution(targetDir, libraryDir, projectName string, fileRecords
 		*fileRecords = append(*fileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   hash,
-			Source: "constitution/" + file + ".template.md",
+			Source: templateRelPath,
 			Owner:  types.FileOwnerLibrary,
 		})
 	}

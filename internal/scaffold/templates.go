@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io/fs"
 	"log"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 
 // ScaffoldTemplatesRules installs template and rule files into the specs directory.
 // Ported from src/scaffold/templates-rules.ts.
-func ScaffoldTemplatesRules(targetDir, libraryDir string, templates []types.TemplateId, rules []types.RuleId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.TemplateId, rules []types.RuleId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	specsDir := filepath.Join(targetDir, "specs")
 
 	// Copy selected templates.
@@ -22,9 +23,9 @@ func ScaffoldTemplatesRules(targetDir, libraryDir string, templates []types.Temp
 		}
 
 		for _, templateId := range templates {
-			src := filepath.Join(libraryDir, "templates", string(templateId)+".md")
+			srcRelPath := "templates/" + string(templateId) + ".md"
 			dest := filepath.Join(templatesDir, string(templateId)+".md")
-			if err := copyLibraryFileWithRecord(src, dest, targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
@@ -38,23 +39,23 @@ func ScaffoldTemplatesRules(targetDir, libraryDir string, templates []types.Temp
 		}
 
 		for _, ruleId := range rules {
-			src := filepath.Join(libraryDir, "rules", string(ruleId)+".md")
+			srcRelPath := "rules/" + string(ruleId) + ".md"
 			dest := filepath.Join(rulesDir, string(ruleId)+".md")
-			if err := copyLibraryFileWithRecord(src, dest, targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Always copy prompts/local-examples directory.
-	srcDir := filepath.Join(libraryDir, "prompts/local-examples")
+	srcRelDir := "prompts/local-examples"
 	destDir := filepath.Join(specsDir, "prompts/local-examples")
-	return copyLibraryDir(srcDir, destDir, targetDir, libraryDir, fileRecords, strategy, perFileOverrides)
+	return copyLibraryDirFromFS(libFS, srcRelDir, destDir, targetDir, fileRecords, strategy, perFileOverrides)
 }
 
-// copyLibraryFileWithRecord copies a single file with conflict resolution and tracking.
-func copyLibraryFileWithRecord(src, dest, targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	if !files.FileExists(src) {
+// copyLibraryFileFromFS copies a single file from the library FS with conflict resolution and tracking.
+func copyLibraryFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	if !files.ExistsFS(libFS, srcRelPath) {
 		return nil
 	}
 
@@ -72,24 +73,29 @@ func copyLibraryFileWithRecord(src, dest, targetDir, libraryDir string, fileReco
 		return nil
 	}
 
-	if err := files.CopyFile(src, dest); err != nil {
+	data, err := files.ReadFS(libFS, srcRelPath)
+	if err != nil {
+		log.Printf("Warning: could not read %s: %v", srcRelPath, err)
+		return nil
+	}
+
+	if err := files.WriteFile(dest, data, 0o644); err != nil {
 		return err
 	}
 
 	hash, _ := files.FileHash(dest)
-	source, _ := filepath.Rel(libraryDir, src)
 	*fileRecords = append(*fileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
-		Source: source,
+		Source: srcRelPath,
 		Owner:  types.FileOwnerLibrary,
 	})
 	return nil
 }
 
-// copyLibraryDir recursively copies a directory with conflict resolution and tracking.
-func copyLibraryDir(src, dest, targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	if !files.FileExists(src) {
+// copyLibraryDirFromFS recursively copies a directory from the library FS with conflict resolution and tracking.
+func copyLibraryDirFromFS(libFS fs.FS, srcRelDir, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	if !files.ExistsFS(libFS, srcRelDir) {
 		return nil
 	}
 
@@ -97,19 +103,23 @@ func copyLibraryDir(src, dest, targetDir, libraryDir string, fileRecords *[]type
 		return err
 	}
 
-	entries := files.ListDir(src)
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry)
-		destPath := filepath.Join(dest, entry)
+	entries, err := files.ReadDirFS(libFS, srcRelDir)
+	if err != nil {
+		return nil // directory doesn't exist, skip
+	}
 
-		if files.IsDirectory(srcPath) {
-			if err := copyLibraryDir(srcPath, destPath, targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+	for _, entry := range entries {
+		srcPath := srcRelDir + "/" + entry.Name()
+		destPath := filepath.Join(dest, entry.Name())
+
+		if entry.IsDir() {
+			if err := copyLibraryDirFromFS(libFS, srcPath, destPath, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 			continue
 		}
 
-		if err := copyLibraryFileWithRecord(srcPath, destPath, targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+		if err := copyLibraryFileFromFS(libFS, srcPath, destPath, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
 			return err
 		}
 	}

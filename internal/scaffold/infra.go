@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 
 // ScaffoldInfra installs infrastructure files (pre-commit hook, compliance,
 // CODEOWNERS, KNOWLEDGE_MAP). Ported from src/scaffold/infra.ts.
-func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.InfraId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldInfra(targetDir string, libFS fs.FS, projectName string, infra []types.InfraId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	if len(infra) == 0 {
 		return nil
 	}
@@ -21,7 +22,7 @@ func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.Infr
 	// Process pre-commit hook.
 	for _, id := range infra {
 		if id == types.InfraIdPreCommit {
-			if err := scaffoldPreCommit(targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := scaffoldPreCommit(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
@@ -30,7 +31,7 @@ func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.Infr
 	// Process compliance.md.
 	for _, id := range infra {
 		if id == types.InfraIdCompliance {
-			if err := scaffoldCompliance(targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := scaffoldCompliance(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
@@ -39,7 +40,7 @@ func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.Infr
 	// Process KNOWLEDGE_MAP.
 	for _, id := range infra {
 		if id == types.InfraIdKnowledgeMap {
-			if err := scaffoldKnowledgeMap(targetDir, libraryDir, projectName, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := scaffoldKnowledgeMap(targetDir, libFS, projectName, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
@@ -48,7 +49,7 @@ func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.Infr
 	// Process CODEOWNERS.
 	for _, id := range infra {
 		if id == types.InfraIdCodeowners {
-			if err := scaffoldCodeowners(targetDir, libraryDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := scaffoldCodeowners(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
 				return err
 			}
 		}
@@ -57,7 +58,7 @@ func ScaffoldInfra(targetDir, libraryDir, projectName string, infra []types.Infr
 	return nil
 }
 
-func scaffoldPreCommit(targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func scaffoldPreCommit(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	gitDir := filepath.Join(targetDir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 		return nil
@@ -68,31 +69,31 @@ func scaffoldPreCommit(targetDir, libraryDir string, fileRecords *[]types.Tracke
 		return err
 	}
 
-	src := filepath.Join(libraryDir, "infra", "pre-commit.hook")
+	srcRelPath := "infra/pre-commit.hook"
 	dest := filepath.Join(hookDir, "pre-commit")
 
-	return copyInfraFile(src, dest, targetDir, fileRecords, strategy, perFileOverrides)
+	return copyInfraFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides)
 }
 
-func scaffoldCompliance(targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func scaffoldCompliance(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	specsDir := filepath.Join(targetDir, "specs")
 	if err := files.EnsureDir(specsDir); err != nil {
 		return err
 	}
 
-	src := filepath.Join(libraryDir, "infra", "compliance.md")
+	srcRelPath := "infra/compliance.md"
 	dest := filepath.Join(specsDir, "compliance.md")
 
-	return copyInfraFile(src, dest, targetDir, fileRecords, strategy, perFileOverrides)
+	return copyInfraFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides)
 }
 
-func scaffoldKnowledgeMap(targetDir, libraryDir, projectName string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	src := filepath.Join(libraryDir, "infra", "KNOWLEDGE_MAP.template.md")
-	if !files.FileExists(src) {
+func scaffoldKnowledgeMap(targetDir string, libFS fs.FS, projectName string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	srcRelPath := "infra/KNOWLEDGE_MAP.template.md"
+	if !files.ExistsFS(libFS, srcRelPath) {
 		return nil
 	}
 
-	data, err := files.ReadFile(src)
+	data, err := files.ReadFS(libFS, srcRelPath)
 	if err != nil {
 		return err
 	}
@@ -121,22 +122,22 @@ func scaffoldKnowledgeMap(targetDir, libraryDir, projectName string, fileRecords
 	*fileRecords = append(*fileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
-		Source: "infra/KNOWLEDGE_MAP.template.md",
+		Source: srcRelPath,
 		Owner:  types.FileOwnerLibrary,
 	})
 	return nil
 }
 
-func scaffoldCodeowners(targetDir, libraryDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	src := filepath.Join(libraryDir, "infra", "CODEOWNERS.template")
+func scaffoldCodeowners(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	srcRelPath := "infra/CODEOWNERS.template"
 	dest := filepath.Join(targetDir, "CODEOWNERS")
 
-	return copyInfraFile(src, dest, targetDir, fileRecords, strategy, perFileOverrides)
+	return copyInfraFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides)
 }
 
-// copyInfraFile copies an infrastructure file with conflict resolution and tracking.
-func copyInfraFile(src, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	if !files.FileExists(src) {
+// copyInfraFileFromFS copies an infrastructure file from the library FS with conflict resolution and tracking.
+func copyInfraFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	if !files.ExistsFS(libFS, srcRelPath) {
 		return nil
 	}
 
@@ -154,16 +155,21 @@ func copyInfraFile(src, dest, targetDir string, fileRecords *[]types.TrackedFile
 		return nil
 	}
 
-	if err := files.CopyFile(src, dest); err != nil {
+	data, err := files.ReadFS(libFS, srcRelPath)
+	if err != nil {
+		log.Printf("Warning: could not read %s: %v", srcRelPath, err)
+		return nil
+	}
+
+	if err := files.WriteFile(dest, data, 0o644); err != nil {
 		return err
 	}
 
 	hash, _ := files.FileHash(dest)
-	source, _ := filepath.Rel(targetDir, src)
 	*fileRecords = append(*fileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
-		Source: source,
+		Source: srcRelPath,
 		Owner:  types.FileOwnerLibrary,
 	})
 	return nil

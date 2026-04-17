@@ -202,7 +202,7 @@ func readStore(dir string) (*types.StoreData, error) {
 		database, err := db.Open(dbPath)
 		if err == nil {
 			defer database.Close()
-			if err := db.RunMigrations(database.DB); err == nil {
+			if err := db.RunMigrations(database); err == nil {
 				store := db.NewStore(database)
 				data, err := store.ReadStoreData()
 				if err == nil && data != nil {
@@ -222,10 +222,6 @@ func readStore(dir string) (*types.StoreData, error) {
 	}
 
 	return nil, aierror.ManifestNotFound(dir)
-}
-
-func printKV(label, value string, labelStyle, valueStyle lipgloss.Style) {
-	fmt.Printf("  %s  %s\n", labelStyle.Render(label+":"), valueStyle.Render(value))
 }
 
 func toolList(tools []types.ToolId) string {

@@ -4,6 +4,8 @@
 package adapter
 
 import (
+	"io/fs"
+
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -14,8 +16,12 @@ type AdapterContext struct {
 	TargetDir string
 	// SetupScope is the installation scope (global, workspace, project).
 	SetupScope types.SetupScope
+	// HomeDir is the user's home directory, used for global scope path resolution.
+	HomeDir string
 	// LibraryDir is the path to the library containing source templates.
 	LibraryDir string
+	// LibraryFS is the filesystem for reading library data (embedded or disk).
+	LibraryFS fs.FS
 	// FileRecords accumulates records of all files written during installation.
 	FileRecords []types.TrackedFile
 	// EnableServers lists MCP servers to enable (e.g. "orchestrator").
@@ -53,4 +59,10 @@ type ToolAdapter interface {
 	Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 	// CompileMCP generates the per-tool MCP config from the canonical .ai/mcp.json.
 	CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error)
+	// CanRunHeadless returns true if this adapter supports headless CLI mode
+	// for validation or generation.
+	CanRunHeadless() bool
+	// RunHeadlessValidation runs a headless validation command if the tool is
+	// installed. Non-fatal: logs a warning on error and returns nil.
+	RunHeadlessValidation(ctx *AdapterContext) error
 }

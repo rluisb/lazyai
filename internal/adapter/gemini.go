@@ -86,3 +86,7 @@ func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error
 func (a *GeminiAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
 	return CompileMCPForTool(types.ToolIdGemini, targetDir, fileRecords)
 }
+
+func (a *GeminiAdapter) CanRunHeadless() bool { return false }
+
+func (a *GeminiAdapter) RunHeadlessValidation(ctx *AdapterContext) error { return nil }

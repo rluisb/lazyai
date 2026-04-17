@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io/fs"
 	"log"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,7 @@ var deprecatedRootTemplateByFile = map[string]string{
 // ScaffoldRootFiles creates root-level AI tool configuration files using the
 // deprecated template approach. Prefer ScaffoldCompiledRoot instead.
 // Ported from src/scaffold/root-files.ts.
-func ScaffoldRootFiles(targetDir, libraryDir, projectName string, tools []types.ToolId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldRootFiles(targetDir string, libFS fs.FS, projectName string, tools []types.ToolId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	for _, tool := range tools {
 		outputName, ok := RootFileByTool[tool]
 		if !ok {
@@ -34,12 +35,12 @@ func ScaffoldRootFiles(targetDir, libraryDir, projectName string, tools []types.
 			continue
 		}
 
-		templatePath := filepath.Join(libraryDir, filepath.Base(templateSource))
-		if !files.FileExists(templatePath) {
+		templateRelPath := "root/" + filepath.Base(templateSource)
+		if !files.ExistsFS(libFS, templateRelPath) {
 			continue
 		}
 
-		data, err := files.ReadFile(templatePath)
+		data, err := files.ReadFS(libFS, templateRelPath)
 		if err != nil {
 			continue
 		}

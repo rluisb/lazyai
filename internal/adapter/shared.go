@@ -5,6 +5,7 @@ package adapter
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"path/filepath"
 	"strings"
@@ -28,9 +29,11 @@ func selectionSet[T ~string](items []T) map[T]bool {
 	return m
 }
 
-// CopyWithRecord copies a file from src to dest, records it in ctx.FileRecords,
-// and handles conflict resolution. If transform is non-nil, it is applied to
-// the file content before writing.
+// CopyWithRecord copies a file from the library FS to dest, records it in
+// ctx.FileRecords, and handles conflict resolution. If transform is non-nil,
+// it is applied to the file content before writing.
+//
+// src is a relative path within ctx.LibraryFS (e.g., "agents/builder.md").
 func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte) error {
 	relPath, err := filepath.Rel(ctx.TargetDir, dest)
 	if err != nil {
@@ -64,13 +67,15 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 		}
 	}
 
+	// Source path for TrackedFile.Source — use the library-relative path.
+	sourcePath := src
+
 	if ctx.DryRun {
 		log.Printf("[dry-run] Would create: %s", relPath)
-		source, _ := filepath.Rel(ctx.LibraryDir, src)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   "dry-run",
-			Source: source,
+			Source: sourcePath,
 			Owner:  types.FileOwnerLibrary,
 		})
 		return nil
@@ -80,28 +85,38 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 		return err
 	}
 
+	// Read content from the library FS (or disk FS as fallback).
 	var content []byte
-	if transform != nil {
-		data, err := files.ReadFile(src)
+	libFS := ctx.LibraryFS
+	if libFS == nil {
+		// Fallback: read from filesystem using LibraryDir.
+		absSrc := filepath.Join(ctx.LibraryDir, src)
+		data, err := files.ReadFile(absSrc)
 		if err != nil {
-			return err
+			return fmt.Errorf("read %s: %w", src, err)
 		}
-		content = transform(data)
-		if err := files.WriteFile(dest, content, 0o644); err != nil {
-			return err
-		}
+		content = data
 	} else {
-		if err := files.CopyFile(src, dest); err != nil {
-			return err
+		data, err := fs.ReadFile(libFS, src)
+		if err != nil {
+			return fmt.Errorf("read FS %s: %w", src, err)
 		}
+		content = data
+	}
+
+	if transform != nil {
+		content = transform(content)
+	}
+
+	if err := files.WriteFile(dest, content, 0o644); err != nil {
+		return err
 	}
 
 	hash, _ := files.FileHash(dest)
-	source, _ := filepath.Rel(ctx.LibraryDir, src)
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
-		Source: source,
+		Source: sourcePath,
 		Owner:  types.FileOwnerLibrary,
 	})
 	return nil
@@ -171,7 +186,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 // CopyLibraryDirectoryOption holds options for CopyLibraryDirectory.
 type CopyLibraryDirectoryOption struct {
 	Ctx          *AdapterContext
-	SourceSubdir string // subdirectory under LibraryDir (e.g. "agents", "skills")
+	SourceSubdir string // subdirectory within library (e.g. "agents", "skills")
 	SelectionKey string // "agents", "skills", or "prompts"
 	ToDestPath   func(file string) string
 	WarnOnSkip   bool
@@ -181,13 +196,71 @@ type CopyLibraryDirectoryOption struct {
 
 // CopyLibraryDirectory copies all files from the library subdirectory,
 // applying selection filtering and conflict resolution.
+// Uses ctx.LibraryFS when available, falls back to ctx.LibraryDir + filesystem.
 func CopyLibraryDirectory(opts CopyLibraryDirectoryOption) error {
+	libFS := opts.Ctx.LibraryFS
+
+	if libFS != nil {
+		return copyLibraryDirectoryFromFS(opts, libFS)
+	}
+	// Fallback: filesystem mode using LibraryDir.
 	sourceDir := filepath.Join(opts.Ctx.LibraryDir, opts.SourceSubdir)
 	if !files.DirExists(sourceDir) {
 		return nil // directory doesn't exist, nothing to copy
 	}
+	return copyLibraryDirectoryFromDisk(opts, sourceDir)
+}
 
-	// Build selection set based on the selection key.
+// copyLibraryDirectoryFromFS copies files from the library fs.FS.
+func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) error {
+	entries, err := fs.ReadDir(libFS, opts.SourceSubdir)
+	if err != nil {
+		// Directory doesn't exist in FS, nothing to copy.
+		return nil
+	}
+
+	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
+	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
+	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		file := entry.Name()
+
+		if opts.IncludeFile != nil && !opts.IncludeFile(file) {
+			continue
+		}
+
+		// Extract file ID (filename without extension) for selection filtering.
+		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
+		switch opts.SelectionKey {
+		case "agents":
+			if selectedAgents != nil && !selectedAgents[types.AgentId(fileIDVal)] {
+				continue
+			}
+		case "skills":
+			if selectedSkills != nil && !selectedSkills[types.SkillId(fileIDVal)] {
+				continue
+			}
+		case "prompts":
+			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
+				continue
+			}
+		}
+
+		srcPath := opts.SourceSubdir + "/" + file
+		dest := opts.ToDestPath(file)
+		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copyLibraryDirectoryFromDisk copies files from the real filesystem (dev mode).
+func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir string) error {
 	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
 	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
 	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
@@ -203,24 +276,26 @@ func CopyLibraryDirectory(opts CopyLibraryDirectoryOption) error {
 		}
 
 		// Extract file ID (filename without extension) for selection filtering.
-		fileID := strings.TrimSuffix(file, filepath.Ext(file))
+		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
 		switch opts.SelectionKey {
 		case "agents":
-			if selectedAgents != nil && !selectedAgents[types.AgentId(fileID)] {
+			if selectedAgents != nil && !selectedAgents[types.AgentId(fileIDVal)] {
 				continue
 			}
 		case "skills":
-			if selectedSkills != nil && !selectedSkills[types.SkillId(fileID)] {
+			if selectedSkills != nil && !selectedSkills[types.SkillId(fileIDVal)] {
 				continue
 			}
 		case "prompts":
-			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileID)] {
+			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
 				continue
 			}
 		}
 
 		dest := opts.ToDestPath(file)
-		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
+		// Use library-relative path for the source so CopyWithRecord reads from FS.
+		libRelPath := opts.SourceSubdir + "/" + file
+		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
 			return err
 		}
 	}
@@ -241,11 +316,9 @@ type InstallToolContextFilesOption struct {
 // InstallToolContextFiles copies the tool-agents context files (agents-dir.md,
 // skills-dir.md, root-dir.md) into the appropriate directories.
 func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
-	toolAgentsDir := filepath.Join(opts.Ctx.LibraryDir, "tool-agents")
-
 	// agents directory context file
 	if err := CopyWithRecord(
-		filepath.Join(toolAgentsDir, "agents-dir.md"),
+		"tool-agents/agents-dir.md",
 		filepath.Join(opts.ToolDir, opts.AgentsDestDir, opts.ContextFileName),
 		opts.Ctx, opts.WarnOnSkip, nil,
 	); err != nil {
@@ -255,7 +328,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 	// skills directory context file
 	if opts.SkillsDestDir != "" {
 		if err := CopyWithRecord(
-			filepath.Join(toolAgentsDir, "skills-dir.md"),
+			"tool-agents/skills-dir.md",
 			filepath.Join(opts.ToolDir, opts.SkillsDestDir, opts.ContextFileName),
 			opts.Ctx, opts.WarnOnSkip, nil,
 		); err != nil {
@@ -266,7 +339,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 	// templates directory context file
 	if opts.TemplatesDestDir != "" {
 		if err := CopyWithRecord(
-			filepath.Join(toolAgentsDir, "templates-dir.md"),
+			"tool-agents/templates-dir.md",
 			filepath.Join(opts.ToolDir, opts.TemplatesDestDir, opts.ContextFileName),
 			opts.Ctx, opts.WarnOnSkip, nil,
 		); err != nil {
@@ -276,7 +349,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 
 	// root directory context file
 	return CopyWithRecord(
-		filepath.Join(toolAgentsDir, "root-dir.md"),
+		"tool-agents/root-dir.md",
 		filepath.Join(opts.ToolDir, opts.ContextFileName),
 		opts.Ctx, opts.WarnOnSkip, nil,
 	)
@@ -290,11 +363,6 @@ func InstallRootTemplateIfMissing(ctx *AdapterContext, recordPath, destPath, tem
 		if r.Path == recordPath {
 			return nil
 		}
-	}
-
-	templatePath := filepath.Join(ctx.LibraryDir, templateSource)
-	if !files.FileExists(templatePath) {
-		return nil
 	}
 
 	effectiveStrategy := ctx.Strategy
@@ -319,10 +387,28 @@ func InstallRootTemplateIfMissing(ctx *AdapterContext, recordPath, destPath, tem
 		}
 	}
 
-	data, err := files.ReadFile(templatePath)
-	if err != nil {
-		return err
+	// Read from library FS or disk.
+	var data []byte
+	libFS := ctx.LibraryFS
+	if libFS != nil {
+		d, err := fs.ReadFile(libFS, templateSource)
+		if err != nil {
+			// Template doesn't exist, skip.
+			return nil
+		}
+		data = d
+	} else {
+		templatePath := filepath.Join(ctx.LibraryDir, templateSource)
+		if !files.FileExists(templatePath) {
+			return nil
+		}
+		d, err := files.ReadFile(templatePath)
+		if err != nil {
+			return err
+		}
+		data = d
 	}
+
 	if err := files.WriteFile(destPath, data, 0o644); err != nil {
 		return err
 	}
@@ -367,11 +453,19 @@ func IsOrchestratorEnabled(ctx *AdapterContext) bool {
 // readOrchestratorAgentSource reads the orchestrator agent source file,
 // falling back to a hardcoded default if the file is missing.
 func readOrchestratorAgentSource(ctx *AdapterContext) string {
-	sourcePath := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
-	if files.FileExists(sourcePath) {
-		data, err := files.ReadFile(sourcePath)
+	libFS := ctx.LibraryFS
+	if libFS != nil {
+		data, err := fs.ReadFile(libFS, "agents/orchestrator.md")
 		if err == nil {
 			return string(data)
+		}
+	} else if ctx.LibraryDir != "" {
+		sourcePath := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
+		if files.FileExists(sourcePath) {
+			data, err := files.ReadFile(sourcePath)
+			if err == nil {
+				return string(data)
+			}
 		}
 	}
 

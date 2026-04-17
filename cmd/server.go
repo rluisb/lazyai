@@ -879,3 +879,13 @@ func finalizeServerReport(server string, checks []CheckResult) ServerHealthRepor
 func boldStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Bold(true)
 }
+
+// perToolMCPConfig maps each tool ID to its per-tool MCP config file path.
+// An empty string means the tool uses a global config (no project-local file).
+var perToolMCPConfig = map[string]string{
+	"opencode":    ".opencode/opencode.jsonc",
+	"claude-code": ".mcp.json",
+	"copilot":     ".vscode/mcp.json",
+	"gemini":      ".gemini/settings.json",
+	"codex":       "", // global, no project-local file
+}

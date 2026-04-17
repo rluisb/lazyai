@@ -206,7 +206,7 @@ For each tool adapter:
 #### 4.2 Test all 6 adapters
 | Adapter | Config file | Verified |
 |---------|------------|-----------|
-| OpenCode | `opencode.jsonc` | ☐ |
+| OpenCode | `.opencode/opencode.jsonc` | ☐ |
 | Claude Code | `.mcp.json` | ☐ |
 | Gemini | `.gemini/settings.json` | ☐ |
 | Copilot | `.vscode/mcp.json` | ☐ |

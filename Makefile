@@ -1,8 +1,9 @@
-.PHONY: build test lint vet clean install release cross-build
+.PHONY: build test lint vet clean install release cross-build checksums
 
 BINARY_NAME=ai-setup
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-LDFLAGS=-ldflags "-s -w -X cmd.Version=$(VERSION)"
+MODULE=github.com/ricardoborges-teachable/ai-setup
+LDFLAGS=-ldflags "-s -w -X $(MODULE)/cmd.Version=$(VERSION)"
 GO=go
 
 build:
@@ -33,6 +34,7 @@ tidy:
 
 clean:
 	rm -f $(BINARY_NAME) coverage.out coverage.html
+	rm -rf dist/
 
 install: build
 	cp $(BINARY_NAME) /usr/local/bin/
@@ -43,6 +45,9 @@ cross-build:
 	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 .
 	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 .
 	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
+
+checksums: cross-build
+	cd dist && shasum -a 256 * > checksums.txt
 
 dev:
 	$(GO) build -o $(BINARY_NAME) . && ./$(BINARY_NAME) $(ARGS)

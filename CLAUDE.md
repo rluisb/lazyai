@@ -24,8 +24,17 @@ Default to repository conventions before introducing new patterns.
 
 | Component | Responsibility | Path |
 |-----------|---------------|------|
-| [YOUR_COMPONENT_1] | [YOUR_RESPONSIBILITY_1] | [YOUR_PATH_1] |
-| [YOUR_COMPONENT_2] | [YOUR_RESPONSIBILITY_2] | [YOUR_PATH_2] |
+| CLI entry points | `init`, `add`, `compile` cobra commands | `cmd/` |
+| Adapter layer | Per-tool Install() + scope resolver | `internal/adapter/` |
+| Config merge | Deep-merge JSON/TOML with backup-on-first-touch | `internal/configmerge/` |
+| Compiler | Assembles CLAUDE.md / AGENTS.md root files | `internal/compiler/` |
+| Scaffold | Orchestrates all file-write steps | `internal/scaffold/` |
+| Global paths | Canonical per-tool home-dir roots | `internal/globalpaths/` |
+| Types | Shared enums and value types | `internal/types/` |
+| Database / store | SQLite-backed config + migration store | `internal/db/` |
+| Library FS | Embedded asset bundle (templates, rules) | `internal/library/`, `library/` |
+| TUI wizard | Interactive multi-phase setup wizard | `tui/wizard/` |
+| Specs | RPI plans, research docs, task files | `specs/` |
 
 ## Architecture & Patterns
 

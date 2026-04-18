@@ -19,7 +19,6 @@ coverage.html
 .worktrees/
 AGENTS.md
 INSTRUCTIONS.md
-KNOWLEDGE_MAP.md
 CODEOWNERS
 
 # Scaffold-generated docs (copies from library/)

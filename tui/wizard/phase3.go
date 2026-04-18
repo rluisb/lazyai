@@ -68,7 +68,7 @@ func runPhase3Interactive(conflicts []conflict.Conflict) (*Phase3Result, PhaseAc
 		).
 		Value(&strategyValue)
 
-	form := huh.NewForm(huh.NewGroup(strategySelect).Title("Phase 3/4: Conflict Resolution"))
+	form := huh.NewForm(huh.NewGroup(strategySelect).Title("Conflict Resolution"))
 	if err := form.Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 3 cancelled: %w", err)
 	}

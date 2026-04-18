@@ -1,5 +1,15 @@
-// Package wizard provides the interactive 5-phase setup wizard for ai-setup,
+// Package wizard provides the interactive setup wizard for ai-setup,
 // built on top of the Charm Bracelet TUI stack (bubbletea, lipgloss, huh).
+//
+// Phase ordering (as executed in RunWizardWithDefaults):
+//   Phase 1 (context) → Phase 2 (features) → Phase 3 (conflicts, conditional)
+//   → Phase 5 (optional tooling) → Phase 4 (review & confirm)
+//
+// Title convention: each interactive sub-screen title uses the format
+// "<PhaseTitle> — <n>/<N>: <StepTitle>" where <n> is the current step and
+// <N> is the total steps for the user's current branch through that phase.
+// Phase titles are neutral labels (e.g., "Setup Context", "Review & Confirm")
+// and do not include "Phase X/N" wording.
 package wizard
 
 import (
@@ -67,13 +77,14 @@ type WizardResult struct {
 	Phase5 *Phase5Result
 }
 
-// RunWizard executes the full 5-phase wizard.
+// RunWizard executes the full setup wizard.
 //
 // It runs phases in sequence with back-navigation support:
 //   - Phase 1 → if back, re-run Phase 1
 //   - Phase 2 → if back, go to Phase 1
 //   - Phase 3 (only when conflicts exist) → if back, go to Phase 2
-//   - Phase 4 → if back, go to Phase 3 (or 2 if no conflicts)
+//   - Phase 5 → if back, go to Phase 3 (or Phase 2 if no conflicts)
+//   - Phase 4 → if back, go to Phase 5 (or Phase 3/2 depending on conflicts)
 //
 // Returns the final WizardResult or an error if the wizard is cancelled
 // or fails.
@@ -81,10 +92,12 @@ func RunWizard(config *WizardConfig) (*WizardResult, error) {
 	return RunWizardWithDefaults(config, nil)
 }
 
-// RunWizardWithDefaults executes the full 4-phase wizard with optional pre-filled defaults.
+// RunWizardWithDefaults executes the setup wizard with optional pre-filled defaults.
 //
 // The defaults are used when re-running phases (e.g., when the user goes back).
 // If defaults are nil, no pre-filling occurs.
+//
+// Phase ordering: 1 → 2 → 3 (conditional) → 5 → 4.
 func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*WizardResult, error) {
 	result := &WizardResult{}
 

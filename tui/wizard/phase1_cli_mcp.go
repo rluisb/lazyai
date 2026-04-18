@@ -3,11 +3,16 @@ package wizard
 import (
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sort"
 
 	"charm.land/huh/v2"
 )
+
+var cliToolLookPath = exec.LookPath
 
 type McpCatalog struct {
 	Servers  map[string]McpServer `json:"servers"`
@@ -26,11 +31,19 @@ type CliTool struct {
 }
 
 func loadMcpCatalog() (*McpCatalog, error) {
-	// We assume the catalog is in the library directory relative to project root.
-	// In a real setup, we'd use a consistent way to find the library path.
-	// For now, we use a path relative to the current working directory.
-	path := filepath.Join("library", "mcp", "catalog.json")
-	data, err := os.ReadFile(path)
+	paths := []string{filepath.Join("library", "mcp", "catalog.json")}
+	if _, file, _, ok := runtime.Caller(0); ok {
+		paths = append(paths, filepath.Join(filepath.Dir(file), "..", "..", "library", "mcp", "catalog.json"))
+	}
+
+	var data []byte
+	var err error
+	for _, path := range paths {
+		data, err = os.ReadFile(path)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to read mcp catalog: %w", err)
 	}
@@ -41,21 +54,20 @@ func loadMcpCatalog() (*McpCatalog, error) {
 	return &catalog, nil
 }
 
-func NewCliToolsSelect(defaults []string) *huh.MultiSelect[string] {
+func NewCliToolsSelect(defaults []string, preSelected []string) *huh.MultiSelect[string] {
 	catalog, err := loadMcpCatalog()
 	if err != nil {
 		return huh.NewMultiSelect[string]().Title("CLI Tools (Error loading catalog)")
 	}
 
-	var options []huh.Option[string]
-	for id := range catalog.CliTools {
-		options = append(options, huh.NewOption(id, id)) // In a real version, we'd use tool.Description
+	selected := cloneStrings(preSelected)
+	if len(defaults) > 0 {
+		selected = cloneStrings(defaults)
 	}
 
-	selected := defaults
 	return huh.NewMultiSelect[string]().
 		Title("Which CLI tools would you like to enable?").
-		Options(options...).
+		Options(cliToolOptionsFromCatalog(catalog)...).
 		Value(&selected)
 }
 
@@ -65,14 +77,65 @@ func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {
 		return huh.NewMultiSelect[string]().Title("MCP Servers (Error loading catalog)")
 	}
 
-	var options []huh.Option[string]
-	for id := range catalog.Servers {
-		options = append(options, huh.NewOption(id, id))
-	}
-
 	selected := defaults
 	return huh.NewMultiSelect[string]().
 		Title("Which MCP servers would you like to enable?").
-		Options(options...).
+		Options(mcpServerOptionsFromCatalog(catalog)...).
 		Value(&selected)
+}
+
+func detectInstalledCliToolsFromCatalog() []string {
+	catalog, err := loadMcpCatalog()
+	if err != nil {
+		return nil
+	}
+	return detectInstalledCliTools(catalog)
+}
+
+func detectInstalledCliTools(catalog *McpCatalog) (installed []string) {
+	defer func() {
+		if recover() != nil {
+			installed = nil
+		}
+	}()
+
+	if catalog == nil {
+		return nil
+	}
+
+	for id := range catalog.CliTools {
+		if _, err := cliToolLookPath(id); err == nil {
+			installed = append(installed, id)
+		}
+	}
+	sort.Strings(installed)
+	return installed
+}
+
+func cliToolOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
+	ids := make([]string, 0, len(catalog.CliTools))
+	for id := range catalog.CliTools {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	options := make([]huh.Option[string], 0, len(ids))
+	for _, id := range ids {
+		options = append(options, huh.NewOption(id, id))
+	}
+	return options
+}
+
+func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
+	ids := make([]string, 0, len(catalog.Servers))
+	for id := range catalog.Servers {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	options := make([]huh.Option[string], 0, len(ids))
+	for _, id := range ids {
+		options = append(options, huh.NewOption(id, id))
+	}
+	return options
 }

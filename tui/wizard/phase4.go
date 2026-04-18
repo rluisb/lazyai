@@ -98,7 +98,7 @@ func runPhase4Interactive(plan *InstallPlan) (*Phase4Result, PhaseAction, error)
 		).
 		Value(&confirmValue)
 
-	form := huh.NewForm(huh.NewGroup(confirmSelect).Title("Phase 4/4: Review & Confirm"))
+	form := huh.NewForm(huh.NewGroup(confirmSelect).Title("Review & Confirm"))
 	if err := form.Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 4 cancelled: %w", err)
 	}

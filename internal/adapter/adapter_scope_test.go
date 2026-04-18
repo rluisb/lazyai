@@ -163,6 +163,49 @@ func TestCodexAdapter_WritesConfigAndSplitSkills(t *testing.T) {
 	}
 }
 
+// TestCodexAdapter_CompileMCP_WritesServers verifies that CompileMCP reads the
+// canonical .ai/mcp.json and merges the enabled servers into .codex/config.toml.
+func TestCodexAdapter_CompileMCP_WritesServers(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write a minimal .ai/mcp.json with one enabled server.
+	aiDir := filepath.Join(dir, ".ai")
+	if err := files.EnsureDir(aiDir); err != nil {
+		t.Fatal(err)
+	}
+	mcpJSON := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem"],"enabled":true}}}`
+	if err := files.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	adapter := &CodexAdapter{}
+	records, err := adapter.CompileMCP(dir, nil)
+	if err != nil {
+		t.Fatalf("CompileMCP: %v", err)
+	}
+
+	configPath := filepath.Join(dir, ".codex", "config.toml")
+	if !files.FileExists(configPath) {
+		t.Fatalf("config.toml not created at %q", configPath)
+	}
+
+	data, _ := files.ReadFile(configPath)
+	content := string(data)
+	if !strings.Contains(content, "mcp_servers") {
+		t.Errorf("mcp_servers table missing from config.toml:\n%s", content)
+	}
+	if !strings.Contains(content, "filesystem") {
+		t.Errorf("filesystem server missing from config.toml:\n%s", content)
+	}
+	if !strings.Contains(content, "npx") {
+		t.Errorf("command 'npx' missing from config.toml:\n%s", content)
+	}
+
+	if len(records) == 0 {
+		t.Error("expected at least one TrackedFile record")
+	}
+}
+
 // TestCodexAdapter_ConfigMergePreservesUserKeys verifies that running Install
 // against a pre-existing config.toml with user-authored tables preserves them
 // and creates a .bak sidecar.

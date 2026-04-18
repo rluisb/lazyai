@@ -96,8 +96,7 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 }
 
 func (a *CodexAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	// Codex has no MCP config file format — nothing to compile.
-	return fileRecords, nil
+	return CompileMCPForTool(types.ToolIdCodex, targetDir, fileRecords)
 }
 
 func (a *CodexAdapter) CanRunHeadless() bool { return true }

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -63,6 +64,8 @@ func CompileMCPForTool(toolId types.ToolId, targetDir string, fileRecords []type
 		return compileCopilotMCP(targetDir, enabledServers, fileRecords)
 	case types.ToolIdGemini:
 		return compileGeminiMCP(targetDir, enabledServers, fileRecords)
+	case types.ToolIdCodex:
+		return compileCodexMCP(targetDir, enabledServers, fileRecords)
 	default:
 		// Tool has no MCP config format — return unchanged.
 		return fileRecords, nil
@@ -318,6 +321,43 @@ func transformEnvSyntax(envObj map[string]string, targetPattern string) map[stri
 // OpenCode config directory (~/.config/opencode).
 func isGlobalOpenCodeDir(dir string) bool {
 	return filepath.Base(dir) == "opencode" && filepath.Base(filepath.Dir(dir)) == ".config"
+}
+
+// ---------------------------------------------------------------------------
+// Codex MCP compilation
+// ---------------------------------------------------------------------------
+
+// compileCodexMCP writes enabled MCP servers into .codex/config.toml under
+// the [mcp_servers.*] tables using deep-merge so user-authored keys survive.
+func compileCodexMCP(targetDir string, enabledServers map[string]McpServer, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
+	configPath := filepath.Join(targetDir, ".codex", "config.toml")
+
+	mcpServers := make(map[string]any, len(enabledServers))
+	for name, srv := range enabledServers {
+		entry := map[string]any{}
+		if srv.Command != "" {
+			entry["command"] = srv.Command
+		}
+		if len(srv.Args) > 0 {
+			entry["args"] = srv.Args
+		}
+		if len(srv.Env) > 0 {
+			entry["env"] = srv.Env
+		}
+		mcpServers[name] = entry
+	}
+
+	patch := map[string]any{"mcp_servers": mcpServers}
+	if _, err := configmerge.MergeTOMLFile(configPath, patch); err != nil {
+		return fileRecords, err
+	}
+
+	hash, _ := files.FileHash(configPath)
+	fileRecords = append(fileRecords, types.TrackedFile{
+		Path: ".codex/config.toml", Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerLibrary,
+	})
+	log.Printf("[codex] compiled MCP config -> %s (%d servers)", configPath, len(enabledServers))
+	return fileRecords, nil
 }
 
 // Ensure all format strings with %s in log statements are correct.

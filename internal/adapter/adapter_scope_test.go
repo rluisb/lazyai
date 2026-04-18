@@ -158,6 +158,12 @@ func TestCodexAdapter_WritesConfigAndSplitSkills(t *testing.T) {
 			if files.DirExists(badGuess) && c.scope != types.SetupScopeGlobal {
 				t.Errorf("codex wrote under parent-of-target: %q", badGuess)
 			}
+			// Global scope must also emit AGENTS.override.md.
+			if c.scope == types.SetupScopeGlobal {
+				if !files.FileExists(filepath.Join(cfg, "AGENTS.override.md")) {
+					t.Errorf("AGENTS.override.md missing at global configRoot %q", cfg)
+				}
+			}
 			_ = home
 		})
 	}

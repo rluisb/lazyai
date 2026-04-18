@@ -92,6 +92,28 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 
 	// Root AGENTS.md placement is handled centrally by scaffold/root.go.
 
+	// Global scope: emit AGENTS.override.md in the config root so users have a
+	// ready-to-edit override file. Only written on first install; never overwrites.
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		overridePath := filepath.Join(configRoot, "AGENTS.override.md")
+		if !files.FileExists(overridePath) {
+			const overrideContent = "# AGENTS Override\n\n" +
+				"Add custom global instructions here. Codex reads this file at startup\n" +
+				"and merges it with the project-level AGENTS.md.\n"
+			if err := files.WriteFile(overridePath, []byte(overrideContent), 0o644); err != nil {
+				return nil, err
+			}
+			relPath, _ := filepath.Rel(ctx.TargetDir, overridePath)
+			if relPath == "" || relPath == "." {
+				relPath = overridePath
+			}
+			hash, _ := files.FileHash(overridePath)
+			ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+				Path: relPath, Hash: hash, Source: "generated:codex-override", Owner: types.FileOwnerLibrary,
+			})
+		}
+	}
+
 	return ctx.FileRecords, nil
 }
 

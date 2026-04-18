@@ -135,7 +135,63 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	// Root CLAUDE.md placement is handled centrally by scaffold/root.go
 	// (scope-aware); the adapter no longer installs it.
 
+	// CLI-driven MCP registration: when DriveCLI=true, attempt to register MCP
+	// servers via `claude mcp add`. Falls back silently to direct-write (via
+	// settings.json merge) on any failure.
+	if ctx.DriveCLI {
+		if ok := installClaudeMCPViaCLI(ctx, claudeDir); ok {
+			log.Println("[claude] MCP servers registered via CLI")
+		}
+	}
+
 	return ctx.FileRecords, nil
+}
+
+// installClaudeMCPViaCLI calls `claude mcp add` for each enabled MCP server
+// found in the canonical .ai/mcp.json. Returns true only if at least one
+// server was registered successfully. Safe to ignore the return value —
+// settings.json already provides the direct-write baseline.
+func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
+	bin, err := exec.LookPath("claude")
+	if err != nil {
+		log.Println("[claude] --drive-cli requested but claude binary not found; using direct-write")
+		return false
+	}
+
+	catalog := readCanonicalMcp(ctx.TargetDir)
+	if catalog == nil || len(catalog.Servers) == 0 {
+		return false
+	}
+
+	success := false
+	for name, srv := range catalog.Servers {
+		if !srv.isEnabled() {
+			continue
+		}
+		// claude mcp add --name <name> --command <cmd> [args...] [--env KEY=VAL]
+		args := []string{"mcp", "add", "--name", name}
+		if srv.Command != "" {
+			args = append(args, "--command", srv.Command)
+		}
+		for _, a := range srv.Args {
+			args = append(args, "--args", a)
+		}
+		for k, v := range srv.Env {
+			args = append(args, "--env", k+"="+v)
+		}
+
+		runCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		out, runErr := exec.CommandContext(runCtx, bin, args...).CombinedOutput()
+		cancel()
+		if runErr != nil {
+			log.Printf("[claude] mcp add %q failed: %v\n%s", name, runErr, string(out))
+			continue
+		}
+		log.Printf("[claude] registered MCP server %q via CLI", name)
+		success = true
+	}
+	_ = claudeDir
+	return success
 }
 
 func (a *ClaudeCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

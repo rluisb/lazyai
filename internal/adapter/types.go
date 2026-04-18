@@ -30,6 +30,11 @@ type AdapterContext struct {
 	Force bool
 	// DryRun reports what would be done without writing files.
 	DryRun bool
+	// DriveCLI, when true, asks adapters that support it to delegate
+	// scaffolding to the tool's own CLI (e.g. `gemini mcp add`) instead of
+	// direct-write. Falls back silently to direct-write when the binary is
+	// absent or the CLI call fails.
+	DriveCLI bool
 	// Strategy controls how file conflicts are handled.
 	Strategy types.ConflictStrategy
 	// PerFileOverrides allows per-file conflict strategy overrides.

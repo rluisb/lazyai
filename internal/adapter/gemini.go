@@ -3,8 +3,12 @@
 package adapter
 
 import (
+	"context"
+	"encoding/json"
 	"log"
+	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
@@ -84,7 +88,64 @@ func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error
 
 	// Root GEMINI.md placement is handled centrally by scaffold/root.go.
 
+	// CLI-driven MCP registration: when DriveCLI=true, attempt to register MCP
+	// servers via `gemini mcp add`. Falls back to direct-write on any failure.
+	if ctx.DriveCLI {
+		if ok := installGeminiMCPViaCLI(ctx, geminiDir); ok {
+			log.Println("[gemini] MCP servers registered via CLI")
+		}
+		// On failure (binary absent or command error) we already wrote settings.json
+		// above, so no further action is needed.
+	}
+
 	return ctx.FileRecords, nil
+}
+
+// installGeminiMCPViaCLI calls `gemini mcp add` for each enabled MCP server
+// found in the canonical .ai/mcp.json. Returns true only if at least one
+// server was registered successfully. Safe to ignore the return value — caller
+// already wrote settings.json as the direct-write baseline.
+func installGeminiMCPViaCLI(ctx *AdapterContext, geminiDir string) bool {
+	geminiBin, err := exec.LookPath("gemini")
+	if err != nil {
+		log.Println("[gemini] --drive-cli requested but gemini binary not found; using direct-write")
+		return false
+	}
+
+	catalog := readCanonicalMcp(ctx.TargetDir)
+	if catalog == nil || len(catalog.Servers) == 0 {
+		return false
+	}
+
+	success := false
+	for name, srv := range catalog.Servers {
+		if !srv.isEnabled() {
+			continue
+		}
+		args := []string{"mcp", "add", "--server-name", name}
+		if srv.Command != "" {
+			args = append(args, "--command", srv.Command)
+		}
+		for _, a := range srv.Args {
+			args = append(args, "--args", a)
+		}
+		if len(srv.Env) > 0 {
+			envJSON, _ := json.Marshal(srv.Env)
+			args = append(args, "--env", string(envJSON))
+		}
+
+		runCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		out, runErr := exec.CommandContext(runCtx, geminiBin, args...).CombinedOutput()
+		cancel()
+		if runErr != nil {
+			log.Printf("[gemini] mcp add %q failed: %v\n%s", name, runErr, string(out))
+			continue
+		}
+		log.Printf("[gemini] registered MCP server %q via CLI", name)
+		success = true
+	}
+	_ = geminiDir
+	return success
 }
 
 func (a *GeminiAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {

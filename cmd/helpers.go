@@ -126,6 +126,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Strategy:         types.ConflictStrategyAlign,
 		Force:            config.Force,
 		DryRun:           config.DryRun,
+		DriveCLI:         config.CLIDriveCLI,
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,

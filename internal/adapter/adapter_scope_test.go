@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -248,5 +250,73 @@ func TestCodexAdapter_ConfigMergePreservesUserKeys(t *testing.T) {
 	}
 	if !strings.Contains(content, "[mcp_servers]") {
 		t.Errorf("ai-setup [mcp_servers] not merged in:\n%s", content)
+	}
+}
+
+// TestGeminiAdapter_DriveCLI_FallsBackWhenBinaryAbsent verifies that when
+// DriveCLI=true but the gemini binary is not on PATH, Install succeeds by
+// falling back to direct-write (settings.json is still created).
+func TestGeminiAdapter_DriveCLI_FallsBackWhenBinaryAbsent(t *testing.T) {
+	ctx, _, _ := newScopeTestContext(t, types.SetupScopeProject)
+	ctx.DriveCLI = true
+
+	// Guarantee gemini binary is not found by prepending an empty tmpdir to PATH.
+	emptyDir := t.TempDir()
+	origPATH := os.Getenv("PATH")
+	t.Setenv("PATH", emptyDir+string(os.PathListSeparator)+origPATH)
+
+	adapter := &GeminiAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("Install with DriveCLI=true and absent binary must not error: %v", err)
+	}
+
+	geminiDir := filepath.Join(ctx.TargetDir, ".gemini")
+	settingsPath := filepath.Join(geminiDir, "settings.json")
+	if !files.FileExists(settingsPath) {
+		t.Errorf("settings.json not created via direct-write fallback")
+	}
+}
+
+// TestGeminiAdapter_DriveCLI_CallsGeminiBinary verifies that when DriveCLI=true
+// and a stub gemini binary is on PATH, the adapter invokes `gemini mcp add`.
+func TestGeminiAdapter_DriveCLI_CallsGeminiBinary(t *testing.T) {
+	ctx, _, _ := newScopeTestContext(t, types.SetupScopeProject)
+	ctx.DriveCLI = true
+
+	// Write a stub gemini binary that records the args it receives.
+	stubDir := t.TempDir()
+	recordFile := filepath.Join(stubDir, "gemini-args.txt")
+	stubScript := fmt.Sprintf("#!/bin/sh\necho \"$@\" >> %s\n", recordFile)
+	stubPath := filepath.Join(stubDir, "gemini")
+	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write a canonical .ai/mcp.json so the adapter has a server to register.
+	aiDir := filepath.Join(ctx.TargetDir, ".ai")
+	if err := files.EnsureDir(aiDir); err != nil {
+		t.Fatal(err)
+	}
+	mcpJSON := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem"]}}}`
+	if err := files.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	origPATH := os.Getenv("PATH")
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+origPATH)
+
+	adapter := &GeminiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	// Stub should have been called — record file will exist if gemini was invoked.
+	if !files.FileExists(recordFile) {
+		t.Error("stub gemini binary was not called when DriveCLI=true and binary is present")
+	}
+	data, _ := files.ReadFile(recordFile)
+	if !strings.Contains(string(data), "mcp add") {
+		t.Errorf("expected 'mcp add' in stub args, got: %s", string(data))
 	}
 }

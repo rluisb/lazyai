@@ -29,6 +29,7 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 			EnableServers:    ctx.EnableServers,
 			Force:            ctx.Force,
 			DryRun:           ctx.DryRun,
+			DriveCLI:         ctx.DriveCLI,
 			Strategy:         ctx.Strategy,
 			PerFileOverrides: ctx.PerFileOverrides,
 			Selections: adapter.AdapterSelections{

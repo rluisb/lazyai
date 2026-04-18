@@ -66,6 +66,10 @@ type WizardConfig struct {
 	CLIQmdIndexPath      string
 	CLIEnableCodegraph   bool
 	CLICodegraphDataPath string
+
+	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
+	// scaffolding to the tool's own CLI instead of direct-write.
+	CLIDriveCLI bool
 }
 
 // WizardResult aggregates the results from all five phases.

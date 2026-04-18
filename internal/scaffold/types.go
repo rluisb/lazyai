@@ -42,6 +42,9 @@ type ScaffoldContext struct {
 	Force bool
 	// DryRun reports what would be done without writing files.
 	DryRun bool
+	// DriveCLI, when true, asks adapters that support it to delegate
+	// scaffolding to the tool's own CLI (e.g. `gemini mcp add`).
+	DriveCLI bool
 	// Agents lists agent IDs to install.
 	Agents []types.AgentId
 	// Skills lists skill IDs to install.

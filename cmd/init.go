@@ -32,6 +32,7 @@ func init() {
 	initCmd.Flags().String("branch-pattern", "", "Git branch naming pattern")
 	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
 	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
@@ -63,6 +64,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
 
 	// Build CLI tools from flags.
 	var tools []types.ToolId
@@ -82,6 +84,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		Interactive:          !nonInteractive,
 		Force:                force,
 		DryRun:               dryRun,
+		CLIDriveCLI:          driveCLI,
 		HomeDir:              homeDir,
 		TargetDir:            targetDir,
 		CLIScope:             types.SetupScope(scopeStr),

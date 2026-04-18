@@ -22,7 +22,9 @@ INSTRUCTIONS.md
 CODEOWNERS
 
 # Scaffold-generated docs (copies from library/)
+specs/adrs/
 specs/bugfixes/
+specs/features/
 specs/memory/
 specs/prompts/
 specs/refactors/

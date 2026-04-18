@@ -49,7 +49,9 @@ Default to repository conventions before introducing new patterns.
 
 ## Decision Tree
 
-Before starting work, identify the task type and follow the appropriate guide:
+Before starting work, identify the task type and follow the appropriate guide.
+Workflow rules live in `specs/{type}/AGENTS.md` (scaffold-generated, gitignored).
+Actual spec content lives in flat `specs/NNN-name/` directories (committed).
 
 | Task Type | Guide | Key Process |
 |-----------|-------|-------------|

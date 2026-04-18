@@ -475,6 +475,8 @@ type WizardSelections struct {
 	Agents         []AgentId       `json:"agents"`
 	Skills         []SkillId       `json:"skills"`
 	Prompts        []PromptId      `json:"prompts"`
+	Commands       []CommandId     `json:"commands"`
+	ChatModes      []ChatModeId    `json:"chatmodes"`
 	Infra          []InfraId       `json:"infra"`
 	Constitution   []string        `json:"constitution"`
 	Features       *FeatureFlags   `json:"features,omitempty"`

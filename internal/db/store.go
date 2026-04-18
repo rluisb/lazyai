@@ -227,14 +227,16 @@ func writeConfig(exec sqlExecutor, c *types.Config) error {
 // ReadSelections reads the selections table.
 func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 	var templatesJSON, rulesJSON, agentsJSON, skillsJSON, promptsJSON string
+	var commandsJSON, chatmodesJSON string
 	var infraJSON, constitutionJSON, featuresJSON, gitConventionsJSON, preset string
 
 	err := s.db.QueryRow(`
 		SELECT templates, rules, agents, skills, prompts, infra, constitution,
-		       features, git_conventions, preset
+		       features, git_conventions, preset, commands, chatmodes
 		FROM selections WHERE id = 1`,
 	).Scan(&templatesJSON, &rulesJSON, &agentsJSON, &skillsJSON, &promptsJSON,
-		&infraJSON, &constitutionJSON, &featuresJSON, &gitConventionsJSON, &preset)
+		&infraJSON, &constitutionJSON, &featuresJSON, &gitConventionsJSON, &preset,
+		&commandsJSON, &chatmodesJSON)
 	if err != nil {
 		return nil, fmt.Errorf("query selections: %w", err)
 	}
@@ -278,12 +280,23 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		return nil, fmt.Errorf("unmarshal gitConventions: %w", err)
 	}
 
+	var commands []types.CommandId
+	if err := json.Unmarshal([]byte(commandsJSON), &commands); err != nil {
+		return nil, fmt.Errorf("unmarshal commands: %w", err)
+	}
+	var chatmodes []types.ChatModeId
+	if err := json.Unmarshal([]byte(chatmodesJSON), &chatmodes); err != nil {
+		return nil, fmt.Errorf("unmarshal chatmodes: %w", err)
+	}
+
 	return &types.WizardSelections{
 		Templates:      templates,
 		Rules:          rules,
 		Agents:         agents,
 		Skills:         skills,
 		Prompts:        prompts,
+		Commands:       commands,
+		ChatModes:      chatmodes,
 		Infra:          infra,
 		Constitution:   constitution,
 		Features:       &features,
@@ -341,16 +354,26 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 		gitConventionsJSON = []byte("{}")
 	}
 
+	commandsJSON, err := json.Marshal(s.Commands)
+	if err != nil {
+		return fmt.Errorf("marshal commands: %w", err)
+	}
+	chatmodesJSON, err := json.Marshal(s.ChatModes)
+	if err != nil {
+		return fmt.Errorf("marshal chatmodes: %w", err)
+	}
+
 	preset := "standard"
 
 	_, err = exec.Exec(`
 		INSERT OR REPLACE INTO selections
 			(id, templates, rules, agents, skills, prompts, infra, constitution,
-			 features, git_conventions, preset)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 features, git_conventions, preset, commands, chatmodes)
+		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(templatesJSON), string(rulesJSON), string(agentsJSON), string(skillsJSON),
 		string(promptsJSON), string(infraJSON), string(constitutionJSON),
-		string(featuresJSON), string(gitConventionsJSON), preset)
+		string(featuresJSON), string(gitConventionsJSON), preset,
+		string(commandsJSON), string(chatmodesJSON))
 	return err
 }
 

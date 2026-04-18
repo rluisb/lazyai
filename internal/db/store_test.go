@@ -96,6 +96,8 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			Agents:       []types.AgentId{types.AgentIdBuilder},
 			Skills:       []types.SkillId{types.SkillIdPlan},
 			Prompts:      []types.PromptId{types.PromptIdCompact},
+			Commands:     []types.CommandId{types.CommandIdRpi},
+			ChatModes:    []types.ChatModeId{types.ChatModeIdArchitect},
 			Infra:        []types.InfraId{types.InfraIdPreCommit},
 			Constitution: []string{"constraints"},
 			Features:     &types.FeatureFlags{QualityGates: true},
@@ -170,6 +172,12 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if got.Selections.Features == nil || !got.Selections.Features.QualityGates {
 		t.Error("Features.QualityGates not preserved")
+	}
+	if len(got.Selections.Commands) != 1 || got.Selections.Commands[0] != types.CommandIdRpi {
+		t.Errorf("Commands not preserved: got %v", got.Selections.Commands)
+	}
+	if len(got.Selections.ChatModes) != 1 || got.Selections.ChatModes[0] != types.ChatModeIdArchitect {
+		t.Errorf("ChatModes not preserved: got %v", got.Selections.ChatModes)
 	}
 }
 

@@ -17,6 +17,11 @@ var migrations = []struct {
 		Up:      migrationUp001,
 		Down:    migrationDown001,
 	},
+	{
+		Version: 2,
+		Up:      migrationUp002,
+		Down:    migrationDown002,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -188,4 +193,17 @@ DROP TABLE IF EXISTS selections;
 DROP TABLE IF EXISTS config;
 DROP TABLE IF EXISTS meta;
 DROP TABLE IF EXISTS schema_migrations;
+`
+
+// migration 002 — add commands + chatmodes columns to selections
+// (spec 009 follow-up: persist Gemini commands and Copilot chatmodes so
+// re-runs and ai-setup status see the full selection).
+const migrationUp002 = `
+ALTER TABLE selections ADD COLUMN commands TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE selections ADD COLUMN chatmodes TEXT NOT NULL DEFAULT '[]';
+`
+
+const migrationDown002 = `
+ALTER TABLE selections DROP COLUMN chatmodes;
+ALTER TABLE selections DROP COLUMN commands;
 `

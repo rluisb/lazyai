@@ -138,8 +138,8 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	return ctx.FileRecords, nil
 }
 
-func (a *ClaudeCodeAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	return CompileMCPForTool(types.ToolIdClaudeCode, targetDir, fileRecords)
+func (a *ClaudeCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
+	return CompileMCPForTool(types.ToolIdClaudeCode, ctx)
 }
 
 func (a *ClaudeCodeAdapter) CanRunHeadless() bool { return true }

@@ -569,52 +569,6 @@ func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
 	}
 }
 
-// --- Test: isGlobalOpenCodeDir helper ---
-
-func TestIsGlobalOpenCodeDir(t *testing.T) {
-	tests := []struct {
-		dir      string
-		expected bool
-	}{
-		{"/home/user/.config/opencode", true},
-		{"/Users/ricardo/.config/opencode", true},
-		{"/some/path/.config/opencode", true},
-		{"/tmp/project/.opencode", false},
-		{"/tmp/project", false},
-		{"/home/user/.config/other", false},
-		{"/home/user/opencode", false},
-		{"opencode", false},
-	}
-
-	for _, tc := range tests {
-		result := isGlobalOpenCodeDir(tc.dir)
-		if result != tc.expected {
-			t.Errorf("isGlobalOpenCodeDir(%q) = %v, want %v", tc.dir, result, tc.expected)
-		}
-	}
-}
-
-// --- Test: isGlobalOpenCodeDir helper with MCP compilation paths ---
-
-func TestIsGlobalOpenCodeDir_MCPPaths(t *testing.T) {
-	// When targetDir is ~/.config/opencode, the config should be written to opencode.jsonc (not .opencode/opencode.jsonc).
-	configOpencode := filepath.Join(t.TempDir(), ".config", "opencode")
-	_ = os.MkdirAll(configOpencode, 0o755)
-	if !isGlobalOpenCodeDir(configOpencode) {
-		t.Fatalf("isGlobalOpenCodeDir(%q) should return true", configOpencode)
-	}
-}
-
-func TestIsGlobalOpenCodeDir_ProjectPaths(t *testing.T) {
-	projectDir := t.TempDir()
-
-	// Project scope target dir should NOT be detected as global.
-	if isGlobalOpenCodeDir(projectDir) {
-		t.Fatalf("isGlobalOpenCodeDir(%q) should return false", projectDir)
-	}
-
-	opencodeDir := filepath.Join(projectDir, ".opencode")
-	if isGlobalOpenCodeDir(opencodeDir) {
-		t.Fatalf("isGlobalOpenCodeDir(%q) should return false", opencodeDir)
-	}
-}
+// Tests for the removed isGlobalOpenCodeDir heuristic were deleted when
+// CompileMCP became scope-aware via CompileContext. Scope parity is now
+// asserted by TestCompileMCPForTool_ScopeParity.

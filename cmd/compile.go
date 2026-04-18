@@ -169,8 +169,17 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
+		// Build CompileContext with scope info from the store.
+		homeDir, _ := os.UserHomeDir()
+		compileCtx := adapter.CompileContext{
+			TargetDir:   dir,
+			HomeDir:     homeDir,
+			SetupScope:  storeData.Config.SetupScope,
+			FileRecords: newFileRecords,
+		}
+
 		// Actually compile
-		toolRecords, err = adapt.CompileMCP(dir, newFileRecords)
+		toolRecords, err = adapt.CompileMCP(compileCtx)
 		if err != nil {
 			fmt.Printf("    %s Failed to compile %s: %v\n", dimStyle.Render("✗"), toolName, err)
 			continue

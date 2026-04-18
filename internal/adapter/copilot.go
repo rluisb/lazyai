@@ -311,8 +311,8 @@ func (a *CopilotAdapter) copySkillAsPromptFromFS(ctx *AdapterContext, libFS fs.F
 	return nil
 }
 
-func (a *CopilotAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	return CompileMCPForTool(types.ToolIdCopilot, targetDir, fileRecords)
+func (a *CopilotAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
+	return CompileMCPForTool(types.ToolIdCopilot, ctx)
 }
 
 func (a *CopilotAdapter) CanRunHeadless() bool { return false }

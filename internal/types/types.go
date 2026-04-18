@@ -73,6 +73,25 @@ const (
 	PromptIdResearch     PromptId = "research"
 )
 
+// CommandId identifies a Gemini custom slash command (TOML file under
+// <geminiRoot>/commands/).
+type CommandId string
+
+const (
+	CommandIdRpi    CommandId = "rpi"
+	CommandIdReview CommandId = "review"
+	CommandIdPlan   CommandId = "plan"
+)
+
+// ChatModeId identifies a GitHub Copilot chat mode (markdown file under
+// <githubDir>/chatmodes/).
+type ChatModeId string
+
+const (
+	ChatModeIdArchitect ChatModeId = "architect"
+	ChatModeIdReviewer  ChatModeId = "reviewer"
+)
+
 // TemplateId identifies a document template.
 type TemplateId string
 

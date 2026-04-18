@@ -119,8 +119,8 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	return ctx.FileRecords, nil
 }
 
-func (a *OpenCodeAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	return CompileMCPForTool(types.ToolIdOpenCode, targetDir, fileRecords)
+func (a *OpenCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
+	return CompileMCPForTool(types.ToolIdOpenCode, ctx)
 }
 
 func (a *OpenCodeAdapter) CanRunHeadless() bool { return false }

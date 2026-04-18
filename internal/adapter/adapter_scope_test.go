@@ -187,7 +187,10 @@ func TestCodexAdapter_CompileMCP_WritesServers(t *testing.T) {
 	}
 
 	adapter := &CodexAdapter{}
-	records, err := adapter.CompileMCP(dir, nil)
+	records, err := adapter.CompileMCP(CompileContext{
+		TargetDir:  dir,
+		SetupScope: types.SetupScopeProject,
+	})
 	if err != nil {
 		t.Fatalf("CompileMCP: %v", err)
 	}

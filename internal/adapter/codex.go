@@ -117,8 +117,8 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 	return ctx.FileRecords, nil
 }
 
-func (a *CodexAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	return CompileMCPForTool(types.ToolIdCodex, targetDir, fileRecords)
+func (a *CodexAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
+	return CompileMCPForTool(types.ToolIdCodex, ctx)
 }
 
 func (a *CodexAdapter) CanRunHeadless() bool { return true }

@@ -9,12 +9,11 @@ import (
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
-// TestCompileOpenCodeMCP_ProjectScope verifies that in project scope, the MCP
-// config is written to .opencode/opencode.jsonc.
+// TestCompileOpenCodeMCP_ProjectScope verifies that at project scope, the MCP
+// config is written to <targetDir>/.opencode/opencode.jsonc.
 func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 	targetDir := t.TempDir()
 
-	// Create the canonical .ai/mcp.json.
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
 	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
@@ -22,69 +21,116 @@ func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 		t.Fatalf("failed to write mcp.json: %v", err)
 	}
 
-	// Call CompileMCPForTool for OpenCode.
-	var fileRecords []types.TrackedFile
-	records, err := CompileMCPForTool(types.ToolIdOpenCode, targetDir, fileRecords)
+	records, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	})
 	if err != nil {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	// Verify the file was written to .opencode/opencode.jsonc.
 	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatal("expected .opencode/opencode.jsonc was not created")
 	}
 
-	// Verify the tracked file record has the correct path.
 	if len(records) != 1 {
 		t.Fatalf("expected 1 tracked file record, got %d", len(records))
 	}
-	if records[0].Path != ".opencode/opencode.jsonc" {
-		t.Errorf("expected path '.opencode/opencode.jsonc', got %q", records[0].Path)
-	}
 }
 
-// TestCompileOpenCodeMCP_GlobalScope verifies that in global scope, the MCP
-// config is written directly to opencode.jsonc (no .opencode subdirectory).
+// TestCompileOpenCodeMCP_GlobalScope verifies that at global scope, the MCP
+// config is written to <home>/.config/opencode/opencode.jsonc (via
+// ResolveToolRoot), not <targetDir>/.opencode/.
 func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
-	// Create a directory that mimics ~/.config/opencode.
-	globalDir := filepath.Join(t.TempDir(), ".config", "opencode")
-	_ = files.EnsureDir(globalDir)
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
 
-	// For global scope, the canonical .ai/mcp.json is still read from a project dir.
-	// But compileOpenCodeMCP receives the targetDir where it should write.
-	// The function reads from targetDir/.ai/mcp.json — we need to create that too.
-	aiDir := filepath.Join(globalDir, ".ai")
+	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
 	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatalf("failed to write mcp.json: %v", err)
 	}
 
-	// Call CompileMCPForTool for OpenCode with the global dir as target.
-	var fileRecords []types.TrackedFile
-	records, err := CompileMCPForTool(types.ToolIdOpenCode, globalDir, fileRecords)
+	records, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+	})
 	if err != nil {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	// Verify the file was written to opencode.jsonc (not .opencode/opencode.jsonc).
-	configPath := filepath.Join(globalDir, "opencode.jsonc")
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("expected opencode.jsonc was not created in global dir")
+	// Global scope: opencode.jsonc should live under <home>/.config/opencode.
+	globalConfigPath := filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc")
+	if _, err := os.Stat(globalConfigPath); os.IsNotExist(err) {
+		t.Fatalf("expected opencode.jsonc at %q, not found", globalConfigPath)
 	}
 
-	// Verify no .opencode subdirectory was created.
-	subDir := filepath.Join(globalDir, ".opencode")
-	if _, err := os.Stat(subDir); !os.IsNotExist(err) {
-		t.Error("global scope should not create .opencode subdirectory")
+	// Must not write under the project target dir.
+	projectSubdir := filepath.Join(targetDir, ".opencode")
+	if _, err := os.Stat(projectSubdir); !os.IsNotExist(err) {
+		t.Errorf("global scope must not create %q", projectSubdir)
 	}
 
-	// Verify the tracked file record has the correct path.
 	if len(records) != 1 {
 		t.Fatalf("expected 1 tracked file record, got %d", len(records))
 	}
-	if records[0].Path != "opencode.jsonc" {
-		t.Errorf("expected path 'opencode.jsonc', got %q", records[0].Path)
+}
+
+// TestCompileMCPForTool_CopilotGlobalSkips verifies that Copilot × global scope
+// is a clean no-op (no error, no records).
+func TestCompileMCPForTool_CopilotGlobalSkips(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y"]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdCopilot, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+	})
+	if err != nil {
+		t.Fatalf("Copilot × global must not error, got: %v", err)
+	}
+	if len(records) != 0 {
+		t.Errorf("Copilot × global must produce 0 records, got %d", len(records))
+	}
+}
+
+// TestCompileMCPForTool_ClaudeGlobalSkips verifies that Claude Code × global
+// skips compile (init's settings.json merge already handles mcpServers).
+func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"memory":{"command":"npx"}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdClaudeCode, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+	})
+	if err != nil {
+		t.Fatalf("Claude × global must not error, got: %v", err)
+	}
+	if len(records) != 0 {
+		t.Errorf("Claude × global must produce 0 records; init handles settings.json")
+	}
+	// No .mcp.json should have been written.
+	if files.FileExists(filepath.Join(targetDir, ".mcp.json")) {
+		t.Error("Claude × global must not write project-scope .mcp.json")
 	}
 }

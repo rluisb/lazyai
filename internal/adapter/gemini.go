@@ -148,8 +148,8 @@ func installGeminiMCPViaCLI(ctx *AdapterContext, geminiDir string) bool {
 	return success
 }
 
-func (a *GeminiAdapter) CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	return CompileMCPForTool(types.ToolIdGemini, targetDir, fileRecords)
+func (a *GeminiAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
+	return CompileMCPForTool(types.ToolIdGemini, ctx)
 }
 
 func (a *GeminiAdapter) CanRunHeadless() bool { return false }

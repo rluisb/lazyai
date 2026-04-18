@@ -43,32 +43,40 @@ func (s McpServer) isEnabled() bool {
 }
 
 // CompileMCPForTool reads the canonical .ai/mcp.json and generates the
-// tool-specific MCP configuration file. It returns updated file records.
-func CompileMCPForTool(toolId types.ToolId, targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	catalog := readCanonicalMcp(targetDir)
+// tool-specific MCP configuration file. The ctx carries scope information so
+// each adapter writes to the correct path per scope. Tools with no global
+// layout (Copilot × global) are skipped cleanly.
+func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.TrackedFile, error) {
+	catalog := readCanonicalMcp(ctx.TargetDir)
 	if catalog == nil {
-		return fileRecords, nil
+		return ctx.FileRecords, nil
 	}
 
 	enabledServers := getEnabledServers(catalog)
 	if len(enabledServers) == 0 {
-		return fileRecords, nil
+		return ctx.FileRecords, nil
+	}
+
+	// Copilot × global is unsupported upstream — skip with no error.
+	if !IsScopeSupported(toolId, ctx.SetupScope) {
+		log.Printf("[compile] %s × %s scope is unsupported; skipping", toolId, ctx.SetupScope)
+		return ctx.FileRecords, nil
 	}
 
 	switch toolId {
 	case types.ToolIdOpenCode:
-		return compileOpenCodeMCP(targetDir, catalog, fileRecords)
+		return compileOpenCodeMCP(ctx, catalog)
 	case types.ToolIdClaudeCode:
-		return compileClaudeCodeMCP(targetDir, enabledServers, fileRecords)
+		return compileClaudeCodeMCP(ctx, enabledServers)
 	case types.ToolIdCopilot:
-		return compileCopilotMCP(targetDir, enabledServers, fileRecords)
+		return compileCopilotMCP(ctx, enabledServers)
 	case types.ToolIdGemini:
-		return compileGeminiMCP(targetDir, enabledServers, fileRecords)
+		return compileGeminiMCP(ctx, enabledServers)
 	case types.ToolIdCodex:
-		return compileCodexMCP(targetDir, enabledServers, fileRecords)
+		return compileCodexMCP(ctx, enabledServers)
 	default:
 		// Tool has no MCP config format — return unchanged.
-		return fileRecords, nil
+		return ctx.FileRecords, nil
 	}
 }
 
@@ -104,13 +112,14 @@ func getEnabledServers(catalog *McpCatalog) map[string]McpServer {
 // OpenCode MCP compilation
 // ---------------------------------------------------------------------------
 
-func compileOpenCodeMCP(targetDir string, catalog *McpCatalog, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	// In global scope, targetDir is already ~/.config/opencode, so write directly.
-	// In project scope, targetDir is the project root, so write to .opencode/.
-	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
-	if isGlobalOpenCodeDir(targetDir) {
-		configPath = filepath.Join(targetDir, "opencode.jsonc")
+func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.TrackedFile, error) {
+	root, err := ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return ctx.FileRecords, err
 	}
+	// Global root is ~/.config/opencode — opencode.jsonc lives directly in it.
+	// Project/workspace root is <target>/.opencode — same placement.
+	configPath := filepath.Join(root, "opencode.jsonc")
 	ocMcp := toOpenCodeMcp(catalog.Servers)
 
 	// Read existing config and merge.
@@ -129,18 +138,17 @@ func compileOpenCodeMCP(targetDir string, catalog *McpCatalog, fileRecords []typ
 	existingConfig["mcp"] = ocMcp
 
 	if err := WriteJSONFile(configPath, existingConfig); err != nil {
-		return fileRecords, err
+		return ctx.FileRecords, err
 	}
 
 	hash, _ := files.FileHash(configPath)
-	recordPath := ".opencode/opencode.jsonc"
-	if isGlobalOpenCodeDir(targetDir) {
-		recordPath = "opencode.jsonc"
+	recordPath, _ := filepath.Rel(ctx.TargetDir, configPath)
+	if recordPath == "" || recordPath == "." {
+		recordPath = configPath
 	}
-	fileRecords = append(fileRecords, types.TrackedFile{
+	return append(ctx.FileRecords, types.TrackedFile{
 		Path: recordPath, Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
-	})
-	return fileRecords, nil
+	}), nil
 }
 
 func toOpenCodeMcp(servers map[string]McpServer) map[string]any {
@@ -176,19 +184,28 @@ func toOpenCodeMcp(servers map[string]McpServer) map[string]any {
 // Claude Code MCP compilation
 // ---------------------------------------------------------------------------
 
-func compileClaudeCodeMCP(targetDir string, servers map[string]McpServer, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	mcpPath := filepath.Join(targetDir, ".mcp.json")
+func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	// Claude Code has two distinct config surfaces:
+	//   - project: <target>/.mcp.json (user-committed project-scope MCP file)
+	//   - global:  ~/.claude/settings.json (mcpServers merged by init's Install)
+	// At global scope we skip compile entirely — init has already merged the
+	// canonical MCP list into settings.json via configmerge.MergeJSONFile.
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		log.Println("[compile] claude-code × global: mcpServers live in settings.json; skipping")
+		return ctx.FileRecords, nil
+	}
+
+	mcpPath := filepath.Join(ctx.TargetDir, ".mcp.json")
 	content := toClaudeCodeMcp(servers)
 
 	if err := WriteJSONFile(mcpPath, content); err != nil {
-		return fileRecords, err
+		return ctx.FileRecords, err
 	}
 
 	hash, _ := files.FileHash(mcpPath)
-	fileRecords = append(fileRecords, types.TrackedFile{
+	return append(ctx.FileRecords, types.TrackedFile{
 		Path: ".mcp.json", Hash: hash, Source: "compiled:mcp", Owner: types.FileOwnerLibrary,
-	})
-	return fileRecords, nil
+	}), nil
 }
 
 func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
@@ -218,21 +235,22 @@ func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 // Copilot MCP compilation
 // ---------------------------------------------------------------------------
 
-func compileCopilotMCP(targetDir string, servers map[string]McpServer, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	vscodeDir := filepath.Join(targetDir, ".vscode")
+func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	// Copilot × global is filtered upstream in CompileMCPForTool; this code
+	// path always runs at project or workspace scope.
+	vscodeDir := filepath.Join(ctx.TargetDir, ".vscode")
 	_ = files.EnsureDir(vscodeDir)
 	vscodeMcpPath := filepath.Join(vscodeDir, "mcp.json")
 	content := toCopilotMcp(servers)
 
 	if err := WriteJSONFile(vscodeMcpPath, content); err != nil {
-		return fileRecords, err
+		return ctx.FileRecords, err
 	}
 
 	hash, _ := files.FileHash(vscodeMcpPath)
-	fileRecords = append(fileRecords, types.TrackedFile{
+	return append(ctx.FileRecords, types.TrackedFile{
 		Path: ".vscode/mcp.json", Hash: hash, Source: "compiled:mcp:copilot", Owner: types.FileOwnerLibrary,
-	})
-	return fileRecords, nil
+	}), nil
 }
 
 func toCopilotMcp(servers map[string]McpServer) map[string]any {
@@ -266,21 +284,27 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 // Gemini MCP compilation
 // ---------------------------------------------------------------------------
 
-func compileGeminiMCP(targetDir string, servers map[string]McpServer, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	geminiDir := filepath.Join(targetDir, ".gemini")
-	_ = files.EnsureDir(geminiDir)
-	settingsPath := filepath.Join(geminiDir, "settings.json")
+func compileGeminiMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	root, err := ResolveToolRoot(types.ToolIdGemini, ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return ctx.FileRecords, err
+	}
+	_ = files.EnsureDir(root)
+	settingsPath := filepath.Join(root, "settings.json")
 	content := toGeminiSettings(servers)
 
 	if err := WriteJSONFile(settingsPath, content); err != nil {
-		return fileRecords, err
+		return ctx.FileRecords, err
 	}
 
 	hash, _ := files.FileHash(settingsPath)
-	fileRecords = append(fileRecords, types.TrackedFile{
-		Path: ".gemini/settings.json", Hash: hash, Source: "compiled:mcp:gemini", Owner: types.FileOwnerLibrary,
-	})
-	return fileRecords, nil
+	recordPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
+	if recordPath == "" || recordPath == "." {
+		recordPath = settingsPath
+	}
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path: recordPath, Hash: hash, Source: "compiled:mcp:gemini", Owner: types.FileOwnerLibrary,
+	}), nil
 }
 
 func toGeminiSettings(servers map[string]McpServer) map[string]any {
@@ -317,20 +341,18 @@ func transformEnvSyntax(envObj map[string]string, targetPattern string) map[stri
 	return result
 }
 
-// isGlobalOpenCodeDir returns true if the given directory looks like the global
-// OpenCode config directory (~/.config/opencode).
-func isGlobalOpenCodeDir(dir string) bool {
-	return filepath.Base(dir) == "opencode" && filepath.Base(filepath.Dir(dir)) == ".config"
-}
-
 // ---------------------------------------------------------------------------
 // Codex MCP compilation
 // ---------------------------------------------------------------------------
 
-// compileCodexMCP writes enabled MCP servers into .codex/config.toml under
-// the [mcp_servers.*] tables using deep-merge so user-authored keys survive.
-func compileCodexMCP(targetDir string, enabledServers map[string]McpServer, fileRecords []types.TrackedFile) ([]types.TrackedFile, error) {
-	configPath := filepath.Join(targetDir, ".codex", "config.toml")
+// compileCodexMCP writes enabled MCP servers into the scope-correct config.toml
+// under the [mcp_servers.*] tables using deep-merge so user-authored keys survive.
+func compileCodexMCP(ctx CompileContext, enabledServers map[string]McpServer) ([]types.TrackedFile, error) {
+	configRoot, _, err := ResolveCodexRoots(ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return ctx.FileRecords, err
+	}
+	configPath := filepath.Join(configRoot, "config.toml")
 
 	mcpServers := make(map[string]any, len(enabledServers))
 	for name, srv := range enabledServers {
@@ -349,15 +371,18 @@ func compileCodexMCP(targetDir string, enabledServers map[string]McpServer, file
 
 	patch := map[string]any{"mcp_servers": mcpServers}
 	if _, err := configmerge.MergeTOMLFile(configPath, patch); err != nil {
-		return fileRecords, err
+		return ctx.FileRecords, err
 	}
 
 	hash, _ := files.FileHash(configPath)
-	fileRecords = append(fileRecords, types.TrackedFile{
-		Path: ".codex/config.toml", Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerLibrary,
-	})
+	recordPath, _ := filepath.Rel(ctx.TargetDir, configPath)
+	if recordPath == "" || recordPath == "." {
+		recordPath = configPath
+	}
 	log.Printf("[codex] compiled MCP config -> %s (%d servers)", configPath, len(enabledServers))
-	return fileRecords, nil
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path: recordPath, Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerLibrary,
+	}), nil
 }
 
 // Ensure all format strings with %s in log statements are correct.

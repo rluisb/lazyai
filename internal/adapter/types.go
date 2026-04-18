@@ -45,9 +45,36 @@ type AdapterContext struct {
 
 // AdapterSelections holds the user's selections for which items to install.
 type AdapterSelections struct {
-	Agents  []types.AgentId
-	Skills  []types.SkillId
-	Prompts []types.PromptId
+	Agents    []types.AgentId
+	Skills    []types.SkillId
+	Prompts   []types.PromptId
+	Commands  []types.CommandId
+	ChatModes []types.ChatModeId
+}
+
+// CompileContext carries the information adapters need to compile per-tool
+// MCP configuration. Unlike AdapterContext (used by Install), this is
+// scope-aware so compile writes to the correct per-scope path.
+type CompileContext struct {
+	// TargetDir is the project root (always). Adapters use it to read the
+	// canonical .ai/mcp.json and to locate project-scoped config paths.
+	TargetDir string
+	// HomeDir is the user's home dir, required when SetupScope is global.
+	HomeDir string
+	// SetupScope tells adapters which on-disk layout to emit for.
+	SetupScope types.SetupScope
+	// FileRecords accumulates records of all files written during compile.
+	FileRecords []types.TrackedFile
+}
+
+// toAdapterContext builds a minimal AdapterContext suitable for calling
+// ResolveToolRoot / ResolveCodexRoots from a CompileContext.
+func (c CompileContext) toAdapterContext() *AdapterContext {
+	return &AdapterContext{
+		TargetDir:  c.TargetDir,
+		HomeDir:    c.HomeDir,
+		SetupScope: c.SetupScope,
+	}
 }
 
 // ToolAdapter is the interface each tool adapter must implement.
@@ -63,7 +90,9 @@ type ToolAdapter interface {
 	// Returns the list of tracked files that were created or modified.
 	Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 	// CompileMCP generates the per-tool MCP config from the canonical .ai/mcp.json.
-	CompileMCP(targetDir string, fileRecords []types.TrackedFile) ([]types.TrackedFile, error)
+	// The ctx carries scope information so the adapter writes to the correct
+	// on-disk path (project/workspace vs global).
+	CompileMCP(ctx CompileContext) ([]types.TrackedFile, error)
 	// CanRunHeadless returns true if this adapter supports headless CLI mode
 	// for validation or generation.
 	CanRunHeadless() bool

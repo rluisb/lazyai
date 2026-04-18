@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -101,6 +100,10 @@ type FragmentContext struct {
 // assembly) will be ported separately.
 // Ported from src/scaffold/compiled-root.ts.
 func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
+	if opts.HomeDir == "" && opts.SetupScope == types.SetupScopeGlobal {
+		return fmt.Errorf("ScaffoldCompiledRoot: HomeDir must be set when scope is global")
+	}
+
 	effectiveFeatures := types.DefaultFeatureFlags()
 	if opts.Features != nil {
 		effectiveFeatures = *opts.Features
@@ -202,11 +205,6 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		}
 
 		homeDir := opts.HomeDir
-		if homeDir == "" {
-			if h, err := os.UserHomeDir(); err == nil {
-				homeDir = h
-			}
-		}
 		destPath, err := memoryDocDestPath(tool, opts.SetupScope, opts.TargetDir, homeDir, outputFile)
 		if err != nil {
 			if errors.Is(err, errMemoryDocScopeUnsupported) {

@@ -3,10 +3,29 @@ package scaffold
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
+
+// TestScaffoldCompiledRoot_GlobalRequiresHomeDir verifies that passing an empty
+// HomeDir at global scope returns an error rather than falling through to the
+// real os.UserHomeDir() (R-3 mitigation from spec 008 risks).
+func TestScaffoldCompiledRoot_GlobalRequiresHomeDir(t *testing.T) {
+	err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:  t.TempDir(),
+		HomeDir:    "", // intentionally empty
+		SetupScope: types.SetupScopeGlobal,
+		Tools:      []types.ToolId{types.ToolIdClaudeCode},
+	})
+	if err == nil {
+		t.Fatal("expected error for empty HomeDir at global scope, got nil")
+	}
+	if !strings.Contains(err.Error(), "HomeDir must be set") {
+		t.Errorf("expected 'HomeDir must be set' message, got: %v", err)
+	}
+}
 
 func TestMemoryDocDestPath(t *testing.T) {
 	target := "/tmp/target"

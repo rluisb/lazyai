@@ -1,16 +1,52 @@
 package scaffold
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/globalpaths"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
+
+// errMemoryDocScopeUnsupported is returned by memoryDocDestPath for Copilot × global.
+var errMemoryDocScopeUnsupported = errors.New("memory doc not supported at this scope")
+
+// memoryDocDestPath returns the absolute path where the tool's memory doc
+// (AGENTS.md / CLAUDE.md / GEMINI.md / .github/copilot-instructions.md) should
+// land for the given scope. Returns errMemoryDocScopeUnsupported when the
+// combination is not supported (e.g. Copilot × global).
+//
+// Placement rules:
+//   - project / workspace: <targetDir>/<outputFile> (Copilot's .github/ prefix
+//     preserved).
+//   - global: under the tool's global root, using the bare basename of
+//     outputFile — Copilot × global is unsupported.
+func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, homeDir, outputFile string) (string, error) {
+	switch scope {
+	case types.SetupScopeProject, types.SetupScopeWorkspace, "":
+		return filepath.Join(targetDir, outputFile), nil
+	case types.SetupScopeGlobal:
+		if tool == types.ToolIdCopilot {
+			return "", errMemoryDocScopeUnsupported
+		}
+		root, err := globalpaths.ResolveGlobalToolTargetDir(tool, homeDir)
+		if err != nil {
+			return "", err
+		}
+		if root == "" {
+			return "", errMemoryDocScopeUnsupported
+		}
+		return filepath.Join(root, filepath.Base(outputFile)), nil
+	}
+	return "", fmt.Errorf("%w: unknown scope %q", errMemoryDocScopeUnsupported, scope)
+}
 
 // FeatureFlagsForTemplate converts types.FeatureFlags into a map suitable for
 // template conditional rendering, including legacy snake_case aliases.
@@ -165,11 +201,22 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 			content = content + workspaceReposSection
 		}
 
-		destPath := filepath.Join(opts.TargetDir, outputFile)
-		if strings.HasPrefix(outputFile, ".github/") {
-			if err := files.EnsureDir(filepath.Dir(destPath)); err != nil {
-				return err
+		homeDir := opts.HomeDir
+		if homeDir == "" {
+			if h, err := os.UserHomeDir(); err == nil {
+				homeDir = h
 			}
+		}
+		destPath, err := memoryDocDestPath(tool, opts.SetupScope, opts.TargetDir, homeDir, outputFile)
+		if err != nil {
+			if errors.Is(err, errMemoryDocScopeUnsupported) {
+				log.Printf("Skipping memory doc for %s at scope %q: not supported", tool, opts.SetupScope)
+				continue
+			}
+			return err
+		}
+		if err := files.EnsureDir(filepath.Dir(destPath)); err != nil {
+			return err
 		}
 
 		action, err := conflict.ApplyStrategy(destPath, opts.Strategy, opts.PerFileOverrides, opts.TargetDir)
@@ -188,6 +235,11 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 
 		hash, _ := files.FileHash(destPath)
 		relPath, _ := filepath.Rel(opts.TargetDir, destPath)
+		if relPath == "" || strings.HasPrefix(relPath, "..") {
+			// Global-scope destinations live outside TargetDir — record the
+			// absolute path so downstream tooling can find the file.
+			relPath = destPath
+		}
 		*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   hash,
@@ -202,6 +254,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 // ScaffoldCompiledRootOptions holds the options for compiling root files.
 type ScaffoldCompiledRootOptions struct {
 	TargetDir        string
+	HomeDir          string
 	LibraryFS        fs.FS
 	Tools            []types.ToolId
 	ProjectName      string

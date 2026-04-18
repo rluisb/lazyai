@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
 	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -165,6 +166,21 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	if len(config.CLITools) == 0 {
 		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
 	}
+
+	// Drop tools that don't support the chosen scope (e.g. copilot × global).
+	// Warn per drop; abort only if nothing is left.
+	kept := make([]types.ToolId, 0, len(config.CLITools))
+	for _, t := range config.CLITools {
+		if adapter.IsScopeSupported(t, config.CLIScope) {
+			kept = append(kept, t)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "WARN: skipping tool %q for scope %q — not supported\n", t, config.CLIScope)
+	}
+	if len(kept) == 0 {
+		return fmt.Errorf("no tools remain after filtering for scope %q", config.CLIScope)
+	}
+	config.CLITools = kept
 	if config.CLIName == "" {
 		// Default project name to directory name.
 		dir, _ := os.Getwd()

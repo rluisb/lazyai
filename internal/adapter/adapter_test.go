@@ -411,36 +411,22 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("skill prompt missing mode: agent frontmatter")
 	}
 
-	// --- Root template AGENTS.md installed ---
-	agentsFile := filepath.Join(targetDir, "AGENTS.md")
-	if _, err := os.Stat(agentsFile); os.IsNotExist(err) {
-		t.Error("AGENTS.md root template was not created")
-	}
+	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
+	// scaffold.ScaffoldCompiledRoot (scope-aware) rather than the adapter;
+	// asserting them here would test the wrong layer.
 
-	// --- Root template .github/copilot-instructions.md installed ---
-	copilotInstructionsFile := filepath.Join(targetDir, ".github", "copilot-instructions.md")
-	if _, err := os.Stat(copilotInstructionsFile); os.IsNotExist(err) {
-		t.Error(".github/copilot-instructions.md was not created")
-	}
-
-	// --- Tracked file records created ---
-	if len(ctx.FileRecords) < 3 {
-		t.Errorf("expected at least 3 tracked file records, got %d", len(ctx.FileRecords))
+	// --- Tracked file records created (prompts only) ---
+	if len(ctx.FileRecords) < 2 {
+		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
 	}
 	hasPreFlight := false
 	hasImplement := false
-	hasAGENTS := false
-	hasCopilotInstructions := false
 	for _, rec := range ctx.FileRecords {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
 		case ".github/prompts/implement.prompt.md":
 			hasImplement = true
-		case "AGENTS.md":
-			hasAGENTS = true
-		case ".github/copilot-instructions.md":
-			hasCopilotInstructions = true
 		}
 	}
 	if !hasPreFlight {
@@ -448,12 +434,6 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	}
 	if !hasImplement {
 		t.Error("no tracked record for implement.prompt.md")
-	}
-	if !hasAGENTS {
-		t.Error("no tracked record for AGENTS.md")
-	}
-	if !hasCopilotInstructions {
-		t.Error("no tracked record for .github/copilot-instructions.md")
 	}
 }
 

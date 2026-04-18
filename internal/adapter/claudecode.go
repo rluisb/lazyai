@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -21,11 +22,11 @@ func (a *ClaudeCodeAdapter) Name() string      { return "Claude Code" }
 func (a *ClaudeCodeAdapter) ConfigDir() string { return ".claude" }
 
 func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
-	isGlobal := ctx.SetupScope == types.SetupScopeGlobal
-	claudeDir := ctx.TargetDir
-	if !isGlobal {
-		claudeDir = filepath.Join(ctx.TargetDir, ".claude")
+	claudeDir, err := ResolveToolRoot(types.ToolIdClaudeCode, ctx.SetupScope, ctx)
+	if err != nil {
+		return nil, err
 	}
+	isGlobal := ctx.SetupScope == types.SetupScopeGlobal
 
 	settingsPath := filepath.Join(claudeDir, "settings.json")
 	rulesDir := filepath.Join(claudeDir, "rules")
@@ -38,17 +39,18 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		_ = files.EnsureDir(filepath.Join(claudeDir, "agents"))
 	}
 
-	// Write default settings.json if it doesn't exist.
-	if !files.FileExists(settingsPath) {
-		defaultSettings := map[string]any{
-			"permissions": map[string]any{
-				"allow": []any{},
-				"deny":  []any{},
-			},
-		}
-		if err := WriteJSONFile(settingsPath, defaultSettings); err != nil {
-			return nil, err
-		}
+	// Merge default settings into settings.json, preserving user keys.
+	defaultSettings := map[string]any{
+		"permissions": map[string]any{
+			"allow": []any{},
+			"deny":  []any{},
+		},
+	}
+	preExisted := files.FileExists(settingsPath)
+	if _, err := configmerge.MergeJSONFile(settingsPath, defaultSettings); err != nil {
+		return nil, err
+	}
+	if !preExisted {
 		relPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
 		hash, _ := files.FileHash(settingsPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
@@ -130,14 +132,8 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Install root CLAUDE.md template.
-	destPath := filepath.Join(ctx.TargetDir, "CLAUDE.md")
-	if isGlobal {
-		destPath = filepath.Join(claudeDir, "CLAUDE.md")
-	}
-	if err := InstallRootTemplateIfMissing(ctx, "CLAUDE.md", destPath, "root/CLAUDE.template.md"); err != nil {
-		return nil, err
-	}
+	// Root CLAUDE.md placement is handled centrally by scaffold/root.go
+	// (scope-aware); the adapter no longer installs it.
 
 	return ctx.FileRecords, nil
 }

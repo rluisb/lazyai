@@ -5,11 +5,10 @@ package adapter
 import (
 	"encoding/json"
 	"log"
-	"os"
 	"path/filepath"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
-	"github.com/ricardoborges-teachable/ai-setup/internal/globalpaths"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -21,24 +20,9 @@ func (a *OpenCodeAdapter) Name() string      { return "OpenCode" }
 func (a *OpenCodeAdapter) ConfigDir() string { return ".opencode" }
 
 func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
-	isGlobal := ctx.SetupScope == types.SetupScopeGlobal
-	ocDir := ctx.TargetDir
-	if isGlobal {
-		homeDir := ctx.HomeDir
-		if homeDir == "" {
-			var err error
-			homeDir, err = os.UserHomeDir()
-			if err != nil {
-				return nil, err
-			}
-		}
-		resolved, err := globalpaths.ResolveGlobalToolTargetDir(types.ToolIdOpenCode, homeDir)
-		if err != nil {
-			return nil, err
-		}
-		ocDir = resolved
-	} else {
-		ocDir = filepath.Join(ctx.TargetDir, ".opencode")
+	ocDir, err := ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	_ = files.EnsureDir(ocDir)
@@ -48,25 +32,27 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	log.Println("Installing OpenCode tools...")
 
-	// Write default opencode.json if not in global scope and file doesn't exist.
-	if !isGlobal {
-		configPath := filepath.Join(ocDir, "opencode.json")
-		jsoncConfigPath := filepath.Join(ocDir, "opencode.jsonc")
-		if !files.FileExists(configPath) && !files.FileExists(jsoncConfigPath) {
-			defaultConfig := map[string]any{
-				"$schema":      "https://opencode.ai/config.json",
-				"instructions": []string{"AGENTS.md"},
-				"permission": map[string]string{
-					"edit": "ask",
-					"bash": "ask",
-				},
-			}
-			if err := WriteJSONFile(configPath, defaultConfig); err != nil {
-				return nil, err
-			}
+	// Merge default opencode.json (preserves user-authored keys). Skip the
+	// merge only if the user-preferred JSONC variant already exists.
+	configPath := filepath.Join(ocDir, "opencode.json")
+	jsoncConfigPath := filepath.Join(ocDir, "opencode.jsonc")
+	if !files.FileExists(jsoncConfigPath) {
+		defaultConfig := map[string]any{
+			"$schema":      "https://opencode.ai/config.json",
+			"instructions": []any{"AGENTS.md"},
+			"permission": map[string]any{
+				"edit": "ask",
+				"bash": "ask",
+			},
+		}
+		preExisted := files.FileExists(configPath)
+		if _, err := configmerge.MergeJSONFile(configPath, defaultConfig); err != nil {
+			return nil, err
+		}
+		if !preExisted {
 			hash, _ := files.FileHash(configPath)
 			ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-				Path:   filepath.Join(ocDir, "opencode.json"),
+				Path:   configPath,
 				Hash:   hash,
 				Source: "generated",
 				Owner:  types.FileOwnerLibrary,

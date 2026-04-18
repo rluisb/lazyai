@@ -23,7 +23,14 @@ func (a *CopilotAdapter) Name() string      { return "GitHub Copilot" }
 func (a *CopilotAdapter) ConfigDir() string { return ".github" }
 
 func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
-	githubDir := filepath.Join(ctx.TargetDir, ".github")
+	if !IsScopeSupported(types.ToolIdCopilot, ctx.SetupScope) {
+		log.Printf("[copilot] scope %q not supported; skipping install", ctx.SetupScope)
+		return ctx.FileRecords, nil
+	}
+	githubDir, err := ResolveToolRoot(types.ToolIdCopilot, ctx.SetupScope, ctx)
+	if err != nil {
+		return nil, err
+	}
 	_ = files.EnsureDir(githubDir)
 
 	instructionsDir := filepath.Join(githubDir, "instructions")
@@ -57,19 +64,8 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 		}
 	}
 
-	// Install root AGENTS.md template.
-	if err := InstallRootTemplateIfMissing(ctx, "AGENTS.md",
-		filepath.Join(ctx.TargetDir, "AGENTS.md"),
-		"root/AGENTS.template.md"); err != nil {
-		return nil, err
-	}
-
-	// Install copilot-instructions.md.
-	if err := InstallRootTemplateIfMissing(ctx, ".github/copilot-instructions.md",
-		filepath.Join(githubDir, "copilot-instructions.md"),
-		"root/copilot-instructions.template.md"); err != nil {
-		return nil, err
-	}
+	// Memory docs (AGENTS.md and .github/copilot-instructions.md) are placed
+	// by scaffold/root.go, which knows the scope-correct destination.
 
 	return ctx.FileRecords, nil
 }

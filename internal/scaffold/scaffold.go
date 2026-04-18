@@ -61,6 +61,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	// Step 7: Compiled root files.
 	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
 		TargetDir:           ctx.TargetDir,
+		HomeDir:             ctx.HomeDir,
 		LibraryFS:           libFS,
 		Tools:               ctx.Tools,
 		ProjectName:         ctx.ProjectName,

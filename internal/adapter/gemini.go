@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -18,31 +19,39 @@ func (a *GeminiAdapter) Name() string      { return "Gemini CLI" }
 func (a *GeminiAdapter) ConfigDir() string { return ".gemini" }
 
 func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
-	geminiDir := filepath.Join(ctx.TargetDir, ".gemini")
+	geminiDir, err := ResolveToolRoot(types.ToolIdGemini, ctx.SetupScope, ctx)
+	if err != nil {
+		return nil, err
+	}
 	_ = files.EnsureDir(geminiDir)
 	_ = files.EnsureDir(filepath.Join(geminiDir, "skills"))
 
-	// Write default settings.json if it doesn't exist.
+	// Merge default settings.json (preserves user-authored keys like mcpServers, hooks).
 	settingsPath := filepath.Join(geminiDir, "settings.json")
-	if !files.FileExists(settingsPath) {
-		defaultSettings := map[string]any{
-			"general": map[string]any{
-				"defaultApprovalMode": "default",
-			},
-			"model": map[string]any{
-				"name": "gemini-2.5-pro",
-			},
-			"context": map[string]any{
-				"fileName":             "GEMINI.md",
-				"includeDirectoryTree": true,
-			},
-		}
-		if err := WriteJSONFile(settingsPath, defaultSettings); err != nil {
-			return nil, err
+	defaultSettings := map[string]any{
+		"general": map[string]any{
+			"defaultApprovalMode": "default",
+		},
+		"model": map[string]any{
+			"name": "gemini-2.5-pro",
+		},
+		"context": map[string]any{
+			"fileName":             "GEMINI.md",
+			"includeDirectoryTree": true,
+		},
+	}
+	preExisted := files.FileExists(settingsPath)
+	if _, err := configmerge.MergeJSONFile(settingsPath, defaultSettings); err != nil {
+		return nil, err
+	}
+	if !preExisted {
+		relPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
+		if relPath == "" || relPath == "." {
+			relPath = settingsPath
 		}
 		hash, _ := files.FileHash(settingsPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path: ".gemini/settings.json", Hash: hash, Source: "generated", Owner: types.FileOwnerLibrary,
+			Path: relPath, Hash: hash, Source: "generated", Owner: types.FileOwnerLibrary,
 		})
 	}
 
@@ -73,12 +82,7 @@ func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error
 		}
 	}
 
-	// Install root GEMINI.md template.
-	if err := InstallRootTemplateIfMissing(ctx, "GEMINI.md",
-		filepath.Join(ctx.TargetDir, "GEMINI.md"),
-		"root/GEMINI.template.md"); err != nil {
-		return nil, err
-	}
+	// Root GEMINI.md placement is handled centrally by scaffold/root.go.
 
 	return ctx.FileRecords, nil
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -16,40 +17,63 @@ import (
 
 // CodexAdapter implements ToolAdapter for OpenAI Codex CLI.
 //
-// Structure:
-//   - Root: AGENTS.md (shared project notes)
-//   - Skills: .agents/skills/{name}/SKILL.md (AgentSkills standard)
-//   - No .codex/ project directory (config only in ~/.codex/)
-//   - Agents: Inline in AGENTS.md (no separate directory)
+// Codex uses two roots per upstream convention:
+//   - configRoot (.codex/ or ~/.codex/): holds config.toml with
+//     [mcp_servers.*] tables.
+//   - skillsRoot (.agents/skills/ or ~/.agents/skills/): holds per-skill
+//     <name>/SKILL.md. Skills live outside .codex/ in Codex's model.
+//
+// The root AGENTS.md is placed by scaffold/root.go (scope-aware).
 type CodexAdapter struct{}
 
 func (a *CodexAdapter) ID() types.ToolId  { return types.ToolIdCodex }
 func (a *CodexAdapter) Name() string      { return "Codex CLI" }
-func (a *CodexAdapter) ConfigDir() string { return ".agents" }
+func (a *CodexAdapter) ConfigDir() string { return ".codex" }
 
 func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	// Check if Codex is installed; print a non-fatal warning if not.
 	_ = detect.EnsureCodexOrPrompt()
 
-	isGlobal := ctx.SetupScope == types.SetupScopeGlobal
-	agentsDir := filepath.Join(ctx.TargetDir, ".agents")
-	if isGlobal {
-		agentsDir = filepath.Join(filepath.Dir(ctx.TargetDir), ".agents")
+	configRoot, skillsRoot, err := ResolveCodexRoots(ctx.SetupScope, ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	_ = files.EnsureDir(agentsDir)
-	_ = files.EnsureDir(filepath.Join(agentsDir, "skills"))
+	_ = files.EnsureDir(configRoot)
+	_ = files.EnsureDir(skillsRoot)
 
 	log.Println("Installing Codex tools...")
 
-	// Codex uses skills in directory format.
+	// Emit a minimal config.toml with an empty [mcp_servers] table so Codex
+	// recognises the project/global config as trusted. User-authored tables
+	// survive via configmerge.
+	configPath := filepath.Join(configRoot, "config.toml")
+	configPatch := map[string]any{
+		"mcp_servers": map[string]any{},
+	}
+	preExisted := files.FileExists(configPath)
+	if _, err := configmerge.MergeTOMLFile(configPath, configPatch); err != nil {
+		return nil, err
+	}
+	if !preExisted {
+		relPath, _ := filepath.Rel(ctx.TargetDir, configPath)
+		if relPath == "" || relPath == "." {
+			relPath = configPath
+		}
+		hash, _ := files.FileHash(configPath)
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path: relPath, Hash: hash, Source: "generated", Owner: types.FileOwnerLibrary,
+		})
+	}
+
+	// Codex uses skills in directory format at the skills root.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "skills",
 		SelectionKey: "skills",
 		ToDestPath: func(file string) string {
 			name := fileID(file)
-			return filepath.Join(agentsDir, "skills", name, "SKILL.md")
+			return filepath.Join(skillsRoot, name, "SKILL.md")
 		},
 	}); err != nil {
 		return nil, err
@@ -59,30 +83,14 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 	if IsOrchestratorEnabled(ctx) {
 		content := GetOrchestratorSkillContent(ctx)
 		if err := WriteContentWithRecord(
-			filepath.Join(agentsDir, "skills", "orchestrator", "SKILL.md"),
+			filepath.Join(skillsRoot, "orchestrator", "SKILL.md"),
 			content, ctx, "generated:orchestrator-skill", false,
 		); err != nil {
 			return nil, err
 		}
 	}
 
-	// Install context files (AGENTS.md references agents inline).
-	if err := InstallToolContextFiles(InstallToolContextFilesOption{
-		Ctx:             ctx,
-		ToolDir:         agentsDir,
-		ContextFileName: "AGENTS.md",
-		AgentsDestDir:   ".", // Inline - agents referenced in root file.
-		SkillsDestDir:   "skills",
-	}); err != nil {
-		return nil, err
-	}
-
-	// Install root AGENTS.md template.
-	if err := InstallRootTemplateIfMissing(ctx, "AGENTS.md",
-		filepath.Join(ctx.TargetDir, "AGENTS.md"),
-		"root/AGENTS.template.md"); err != nil {
-		return nil, err
-	}
+	// Root AGENTS.md placement is handled centrally by scaffold/root.go.
 
 	return ctx.FileRecords, nil
 }

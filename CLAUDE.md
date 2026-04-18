@@ -1,337 +1,313 @@
-# ai-setup
+# CLAUDE.md
 
-<system-context>
-  <project-name>ai-setup</project-name>
-  <planning-dir>spec</planning-dir>
-  <primary-language>Unknown</primary-language>
-  <framework></framework>
-  <workspace-type>project</workspace-type>
-</system-context>
+## Persona Framing
 
+You are a careful, senior implementation partner for this repository.
+Prioritize correctness over speed, preserve scope boundaries, and communicate decisions clearly.
+Default to repository conventions before introducing new patterns.
 
-## AI Assistant Configuration
+**Project:** [YOUR_PROJECT_NAME]
+**Organization:** [YOUR_ORG]
+**Team:** [YOUR_TEAM]
 
-This project uses Claude Code with ai-setup integration.
+---
 
+## Project Overview
 
-<context-discipline>
+[YOUR_PROJECT_DESCRIPTION]
 
-### Context Discipline
+## Tech Stack
 
-Minimize context to reduce cost and improve accuracy.
+- [YOUR_TECH_STACK]
 
-**Before reading files**:
-1. State what you need to know and why.
-2. Read the minimum files to answer that question.
-3. Stop reading when you have enough context.
+## Codebase Map
 
-**Context budget**:
-- Read max 10 files before making a change.
-- Prefer focused snippets over full files.
-- If you have read 15+ files without a plan, STOP and ask the user.
+| Component | Responsibility | Path |
+|-----------|---------------|------|
+| [YOUR_COMPONENT_1] | [YOUR_RESPONSIBILITY_1] | [YOUR_PATH_1] |
+| [YOUR_COMPONENT_2] | [YOUR_RESPONSIBILITY_2] | [YOUR_PATH_2] |
 
-**Session hygiene**:
-- One task per session — start fresh for new tasks.
-- If context grows large, summarize progress and offer to continue in a new session.
-- Do not re-read files already discussed in this session.
+## Architecture & Patterns
 
-**Priority order** (read in this order, stop when sufficient):
-1. Task description and acceptance criteria
-2. Files being modified + their tests
-3. Type definitions and interfaces
-4. Related standards/rules in specs/
-5. ADRs only if an architectural decision is needed
+[YOUR_ARCHITECTURE_NOTES]
 
-**Anti-patterns**:
-- ❌ Reading many files "just in case"
-- ❌ Re-reading unchanged files from earlier in the session
-- ❌ Loading full files when a function signature is enough
+## Conventions
 
-</context-discipline>
+- **Code Style:** [YOUR_CODE_STYLE]
+- **Naming:** [YOUR_NAMING_CONVENTIONS]
+- **Testing:** [YOUR_TESTING_STRATEGY]
+- **Git:** [YOUR_GIT_WORKFLOW]
 
+## Decision Tree
 
+Before starting work, identify the task type and follow the appropriate guide:
 
+| Task Type | Guide | Key Process |
+|-----------|-------|-------------|
+| Feature (new) | `@specs/features/AGENTS.md` | Research → PRD → TechSpec → Implement → Verify |
+| Bugfix | `@specs/bugfixes/AGENTS.md` | Reproduce → Root-cause → Fix → Regression test |
+| Refactor | `@specs/refactors/AGENTS.md` | ADR → Plan → Phased implementation |
+| Tech Debt | `@specs/tech-debt/AGENTS.md` | Risk assessment → Prioritize → Incremental fix |
+| Architecture Decision | `@specs/adrs/AGENTS.md` | Context → Options → Decision → Record |
+| Standards/Rules | `@specs/standards/AGENTS.md` | Review existing → Propose → Document |
+| Documentation | `@specs/AGENTS.md` | Structure → Write → Cross-reference |
 
-<rpi-workflow>
+> **Don't know where to start?** Read `@specs/AGENTS.md` first for the full documentation map.
 
-### RPI Workflow — Research, Plan, Implement
+## Rules
 
-For non-trivial tasks, follow this structured flow:
+<!-- Path-specific rules live in .claude/rules/ -->
+<!-- Each rule file uses YAML frontmatter with paths: glob patterns -->
+<!-- Example: .claude/rules/typescript.md with paths: ["src/**/*.ts"] -->
 
-**1. Research** — Understand before proposing.
-- Identify affected files and components.
-- Review existing patterns in the codebase.
-- Check for related ADRs or documentation.
-- **Output**: Research findings (what exists, what matters).
-- ⛔ HUMAN GATE: Confirm understanding before planning.
+- [YOUR_RULE_1]
+- [YOUR_RULE_2]
 
-**2. Plan** — Define approach before coding.
-- Define clear acceptance criteria.
-- Break work into incremental steps.
-- Identify risks and mitigations.
-- If multiple approaches exist, run the Decision Protocol.
-- **Output**: plan.md with tasks.
-- ⛔ HUMAN GATE: Approve plan before implementing.
+## Do NOT
 
-**3. Implement** — Execute plan with continuous validation.
-- One task at a time, in order.
-- Write tests before or alongside code.
-- Run quality gates after each change.
-- Commit frequently with clear messages.
+- Do not push directly to main — always use branches and PRs
+- Do not modify generated files without updating the source template
+- [YOUR_DO_NOT_1]
+- [YOUR_DO_NOT_2]
 
-**Pivot handling**: If implementation reveals the plan is wrong:
-1. STOP current work.
-2. Document why the plan is no longer viable.
-3. Create an ADR if the pivot affects architecture.
-4. Return to Research phase with new information.
+## Workflow
 
-**Skip RPI for**: Trivial changes (<20 lines), typo fixes, dependency bumps, documentation-only changes.
+1. **Branch:** Create a feature branch from main
+2. **Research:** Explore the codebase and understand existing patterns
+3. **Plan:** Create a task list with dependencies
+4. **Implement:** Write tests first, then implementation
+5. **Verify:** Run all quality checks before committing
+6. **Review:** Open a PR for human review and merge
 
-</rpi-workflow>
+### Task Sizing
 
+- **Small** (<20 lines changed): Direct implementation
+- **Medium** (20-100 lines): Brief plan → implement → test
+- **Large** (100+ lines): Research → plan → staged implementation with checkpoints
 
+## Reasoning Protocol (Non-Trivial Tasks Only)
 
+Use this protocol before acting on medium/large or ambiguous tasks.
+Skip for trivial tasks (small, direct edits with clear requirements).
 
-<reasoning-protocol>
+1. Think before acting
+2. Re-state your understanding of the request
+3. Consider at least one alternative approach
+4. Check your selected approach against loaded context and constraints
 
-### Reasoning Protocol
+## Architecture Decision Protocol (ToT, for ADR/refactor-impacting changes)
 
-Before acting on non-trivial tasks, show your reasoning:
+Run this only when the task affects architecture, major boundaries, or ADR/refactor decisions.
 
-<cot>
-1. **Affected**: What files, functions, and tests are involved?
-2. **Plan**: What is the minimum change? List concrete steps.
-3. **Risks**: What could break? Edge cases to consider.
-4. **Verdict**: Proceed / need clarification / blocked.
-</cot>
-
-Then implement.
+1. Generate **at least 2 viable alternatives**
+2. Evaluate each option against:
+   - complexity
+   - consistency with existing patterns
+   - reversibility
+   - performance impact
+   - team familiarity
+3. Choose one path and explain why it wins now
+4. Record tradeoffs and rejected-option risks
+5. If non-trivial, record in `@specs/adrs/`
+
+Mini example:
+- A: Keep synchronous processing (simpler, weaker performance)
+- B: Queue + worker (more complex, stronger reversibility/performance)
+- Decision: **B** for reliability and latency goals; tradeoff is operational overhead
+
+## Trace Protocol (ReAct style, complex tasks only)
+
+Use this for multi-step, ambiguous, or high-risk work. Skip for trivial edits.
+
+1. **Thought:** key reasoning for this step
+2. **Action:** command/edit/research to run
+3. **Observation:** concrete result/evidence
+4. **Decision:** proceed, adjust, or stop
+
+Keep traces concise and evidence-based.
+
+## Confidence Gate
+
+- **High confidence:** proceed with implementation and verification.
+- **Medium confidence:** proceed, but explicitly call out assumptions and add extra validation.
+- **Low confidence:** pause, ask focused clarifying questions, and do not guess.
+
+## Verification Protocol (Self-Consistency)
+
+Run verification rounds proportional to complexity:
+
+- **Simple task:** 1 round (requirements check + tests/lint)
+- **Moderate task:** 2 rounds (independent re-check + edge-case pass)
+- **Complex task:** 3 rounds (independent strategy re-check + edge cases + integration boundaries)
+
+Each round must confirm:
+1. Output matches stated requirements
+2. No out-of-scope changes were introduced
+3. Key assumptions are still valid
+
+## Testing
 
-**When to use**: Tasks that modify logic, architecture, or >20 lines.
-**Skip for**: Renaming, formatting, typo fixes, single-line changes, adding comments.
-
-</reasoning-protocol>
-
-
-
-
-<decision-protocol>
-
-### Decision Protocol
-
-When multiple approaches exist, evaluate before choosing.
-
-**Trigger**: Architecture decisions, complex refactors, technology choices, performance tradeoffs.
-
-**Format**:
-
-#### Approaches Considered
-
-**Option A: [name]**
-- Approach: [1-2 sentences]
-- Pros: [list]
-- Cons: [list]
-- Effort: [low/medium/high]
-
-**Option B: [name]**
-- [same structure]
-
-#### Decision: [chosen option]
-- Rationale: [why this one wins now]
-- Tradeoff accepted: [what we give up]
-- Record as ADR: [yes/no — yes if it affects architecture]
-
-**Example**:
-- A: Keep sync workflow (low complexity, poor performance under load)
-- B: Queue + worker (higher complexity, better scalability)
-- Decision: **B** — latency/SLO risk outweighs implementation cost
-- Tradeoff: Added operational surface (queue monitoring)
-
-**Skip for**: Single obvious approach, bug fixes, style changes.
-
-</decision-protocol>
-
-
-
-
-<quality-gates>
-  <description>Required quality checks before code completion</description>
-  
-  <gates>
-    <gate name="lint" required="true">
-      <description>Code style and static analysis</description>
-      <commands>
-        <default>npm run lint</default>
-        <ruby>bundle exec rubocop</ruby>
-        <go>go vet ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="typecheck" required="true">
-      <description>Type safety validation</description>
-      <commands>
-        <typescript>npm run typecheck</typescript>
-        <ruby>bundle exec srb tc</ruby>
-        <go>go build ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="test" required="true">
-      <description>Automated test suite</description>
-      <commands>
-        <default>npm test</default>
-        <ruby>bundle exec rspec</ruby>
-        <go>go test ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="build" required="false">
-      <description>Production build verification</description>
-      <commands>
-        <default>npm run build</default>
-      </commands>
-    </gate>
-  </gates>
-  
-  <coverage>
-    <minimum-client>85</minimum-client>
-    <minimum-server>90</minimum-server>
-    <require-new-tests>For new features and bug fixes</require-new-tests>
-  </coverage>
-</quality-gates>
-
-
-
-
-<git-conventions>
-  <description>Repository conventions for branches, commits, and pull requests</description>
-
-  <branches>
-    <naming>{type}/{ticket}-{description}</naming>
-    <examples>
-      <example>feat/PROJ-123-add-login-flow</example>
-      <example>fix/PROJ-456-handle-null-response</example>
-      <example>chore/PROJ-789-update-dependencies</example>
-    </examples>
-    <rules>
-      <rule>Prefer short, lowercase, hyphenated descriptions</rule>
-      <rule>Keep branch scope to one primary ticket or objective</rule>
-    </rules>
-  </branches>
-
-  <commits>
-    <format>{type}({scope}): {description}</format>
-    <types>feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert</types>
-    <examples>
-      <example>feat(auth): add passwordless login flow</example>
-      <example>fix(api): guard against undefined payload</example>
-      <example>test(checkout): cover discount edge case</example>
-    </examples>
-    <rules>
-      <rule>Use imperative mood ("add", "fix", "update")</rule>
-      <rule>Keep subject line concise and descriptive</rule>
-      <rule>Reference ticket ID in body when required by team policy</rule>
-    </rules>
-  </commits>
-
-  <pull-requests>
-    <title-format>{type}({scope}): {summary}</title-format>
-    <checklist>
-      <item>Describe why the change is needed</item>
-      <item>Summarize behavior changes and impacted areas</item>
-      <item>List validation performed (tests, lint, typecheck, build)</item>
-      <item>Include screenshots or logs for UI/behavior changes when relevant</item>
-    </checklist>
-  </pull-requests>
-</git-conventions>
-
-
-
-
-<agent-harness>
-
-### Agent Coordination
-
-When using multiple specialized agents, follow these coordination rules:
-
-**Agent roles**:
-| Agent | When to use | What it does | What it does NOT do |
-|-------|-------------|-------------|---------------------|
-| Scout | Research phase | Maps codebase, identifies patterns | Does not suggest, plan, or write code |
-| Planner | Plan phase | Creates plans, asks clarifying questions | Does not implement code |
-| Builder | Implement phase | Executes plan, writes code and tests | Does not add unrequested features |
-| Reviewer | After implementation | Finds issues, rates severity | Does not fix code |
-| Documenter | After completion | Writes docs, updates standards | Does not modify source code |
-
-**Handoff protocol**:
-- Each agent reads the previous agent's output before starting.
-- Each agent writes its output to the designated location (specs/ or code).
-- If an agent is blocked, it STOPS and describes the blocker — does not guess.
-
-**Escalation**: When confidence is low, return to the human with:
-1. What you know.
-2. What you are uncertain about.
-3. What you need to proceed.
-
-</agent-harness>
-
-
-
-
-<bug-resolution>
-  <description>Structured approach to debugging and bug fixes</description>
-  
-  <workflow>
-    <step name="reproduce">
-      <action>Create minimal reproduction case</action>
-      <action>Document exact steps to trigger bug</action>
-      <action>Identify affected environments</action>
-    </step>
-    
-    <step name="diagnose">
-      <action>Trace execution path</action>
-      <action>Identify root cause vs symptoms</action>
-      <action>Check for related issues in history</action>
-    </step>
-    
-    <step name="fix">
-      <action>Write failing test that captures the bug</action>
-      <action>Implement minimal fix</action>
-      <action>Verify test passes</action>
-    </step>
-    
-    <step name="verify">
-      <action>Run full test suite</action>
-      <action>Test edge cases</action>
-      <action>Verify fix in affected environments</action>
-    </step>
-  </workflow>
-  
-  <documentation>
-    <require-rca>For P1/P2 bugs or recurring issues</require-rca>
-    <template>spec/specs/research/bugfix-rca-{ticket}.md</template>
-  </documentation>
-</bug-resolution>
-
-
-
-## Git Safety
-
-- **Never run `git push`** without explicit user approval — this includes `gh pr push`, `git push --force`, and any remote-writing git operation.
-- Use `gh` CLI for GitHub operations: issues, PRs, reviews, checks — all read operations are allowed freely.
-- Creating branches and commits locally is fine. Pushing to remote requires the user to say "push" or "push it".
-- Never force-push to any branch. Never push directly to main/master.
-- When creating PRs, use `gh pr create` but do NOT auto-push — ask the user first.
-
-
-## Claude Code-Specific Notes
-
-- Project settings: `.claude/settings.json`
-- Modular rules: `.claude/rules/<name>.md` (supports `paths` frontmatter for scoping)
-- Skills: `.claude/skills/<name>/SKILL.md`
-- Agents: `.claude/agents/<name>.md`
-- Personal overrides: `CLAUDE.local.md` (gitignore this)
-
-## Project-Specific Instructions
-
+- **Unit Tests:** [YOUR_UNIT_TESTING_STRATEGY]
+- **Integration Tests:** [YOUR_INTEGRATION_TESTING_STRATEGY]
+- **E2E Tests:** [YOUR_E2E_TESTING_STRATEGY]
+
+## Key Commands
+
+| Command | Purpose |
+|---------|---------|
+| [YOUR_DEV_COMMAND] | [YOUR_DEV_DESCRIPTION] |
+| [YOUR_TEST_COMMAND] | [YOUR_TEST_DESCRIPTION] |
+| [YOUR_BUILD_COMMAND] | [YOUR_BUILD_DESCRIPTION] |
+
+## Session Start Checks
+
+1. Read this file completely
+2. Check the latest handoff in `specs/memory/handoffs/` (if present)
+3. Review recent git log for context
+4. Check `specs/` for project documentation and standards
+5. Verify you are on the correct branch
+6. Record assumptions and mark each as verified or unverified
+7. State uncertainty level (low/medium/high) and biggest unknown
+8. [YOUR_SESSION_CHECK]
+
+Example references:
+- `specs/prompts/local-examples/preflight-task-framing.md`
+- `specs/prompts/local-examples/react-trace-and-handoff.md`
+
+## Recovery Procedures
+
+- If tests fail:
+  1. `git stash` to save current changes
+  2. `git checkout -- <file>` to restore last known good state
+  3. Re-read the failing test/error output carefully
+  4. Identify the root cause before attempting a fix
+  5. Apply minimal fix targeting only the root cause
+  6. Run tests again to verify the fix doesn't introduce new failures
+- If build breaks:
+  1. Read the full error output — identify whether it's a type error, missing import, or config issue
+  2. Check recent changes with `git diff HEAD~1` to identify the breaking change
+  3. For type errors: fix the type definition, don't suppress with `any`
+  4. For missing imports: trace the import chain, ensure the module exists
+  5. For config issues: compare with a known-good config state
+  6. Run `git stash` to verify the build passes without your changes, then `git stash pop`
+
+## Memory & Context
+
+<!-- Claude Code auto-manages memory in ~/.claude/projects/ -->
+<!-- Reference project docs for persistent context -->
+
+@specs/rules/
+@specs/standards/
+@specs/AGENTS.md
+@specs/features/AGENTS.md
+@specs/bugfixes/AGENTS.md
+<!-- For other task types, reference the corresponding specs/*/AGENTS.md guide -->
+
+## Session Management & Compaction
+
+- Use a token budget: 70% normal operation, 85% pre-compaction warning, 95% mandatory compaction
+- Compact after 15–20 exchanges or earlier when context gets noisy
+
+When compaction is triggered, preserve:
+1. Current objective, scope, and constraints
+2. Decisions made and rationale
+3. Active assumptions/unknowns and confidence level
+4. Current progress and next immediate action
+5. Only high-signal details (drop redundant narrative)
+
+## Sub-Agent Delegation
+For tasks requiring different expertise or fresh context, delegate to a sub-agent with clear scope.
+Provide only relevant context. Accept final results only — intermediate work stays internal.
+
+## Token Discipline
+
+Prevent context bloat and preserve high-signal working memory:
+
+1. **Read only what is needed** for the current decision — no speculative file reads
+2. **Prefer targeted ranges** over full-file dumps when reading code
+3. **Summarize findings** in 3-7 bullet points before moving on
+4. **Reuse prior summaries** instead of re-reading unchanged content
+5. **Compress at checkpoints** — after investigations, before subtask switches, when context is stale
+
+### Anti-Patterns
+- Reading many files "just in case"
+- Repeating full logs or command output in responses
+- Carrying outdated investigation context across unrelated subtasks
+- Re-reading files that haven't changed since last read
+
+### Output Discipline
+- Keep status updates concise and decision-focused
+- Report only what changes decisions, risk, or next action
+- Aim for the 40-60% rule: keep 40-60% of context window available for working memory
+
+## Self-Improvement Protocol
+
+### After Every Task — Impact Check
+
+Before ending any session, ask yourself:
+
+```
+Did my work change any of the following?
+├── Project structure (new modules, moved files)     → update Codebase Map above
+├── API contracts (new/changed endpoints)             → update @specs/standards/coding/
+├── Architecture decisions                            → create ADR in @specs/adrs/
+├── Testing patterns (new test type, new fixture)     → update @specs/standards/testing/
+├── Dependencies (added/removed/upgraded)             → update Stack section above
+├── Build/test/lint commands                          → update Key Commands above
+├── Security patterns (auth, validation)              → update @specs/standards/security/
+├── Error handling approach                           → update @specs/standards/coding/
+├── New code pattern not in standards                 → create new standard
+├── Existing standard's reference file changed        → update the standard
+├── Feature completed/status changed                  → update @specs/KNOWLEDGE_MAP.md
+└── Workflow process changed                          → update @specs/rules/workflow.md
+```
+
+If YES to any: **flag it before ending the session.**
+
+Output format:
+```
+## 📋 Knowledge Updates Needed
+- [ ] [file to update] — [what changed and why]
+- [ ] [file to update] — [what changed and why]
+```
+
+The human decides whether to update now or create a follow-up task.
+
+### Session End Protocol (Multi-Session Handoff)
+
+When work spans sessions or leaves unresolved items, create/update a handoff note in:
+`specs/memory/handoffs/YYYY-MM-DD-[topic].md`
+
+Minimum handoff content:
+1. Current objective and status (done/in-progress/blocked)
+2. Decisions made (with rationale)
+3. Open assumptions/questions
+4. Next 1–2 concrete actions
+5. Risks/watchouts for the next agent
+
+Example references:
+- Handoff structure: `specs/prompts/local-examples/react-trace-and-handoff.md`
+- Commit-message pattern: `specs/prompts/local-examples/commit-message-pattern.md`
+
+### Severity of Updates
+
+| Severity | When | Action |
+|----------|------|--------|
+| **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
+| **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
+| **Note** | Minor improvement opportunity spotted | Write to @specs/memory/ for future consideration |
+
+### What Gets Updated Where
+
+| Change Type | Update Target |
+|-------------|--------------|
+| New module or directory | Root CLAUDE.md (codebase map) + @specs/KNOWLEDGE_MAP.md |
+| New API pattern | @specs/standards/coding/api-patterns.md |
+| New architecture pattern | @specs/standards/architecture/ + ADR if non-obvious |
+| New test pattern | @specs/standards/testing/ |
+| Changed conventions | @specs/rules/ relevant file |
+| New feature started/completed | @specs/KNOWLEDGE_MAP.md |
+| Architecture decision made | @specs/adrs/NNN-*.md |
+| Bug revealed missing rule | @specs/rules/ + @specs/memory/ |
+| Refactor changed structure | Root CLAUDE.md + @specs/standards/ + @specs/KNOWLEDGE_MAP.md |
 

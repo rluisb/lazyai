@@ -52,22 +52,32 @@ func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, erro
 		return filepath.Join(homeDir, ".config", "opencode"), nil
 	case types.ToolIdClaudeCode:
 		return filepath.Join(homeDir, ".claude"), nil
+	case types.ToolIdGemini:
+		return filepath.Join(homeDir, ".gemini"), nil
+	case types.ToolIdCodex:
+		return filepath.Join(homeDir, ".codex"), nil
 	default:
 		return "", nil
 	}
 }
 
+// ResolveCodexSkillsGlobalDir returns the global path where Codex reads skills.
+// Codex is unique: skills live outside .codex/ at ~/.agents/skills/ per upstream convention.
+func ResolveCodexSkillsGlobalDir(homeDir string) string {
+	return filepath.Join(homeDir, ".agents", "skills")
+}
+
 // IsGlobalSupportedTool reports whether a tool supports file-based global config.
+// Only Copilot lacks a meaningful repo-scaffolding global surface.
 func IsGlobalSupportedTool(tool types.ToolId) bool {
-	return tool == types.ToolIdOpenCode || tool == types.ToolIdClaudeCode
+	return tool != types.ToolIdCopilot
 }
 
 // LogUnsupportedGlobalTool prints a message for tools that don't support global config.
+// Deprecated: prefer adapter.ErrScopeUnsupported and the wizard/non-interactive scope
+// filters; this helper remains for callers that still need a simple stderr warning.
 func LogUnsupportedGlobalTool(tool types.ToolId) {
-	switch tool {
-	case types.ToolIdCopilot:
+	if tool == types.ToolIdCopilot {
 		fmt.Fprintln(os.Stderr, "Copilot doesn't support file-based global config. Use project scope instead.")
-	case types.ToolIdGemini:
-		fmt.Fprintln(os.Stderr, "Gemini doesn't support file-based global config. Use project scope instead.")
 	}
 }

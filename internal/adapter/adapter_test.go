@@ -41,6 +41,21 @@ func createTestFS() fstest.MapFS {
 		"prompts/preflight-task-framing.md": &fstest.MapFile{
 			Data: []byte("---\nname: preflight-task-framing\n---\n\n# Task Framing\n\nFrame tasks before starting."),
 		},
+		"commands/rpi.toml": &fstest.MapFile{
+			Data: []byte("name = \"rpi\"\ndescription = \"Start RPI\"\nprompt = \"Begin RPI\"\n"),
+		},
+		"commands/review.toml": &fstest.MapFile{
+			Data: []byte("name = \"review\"\ndescription = \"Review work\"\nprompt = \"Do review\"\n"),
+		},
+		"commands/plan.toml": &fstest.MapFile{
+			Data: []byte("name = \"plan\"\ndescription = \"Plan work\"\nprompt = \"Make plan\"\n"),
+		},
+		"chatmodes/architect.chatmode.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Architect mode\n---\nArchitect instructions."),
+		},
+		"chatmodes/reviewer.chatmode.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Reviewer mode\n---\nReviewer instructions."),
+		},
 	}
 }
 

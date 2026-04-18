@@ -86,6 +86,18 @@ func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error
 		}
 	}
 
+	// Copy custom slash commands (TOML files).
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "commands",
+		SelectionKey: "commands",
+		ToDestPath: func(file string) string {
+			return filepath.Join(geminiDir, "commands", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
 	// Root GEMINI.md placement is handled centrally by scaffold/root.go.
 
 	// CLI-driven MCP registration: when DriveCLI=true, attempt to register MCP

@@ -343,6 +343,17 @@ var (
 		PromptIdResearch,
 	}
 
+	ALL_COMMANDS = []CommandId{
+		CommandIdRpi,
+		CommandIdReview,
+		CommandIdPlan,
+	}
+
+	ALL_CHATMODES = []ChatModeId{
+		ChatModeIdArchitect,
+		ChatModeIdReviewer,
+	}
+
 	ALL_TEMPLATES = []TemplateId{
 		TemplateIdAdr,
 		TemplateIdBugfixRcaTemplate,

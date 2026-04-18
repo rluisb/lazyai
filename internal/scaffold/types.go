@@ -51,6 +51,10 @@ type ScaffoldContext struct {
 	Skills []types.SkillId
 	// Prompts lists prompt IDs to install.
 	Prompts []types.PromptId
+	// Commands lists Gemini custom command IDs to install.
+	Commands []types.CommandId
+	// ChatModes lists Copilot chat mode IDs to install.
+	ChatModes []types.ChatModeId
 	// Templates lists template IDs to install.
 	Templates []types.TemplateId
 	// Rules lists rule IDs to install.

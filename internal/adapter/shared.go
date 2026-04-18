@@ -187,7 +187,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 type CopyLibraryDirectoryOption struct {
 	Ctx          *AdapterContext
 	SourceSubdir string // subdirectory within library (e.g. "agents", "skills")
-	SelectionKey string // "agents", "skills", or "prompts"
+	SelectionKey string // "agents", "skills", "prompts", "commands", or "chatmodes"
 	ToDestPath   func(file string) string
 	WarnOnSkip   bool
 	Transform    func(content []byte) []byte
@@ -222,6 +222,8 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
 	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
 	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
+	selectedCommands := selectionSet(opts.Ctx.Selections.Commands)
+	selectedChatModes := selectionSet(opts.Ctx.Selections.ChatModes)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -234,7 +236,11 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 		}
 
 		// Extract file ID (filename without extension) for selection filtering.
+		// Chatmodes use a compound extension ".chatmode.md" — strip it explicitly.
 		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
+		if opts.SelectionKey == "chatmodes" {
+			fileIDVal = strings.TrimSuffix(fileIDVal, ".chatmode")
+		}
 		switch opts.SelectionKey {
 		case "agents":
 			if selectedAgents != nil && !selectedAgents[types.AgentId(fileIDVal)] {
@@ -246,6 +252,14 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 			}
 		case "prompts":
 			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
+				continue
+			}
+		case "commands":
+			if selectedCommands != nil && !selectedCommands[types.CommandId(fileIDVal)] {
+				continue
+			}
+		case "chatmodes":
+			if selectedChatModes != nil && !selectedChatModes[types.ChatModeId(fileIDVal)] {
 				continue
 			}
 		}
@@ -264,6 +278,8 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
 	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
 	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
+	selectedCommands := selectionSet(opts.Ctx.Selections.Commands)
+	selectedChatModes := selectionSet(opts.Ctx.Selections.ChatModes)
 
 	for _, file := range files.ListDir(sourceDir) {
 		if opts.IncludeFile != nil && !opts.IncludeFile(file) {
@@ -276,7 +292,11 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 		}
 
 		// Extract file ID (filename without extension) for selection filtering.
+		// Chatmodes use a compound extension ".chatmode.md" — strip it explicitly.
 		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
+		if opts.SelectionKey == "chatmodes" {
+			fileIDVal = strings.TrimSuffix(fileIDVal, ".chatmode")
+		}
 		switch opts.SelectionKey {
 		case "agents":
 			if selectedAgents != nil && !selectedAgents[types.AgentId(fileIDVal)] {
@@ -288,6 +308,14 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 			}
 		case "prompts":
 			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
+				continue
+			}
+		case "commands":
+			if selectedCommands != nil && !selectedCommands[types.CommandId(fileIDVal)] {
+				continue
+			}
+		case "chatmodes":
+			if selectedChatModes != nil && !selectedChatModes[types.ChatModeId(fileIDVal)] {
 				continue
 			}
 		}

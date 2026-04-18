@@ -86,12 +86,16 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var agents []types.AgentId
 	var skills []types.SkillId
 	var prompts []types.PromptId
+	var commands []types.CommandId
+	var chatmodes []types.ChatModeId
 	var infra []types.InfraId
 
 	if presetLevel != types.PresetLevelMinimal {
 		agents = types.ALL_AGENTS[:]
 		skills = types.ALL_SKILLS[:]
 		prompts = types.ALL_PROMPTS[:]
+		commands = types.ALL_COMMANDS[:]
+		chatmodes = types.ALL_CHATMODES[:]
 		infra = types.ALL_INFRA[:]
 	}
 
@@ -130,6 +134,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,
+		Commands:         commands,
+		ChatModes:        chatmodes,
 		Templates:        templates,
 		Rules:            rules,
 		Infra:            infra,

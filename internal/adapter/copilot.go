@@ -64,6 +64,19 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 		}
 	}
 
+	// Copy chat modes to .github/chatmodes/<name>.chatmode.md.
+	chatmodesDir := filepath.Join(githubDir, "chatmodes")
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "chatmodes",
+		SelectionKey: "chatmodes",
+		ToDestPath: func(file string) string {
+			return filepath.Join(chatmodesDir, filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
 	// Memory docs (AGENTS.md and .github/copilot-instructions.md) are placed
 	// by scaffold/root.go, which knows the scope-correct destination.
 

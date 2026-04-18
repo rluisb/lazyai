@@ -6,19 +6,22 @@ You are a careful, senior implementation partner for this repository.
 Prioritize correctness over speed, preserve scope boundaries, and communicate decisions clearly.
 Default to repository conventions before introducing new patterns.
 
-**Project:** [YOUR_PROJECT_NAME]
-**Organization:** [YOUR_ORG]
-**Team:** [YOUR_TEAM]
+**Project:** ai-setup
+**Organization:** <!-- fill-in: your org -->
+**Team:** <!-- fill-in: your team -->
 
 ---
 
 ## Project Overview
 
-[YOUR_PROJECT_DESCRIPTION]
+One-command AI development environment scaffold. Installs per-tool configuration
+(agents, skills, prompts, commands, chatmodes, MCP servers) for 5 AI CLI tools
+(Claude Code, OpenCode, Gemini, GitHub Copilot, Codex) across three scopes
+(project, workspace, global).
 
 ## Tech Stack
 
-- [YOUR_TECH_STACK]
+- Go 1.26 · Cobra CLI · SQLite · huh (TUI) · BurntSushi/toml · lipgloss
 
 ## Codebase Map
 
@@ -38,14 +41,14 @@ Default to repository conventions before introducing new patterns.
 
 ## Architecture & Patterns
 
-[YOUR_ARCHITECTURE_NOTES]
+<!-- fill-in: one paragraph on high-level architecture (adapter registry + scope resolver + configmerge + library FS). -->
 
 ## Conventions
 
-- **Code Style:** [YOUR_CODE_STYLE]
-- **Naming:** [YOUR_NAMING_CONVENTIONS]
-- **Testing:** [YOUR_TESTING_STRATEGY]
-- **Git:** [YOUR_GIT_WORKFLOW]
+- **Code Style:** Go standard; `go fmt` enforced. Prefer existing helpers (`internal/files`, `internal/jsonc`, `internal/configmerge`) over ad-hoc re-implementations.
+- **Naming:** `CamelCase` for exported, `camelCase` for unexported. Test files end with `_test.go`. Package names lowercase, no underscores.
+- **Testing:** `go test ./... -count=1`. Scope-parity tests cover every (tool, scope) pair. Prefer `t.TempDir()` + explicit `HomeDir` over `os.UserHomeDir()`.
+- **Git:** Branches off `main`; one wave per commit for spec work. Commits use Conventional format (`feat(adapters):`, `fix(scaffold):`).
 
 ## Decision Tree
 
@@ -71,15 +74,15 @@ Actual spec content lives in flat `specs/NNN-name/` directories (committed).
 <!-- Each rule file uses YAML frontmatter with paths: glob patterns -->
 <!-- Example: .claude/rules/typescript.md with paths: ["src/**/*.ts"] -->
 
-- [YOUR_RULE_1]
-- [YOUR_RULE_2]
+- <!-- fill-in: rule 1 -->
+- <!-- fill-in: rule 2 -->
 
 ## Do NOT
 
 - Do not push directly to main — always use branches and PRs
 - Do not modify generated files without updating the source template
-- [YOUR_DO_NOT_1]
-- [YOUR_DO_NOT_2]
+- <!-- fill-in: project-specific don't -->
+- <!-- fill-in: project-specific don't -->
 
 ## Workflow
 
@@ -158,17 +161,18 @@ Each round must confirm:
 
 ## Testing
 
-- **Unit Tests:** [YOUR_UNIT_TESTING_STRATEGY]
-- **Integration Tests:** [YOUR_INTEGRATION_TESTING_STRATEGY]
-- **E2E Tests:** [YOUR_E2E_TESTING_STRATEGY]
+- **Unit Tests:** `*_test.go` colocated with source. Table-driven where natural. Use `t.TempDir()` and `t.Setenv()` for isolation.
+- **Integration Tests:** Scope-parity (adapter install/compile), library embed (`internal/library/integration_test.go`), store round-trip (`internal/db/`).
+- **E2E Tests:** Manual smoke via `ai-setup init` in a temp dir; see each spec's `## Verification` section.
 
 ## Key Commands
 
 | Command | Purpose |
 |---------|---------|
-| [YOUR_DEV_COMMAND] | [YOUR_DEV_DESCRIPTION] |
-| [YOUR_TEST_COMMAND] | [YOUR_TEST_DESCRIPTION] |
-| [YOUR_BUILD_COMMAND] | [YOUR_BUILD_DESCRIPTION] |
+| `go run .` | Run the CLI from source |
+| `go test ./... -count=1` | Run the full test suite |
+| `go build ./...` | Build the binary |
+| `go vet ./...` | Static analysis gate |
 
 ## Session Start Checks
 
@@ -179,7 +183,7 @@ Each round must confirm:
 5. Verify you are on the correct branch
 6. Record assumptions and mark each as verified or unverified
 7. State uncertainty level (low/medium/high) and biggest unknown
-8. [YOUR_SESSION_CHECK]
+8. <!-- fill-in: team-specific session check -->
 
 Example references:
 - `specs/prompts/local-examples/preflight-task-framing.md`

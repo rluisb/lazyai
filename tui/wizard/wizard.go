@@ -70,6 +70,11 @@ type WizardConfig struct {
 	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
 	// scaffolding to the tool's own CLI instead of direct-write.
 	CLIDriveCLI bool
+
+	// CLIOrg and CLITeam populate [YOUR_ORG] / [YOUR_TEAM] in the generated
+	// CLAUDE.md. Empty values become <!-- fill-in --> markers.
+	CLIOrg  string
+	CLITeam string
 }
 
 // WizardResult aggregates the results from all five phases.

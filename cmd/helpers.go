@@ -143,6 +143,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Force:            config.Force,
 		DryRun:           config.DryRun,
 		DriveCLI:         config.CLIDriveCLI,
+		Organization:     firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
+		Team:             firstNonEmpty(result.Phase1.Team, config.CLITeam),
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,
@@ -221,4 +223,14 @@ func projectNameFromDir(dir string) string {
 		return "my-project"
 	}
 	return strings.ReplaceAll(strings.ReplaceAll(base, " ", "-"), "_", "-")
+}
+
+// firstNonEmpty returns the first non-empty string from values.
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

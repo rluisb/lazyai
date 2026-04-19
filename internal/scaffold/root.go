@@ -188,8 +188,11 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		}
 
 		content := string(data)
-		// Perform basic substitutions.
-		content = strings.ReplaceAll(content, "[YOUR_PROJECT_NAME]", opts.ProjectName)
+		// Perform hybrid [YOUR_*] placeholder fill (spec 010 wave C):
+		// mechanical fields get concrete values; subjective fields get
+		// HTML-comment <!-- fill-in --> markers.
+		content = fillClaudeMdPlaceholders(content, opts)
+		// Templating handlebars-style substitutions.
 		content = strings.ReplaceAll(content, "{{projectName}}", ctx.ProjectName)
 		content = strings.ReplaceAll(content, "{{planningDir}}", ctx.PlanningDir)
 		if ctx.PrimaryLanguage != "" {
@@ -268,6 +271,112 @@ type ScaffoldCompiledRootOptions struct {
 	Framework           string
 	WorkspaceType       string
 	ProjectInstructions string
+	ProjectDescription  string // optional; substituted into [YOUR_PROJECT_DESCRIPTION]
+	Organization        string // optional; substituted into [YOUR_ORG]
+	Team                string // optional; substituted into [YOUR_TEAM]
 	// Referenced repos for workspace scope.
 	Repos []types.RepoInfo
+}
+
+// fillClaudeMdPlaceholders replaces [YOUR_*] placeholders in a CLAUDE.md /
+// AGENTS.md / GEMINI.md template with values derived from opts, or with
+// <!-- fill-in: hint --> markers when the value is unknown or subjective.
+// Applying this centrally means each tool's root file gets consistent
+// substitutions.
+func fillClaudeMdPlaceholders(content string, opts ScaffoldCompiledRootOptions) string {
+	// Project name — always known; already substituted upstream but kept here
+	// for robustness when this helper runs on its own.
+	if opts.ProjectName != "" {
+		content = strings.ReplaceAll(content, "[YOUR_PROJECT_NAME]", opts.ProjectName)
+	}
+
+	// Project description — derived from opts or a gentle default.
+	desc := opts.ProjectDescription
+	if desc == "" {
+		desc = "AI-assisted development project"
+	}
+	content = strings.ReplaceAll(content, "[YOUR_PROJECT_DESCRIPTION]", desc)
+
+	// Tech stack — derived from primary language + framework, else fill-in.
+	techStack := "<!-- fill-in: tech stack -->"
+	if opts.PrimaryLanguage != "" {
+		techStack = opts.PrimaryLanguage
+		if opts.Framework != "" {
+			techStack += " · " + opts.Framework
+		}
+	}
+	content = strings.ReplaceAll(content, "[YOUR_TECH_STACK]", techStack)
+
+	// Organization and Team — from wizard/flags, else fill-in.
+	content = strings.ReplaceAll(content, "[YOUR_ORG]",
+		fallbackMarker(opts.Organization, "your org"))
+	content = strings.ReplaceAll(content, "[YOUR_TEAM]",
+		fallbackMarker(opts.Team, "your team"))
+
+	// Dev/test/build commands — inferred by primary language.
+	dev, test, build := commandsForLanguage(opts.PrimaryLanguage)
+	content = strings.ReplaceAll(content, "[YOUR_DEV_COMMAND]", dev)
+	content = strings.ReplaceAll(content, "[YOUR_DEV_DESCRIPTION]", "Run the app from source")
+	content = strings.ReplaceAll(content, "[YOUR_TEST_COMMAND]", test)
+	content = strings.ReplaceAll(content, "[YOUR_TEST_DESCRIPTION]", "Run the test suite")
+	content = strings.ReplaceAll(content, "[YOUR_BUILD_COMMAND]", build)
+	content = strings.ReplaceAll(content, "[YOUR_BUILD_DESCRIPTION]", "Build the project")
+
+	// Subjective fields — always fill-in markers.
+	subjectiveMarkers := map[string]string{
+		"[YOUR_ARCHITECTURE_NOTES]":       "<!-- fill-in: architecture and key patterns -->",
+		"[YOUR_CODE_STYLE]":               "<!-- fill-in: code style -->",
+		"[YOUR_NAMING_CONVENTIONS]":       "<!-- fill-in: naming conventions -->",
+		"[YOUR_TESTING_STRATEGY]":         "<!-- fill-in: testing strategy -->",
+		"[YOUR_GIT_WORKFLOW]":             "<!-- fill-in: git workflow -->",
+		"[YOUR_RULE_1]":                   "<!-- fill-in: rule 1 -->",
+		"[YOUR_RULE_2]":                   "<!-- fill-in: rule 2 -->",
+		"[YOUR_DO_NOT_1]":                 "<!-- fill-in: project-specific don't -->",
+		"[YOUR_DO_NOT_2]":                 "<!-- fill-in: project-specific don't -->",
+		"[YOUR_UNIT_TESTING_STRATEGY]":    "<!-- fill-in: unit testing strategy -->",
+		"[YOUR_INTEGRATION_TESTING_STRATEGY]": "<!-- fill-in: integration testing strategy -->",
+		"[YOUR_E2E_TESTING_STRATEGY]":     "<!-- fill-in: e2e testing strategy -->",
+		"[YOUR_SESSION_CHECK]":            "<!-- fill-in: team-specific session check -->",
+		"[YOUR_COMPONENT_1]":              "<!-- fill-in: component -->",
+		"[YOUR_COMPONENT_2]":              "<!-- fill-in: component -->",
+		"[YOUR_RESPONSIBILITY_1]":         "<!-- fill-in: responsibility -->",
+		"[YOUR_RESPONSIBILITY_2]":         "<!-- fill-in: responsibility -->",
+		"[YOUR_PATH_1]":                   "<!-- fill-in: path -->",
+		"[YOUR_PATH_2]":                   "<!-- fill-in: path -->",
+	}
+	for placeholder, marker := range subjectiveMarkers {
+		content = strings.ReplaceAll(content, placeholder, marker)
+	}
+
+	return content
+}
+
+// fallbackMarker returns value if non-empty, else an HTML-comment fill-in hint.
+func fallbackMarker(value, hint string) string {
+	if value != "" {
+		return value
+	}
+	return "<!-- fill-in: " + hint + " -->"
+}
+
+// commandsForLanguage returns canonical (dev, test, build) commands per
+// primary language. Returns fill-in markers when the language is unknown.
+func commandsForLanguage(lang string) (dev, test, build string) {
+	switch strings.ToLower(lang) {
+	case "go":
+		return "go run .", "go test ./...", "go build ./..."
+	case "node", "nodejs", "node.js", "javascript", "typescript":
+		return "npm run dev", "npm test", "npm run build"
+	case "python":
+		return "python -m app", "pytest", "python -m build"
+	case "rust":
+		return "cargo run", "cargo test", "cargo build --release"
+	case "ruby":
+		return "bundle exec rails s", "bundle exec rspec", "bundle exec rake build"
+	case "java":
+		return "./gradlew bootRun", "./gradlew test", "./gradlew build"
+	}
+	return "<!-- fill-in: dev command -->",
+		"<!-- fill-in: test command -->",
+		"<!-- fill-in: build command -->"
 }

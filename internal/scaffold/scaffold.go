@@ -76,6 +76,9 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		Framework:           ctx.Framework,
 		WorkspaceType:       ctx.WorkspaceType,
 		ProjectInstructions: ctx.ProjectInstructions,
+		ProjectDescription:  ctx.ProjectDescription,
+		Organization:        ctx.Organization,
+		Team:                ctx.Team,
 		Repos:               ctx.Repos,
 	}); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("compiled-root: %w", err))

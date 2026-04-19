@@ -32,7 +32,9 @@ func init() {
 	initCmd.Flags().String("branch-pattern", "", "Git branch naming pattern")
 	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
-	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini)")
+	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini, Claude Code, Codex)")
+	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in CLAUDE.md)")
+	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in CLAUDE.md)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
 	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
@@ -65,6 +67,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
+	orgName, _ := cmd.Flags().GetString("org")
+	teamName, _ := cmd.Flags().GetString("team")
 
 	// Build CLI tools from flags.
 	var tools []types.ToolId
@@ -85,6 +89,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		Force:                force,
 		DryRun:               dryRun,
 		CLIDriveCLI:          driveCLI,
+		CLIOrg:               orgName,
+		CLITeam:              teamName,
 		HomeDir:              homeDir,
 		TargetDir:            targetDir,
 		CLIScope:             types.SetupScope(scopeStr),
@@ -202,9 +208,11 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 
 	// Create Phase1 result from CLI flags.
 	phase1 := &wizard.Phase1Result{
-		Scope:       config.CLIScope,
-		Tools:       config.CLITools,
-		ProjectName: config.CLIName,
+		Scope:        config.CLIScope,
+		Tools:        config.CLITools,
+		ProjectName:  config.CLIName,
+		Organization: config.CLIOrg,
+		Team:         config.CLITeam,
 	}
 
 	// Create Phase2 result from preset + features.

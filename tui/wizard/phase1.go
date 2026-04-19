@@ -36,6 +36,11 @@ type Phase1Result struct {
 	ProjectName   string
 	CliTools      []string
 	EnableServers []string
+	// Organization and Team are optional identity fields that populate the
+	// [YOUR_ORG] / [YOUR_TEAM] placeholders in the generated CLAUDE.md.
+	// Empty → left as <!-- fill-in --> markers.
+	Organization string
+	Team         string
 }
 
 // RunPhase1 runs the context collection phase.
@@ -78,6 +83,8 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 		state.ProjectName = defaults.ProjectName
 		state.CliTools = cloneStrings(defaults.CliTools)
 		state.Servers = cloneStrings(defaults.EnableServers)
+		state.Organization = defaults.Organization
+		state.Team = defaults.Team
 	}
 	if state.Scope == "" {
 		state.Scope = defaultPhase1Scope()
@@ -87,7 +94,7 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	}
 
 	currentStep := 1
-	for currentStep >= 1 && currentStep <= 5 {
+	for currentStep >= 1 && currentStep <= 6 {
 		scopeForStep := state.Scope
 		if scopeForStep == "" {
 			scopeForStep = defaultPhase1Scope()
@@ -148,21 +155,35 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 			}
 			state.Servers = servers
 			currentStep++
+		case 6:
+			org, team, action, err := askProjectIdentity(state.Organization, state.Team, phase1StepInfoFor(6, scopeForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase1Step(currentStep, state.Scope)
+				continue
+			}
+			state.Organization = org
+			state.Team = team
+			currentStep++
 		}
 	}
 
-	return buildPhase1Result(state.Scope, state.Tools, state.ProjectName, state.CliTools, state.Servers), PhaseContinue, nil
+	return buildPhase1Result(state.Scope, state.Tools, state.ProjectName, state.CliTools, state.Servers, state.Organization, state.Team), PhaseContinue, nil
 }
 
 type phase1InteractiveState struct {
-	Scope       types.SetupScope
-	Tools       []types.ToolId
-	ProjectName string
-	CliTools    []string
-	Servers     []string
+	Scope        types.SetupScope
+	Tools        []types.ToolId
+	ProjectName  string
+	CliTools     []string
+	Servers      []string
+	Organization string
+	Team         string
 }
 
-func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, name string, cliTools, servers []string) *Phase1Result {
+func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, name string, cliTools, servers []string, org, team string) *Phase1Result {
 	projectName := name
 	if scope == types.SetupScopeGlobal {
 		projectName = "global"
@@ -174,6 +195,8 @@ func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, name string
 		ProjectName:   projectName,
 		CliTools:      cloneStrings(cliTools),
 		EnableServers: cloneStrings(servers),
+		Organization:  org,
+		Team:          team,
 	}
 }
 
@@ -326,6 +349,39 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 	return selected, PhaseContinue, nil
 }
 
+// askProjectIdentity collects optional Organization and Team values used to
+// fill [YOUR_ORG] / [YOUR_TEAM] in the generated CLAUDE.md. Both fields
+// accept empty input (enter to skip — stays as <!-- fill-in --> marker).
+func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (string, string, PhaseAction, error) {
+	org := currentOrg
+	team := currentTeam
+	decision := "continue"
+
+	orgField := huh.NewInput().
+		Title(info.Title()).
+		Description("Organization name (leave blank to skip — stays as <!-- fill-in --> in CLAUDE.md).").
+		Value(&org)
+	teamField := huh.NewInput().
+		Title("Team").
+		Description("Team name (optional).").
+		Value(&team)
+	decisionField := huh.NewSelect[string]().
+		Title("Save identity or go back?").
+		Options(
+			huh.NewOption("Save and continue", "continue"),
+			huh.NewOption("↩ Back", phase1BackValue),
+		).
+		Value(&decision)
+
+	if err := huh.NewForm(huh.NewGroup(orgField, teamField, decisionField)).Run(); err != nil {
+		return "", "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
+	}
+	if decision == phase1BackValue {
+		return "", "", PhaseBack, nil
+	}
+	return strings.TrimSpace(org), strings.TrimSpace(team), PhaseContinue, nil
+}
+
 func filterUninstalledCodex(tools []types.ToolId) ([]types.ToolId, error) {
 	if !containsTool(tools, string(types.ToolIdCodex)) || detect.IsCodexInstalled() {
 		return tools, nil
@@ -408,15 +464,20 @@ func phase1StepInfoFor(step int, scope types.SetupScope, defaults *Phase1Result)
 		info.StepTitle = "CLI Tools"
 	case 5:
 		info.StepTitle = "MCP Servers"
+	case 6:
+		info.StepTitle = "Project Identity (optional)"
+		if defaults != nil && (defaults.Organization != "" || defaults.Team != "") {
+			info.Previous = fmt.Sprintf("org=%q team=%q", defaults.Organization, defaults.Team)
+		}
 	}
 	return info
 }
 
 func phase1Total(scope types.SetupScope) int {
 	if scope == types.SetupScopeGlobal {
-		return 4
+		return 5
 	}
-	return 5
+	return 6
 }
 
 func previousPhase1Step(current int, scope types.SetupScope) int {

@@ -53,7 +53,7 @@ func TestBuildPhase1Result(t *testing.T) {
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
 
-			result := buildPhase1Result(tt.scope, tools, tt.project, cliTools, servers)
+			result := buildPhase1Result(tt.scope, tools, tt.project, cliTools, servers, "", "")
 
 			if result.Scope != tt.scope {
 				t.Fatalf("Scope = %q, want %q", result.Scope, tt.scope)
@@ -152,12 +152,21 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	}
 
 	info := phase1StepInfoFor(2, types.SetupScopeProject, defaults)
-	if got, want := info.Title(), "Setup Context — 2/5: AI Tools (previous: opencode, gemini)"; got != want {
+	if got, want := info.Title(), "Setup Context — 2/6: AI Tools (previous: opencode, gemini)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
 	globalInfo := phase1StepInfoFor(4, types.SetupScopeGlobal, defaults)
-	if got, want := globalInfo.Title(), "Setup Context — 3/4: CLI Tools"; got != want {
+	if got, want := globalInfo.Title(), "Setup Context — 3/5: CLI Tools"; got != want {
+		t.Fatalf("Title() = %q, want %q", got, want)
+	}
+
+	// Step 6 is the new Project Identity step.
+	identity := phase1StepInfoFor(6, types.SetupScopeProject, &Phase1Result{
+		Organization: "Acme",
+		Team:         "Platform",
+	})
+	if got, want := identity.Title(), "Setup Context — 6/6: Project Identity (optional) (previous: org=\"Acme\" team=\"Platform\")"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 }

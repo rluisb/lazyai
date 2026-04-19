@@ -81,6 +81,8 @@ func TestBuildPhase2Result(t *testing.T) {
 		"branch/{description}",
 		"[{ticket}] {description}",
 		true,
+		nil,
+		nil,
 	)
 
 	if result.Preset != types.PresetLevelCustom {
@@ -108,7 +110,7 @@ func TestBuildPhase2Result(t *testing.T) {
 func TestBuildPhase2ResultGitConventionDefaults(t *testing.T) {
 	t.Parallel()
 
-	result := buildPhase2Result(types.SetupScopeGlobal, "", nil, "", "", false)
+	result := buildPhase2Result(types.SetupScopeGlobal, "", nil, "", "", false, nil, nil)
 	wantPreset := preset.DefaultPresetForScope(types.SetupScopeGlobal)
 	wantFeatures := preset.ResolvePreset(wantPreset)
 	wantGit := types.DefaultGitConventions()
@@ -154,13 +156,80 @@ func TestPhase2StepInfoFor(t *testing.T) {
 	}
 
 	info := phase2StepInfoFor(3, types.PresetLevelCustom, defaults)
-	if got, want := info.Title(), "Features & Conventions — 3/5: Branch Pattern (previous: {ticket}/{description})"; got != want {
+	if got, want := info.Title(), "Features & Conventions — 3/7: Branch Pattern (previous: {ticket}/{description})"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
 	standardInfo := phase2StepInfoFor(3, types.PresetLevelStandard, defaults)
 	if got, want := standardInfo.Title(), "Features & Conventions — 2/4: Branch Pattern (previous: {ticket}/{description})"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
+	}
+}
+
+func TestPhase2StepInfo_CommandsAndChatModes(t *testing.T) {
+	t.Parallel()
+
+	defaults := &Phase2Result{
+		Preset:    types.PresetLevelCustom,
+		Commands:  []types.CommandId{types.CommandIdRpi, types.CommandIdReview},
+		ChatModes: []types.ChatModeId{types.ChatModeIdArchitect},
+	}
+
+	commandsInfo := phase2StepInfoFor(6, types.PresetLevelCustom, defaults)
+	if got, want := commandsInfo.Title(), "Features & Conventions — 6/7: Gemini Commands (previous: rpi, review)"; got != want {
+		t.Fatalf("commands title = %q, want %q", got, want)
+	}
+
+	chatmodesInfo := phase2StepInfoFor(7, types.PresetLevelCustom, defaults)
+	if got, want := chatmodesInfo.Title(), "Features & Conventions — 7/7: Copilot Chat Modes (previous: architect)"; got != want {
+		t.Fatalf("chatmodes title = %q, want %q", got, want)
+	}
+}
+
+// TestPhase2Stepping_NonCustomSkipsCommandsAndChatmodes verifies that after
+// step 5 (Require Ticket), non-custom presets exit the loop (skip steps 6+7).
+func TestPhase2Stepping_NonCustomSkipsCommandsAndChatmodes(t *testing.T) {
+	t.Parallel()
+
+	// For non-custom preset, next(5) must be >= 8 (exit).
+	next := nextPhase2Step(5, types.PresetLevelStandard)
+	if next <= 7 {
+		t.Errorf("next(5, standard) = %d; expected >= 8 to skip commands/chatmodes", next)
+	}
+
+	// For custom preset, next(5) == 6 (show Commands step).
+	if got := nextPhase2Step(5, types.PresetLevelCustom); got != 6 {
+		t.Errorf("next(5, custom) = %d; want 6", got)
+	}
+	// next(6, custom) == 7.
+	if got := nextPhase2Step(6, types.PresetLevelCustom); got != 7 {
+		t.Errorf("next(6, custom) = %d; want 7", got)
+	}
+}
+
+// TestBuildPhase2Result_CustomPreservesCommands confirms that custom preset
+// carries Commands/ChatModes through; non-custom presets strip them (preset
+// defaults handle selection).
+func TestBuildPhase2Result_CustomPreservesCommands(t *testing.T) {
+	t.Parallel()
+
+	cmds := []types.CommandId{types.CommandIdRpi, types.CommandIdPlan}
+	modes := []types.ChatModeId{types.ChatModeIdReviewer}
+
+	custom := buildPhase2Result(types.SetupScopeProject, types.PresetLevelCustom, nil, "", "", false, cmds, modes)
+	if !reflect.DeepEqual(custom.Commands, cmds) {
+		t.Errorf("custom.Commands = %v, want %v", custom.Commands, cmds)
+	}
+	if !reflect.DeepEqual(custom.ChatModes, modes) {
+		t.Errorf("custom.ChatModes = %v, want %v", custom.ChatModes, modes)
+	}
+
+	standard := buildPhase2Result(types.SetupScopeProject, types.PresetLevelStandard, nil, "", "", false, cmds, modes)
+	if len(standard.Commands) != 0 {
+		t.Errorf("standard.Commands = %v; non-custom must drop explicit list", standard.Commands)
+	}
+	if len(standard.ChatModes) != 0 {
+		t.Errorf("standard.ChatModes = %v; non-custom must drop explicit list", standard.ChatModes)
 	}
 }
 

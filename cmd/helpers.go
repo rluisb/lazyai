@@ -99,6 +99,18 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		infra = types.ALL_INFRA[:]
 	}
 
+	// When the user picked the custom preset AND went through the wizard's
+	// commands/chatmodes selection, honour their explicit choice instead of
+	// the ALL_* defaults.
+	if presetLevel == types.PresetLevelCustom {
+		if result.Phase2.Commands != nil {
+			commands = result.Phase2.Commands
+		}
+		if result.Phase2.ChatModes != nil {
+			chatmodes = result.Phase2.ChatModes
+		}
+	}
+
 	// Resolve library directory and FS.
 	libDir := getLibraryDir()
 	libFS := library.GetLibraryFS()

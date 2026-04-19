@@ -29,9 +29,11 @@ func (s phase2StepInfo) Title() string {
 
 // Phase2Result holds the feature selection results from the second wizard phase.
 type Phase2Result struct {
-	Preset   types.PresetLevel
-	Features *types.FeatureFlags
-	GitConv  *types.GitConventions
+	Preset    types.PresetLevel
+	Features  *types.FeatureFlags
+	GitConv   *types.GitConventions
+	Commands  []types.CommandId  // populated only when Preset == Custom
+	ChatModes []types.ChatModeId // populated only when Preset == Custom
 }
 
 var branchPatternOptions = []huh.Option[string]{
@@ -93,7 +95,7 @@ func runPhase2NonInteractive(scope types.SetupScope, defaults *Phase2Result) (*P
 		}
 	}
 
-	return buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket), PhaseContinue, nil
+	return buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket, nil, nil), PhaseContinue, nil
 }
 
 func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phase2Result, PhaseAction, error) {
@@ -106,7 +108,7 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 	}
 
 	currentStep := 1
-	for currentStep >= 1 && currentStep <= 5 {
+	for currentStep >= 1 && currentStep <= 7 {
 		presetForStep := state.Preset
 		if presetForStep == "" {
 			presetForStep = defaultPhase2Preset(scope, defaults)
@@ -124,6 +126,8 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 			state.Preset = presetValue
 			if state.Preset != types.PresetLevelCustom {
 				state.Features = nil
+				state.Commands = nil
+				state.ChatModes = nil
 			}
 			currentStep = nextPhase2Step(currentStep, state.Preset)
 		case 2:
@@ -169,11 +173,33 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 				continue
 			}
 			state.RequireTicket = requireTicket
+			currentStep = nextPhase2Step(currentStep, state.Preset)
+		case 6:
+			commands, action, err := askCommands(state.Commands, phase2StepInfoFor(6, presetForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase2Step(currentStep, state.Preset)
+				continue
+			}
+			state.Commands = commands
+			currentStep = nextPhase2Step(currentStep, state.Preset)
+		case 7:
+			chatmodes, action, err := askChatModes(state.ChatModes, phase2StepInfoFor(7, presetForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase2Step(currentStep, state.Preset)
+				continue
+			}
+			state.ChatModes = chatmodes
 			currentStep++
 		}
 	}
 
-	return buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket), PhaseContinue, nil
+	return buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket, state.Commands, state.ChatModes), PhaseContinue, nil
 }
 
 type phase2InteractiveState struct {
@@ -182,9 +208,11 @@ type phase2InteractiveState struct {
 	BranchPattern string
 	CommitPattern string
 	RequireTicket bool
+	Commands      []types.CommandId
+	ChatModes     []types.ChatModeId
 }
 
-func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool) *Phase2Result {
+func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool, commands []types.CommandId, chatmodes []types.ChatModeId) *Phase2Result {
 	resolvedPreset := presetValue
 	if resolvedPreset == "" {
 		resolvedPreset = preset.DefaultPresetForScope(scope)
@@ -207,6 +235,15 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 		commit = gitDefaults.CommitPattern
 	}
 
+	// Only carry explicit Commands/ChatModes when the user chose custom preset.
+	// For non-custom presets, caller (helpers.go) falls back to ALL_* defaults.
+	var resolvedCommands []types.CommandId
+	var resolvedChatModes []types.ChatModeId
+	if resolvedPreset == types.PresetLevelCustom {
+		resolvedCommands = append([]types.CommandId(nil), commands...)
+		resolvedChatModes = append([]types.ChatModeId(nil), chatmodes...)
+	}
+
 	return &Phase2Result{
 		Preset:   resolvedPreset,
 		Features: resolvedFeatures,
@@ -217,6 +254,8 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 			RequireTicket: requireTicket,
 			TicketPattern: gitDefaults.TicketPattern,
 		},
+		Commands:  resolvedCommands,
+		ChatModes: resolvedChatModes,
 	}
 }
 
@@ -353,6 +392,99 @@ func askRequireTicket(current bool, info phase2StepInfo) (bool, PhaseAction, err
 	return requireTicket, PhaseContinue, nil
 }
 
+func askCommands(current []types.CommandId, info phase2StepInfo) ([]types.CommandId, PhaseAction, error) {
+	selected := commandIdsToStrings(current)
+	if len(selected) == 0 {
+		selected = commandIdsToStrings(types.ALL_COMMANDS[:])
+	}
+
+	options := []huh.Option[string]{
+		huh.NewOption("RPI workflow command (rpi)", string(types.CommandIdRpi)),
+		huh.NewOption("Review command (review)", string(types.CommandIdReview)),
+		huh.NewOption("Plan command (plan)", string(types.CommandIdPlan)),
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title(info.Title()).
+		Description("Select Gemini custom slash commands to install. Deselect to skip.").
+		Options(appendPhase2BackOption(options)...).
+		Value(&selected)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
+	}
+
+	if containsString(selected, phase2BackValue) {
+		return nil, PhaseBack, nil
+	}
+	return stringsToCommandIds(selected), PhaseContinue, nil
+}
+
+func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.ChatModeId, PhaseAction, error) {
+	selected := chatModeIdsToStrings(current)
+	if len(selected) == 0 {
+		selected = chatModeIdsToStrings(types.ALL_CHATMODES[:])
+	}
+
+	options := []huh.Option[string]{
+		huh.NewOption("Architect mode (architect)", string(types.ChatModeIdArchitect)),
+		huh.NewOption("Reviewer mode (reviewer)", string(types.ChatModeIdReviewer)),
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title(info.Title()).
+		Description("Select Copilot chat modes to install. Deselect to skip.").
+		Options(appendPhase2BackOption(options)...).
+		Value(&selected)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
+	}
+
+	if containsString(selected, phase2BackValue) {
+		return nil, PhaseBack, nil
+	}
+	return stringsToChatModeIds(selected), PhaseContinue, nil
+}
+
+func commandIdsToStrings(ids []types.CommandId) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, string(id))
+	}
+	return out
+}
+
+func stringsToCommandIds(values []string) []types.CommandId {
+	out := make([]types.CommandId, 0, len(values))
+	for _, v := range values {
+		if v == phase2BackValue {
+			continue
+		}
+		out = append(out, types.CommandId(v))
+	}
+	return out
+}
+
+func chatModeIdsToStrings(ids []types.ChatModeId) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, string(id))
+	}
+	return out
+}
+
+func stringsToChatModeIds(values []string) []types.ChatModeId {
+	out := make([]types.ChatModeId, 0, len(values))
+	for _, v := range values {
+		if v == phase2BackValue {
+			continue
+		}
+		out = append(out, types.ChatModeId(v))
+	}
+	return out
+}
+
 func defaultPhase2Preset(scope types.SetupScope, defaults *Phase2Result) types.PresetLevel {
 	if defaults != nil && defaults.Preset != "" {
 		return defaults.Preset
@@ -465,19 +597,31 @@ func phase2StepInfoFor(step int, presetValue types.PresetLevel, defaults *Phase2
 		if defaults != nil && defaults.GitConv != nil {
 			info.Previous = fmt.Sprintf("%t", defaults.GitConv.RequireTicket)
 		}
+	case 6:
+		info.StepTitle = "Gemini Commands"
+		if defaults != nil && len(defaults.Commands) > 0 {
+			info.Previous = strings.Join(commandIdsToStrings(defaults.Commands), ", ")
+		}
+	case 7:
+		info.StepTitle = "Copilot Chat Modes"
+		if defaults != nil && len(defaults.ChatModes) > 0 {
+			info.Previous = strings.Join(chatModeIdsToStrings(defaults.ChatModes), ", ")
+		}
 	}
 	return info
 }
 
 func phase2Total(presetValue types.PresetLevel) int {
 	if presetValue == types.PresetLevelCustom {
-		return 5
+		return 7
 	}
 	return 4
 }
 
 func previousPhase2Step(current int, presetValue types.PresetLevel) int {
 	previous := current - 1
+	// Non-custom presets skip the Features step (2) and the Commands/Chatmodes
+	// steps (6, 7 — unreachable for non-custom presets, but guard anyway).
 	if presetValue != types.PresetLevelCustom && previous == 2 {
 		previous--
 	}
@@ -491,6 +635,10 @@ func nextPhase2Step(current int, presetValue types.PresetLevel) int {
 	next := current + 1
 	if presetValue != types.PresetLevelCustom && next == 2 {
 		next++
+	}
+	// After RequireTicket (step 5), jump past 6 and 7 for non-custom presets.
+	if presetValue != types.PresetLevelCustom && next == 6 {
+		next = 8 // exit loop (loop condition is currentStep <= 7)
 	}
 	return next
 }

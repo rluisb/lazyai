@@ -1,7 +1,7 @@
 # Task 008 — Post-install validation via `opencode debug *`
 
 **Phase:** 4
-**Status:** pending
+**Status:** ✅ complete (2026-04-19)
 **Depends on:** 003, 006
 
 ## Scope

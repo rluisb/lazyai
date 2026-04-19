@@ -100,6 +100,7 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			ChatModes:        []types.ChatModeId{types.ChatModeIdArchitect},
 			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
+			OpenCodePlugins:  []string{"@opencode/git-tools"},
 			Infra:            []types.InfraId{types.InfraIdPreCommit},
 			Constitution: []string{"constraints"},
 			Features:     &types.FeatureFlags{QualityGates: true},
@@ -186,6 +187,9 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if len(got.Selections.OpenCodeModes) != 1 || got.Selections.OpenCodeModes[0] != types.OpenCodeModeIdPlan {
 		t.Errorf("OpenCodeModes not preserved: got %v", got.Selections.OpenCodeModes)
+	}
+	if len(got.Selections.OpenCodePlugins) != 1 || got.Selections.OpenCodePlugins[0] != "@opencode/git-tools" {
+		t.Errorf("OpenCodePlugins not preserved: got %v", got.Selections.OpenCodePlugins)
 	}
 }
 

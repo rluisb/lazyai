@@ -90,6 +90,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var chatmodes []types.ChatModeId
 	var opencodeCommands []types.OpenCodeCommandId
 	var opencodeModes []types.OpenCodeModeId
+	var opencodePlugins []string
 	var infra []types.InfraId
 
 	if presetLevel != types.PresetLevelMinimal {
@@ -119,6 +120,11 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		if result.Phase2.OpenCodeModes != nil {
 			opencodeModes = result.Phase2.OpenCodeModes
 		}
+	}
+
+	// Plugin selections come from Phase5 regardless of preset.
+	if result.Phase5 != nil {
+		opencodePlugins = result.Phase5.OpenCodePlugins
 	}
 
 	// Resolve library directory and FS.
@@ -162,6 +168,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		ChatModes:        chatmodes,
 		OpenCodeCommands: opencodeCommands,
 		OpenCodeModes:    opencodeModes,
+		OpenCodePlugins:  opencodePlugins,
 		Templates:        templates,
 		Rules:            rules,
 		Infra:            infra,
@@ -203,6 +210,7 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.ChatModes = ctx.ChatModes
 	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
 	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes
+	storeData.Selections.OpenCodePlugins = ctx.OpenCodePlugins
 	storeData.Selections.Infra = ctx.Infra
 	storeData.Selections.Features = ctx.Features
 	storeData.Selections.GitConventions = ctx.GitConventions

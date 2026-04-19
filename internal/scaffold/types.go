@@ -59,6 +59,8 @@ type ScaffoldContext struct {
 	OpenCodeCommands []types.OpenCodeCommandId
 	// OpenCodeModes lists opencode chat mode IDs to install.
 	OpenCodeModes []types.OpenCodeModeId
+	// OpenCodePlugins lists opencode plugin npm module names to install.
+	OpenCodePlugins []string
 	// Templates lists template IDs to install.
 	Templates []types.TemplateId
 	// Rules lists rule IDs to install.

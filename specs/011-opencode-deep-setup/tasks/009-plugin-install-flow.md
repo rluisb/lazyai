@@ -1,7 +1,7 @@
 # Task 009 — Plugin install flow via `opencode plugin <module>`
 
 **Phase:** 5
-**Status:** pending
+**Status:** ✅ complete (2026-04-19)
 **Depends on:** 007, 008
 
 ## Scope

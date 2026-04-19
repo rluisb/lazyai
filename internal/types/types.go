@@ -510,6 +510,7 @@ type WizardSelections struct {
 	ChatModes        []ChatModeId        `json:"chatmodes"`
 	OpenCodeCommands []OpenCodeCommandId `json:"opencodeCommands"`
 	OpenCodeModes    []OpenCodeModeId    `json:"opencodeModes"`
+	OpenCodePlugins  []string            `json:"opencodePlugins"`
 	Infra            []InfraId           `json:"infra"`
 	Constitution     []string            `json:"constitution"`
 	Features         *FeatureFlags       `json:"features,omitempty"`

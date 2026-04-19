@@ -161,7 +161,8 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 			}
 		}
 
-		phase5, action, err := RunPhase5(result.Phase5, !config.Interactive)
+		opencodeSelected := toolsContain(result.Phase1.Tools, types.ToolIdOpenCode)
+		phase5, action, err := RunPhase5(result.Phase5, !config.Interactive, opencodeSelected)
 		if err != nil {
 			return nil, err
 		}
@@ -259,6 +260,15 @@ func runPhase12Loop(config *WizardConfig, result *WizardResult, phase2Defaults *
 
 // ErrUserCancelled is returned when the user cancels the wizard.
 var ErrUserCancelled = fmt.Errorf("user cancelled")
+
+func toolsContain(tools []types.ToolId, target types.ToolId) bool {
+	for _, t := range tools {
+		if t == target {
+			return true
+		}
+	}
+	return false
+}
 
 // BuildConflictList builds a list of conflict.Conflict structs from the plan's
 // ConflictInfo list. It converts the internal representation to the format

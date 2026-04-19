@@ -52,6 +52,7 @@ type AdapterSelections struct {
 	ChatModes        []types.ChatModeId
 	OpenCodeCommands []types.OpenCodeCommandId
 	OpenCodeModes    []types.OpenCodeModeId
+	OpenCodePlugins  []string
 }
 
 // CompileContext carries the information adapters need to compile per-tool

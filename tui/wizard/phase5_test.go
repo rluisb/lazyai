@@ -1,6 +1,9 @@
 package wizard
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestBuildPhase5Result(t *testing.T) {
 	t.Parallel()
@@ -60,9 +63,10 @@ func TestBuildPhase5Result(t *testing.T) {
 				tt.args.QmdIndexPath,
 				tt.args.EnableCodegraph,
 				tt.args.CodegraphDataPath,
+				tt.args.OpenCodePlugins,
 			)
 
-			if *got != tt.want {
+			if !reflect.DeepEqual(*got, tt.want) {
 				t.Fatalf("buildPhase5Result() = %#v, want %#v", *got, tt.want)
 			}
 		})
@@ -86,7 +90,7 @@ func TestPhase5StepInfoTitles(t *testing.T) {
 	}
 
 	allEnabled := Phase5Result{EnableObsidian: true, EnableQmd: true, EnableCodegraph: true}
-	if got, want := phase5CodegraphDataPathStepInfo(allEnabled).Title(), "Optional Tooling — 7/7: Codegraph Data Path"; got != want {
+	if got, want := phase5CodegraphDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 7/7: Codegraph Data Path"; got != want {
 		t.Fatalf("phase5CodegraphDataPathStepInfo().Title() = %q, want %q", got, want)
 	}
 }

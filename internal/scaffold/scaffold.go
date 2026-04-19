@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -90,6 +91,23 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		result.Errors = append(result.Errors, fmt.Errorf("artifacts: %w", err))
 	}
 	result.Files = append(result.Files, artifactRecords...)
+
+	// Step 8b: Post-install validation for OpenCode (no-op when binary absent).
+	for _, tool := range ctx.Tools {
+		if tool == types.ToolIdOpenCode {
+			adapterCtx := &adapter.AdapterContext{
+				TargetDir:  ctx.TargetDir,
+				HomeDir:    ctx.HomeDir,
+				SetupScope: ctx.SetupScope,
+				LibraryFS:  ctx.LibraryFS,
+			}
+			warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
+			for _, w := range warnings {
+				log.Printf("WARN %s", w)
+			}
+			break
+		}
+	}
 
 	// Step 9: .env.example (depends on MCP config).
 	if err := ScaffoldEnvExample(ctx.TargetDir, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {

@@ -2,6 +2,7 @@ package wizard
 
 import (
 	"fmt"
+	"os/exec"
 
 	"charm.land/huh/v2"
 )
@@ -24,13 +25,18 @@ type Phase5Result struct {
 	QmdIndexPath      string
 	EnableCodegraph   bool
 	CodegraphDataPath string
+	OpenCodePlugins   []string
 }
 
-func RunPhase5(defaults *Phase5Result, nonInteractive bool) (*Phase5Result, PhaseAction, error) {
+// RunPhase5 runs the optional tooling phase.
+// opencodeSelected is true when opencode is in the user's tool list — it gates
+// the plugin install step (which also requires the binary to be on PATH).
+func RunPhase5(defaults *Phase5Result, nonInteractive bool, opencodeSelected ...bool) (*Phase5Result, PhaseAction, error) {
+	selected := len(opencodeSelected) > 0 && opencodeSelected[0]
 	if nonInteractive {
 		return runPhase5NonInteractive(defaults)
 	}
-	return runPhase5Interactive(defaults)
+	return runPhase5Interactive(defaults, selected)
 }
 
 func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction, error) {
@@ -46,17 +52,25 @@ func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction
 		result.QmdIndexPath,
 		result.EnableCodegraph,
 		result.CodegraphDataPath,
+		result.OpenCodePlugins,
 	), PhaseContinue, nil
 }
 
-func runPhase5Interactive(defaults *Phase5Result) (*Phase5Result, PhaseAction, error) {
+func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase5Result, PhaseAction, error) {
 	state := defaultPhase5Result()
 	if defaults != nil {
 		state = *defaults
 	}
 
+	// Plugin step is shown only when opencode is selected AND binary is on PATH.
+	showPlugins := opencodeSelected && opencodeBinaryPresent()
+
 	currentStep := 1
-	for currentStep >= 1 && currentStep <= 7 {
+	maxStep := 7
+	if showPlugins {
+		maxStep = 8
+	}
+	for currentStep >= 1 && currentStep <= maxStep {
 		switch currentStep {
 		case 1:
 			memoryPath, action, err := askMemoryPath(state.MemoryPath, phase5MemoryPathStepInfo(state))
@@ -113,11 +127,22 @@ func runPhase5Interactive(defaults *Phase5Result) (*Phase5Result, PhaseAction, e
 			}
 			currentStep++
 		case 7:
-			codegraphDataPath, action, err := askCodegraphDataPath(state.CodegraphDataPath, phase5CodegraphDataPathStepInfo(state))
+			codegraphDataPath, action, err := askCodegraphDataPath(state.CodegraphDataPath, phase5CodegraphDataPathStepInfo(state, showPlugins))
 			if err != nil {
 				return nil, action, err
 			}
 			state.CodegraphDataPath = codegraphDataPath
+			currentStep++
+		case 8:
+			plugins, action, err := askOpenCodePlugins(state.OpenCodePlugins, phase5OpenCodePluginsStepInfo(state, showPlugins))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep--
+				continue
+			}
+			state.OpenCodePlugins = plugins
 			currentStep++
 		}
 	}
@@ -130,10 +155,11 @@ func runPhase5Interactive(defaults *Phase5Result) (*Phase5Result, PhaseAction, e
 		state.QmdIndexPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
+		state.OpenCodePlugins,
 	), PhaseContinue, nil
 }
 
-func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string) *Phase5Result {
+func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, opencodePlugins []string) *Phase5Result {
 	if memoryPath == "" {
 		memoryPath = "specs/memory"
 	}
@@ -152,6 +178,7 @@ func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath
 		QmdIndexPath:      qmdIndexPath,
 		EnableCodegraph:   enableCodegraph,
 		CodegraphDataPath: codegraphDataPath,
+		OpenCodePlugins:   opencodePlugins,
 	}
 }
 
@@ -278,12 +305,58 @@ func phase5EnableCodegraphStepInfo(state Phase5Result) phase5StepInfo {
 	return phase5StepInfo{Current: 4 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state), StepTitle: "Enable Codegraph"}
 }
 
-func phase5CodegraphDataPathStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state), StepTitle: "Codegraph Data Path"}
+func phase5CodegraphDataPathStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
+	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state, showPlugins), StepTitle: "Codegraph Data Path"}
 }
 
-func phase5TotalSteps(state Phase5Result) int {
-	return 4 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph)
+func phase5OpenCodePluginsStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
+	return phase5StepInfo{Current: phase5TotalSteps(state, showPlugins), Total: phase5TotalSteps(state, showPlugins), StepTitle: "OpenCode Plugins"}
+}
+
+func phase5TotalSteps(state Phase5Result, showPlugins ...bool) int {
+	extra := 0
+	if len(showPlugins) > 0 && showPlugins[0] {
+		extra = 1
+	}
+	return 4 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph) + extra
+}
+
+func opencodeBinaryPresent() bool {
+	_, err := exec.LookPath("opencode")
+	return err == nil
+}
+
+func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseAction, error) {
+	selected := append([]string(nil), current...)
+
+	options := []huh.Option[string]{
+		huh.NewOption("Desktop Commander (@opencode/desktop-commander)", "@opencode/desktop-commander"),
+		huh.NewOption("Context Files (@opencode/context-files)", "@opencode/context-files"),
+		huh.NewOption("Git Tools (@opencode/git-tools)", "@opencode/git-tools"),
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title(info.Title()).
+		Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
+		Options(append(options, huh.NewOption("↩ Back", "__phase5_back__"))...).
+		Value(&selected)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
+	}
+
+	filtered := selected[:0]
+	for _, s := range selected {
+		if s != "__phase5_back__" {
+			filtered = append(filtered, s)
+		}
+	}
+	for _, s := range selected {
+		if s == "__phase5_back__" {
+			return nil, PhaseBack, nil
+		}
+	}
+	return filtered, PhaseContinue, nil
 }
 
 func boolToInt(value bool) int {

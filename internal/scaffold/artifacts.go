@@ -40,6 +40,7 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 				ChatModes:        ctx.ChatModes,
 				OpenCodeCommands: ctx.OpenCodeCommands,
 				OpenCodeModes:    ctx.OpenCodeModes,
+				OpenCodePlugins:  ctx.OpenCodePlugins,
 			},
 		}
 

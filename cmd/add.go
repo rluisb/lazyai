@@ -186,6 +186,7 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 		ChatModes:        storeData.Selections.ChatModes,
 		OpenCodeCommands: storeData.Selections.OpenCodeCommands,
 		OpenCodeModes:    storeData.Selections.OpenCodeModes,
+		OpenCodePlugins:  storeData.Selections.OpenCodePlugins,
 		Templates:        storeData.Selections.Templates,
 		Rules:            storeData.Selections.Rules,
 		Infra:            storeData.Selections.Infra,

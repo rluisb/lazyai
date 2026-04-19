@@ -27,6 +27,11 @@ var migrations = []struct {
 		Up:      migrationUp003,
 		Down:    migrationDown003,
 	},
+	{
+		Version: 4,
+		Up:      migrationUp004,
+		Down:    migrationDown004,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -224,4 +229,14 @@ ALTER TABLE selections ADD COLUMN opencode_modes TEXT NOT NULL DEFAULT '[]';
 const migrationDown003 = `
 ALTER TABLE selections DROP COLUMN opencode_modes;
 ALTER TABLE selections DROP COLUMN opencode_commands;
+`
+
+// migration 004 — add opencode_plugins column
+// (spec 011 phase 5: persist opencode plugin module names).
+const migrationUp004 = `
+ALTER TABLE selections ADD COLUMN opencode_plugins TEXT NOT NULL DEFAULT '[]';
+`
+
+const migrationDown004 = `
+ALTER TABLE selections DROP COLUMN opencode_plugins;
 `

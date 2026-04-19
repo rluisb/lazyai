@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
@@ -180,6 +181,11 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
+	// Install selected plugins via the opencode CLI if the binary is present.
+	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
+		log.Printf("Warning: plugin install failed: %v", err)
+	}
+
 	return ctx.FileRecords, nil
 }
 
@@ -195,6 +201,32 @@ func (a *OpenCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error { ret
 func fileID(filename string) string {
 	ext := filepath.Ext(filename)
 	return filename[:len(filename)-len(ext)]
+}
+
+// installOpenCodePlugins shells out to `opencode plugin <module>` for each
+// selected plugin. Requires the binary to be on PATH; no-ops silently otherwise.
+// Global scope passes -g; project/workspace scopes use the target dir as cwd.
+// Each failure is logged and skipped — plugin errors do not block the install.
+func installOpenCodePlugins(ctx *AdapterContext, run CmdRunner) error {
+	if len(ctx.Selections.OpenCodePlugins) == 0 {
+		return nil
+	}
+	if _, err := exec.LookPath("opencode"); err != nil {
+		return nil
+	}
+
+	for _, module := range ctx.Selections.OpenCodePlugins {
+		var args []string
+		if ctx.SetupScope == types.SetupScopeGlobal {
+			args = []string{"plugin", module, "-g"}
+		} else {
+			args = []string{"plugin", module}
+		}
+		if out, err := run("opencode", args...); err != nil {
+			log.Printf("Warning: opencode plugin %s failed: %v — %s", module, err, out)
+		}
+	}
+	return nil
 }
 
 // MarshalJSON marshals v to indented JSON bytes.

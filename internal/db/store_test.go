@@ -96,9 +96,11 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			Agents:       []types.AgentId{types.AgentIdBuilder},
 			Skills:       []types.SkillId{types.SkillIdPlan},
 			Prompts:      []types.PromptId{types.PromptIdCompact},
-			Commands:     []types.CommandId{types.CommandIdRpi},
-			ChatModes:    []types.ChatModeId{types.ChatModeIdArchitect},
-			Infra:        []types.InfraId{types.InfraIdPreCommit},
+			Commands:         []types.CommandId{types.CommandIdRpi},
+			ChatModes:        []types.ChatModeId{types.ChatModeIdArchitect},
+			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
+			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
+			Infra:            []types.InfraId{types.InfraIdPreCommit},
 			Constitution: []string{"constraints"},
 			Features:     &types.FeatureFlags{QualityGates: true},
 			GitConventions: &types.GitConventions{
@@ -178,6 +180,12 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if len(got.Selections.ChatModes) != 1 || got.Selections.ChatModes[0] != types.ChatModeIdArchitect {
 		t.Errorf("ChatModes not preserved: got %v", got.Selections.ChatModes)
+	}
+	if len(got.Selections.OpenCodeCommands) != 1 || got.Selections.OpenCodeCommands[0] != types.OpenCodeCommandIdReview {
+		t.Errorf("OpenCodeCommands not preserved: got %v", got.Selections.OpenCodeCommands)
+	}
+	if len(got.Selections.OpenCodeModes) != 1 || got.Selections.OpenCodeModes[0] != types.OpenCodeModeIdPlan {
+		t.Errorf("OpenCodeModes not preserved: got %v", got.Selections.OpenCodeModes)
 	}
 }
 

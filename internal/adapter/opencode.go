@@ -37,6 +37,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	_ = files.EnsureDir(filepath.Join(ocDir, "agents"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "commands"))
+	_ = files.EnsureDir(filepath.Join(ocDir, "modes"))
 
 	log.Println("Installing OpenCode tools...")
 
@@ -132,6 +133,35 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		ToDestPath: func(file string) string {
 			name := fileID(file)
 			return filepath.Join(ocDir, "skills", name, "SKILL.md")
+		},
+		WarnOnSkip: true,
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy opencode-native slash commands from library/opencode/commands/.
+	// SelectionKey "opencodeCommands" honors per-user filtering once the
+	// wizard populates ctx.Selections.OpenCodeCommands; with an unset
+	// selection, all starter commands install.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "opencode/commands",
+		SelectionKey: "opencodeCommands",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ocDir, "commands", file)
+		},
+		WarnOnSkip: true,
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy opencode chat modes from library/opencode/modes/.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "opencode/modes",
+		SelectionKey: "opencodeModes",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ocDir, "modes", file)
 		},
 		WarnOnSkip: true,
 	}); err != nil {

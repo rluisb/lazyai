@@ -55,6 +55,10 @@ type ScaffoldContext struct {
 	Commands []types.CommandId
 	// ChatModes lists Copilot chat mode IDs to install.
 	ChatModes []types.ChatModeId
+	// OpenCodeCommands lists opencode slash command IDs to install.
+	OpenCodeCommands []types.OpenCodeCommandId
+	// OpenCodeModes lists opencode chat mode IDs to install.
+	OpenCodeModes []types.OpenCodeModeId
 	// Templates lists template IDs to install.
 	Templates []types.TemplateId
 	// Rules lists rule IDs to install.

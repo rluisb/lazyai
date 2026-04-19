@@ -45,11 +45,13 @@ type AdapterContext struct {
 
 // AdapterSelections holds the user's selections for which items to install.
 type AdapterSelections struct {
-	Agents    []types.AgentId
-	Skills    []types.SkillId
-	Prompts   []types.PromptId
-	Commands  []types.CommandId
-	ChatModes []types.ChatModeId
+	Agents           []types.AgentId
+	Skills           []types.SkillId
+	Prompts          []types.PromptId
+	Commands         []types.CommandId
+	ChatModes        []types.ChatModeId
+	OpenCodeCommands []types.OpenCodeCommandId
+	OpenCodeModes    []types.OpenCodeModeId
 }
 
 // CompileContext carries the information adapters need to compile per-tool

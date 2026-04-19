@@ -1,8 +1,22 @@
 # Task 005 — Add `library/opencode/commands/` and `library/opencode/modes/` assets
 
 **Phase:** 3
-**Status:** pending
+**Status:** ✅ complete (2026-04-19)
 **Depends on:** none
+
+## Implementation Notes
+
+- Added `library/opencode/commands/` with three starter commands — `review.md` (diff review), `test.md` (run + summarize tests), `commit.md` (draft Conventional Commit for staged diff). Each uses opencode command frontmatter (`description` only; agent/model left for opencode defaults).
+- Added `library/opencode/modes/` with two starter modes — `plan.md` (read-only planning: write/edit/bash/patch all `false`) and `audit.md` (security/quality audit: also read-only, with `webfetch: false` for tighter isolation).
+- No embed-directive change needed — `//go:embed all:library` in `main.go:13` already captures the new subtree.
+- Extended `internal/library/integration_test.go`:
+  - Added `opencode/commands` and `opencode/modes` to the expected-dirs list.
+  - New `TestGetLibraryFS_OpenCodeAssetsAreEmbedded` walks each starter asset, asserts non-empty bytes, leading `---` frontmatter fence, and the required frontmatter key (`description:` for commands, `tools:` for modes).
+
+## Verification
+
+- `go test ./internal/library/ -count=1` — PASS (new test + existing)
+- `go vet ./...` — clean
 
 ## Scope
 

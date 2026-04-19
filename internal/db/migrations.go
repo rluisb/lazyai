@@ -22,6 +22,11 @@ var migrations = []struct {
 		Up:      migrationUp002,
 		Down:    migrationDown002,
 	},
+	{
+		Version: 3,
+		Up:      migrationUp003,
+		Down:    migrationDown003,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -206,4 +211,17 @@ ALTER TABLE selections ADD COLUMN chatmodes TEXT NOT NULL DEFAULT '[]';
 const migrationDown002 = `
 ALTER TABLE selections DROP COLUMN chatmodes;
 ALTER TABLE selections DROP COLUMN commands;
+`
+
+// migration 003 — add opencode_commands + opencode_modes columns
+// (spec 011 phase 3: persist opencode slash commands and chat modes so
+// re-runs and ai-setup status see the full selection).
+const migrationUp003 = `
+ALTER TABLE selections ADD COLUMN opencode_commands TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE selections ADD COLUMN opencode_modes TEXT NOT NULL DEFAULT '[]';
+`
+
+const migrationDown003 = `
+ALTER TABLE selections DROP COLUMN opencode_modes;
+ALTER TABLE selections DROP COLUMN opencode_commands;
 `

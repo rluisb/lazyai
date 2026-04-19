@@ -36,6 +36,8 @@ func TestGetLibraryFS_EmbeddedFSContainsExpectedFiles(t *testing.T) {
 		"infra",
 		"root",
 		"templates",
+		"opencode/commands",
+		"opencode/modes",
 	}
 
 	for _, dir := range expectedDirs {
@@ -48,6 +50,55 @@ func TestGetLibraryFS_EmbeddedFSContainsExpectedFiles(t *testing.T) {
 			t.Errorf("directory %s is empty", dir)
 		}
 	}
+}
+
+// TestGetLibraryFS_OpenCodeAssetsAreEmbedded verifies that the opencode-
+// specific command and mode starter assets are bundled. These are consumed
+// by OpenCodeAdapter.Install (task 006) to populate .opencode/commands/
+// and .opencode/modes/ at every scope.
+func TestGetLibraryFS_OpenCodeAssetsAreEmbedded(t *testing.T) {
+	libFS := GetLibraryFS()
+
+	type asset struct{ path, requiredKey string }
+	cases := []asset{
+		{"opencode/commands/review.md", "description:"},
+		{"opencode/commands/test.md", "description:"},
+		{"opencode/commands/commit.md", "description:"},
+		{"opencode/modes/plan.md", "tools:"},
+		{"opencode/modes/audit.md", "tools:"},
+	}
+	for _, c := range cases {
+		data, err := fs.ReadFile(libFS, c.path)
+		if err != nil {
+			t.Errorf("missing embedded asset %s: %v", c.path, err)
+			continue
+		}
+		s := string(data)
+		if len(s) == 0 {
+			t.Errorf("%s is empty", c.path)
+			continue
+		}
+		// Frontmatter fences + the required schema key.
+		if !hasFence(s) {
+			t.Errorf("%s: missing frontmatter fences", c.path)
+		}
+		if !contains(s, c.requiredKey) {
+			t.Errorf("%s: missing required frontmatter key %q", c.path, c.requiredKey)
+		}
+	}
+}
+
+func hasFence(s string) bool {
+	return len(s) >= 4 && s[:4] == "---\n"
+}
+
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
 }
 
 func TestGetLibraryFS_CanReadAgents(t *testing.T) {

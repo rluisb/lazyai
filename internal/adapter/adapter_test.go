@@ -58,6 +58,21 @@ func createTestFS() fstest.MapFS {
 		"chatmodes/reviewer.chatmode.md": &fstest.MapFile{
 			Data: []byte("---\ndescription: Reviewer mode\n---\nReviewer instructions."),
 		},
+		"opencode/commands/review.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Review branch\n---\n\nReview body."),
+		},
+		"opencode/commands/test.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Run tests\n---\n\nTest body."),
+		},
+		"opencode/commands/commit.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Draft commit\n---\n\nCommit body."),
+		},
+		"opencode/modes/plan.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Plan mode\ntools:\n  write: false\n  read: true\n---\n\nPlan body."),
+		},
+		"opencode/modes/audit.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Audit mode\ntools:\n  write: false\n  read: true\n---\n\nAudit body."),
+		},
 	}
 }
 
@@ -680,6 +695,95 @@ func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
 	}
 	if !strings.Contains(string(jsoncContents), `"edit": "allow"`) {
 		t.Errorf("migrated .jsonc did not preserve user-authored permission.edit:\n%s", jsoncContents)
+	}
+}
+
+// --- Test: opencode commands + modes install at every scope ---
+
+func TestOpenCodeAdapter_InstallsCommandsAndModes(t *testing.T) {
+	type scopeCase struct {
+		name   string
+		scope  types.SetupScope
+		rootFn func(targetDir, homeDir string) string
+	}
+	cases := []scopeCase{
+		{"project", types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".opencode") }},
+		{"workspace", types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".opencode") }},
+		{"global", types.SetupScopeGlobal, func(_ , h string) string { return filepath.Join(h, ".config", "opencode") }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			homeDir := t.TempDir()
+			ctx := &AdapterContext{
+				TargetDir:  targetDir,
+				SetupScope: tc.scope,
+				HomeDir:    homeDir,
+				LibraryFS:  createTestFS(),
+				Strategy:   types.ConflictStrategyAlign,
+				Selections: AdapterSelections{
+					Agents: []types.AgentId{"builder"},
+					Skills: []types.SkillId{"implement"},
+					// Leaving OpenCodeCommands / OpenCodeModes unset means
+					// "install all" — the wizard will populate these later.
+				},
+			}
+
+			if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install (%s): %v", tc.name, err)
+			}
+
+			root := tc.rootFn(targetDir, homeDir)
+			for _, want := range []string{
+				"commands/review.md",
+				"commands/test.md",
+				"commands/commit.md",
+				"modes/plan.md",
+				"modes/audit.md",
+			} {
+				path := filepath.Join(root, want)
+				if _, err := os.Stat(path); os.IsNotExist(err) {
+					t.Errorf("%s: missing %s after install", tc.name, want)
+				}
+			}
+		})
+	}
+}
+
+// TestOpenCodeAdapter_SelectionFiltersCommandsAndModes verifies that
+// ctx.Selections.OpenCodeCommands narrows the install set. An explicit
+// selection of ["review"] must leave test.md and commit.md uninstalled.
+func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
+	targetDir := t.TempDir()
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  createTestFS(),
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Agents:           []types.AgentId{"builder"},
+			Skills:           []types.SkillId{"implement"},
+			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
+			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
+		},
+	}
+	if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := filepath.Join(targetDir, ".opencode")
+	mustExist := []string{"commands/review.md", "modes/plan.md"}
+	mustNotExist := []string{"commands/test.md", "commands/commit.md", "modes/audit.md"}
+	for _, p := range mustExist {
+		if _, err := os.Stat(filepath.Join(root, p)); os.IsNotExist(err) {
+			t.Errorf("selection did not include %s: missing", p)
+		}
+	}
+	for _, p := range mustNotExist {
+		if _, err := os.Stat(filepath.Join(root, p)); err == nil {
+			t.Errorf("selection leaked: %s should not exist", p)
+		}
 	}
 }
 

@@ -92,6 +92,26 @@ const (
 	ChatModeIdReviewer  ChatModeId = "reviewer"
 )
 
+// OpenCodeCommandId identifies an opencode slash command (markdown file
+// under <opencodeRoot>/commands/). Distinct keyspace from Gemini's
+// CommandId — opencode commands have their own frontmatter schema.
+type OpenCodeCommandId string
+
+const (
+	OpenCodeCommandIdReview OpenCodeCommandId = "review"
+	OpenCodeCommandIdTest   OpenCodeCommandId = "test"
+	OpenCodeCommandIdCommit OpenCodeCommandId = "commit"
+)
+
+// OpenCodeModeId identifies an opencode chat mode (markdown file under
+// <opencodeRoot>/modes/). Distinct keyspace from Copilot's ChatModeId.
+type OpenCodeModeId string
+
+const (
+	OpenCodeModeIdPlan  OpenCodeModeId = "plan"
+	OpenCodeModeIdAudit OpenCodeModeId = "audit"
+)
+
 // TemplateId identifies a document template.
 type TemplateId string
 
@@ -354,6 +374,17 @@ var (
 		ChatModeIdReviewer,
 	}
 
+	ALL_OPENCODE_COMMANDS = []OpenCodeCommandId{
+		OpenCodeCommandIdReview,
+		OpenCodeCommandIdTest,
+		OpenCodeCommandIdCommit,
+	}
+
+	ALL_OPENCODE_MODES = []OpenCodeModeId{
+		OpenCodeModeIdPlan,
+		OpenCodeModeIdAudit,
+	}
+
 	ALL_TEMPLATES = []TemplateId{
 		TemplateIdAdr,
 		TemplateIdBugfixRcaTemplate,
@@ -470,17 +501,19 @@ type Config struct {
 
 // WizardSelections stores the choices made during the setup wizard.
 type WizardSelections struct {
-	Templates      []TemplateId    `json:"templates"`
-	Rules          []RuleId        `json:"rules"`
-	Agents         []AgentId       `json:"agents"`
-	Skills         []SkillId       `json:"skills"`
-	Prompts        []PromptId      `json:"prompts"`
-	Commands       []CommandId     `json:"commands"`
-	ChatModes      []ChatModeId    `json:"chatmodes"`
-	Infra          []InfraId       `json:"infra"`
-	Constitution   []string        `json:"constitution"`
-	Features       *FeatureFlags   `json:"features,omitempty"`
-	GitConventions *GitConventions `json:"gitConventions,omitempty"`
+	Templates        []TemplateId        `json:"templates"`
+	Rules            []RuleId            `json:"rules"`
+	Agents           []AgentId           `json:"agents"`
+	Skills           []SkillId           `json:"skills"`
+	Prompts          []PromptId          `json:"prompts"`
+	Commands         []CommandId         `json:"commands"`
+	ChatModes        []ChatModeId        `json:"chatmodes"`
+	OpenCodeCommands []OpenCodeCommandId `json:"opencodeCommands"`
+	OpenCodeModes    []OpenCodeModeId    `json:"opencodeModes"`
+	Infra            []InfraId           `json:"infra"`
+	Constitution     []string            `json:"constitution"`
+	Features         *FeatureFlags       `json:"features,omitempty"`
+	GitConventions   *GitConventions     `json:"gitConventions,omitempty"`
 }
 
 // Meta stores schema and version metadata for the store file.

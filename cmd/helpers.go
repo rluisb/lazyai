@@ -88,6 +88,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var prompts []types.PromptId
 	var commands []types.CommandId
 	var chatmodes []types.ChatModeId
+	var opencodeCommands []types.OpenCodeCommandId
+	var opencodeModes []types.OpenCodeModeId
 	var infra []types.InfraId
 
 	if presetLevel != types.PresetLevelMinimal {
@@ -96,6 +98,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		prompts = types.ALL_PROMPTS[:]
 		commands = types.ALL_COMMANDS[:]
 		chatmodes = types.ALL_CHATMODES[:]
+		opencodeCommands = types.ALL_OPENCODE_COMMANDS[:]
+		opencodeModes = types.ALL_OPENCODE_MODES[:]
 		infra = types.ALL_INFRA[:]
 	}
 
@@ -108,6 +112,12 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		}
 		if result.Phase2.ChatModes != nil {
 			chatmodes = result.Phase2.ChatModes
+		}
+		if result.Phase2.OpenCodeCommands != nil {
+			opencodeCommands = result.Phase2.OpenCodeCommands
+		}
+		if result.Phase2.OpenCodeModes != nil {
+			opencodeModes = result.Phase2.OpenCodeModes
 		}
 	}
 
@@ -150,6 +160,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Prompts:          prompts,
 		Commands:         commands,
 		ChatModes:        chatmodes,
+		OpenCodeCommands: opencodeCommands,
+		OpenCodeModes:    opencodeModes,
 		Templates:        templates,
 		Rules:            rules,
 		Infra:            infra,
@@ -187,6 +199,10 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.Agents = ctx.Agents
 	storeData.Selections.Skills = ctx.Skills
 	storeData.Selections.Prompts = ctx.Prompts
+	storeData.Selections.Commands = ctx.Commands
+	storeData.Selections.ChatModes = ctx.ChatModes
+	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
+	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes
 	storeData.Selections.Infra = ctx.Infra
 	storeData.Selections.Features = ctx.Features
 	storeData.Selections.GitConventions = ctx.GitConventions

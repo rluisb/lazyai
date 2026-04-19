@@ -14,6 +14,7 @@
 | 008 | CLI tool structure parity | ✅ Complete | `feature/go-migration` (0747e50) |
 | 009 | Compile-time scope awareness & artifact parity | ✅ Complete | `feature/go-migration` (1dca890) |
 | 010 | Wizard selection UI + Codex drive-cli + CLAUDE.md hybrid fill | ✅ Complete | `feature/go-migration` (1ee3e9f) |
+| 011 | OpenCode deep setup (config, frontmatter, MCP merge, commands/modes, validation, plugins) | ✅ Complete | `feature/go-migration` (556db86) |
 
 ## Key Architecture Decisions
 
@@ -26,6 +27,8 @@
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |
 | `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all 5 adapters; clean internal migration |
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
+| OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
+| OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
 
 ## Packages Reference
 
@@ -39,6 +42,11 @@
 | `library/commands/*.toml` | Gemini custom slash command templates |
 | `library/chatmodes/*.chatmode.md` | Copilot chat mode templates |
 | `internal/scaffold/root.go#fillClaudeMdPlaceholders` | Hybrid template-placeholder substitution (mechanical auto-infer + subjective fill-in markers) |
+| `internal/adapter/opencode_frontmatter.go` | `BuildOpenCodeAgentFrontmatter` — emits opencode-schema YAML frontmatter, drops incompatible source fields |
+| `internal/adapter/opencode_validate.go` | `ValidateOpenCodeInstall` — post-install opencode debug checks via injectable `CmdRunner` |
+| `library/opencode/commands/` | OpenCode slash command templates (review, test, commit) |
+| `library/opencode/modes/` | OpenCode chat mode templates (plan, audit) |
+| `library/opencode/plugins.json` | Curated list of installable plugin module names |
 
 ## Pending / Follow-up
 
@@ -53,5 +61,9 @@
 - [x] ~~CLAUDE.md hybrid placeholder fill (mechanical + org/team)~~ — spec 010
 - [x] ~~Spec-dir convention reconciliation~~ — spec 008 follow-up
 - [x] ~~Store persistence for Commands/ChatModes~~ — spec 009 follow-up patch
+- [x] ~~OpenCode structural conformance (config, frontmatter, MCP, commands, modes)~~ — spec 011
+- [x] ~~Post-install opencode debug validation~~ — spec 011
+- [x] ~~OpenCode plugin install flow~~ — spec 011
 - [ ] Snapshot tests for library assets + compiled output (deferred in spec 009)
 - [ ] `--drive-cli` for OpenCode (interactive-only upstream) / Copilot (flag surface unverified)
+- [ ] CI-side validation with opencode binary (deferred in spec 011)

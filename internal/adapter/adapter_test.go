@@ -8,6 +8,7 @@ import (
 	"testing/fstest"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/frontmatter"
 	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -392,6 +393,33 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		path := filepath.Join(targetDir, f)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected file %s was not created", f)
+		}
+	}
+
+	// Every installed agent file must carry opencode-schema-valid
+	// frontmatter: at minimum `description` and `mode`. This closes the gap
+	// where the old shared stripper emitted HTML comments that opencode
+	// could not parse.
+	agentsDir := filepath.Join(targetDir, ".opencode", "agents")
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		t.Fatalf("read agents dir: %v", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || e.Name() == "AGENTS.md" {
+			continue
+		}
+		data, _ := os.ReadFile(filepath.Join(agentsDir, e.Name()))
+		fm, _, err := frontmatter.ExtractFrontmatter(data)
+		if err != nil {
+			t.Errorf("%s: frontmatter does not parse: %v", e.Name(), err)
+			continue
+		}
+		if fm["description"] == nil || fm["description"] == "" {
+			t.Errorf("%s: missing description key", e.Name())
+		}
+		if fm["mode"] == nil || fm["mode"] == "" {
+			t.Errorf("%s: missing mode key", e.Name())
 		}
 	}
 }

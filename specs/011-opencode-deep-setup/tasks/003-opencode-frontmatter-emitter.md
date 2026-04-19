@@ -1,8 +1,22 @@
 # Task 003 — OpenCode-specific agent frontmatter emitter
 
 **Phase:** 2
-**Status:** pending
+**Status:** ✅ complete (2026-04-19)
 **Depends on:** 002
+
+## Implementation Notes
+
+- New file `internal/adapter/opencode_frontmatter.go` provides `BuildOpenCodeAgentFrontmatter(source, opts)` plus the `OpenCodeAgentOpts` struct (`Description`, `Mode`, `Tools map[string]bool`, `Model`, `Permission map[string]string`).
+- Emitter behavior: strips existing frontmatter, inherits `description` from source `name` (fallback: source `description`, then "Agent"), defaults `mode: all`, omits optional keys when nil/empty, escapes the description as a double-quoted YAML scalar, emits map keys in sorted order for byte-stable output.
+- Dropped source keys explicitly (verified by `TestBuildOpenCodeAgentFrontmatter_DropsSourceExtraKeys`): `name` (opencode derives name from filename), `tools` (source holds MCP-server names — a different keyspace than opencode tool names), `model` (source values like "sonnet" aren't in opencode's provider/model format).
+- Orchestrator branch in `opencode.go` now emits `mode: primary`; other agents use the default (`mode: all`). This aligns with opencode's `default_agent: "orchestrator"` config.
+- Wired the emitter into `OpenCodeAdapter.Install` — replaced the `StripFrontmatterAndInjectModel` transform (which emitted HTML comments) with a call to `BuildOpenCodeAgentFrontmatter`. Other adapters still use the shared stripper (unchanged).
+- `TestOpenCodeAdapter_Install_FromFS` now asserts every installed agent parses as valid YAML frontmatter with `description` and `mode` keys populated.
+
+## Verification
+
+- `go test ./... -count=1` — PASS (6 new frontmatter unit tests + extended install assertion)
+- `go vet ./...` — clean
 
 ## Scope
 

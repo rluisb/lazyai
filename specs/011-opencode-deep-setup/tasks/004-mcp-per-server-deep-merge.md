@@ -1,8 +1,23 @@
 # Task 004 — MCP per-server deep-merge on compile
 
 **Phase:** 2
-**Status:** pending
+**Status:** ✅ complete (2026-04-19)
 **Depends on:** 001
+
+## Implementation Notes
+
+- `compileOpenCodeMCP` (`internal/adapter/mcp_compiler.go`) no longer overwrites the whole `mcp` key. It now delegates to a new `mergeOpenCodeMcpServers(existingRaw, managed)` helper that:
+  - Keeps any server name from the pre-existing config that is NOT in the managed catalog (user-authored servers).
+  - Upserts every entry from the managed catalog (so toggling enabled/disabled propagates).
+  - On name collision between user-authored and managed, the managed entry wins — documented inline.
+- Two new tests in `mcp_compiler_test.go`:
+  - `TestCompileOpenCodeMCP_PreservesUserAuthoredServer` — pre-seeds `opencode.jsonc` with a `userAuthored` server and asserts it survives compile alongside the managed `memory` server.
+  - `TestCompileOpenCodeMCP_ManagedWinsOnNameCollision` — pre-seeds a user `memory` with a custom command and verifies the managed definition overwrites it.
+
+## Verification
+
+- `go test ./... -count=1` — PASS
+- `go vet ./...` — clean
 
 ## Scope
 

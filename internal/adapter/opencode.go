@@ -88,7 +88,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		})
 	}
 
-	// Copy agents (excluding orchestrator unless enabled).
+	// Copy agents (excluding orchestrator unless enabled). The transform
+	// rewrites each source agent with opencode-schema frontmatter so
+	// `opencode debug agent <name>` can parse it.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "agents",
@@ -97,7 +99,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			return filepath.Join(ocDir, "agents", file)
 		},
 		WarnOnSkip: true,
-		Transform:  StripFrontmatterAndInjectModel,
+		Transform: func(content []byte) []byte {
+			return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+		},
 		IncludeFile: func(file string) bool {
 			name := fileID(file)
 			return name != "orchestrator"
@@ -106,9 +110,11 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
-	// Orchestrator agent if enabled.
+	// Orchestrator agent if enabled. It is the primary entry point
+	// (opencode's default_agent typically points here), so mode=primary.
 	if IsOrchestratorEnabled(ctx) {
-		content := GetOrchestratorAgentContent(ctx)
+		raw := GetOrchestratorAgentContent(ctx)
+		content := BuildOpenCodeAgentFrontmatter(raw, OpenCodeAgentOpts{Mode: "primary"})
 		if err := CopyWithRecord("agents/orchestrator.md",
 			filepath.Join(ocDir, "agents", "orchestrator.md"),
 			ctx, true,

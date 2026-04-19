@@ -137,7 +137,7 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}
 
 	existingConfig["$schema"] = "https://opencode.ai/config.json"
-	existingConfig["mcp"] = ocMcp
+	existingConfig["mcp"] = mergeOpenCodeMcpServers(existingConfig["mcp"], ocMcp)
 
 	if err := WriteJSONFile(configPath, existingConfig); err != nil {
 		return ctx.FileRecords, err
@@ -151,6 +151,32 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	return append(ctx.FileRecords, types.TrackedFile{
 		Path: recordPath, Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
 	}), nil
+}
+
+// mergeOpenCodeMcpServers merges the ai-setup-managed mcp map into whatever
+// the user currently has under `mcp` in their opencode.jsonc. Managed
+// servers (those present in `managed`) are upserted; any existing entry
+// keyed by a name NOT in `managed` is preserved untouched — so a user who
+// hand-adds an MCP server directly in opencode.jsonc does not lose it on
+// the next `ai-setup compile`.
+//
+// Documented limit: if a user hand-authors a server with the same name as a
+// managed server, the managed definition wins (this matches the catalog's
+// intent that `ai-setup` owns the named server).
+func mergeOpenCodeMcpServers(existingRaw any, managed map[string]any) map[string]any {
+	merged := make(map[string]any, len(managed))
+	if existing, ok := existingRaw.(map[string]any); ok {
+		for name, entry := range existing {
+			if _, isManaged := managed[name]; isManaged {
+				continue // skip; managed entry wins
+			}
+			merged[name] = entry
+		}
+	}
+	for name, entry := range managed {
+		merged[name] = entry
+	}
+	return merged
 }
 
 func toOpenCodeMcp(servers map[string]McpServer) map[string]any {

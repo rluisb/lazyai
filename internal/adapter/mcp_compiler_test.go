@@ -3,6 +3,7 @@ package adapter
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
@@ -76,6 +77,93 @@ func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 
 	if len(records) != 1 {
 		t.Fatalf("expected 1 tracked file record, got %d", len(records))
+	}
+}
+
+// TestCompileOpenCodeMCP_PreservesUserAuthoredServer verifies that a server
+// the user hand-added to opencode.jsonc (not present in .ai/mcp.json) is
+// preserved across an ai-setup compile cycle. This is the core per-server
+// deep-merge behavior introduced in spec 011 phase 2.
+func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	// Pre-seed opencode.jsonc with a user-authored MCP entry under a name
+	// that ai-setup does not manage.
+	ocDir := filepath.Join(targetDir, ".opencode")
+	_ = files.EnsureDir(ocDir)
+	preExisting := `{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "userAuthored": { "type": "local", "command": ["custom-cli"], "enabled": true }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(ocDir, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
+		t.Fatalf("seed opencode.jsonc: %v", err)
+	}
+
+	if _, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(ocDir, "opencode.jsonc"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	contents := string(data)
+	if !strings.Contains(contents, `"userAuthored"`) {
+		t.Errorf("user-authored server was lost on compile:\n%s", contents)
+	}
+	if !strings.Contains(contents, `"memory"`) {
+		t.Errorf("managed server missing after merge:\n%s", contents)
+	}
+	if !strings.Contains(contents, `"custom-cli"`) {
+		t.Errorf("user-authored server's command was rewritten:\n%s", contents)
+	}
+}
+
+// TestCompileOpenCodeMCP_ManagedWinsOnNameCollision documents the
+// collision rule: if the user hand-authored a server under a name that is
+// also managed by ai-setup, the managed entry wins.
+func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ocDir := filepath.Join(targetDir, ".opencode")
+	_ = files.EnsureDir(ocDir)
+	preExisting := `{"mcp":{"memory":{"type":"local","command":["user-override"]}}}`
+	if err := os.WriteFile(filepath.Join(ocDir, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+
+	data, _ := os.ReadFile(filepath.Join(ocDir, "opencode.jsonc"))
+	if strings.Contains(string(data), "user-override") {
+		t.Errorf("user-override survived; managed entry should have won:\n%s", data)
+	}
+	if !strings.Contains(string(data), "@modelcontextprotocol/server-memory") {
+		t.Errorf("managed `memory` entry not present after collision:\n%s", data)
 	}
 }
 

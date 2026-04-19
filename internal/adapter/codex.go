@@ -92,6 +92,15 @@ func (a *CodexAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error)
 
 	// Root AGENTS.md placement is handled centrally by scaffold/root.go.
 
+	// CLI-driven MCP registration: when DriveCLI=true, attempt to register MCP
+	// servers via `codex mcp add`. Falls back silently to direct-write TOML
+	// (already merged above) on any failure.
+	if ctx.DriveCLI {
+		if ok := installCodexMCPViaCLI(ctx); ok {
+			log.Println("[codex] MCP servers registered via CLI")
+		}
+	}
+
 	// Global scope: emit AGENTS.override.md in the config root so users have a
 	// ready-to-edit override file. Only written on first install; never overwrites.
 	if ctx.SetupScope == types.SetupScopeGlobal {
@@ -149,4 +158,59 @@ func (a *CodexAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
 
 	log.Printf("[codex] headless validation succeeded")
 	return nil
+}
+
+// installCodexMCPViaCLI calls `codex mcp add <name> [--env K=V]... -- <cmd> <args>...`
+// for each enabled MCP server in the canonical .ai/mcp.json. Returns true only
+// if at least one server was registered successfully. The direct-write TOML
+// merge already happened earlier in Install, so returning false is safe.
+//
+// Codex's CLI format (verified from the upstream source): positional
+// COMMAND [ARGS...] follow a literal `--` separator. Env vars are repeated
+// `--env KEY=VALUE` flags.
+func installCodexMCPViaCLI(ctx *AdapterContext) bool {
+	bin, err := exec.LookPath("codex")
+	if err != nil {
+		log.Println("[codex] --drive-cli requested but codex binary not found; using direct-write")
+		return false
+	}
+
+	catalog := readCanonicalMcp(ctx.TargetDir)
+	if catalog == nil || len(catalog.Servers) == 0 {
+		return false
+	}
+
+	success := false
+	for name, srv := range catalog.Servers {
+		if !srv.isEnabled() {
+			continue
+		}
+		// Remote servers not supported by this helper — skip with a log.
+		if srv.URL != "" {
+			log.Printf("[codex] skipping remote server %q (use --url flow manually)", name)
+			continue
+		}
+		if srv.Command == "" {
+			log.Printf("[codex] skipping server %q: no command", name)
+			continue
+		}
+
+		args := []string{"mcp", "add", name}
+		for k, v := range srv.Env {
+			args = append(args, "--env", k+"="+v)
+		}
+		args = append(args, "--", srv.Command)
+		args = append(args, srv.Args...)
+
+		runCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		out, runErr := exec.CommandContext(runCtx, bin, args...).CombinedOutput()
+		cancel()
+		if runErr != nil {
+			log.Printf("[codex] mcp add %q failed: %v\n%s", name, runErr, string(out))
+			continue
+		}
+		log.Printf("[codex] registered MCP server %q via CLI", name)
+		success = true
+	}
+	return success
 }

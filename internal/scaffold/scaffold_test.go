@@ -187,12 +187,16 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 		t.Error("constitution.md was not created")
 	}
 
-	// Check opencode.json was created in the correct subdirectory.
-	if !fileExistsInDir(targetDir, ".opencode/opencode.json") {
-		t.Error("opencode.json was not created in .opencode/")
+	// Check opencode.jsonc was created in the correct subdirectory (install
+	// and compile both target .jsonc per the spec 011 unification).
+	if !fileExistsInDir(targetDir, ".opencode/opencode.jsonc") {
+		t.Error("opencode.jsonc was not created in .opencode/")
 	}
-	if fileExistsInDir(targetDir, "opencode.json") {
-		t.Error("opencode.json should not be created at the root")
+	if fileExistsInDir(targetDir, ".opencode/opencode.json") {
+		t.Error("opencode.json must not coexist with opencode.jsonc")
+	}
+	if fileExistsInDir(targetDir, "opencode.json") || fileExistsInDir(targetDir, "opencode.jsonc") {
+		t.Error("opencode config must not be created at the project root")
 	}
 
 	// Check .opencode directory was created.

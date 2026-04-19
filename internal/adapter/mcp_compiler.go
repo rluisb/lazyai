@@ -118,8 +118,10 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 		return ctx.FileRecords, err
 	}
 	// Global root is ~/.config/opencode — opencode.jsonc lives directly in it.
-	// Project/workspace root is <target>/.opencode — same placement.
-	configPath := filepath.Join(root, "opencode.jsonc")
+	// Project/workspace root is <target>/.opencode — same placement. The
+	// filename constant is shared with OpenCodeAdapter.Install so install and
+	// compile always target the same file (no .json/.jsonc split).
+	configPath := filepath.Join(root, OpenCodeConfigFilename)
 	ocMcp := toOpenCodeMcp(catalog.Servers)
 
 	// Read existing config and merge.

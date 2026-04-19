@@ -8,6 +8,7 @@ import (
 	"testing/fstest"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -372,13 +373,20 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		t.Fatal("expected at least one tracked file record")
 	}
 
-	// Check that key files were created.
+	// Check that key files were created. The root AGENTS.md at .opencode/
+	// is the target of the `instructions: ["AGENTS.md"]` key and must exist
+	// at every scope (see TestOpenCodeAdapter_InstructionsKeyResolves).
 	keyFiles := []string{
-		".opencode/opencode.json",
+		".opencode/opencode.jsonc",
 		".opencode/agents/builder.md",
 		".opencode/agents/orchestrator.md",
 		".opencode/skills/implement/SKILL.md",
 		".opencode/agents/AGENTS.md",
+		".opencode/AGENTS.md",
+	}
+	// The pre-unification .json variant must never be produced on a fresh install.
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
+		t.Error("opencode.json should not exist; install must target opencode.jsonc only")
 	}
 	for _, f := range keyFiles {
 		path := filepath.Join(targetDir, f)
@@ -581,6 +589,171 @@ func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
 	expectedDir := filepath.Join(realHome, ".config", "opencode")
 	if _, err := os.Stat(expectedDir); os.IsNotExist(err) {
 		t.Errorf("expected global dir %s was not created", expectedDir)
+	}
+}
+
+// --- Test: OpenCode adapter migrates pre-existing opencode.json to .jsonc ---
+
+func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{"builder"},
+		Skills: []types.SkillId{"implement"},
+	}
+
+	// Seed a pre-existing opencode.json with a user-authored key that must
+	// survive the migration unchanged.
+	ocDir := filepath.Join(targetDir, ".opencode")
+	if err := files.EnsureDir(ocDir); err != nil {
+		t.Fatalf("EnsureDir: %v", err)
+	}
+	jsonPath := filepath.Join(ocDir, "opencode.json")
+	jsoncPath := filepath.Join(ocDir, "opencode.jsonc")
+	original := []byte(`{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": { "edit": "allow" },
+  "user_key": "preserved"
+}
+`)
+	if err := os.WriteFile(jsonPath, original, 0o644); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	// .jsonc must exist; .json must be gone; .json.bak must preserve original.
+	if _, err := os.Stat(jsoncPath); os.IsNotExist(err) {
+		t.Fatal("opencode.jsonc was not created by migration")
+	}
+	if _, err := os.Stat(jsonPath); err == nil {
+		t.Error("opencode.json should have been removed after migration")
+	}
+	bakPath := jsonPath + ".bak"
+	bakContents, err := os.ReadFile(bakPath)
+	if err != nil {
+		t.Fatalf("opencode.json.bak was not created: %v", err)
+	}
+	if string(bakContents) != string(original) {
+		t.Errorf(".bak sidecar content mismatch.\nwant: %q\ngot:  %q", original, bakContents)
+	}
+
+	// The migrated .jsonc must carry the user-authored key forward verbatim
+	// (no default-config merge on top of the migrated file — that would
+	// silently clobber customizations like permission.edit == "allow").
+	jsoncContents, err := os.ReadFile(jsoncPath)
+	if err != nil {
+		t.Fatalf("read migrated .jsonc: %v", err)
+	}
+	if !strings.Contains(string(jsoncContents), `"user_key": "preserved"`) {
+		t.Errorf("migrated .jsonc dropped user_key:\n%s", jsoncContents)
+	}
+	if !strings.Contains(string(jsoncContents), `"edit": "allow"`) {
+		t.Errorf("migrated .jsonc did not preserve user-authored permission.edit:\n%s", jsoncContents)
+	}
+}
+
+// --- Test: instructions key resolves to a real file at every scope ---
+//
+// opencode resolves entries in opencode.jsonc's `instructions` array
+// relative to the config file's directory. So `instructions: ["AGENTS.md"]`
+// in `<root>/opencode.jsonc` must point at `<root>/AGENTS.md` — and that
+// file must exist after install for each of project/workspace/global.
+
+func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
+	type scopeCase struct {
+		name  string
+		scope types.SetupScope
+		// rootFn returns the expected .opencode/ root given a fresh (targetDir, homeDir) pair.
+		rootFn func(targetDir, homeDir string) string
+	}
+
+	cases := []scopeCase{
+		{
+			name:  "project",
+			scope: types.SetupScopeProject,
+			rootFn: func(targetDir, _ string) string {
+				return filepath.Join(targetDir, ".opencode")
+			},
+		},
+		{
+			name:  "workspace",
+			scope: types.SetupScopeWorkspace,
+			rootFn: func(targetDir, _ string) string {
+				return filepath.Join(targetDir, ".opencode")
+			},
+		},
+		{
+			name:  "global",
+			scope: types.SetupScopeGlobal,
+			rootFn: func(_ , homeDir string) string {
+				return filepath.Join(homeDir, ".config", "opencode")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			homeDir := t.TempDir()
+			ctx := &AdapterContext{
+				TargetDir:  targetDir,
+				SetupScope: tc.scope,
+				HomeDir:    homeDir,
+				LibraryFS:  createTestFS(),
+				Strategy:   types.ConflictStrategyAlign,
+				Selections: AdapterSelections{
+					Agents: []types.AgentId{"builder"},
+					Skills: []types.SkillId{"implement"},
+				},
+			}
+
+			if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install (%s): %v", tc.name, err)
+			}
+
+			root := tc.rootFn(targetDir, homeDir)
+
+			// Read back opencode.jsonc and assert instructions shape.
+			cfgPath := filepath.Join(root, OpenCodeConfigFilename)
+			cfg, err := jsonc.ReadJSONCFile(cfgPath)
+			if err != nil {
+				t.Fatalf("read %s: %v", cfgPath, err)
+			}
+			rawInstr, ok := cfg["instructions"]
+			if !ok {
+				t.Fatalf("opencode.jsonc missing `instructions` key at %s", tc.name)
+			}
+			instr, ok := rawInstr.([]any)
+			if !ok || len(instr) == 0 {
+				t.Fatalf("instructions must be a non-empty array, got %T: %v", rawInstr, rawInstr)
+			}
+
+			// Each instructions entry, resolved relative to the config dir,
+			// must point at an existing, non-empty file.
+			cfgDir := filepath.Dir(cfgPath)
+			for _, raw := range instr {
+				rel, ok := raw.(string)
+				if !ok {
+					t.Errorf("instructions entry is not a string: %T %v", raw, raw)
+					continue
+				}
+				resolved := rel
+				if !filepath.IsAbs(rel) {
+					resolved = filepath.Join(cfgDir, rel)
+				}
+				info, err := os.Stat(resolved)
+				if err != nil {
+					t.Errorf("instructions entry %q resolves to %q which does not exist: %v", rel, resolved, err)
+					continue
+				}
+				if info.Size() == 0 {
+					t.Errorf("instructions entry %q resolves to an empty file at %q", rel, resolved)
+				}
+			}
+		})
 	}
 }
 

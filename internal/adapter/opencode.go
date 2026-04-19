@@ -4,13 +4,21 @@ package adapter
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
+
+// OpenCodeConfigFilename is the canonical opencode config filename. Both the
+// install-time default-config writer and the compile-time MCP writer target
+// this single file so users never end up with both opencode.json and
+// opencode.jsonc side-by-side.
+const OpenCodeConfigFilename = "opencode.jsonc"
 
 // OpenCodeAdapter implements ToolAdapter for OpenCode (opencode CLI).
 type OpenCodeAdapter struct{}
@@ -32,11 +40,34 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	log.Println("Installing OpenCode tools...")
 
-	// Merge default opencode.json (preserves user-authored keys). Skip the
-	// merge only if the user-preferred JSONC variant already exists.
-	configPath := filepath.Join(ocDir, "opencode.json")
-	jsoncConfigPath := filepath.Join(ocDir, "opencode.jsonc")
-	if !files.FileExists(jsoncConfigPath) {
+	jsonPath := filepath.Join(ocDir, "opencode.json")
+	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
+
+	// One-shot migration: collapse any pre-existing opencode.json onto
+	// opencode.jsonc. The original .json is preserved as a .bak sidecar so
+	// users can recover if the rename surprises them. If both files exist
+	// (rare), .jsonc is authoritative.
+	if files.FileExists(jsonPath) {
+		bakPath := jsonPath + ".bak"
+		if !files.FileExists(bakPath) {
+			if err := files.CopyFile(jsonPath, bakPath); err != nil {
+				return nil, fmt.Errorf("backup opencode.json: %w", err)
+			}
+		}
+		if !files.FileExists(jsoncPath) {
+			if err := files.CopyFile(jsonPath, jsoncPath); err != nil {
+				return nil, fmt.Errorf("migrate opencode.json to opencode.jsonc: %w", err)
+			}
+		}
+		if err := os.Remove(jsonPath); err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("remove opencode.json after migration: %w", err)
+		}
+	}
+
+	// Install the default config only when no config is present. Skipping the
+	// merge on pre-existing configs preserves user customizations (e.g., a
+	// hand-tuned `permission.edit` value) across re-runs.
+	if !files.FileExists(jsoncPath) {
 		defaultConfig := map[string]any{
 			"$schema":      "https://opencode.ai/config.json",
 			"instructions": []any{"AGENTS.md"},
@@ -45,19 +76,16 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 				"bash": "ask",
 			},
 		}
-		preExisted := files.FileExists(configPath)
-		if _, err := configmerge.MergeJSONFile(configPath, defaultConfig); err != nil {
+		if _, err := configmerge.MergeJSONFile(jsoncPath, defaultConfig); err != nil {
 			return nil, err
 		}
-		if !preExisted {
-			hash, _ := files.FileHash(configPath)
-			ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-				Path:   configPath,
-				Hash:   hash,
-				Source: "generated",
-				Owner:  types.FileOwnerLibrary,
-			})
-		}
+		hash, _ := files.FileHash(jsoncPath)
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path:   jsoncPath,
+			Hash:   hash,
+			Source: "generated",
+			Owner:  types.FileOwnerLibrary,
+		})
 	}
 
 	// Copy agents (excluding orchestrator unless enabled).

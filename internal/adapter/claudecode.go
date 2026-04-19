@@ -4,7 +4,9 @@ package adapter
 
 import (
 	"context"
+	"io/fs"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -35,8 +37,14 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	_ = files.EnsureDir(claudeDir)
 	_ = files.EnsureDir(rulesDir)
 	_ = files.EnsureDir(filepath.Join(claudeDir, "skills"))
-	if !isGlobal {
-		_ = files.EnsureDir(filepath.Join(claudeDir, "agents"))
+	_ = files.EnsureDir(filepath.Join(claudeDir, "agents"))
+
+	// Spec 012 / Task 001: pre-spec installs at global scope wrote agents
+	// flat at ~/.claude/<agent>.md, where Claude Code does not discover them.
+	// Migrate any such files into ~/.claude/agents/ before re-installing so
+	// existing global installs converge on the canonical layout.
+	if isGlobal {
+		migrateLegacyGlobalAgents(ctx, claudeDir)
 	}
 
 	// Merge default settings into settings.json, preserving user keys.
@@ -79,9 +87,6 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		SourceSubdir: "agents",
 		SelectionKey: "agents",
 		ToDestPath: func(file string) string {
-			if isGlobal {
-				return filepath.Join(claudeDir, file)
-			}
 			return filepath.Join(claudeDir, "agents", file)
 		},
 		IncludeFile: func(file string) bool {
@@ -116,18 +121,16 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Install tool context files.
+	// Install tool context files. At global scope ~/.claude/CLAUDE.md is the
+	// user's personal-conventions file; preserve any pre-existing copy
+	// (Spec 012 / Q3 decision).
 	if err := InstallToolContextFiles(InstallToolContextFilesOption{
-		Ctx:             ctx,
-		ToolDir:         claudeDir,
-		ContextFileName: "CLAUDE.md",
-		AgentsDestDir: func() string {
-			if isGlobal {
-				return "."
-			}
-			return "agents"
-		}(),
-		SkillsDestDir: "skills",
+		Ctx:                ctx,
+		ToolDir:            claudeDir,
+		ContextFileName:    "CLAUDE.md",
+		AgentsDestDir:      "agents",
+		SkillsDestDir:      "skills",
+		SkipRootIfExists:   isGlobal,
 	}); err != nil {
 		return nil, err
 	}
@@ -192,6 +195,53 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 	}
 	_ = claudeDir
 	return success
+}
+
+// migrateLegacyGlobalAgents moves any flat-layout agent files at
+// <claudeDir>/<agent>.md (pre-spec-012 install bug) into the canonical
+// <claudeDir>/agents/<agent>.md location. Only the agent filenames known to
+// the embedded library are considered — unrelated files at the root (notably
+// the user's personal CLAUDE.md) are never touched.
+func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
+	agentsDir := filepath.Join(claudeDir, "agents")
+
+	var agentFiles []string
+	if ctx.LibraryFS != nil {
+		entries, err := fs.ReadDir(ctx.LibraryFS, "agents")
+		if err == nil {
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				agentFiles = append(agentFiles, e.Name())
+			}
+		}
+	} else if ctx.LibraryDir != "" {
+		sourceDir := filepath.Join(ctx.LibraryDir, "agents")
+		for _, f := range files.ListDir(sourceDir) {
+			if files.IsDirectory(filepath.Join(sourceDir, f)) {
+				continue
+			}
+			agentFiles = append(agentFiles, f)
+		}
+	}
+
+	for _, file := range agentFiles {
+		legacyPath := filepath.Join(claudeDir, file)
+		newPath := filepath.Join(agentsDir, file)
+		if !files.FileExists(legacyPath) {
+			continue
+		}
+		if files.FileExists(newPath) {
+			log.Printf("[claude-code] legacy agent %q remains at %s (canonical %s also exists; leaving both for manual review)", file, legacyPath, newPath)
+			continue
+		}
+		if err := os.Rename(legacyPath, newPath); err != nil {
+			log.Printf("[claude-code] failed to migrate legacy agent %s -> %s: %v", legacyPath, newPath, err)
+			continue
+		}
+		log.Printf("[claude-code] migrated legacy global agent %s -> %s", legacyPath, newPath)
+	}
 }
 
 func (a *ClaudeCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

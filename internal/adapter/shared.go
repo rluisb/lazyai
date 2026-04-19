@@ -359,6 +359,11 @@ type InstallToolContextFilesOption struct {
 	SkillsDestDir    string
 	TemplatesDestDir string
 	WarnOnSkip       bool
+	// SkipRootIfExists, when true, suppresses the root context file write if
+	// <ToolDir>/<ContextFileName> already exists. Used at user/global scope
+	// where that path is the user's personal-conventions file (e.g.
+	// ~/.claude/CLAUDE.md) and must not be overwritten on re-run.
+	SkipRootIfExists bool
 }
 
 // InstallToolContextFiles copies the tool-agents context files (agents-dir.md,
@@ -396,9 +401,13 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 	}
 
 	// root directory context file
+	rootPath := filepath.Join(opts.ToolDir, opts.ContextFileName)
+	if opts.SkipRootIfExists && files.FileExists(rootPath) {
+		return nil
+	}
 	return CopyWithRecord(
 		"tool-agents/root-dir.md",
-		filepath.Join(opts.ToolDir, opts.ContextFileName),
+		rootPath,
 		opts.Ctx, opts.WarnOnSkip, nil,
 	)
 }

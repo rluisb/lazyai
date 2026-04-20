@@ -35,7 +35,8 @@ func TestClaudeAdapter_DriveCLI_FallsBackWhenBinaryAbsent(t *testing.T) {
 }
 
 // TestClaudeAdapter_DriveCLI_CallsClaudeBinary verifies that when DriveCLI=true
-// and a stub claude binary is on PATH, the adapter invokes `claude mcp add`.
+// and a stub claude binary is on PATH, the adapter invokes `claude mcp` commands.
+// (spec 012: uses `mcp get` to pre-check, then `mcp add-json` to register)
 func TestClaudeAdapter_DriveCLI_CallsClaudeBinary(t *testing.T) {
 	ctx, _, _ := newScopeTestContext(t, types.SetupScopeProject)
 	ctx.DriveCLI = true
@@ -43,7 +44,7 @@ func TestClaudeAdapter_DriveCLI_CallsClaudeBinary(t *testing.T) {
 	// Stub claude binary that records its args.
 	stubDir := t.TempDir()
 	recordFile := filepath.Join(stubDir, "claude-args.txt")
-	stubScript := fmt.Sprintf("#!/bin/sh\necho \"$@\" >> %s\n", recordFile)
+	stubScript := fmt.Sprintf("#!/bin/sh\necho \"$@\" >> %s\nexit 1\n", recordFile)
 	stubPath := filepath.Join(stubDir, "claude")
 	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
 		t.Fatal(err)
@@ -71,7 +72,9 @@ func TestClaudeAdapter_DriveCLI_CallsClaudeBinary(t *testing.T) {
 		t.Fatal("stub claude binary was not called when DriveCLI=true and binary present")
 	}
 	data, _ := files.ReadFile(recordFile)
-	if !strings.Contains(string(data), "mcp add") {
-		t.Errorf("expected 'mcp add' in stub args, got: %s", string(data))
+	// Expect either 'mcp get' (pre-check) or 'mcp add-json' (registration).
+	contents := string(data)
+	if !strings.Contains(contents, "mcp get") && !strings.Contains(contents, "mcp add-json") {
+		t.Errorf("expected 'mcp get' or 'mcp add-json' in stub args, got: %s", contents)
 	}
 }

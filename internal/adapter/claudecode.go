@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
@@ -179,14 +180,15 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	return ctx.FileRecords, nil
 }
 
-// installClaudeMCPViaCLI calls `claude mcp add` for each enabled MCP server
+// installClaudeMCPViaCLI calls `claude mcp add-json` for each enabled MCP server
 // found in the canonical .ai/mcp.json. Returns true only if at least one
-// server was registered successfully. Safe to ignore the return value —
+// server was registered successfully. Falls back silently to direct-write
+// (via settings.json merge) on any failure. Safe to ignore the return value —
 // settings.json already provides the direct-write baseline.
 func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
-	bin, err := exec.LookPath("claude")
-	if err != nil {
-		log.Println("[claude] --drive-cli requested but claude binary not found; using direct-write")
+	_, found := LookupClaudeBinary()
+	if !found {
+		log.Println("[claude] claude binary not found; falling back to direct-write for MCP servers")
 		return false
 	}
 
@@ -195,35 +197,132 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 		return false
 	}
 
+	runner := &DefaultClaudeCLIRunner{}
+	runCtx := context.Background()
+
+	// Map scope to claude mcp add-json scope flag.
+	scopeFlag := "project"
+	workingDir := ctx.TargetDir
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		scopeFlag = "user"
+		workingDir = ""
+	}
+
 	success := false
 	for name, srv := range catalog.Servers {
 		if !srv.isEnabled() {
 			continue
 		}
-		// claude mcp add --name <name> --command <cmd> [args...] [--env KEY=VAL]
-		args := []string{"mcp", "add", "--name", name}
-		if srv.Command != "" {
-			args = append(args, "--command", srv.Command)
-		}
-		for _, a := range srv.Args {
-			args = append(args, "--args", a)
-		}
-		for k, v := range srv.Env {
-			args = append(args, "--env", k+"="+v)
-		}
 
-		runCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		out, runErr := exec.CommandContext(runCtx, bin, args...).CombinedOutput()
+		// Pre-check: is this server already registered?
+		checkCtx, cancel := context.WithTimeout(runCtx, 10*time.Second)
+		_, _, err := runner.Run(checkCtx, workingDir, "mcp", "get", name)
 		cancel()
-		if runErr != nil {
-			log.Printf("[claude] mcp add %q failed: %v\n%s", name, runErr, string(out))
+		if err == nil {
+			// Server already exists, skip it
+			log.Printf("[claude] MCP server %q already registered, skipping", name)
+			success = true
 			continue
 		}
+
+		// Server not found, add it via add-json.
+		payload := mcpServerToJSON(srv)
+		addCtx, cancel := context.WithTimeout(runCtx, 30*time.Second)
+		_, stderr, err := runner.Run(addCtx, workingDir, "mcp", "add-json", name, payload, "-s", scopeFlag)
+		cancel()
+		if err != nil {
+			log.Printf("[claude] mcp add-json %q failed: %v\nstderr: %s", name, err, string(stderr))
+			// Continue trying other servers, but note the failure.
+			continue
+		}
+
 		log.Printf("[claude] registered MCP server %q via CLI", name)
 		success = true
 	}
 	_ = claudeDir
 	return success
+}
+
+// mcpServerToJSON converts an MCP catalog server entry to a JSON string
+// suitable for `claude mcp add-json`.
+func mcpServerToJSON(srv McpServer) string {
+	// Build a JSON object matching claude's mcp add-json schema.
+	// For stdio servers: {"command": "...", "args": [...], "env": {...}}
+	// For http/sse servers: {"url": "...", "headers": {...}}
+
+	var buf strings.Builder
+	buf.WriteString("{")
+	first := true
+
+	// Command (for stdio/subprocess servers)
+	if srv.Command != "" {
+		fmt.Fprintf(&buf, `"command":"%s"`, srv.Command)
+		first = false
+	}
+
+	// Args array
+	if len(srv.Args) > 0 {
+		if !first {
+			buf.WriteString(",")
+		}
+		buf.WriteString(`"args":[`)
+		for i, arg := range srv.Args {
+			if i > 0 {
+				buf.WriteString(",")
+			}
+			fmt.Fprintf(&buf, `"%s"`, arg)
+		}
+		buf.WriteString("]")
+		first = false
+	}
+
+	// Env object
+	if len(srv.Env) > 0 {
+		if !first {
+			buf.WriteString(",")
+		}
+		buf.WriteString(`"env":{`)
+		envFirst := true
+		for k, v := range srv.Env {
+			if !envFirst {
+				buf.WriteString(",")
+			}
+			fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
+			envFirst = false
+		}
+		buf.WriteString("}")
+		first = false
+	}
+
+	// URL (for HTTP/SSE servers)
+	if srv.URL != "" {
+		if !first {
+			buf.WriteString(",")
+		}
+		fmt.Fprintf(&buf, `"url":"%s"`, srv.URL)
+		first = false
+	}
+
+	// Headers object (for HTTP/SSE servers)
+	if len(srv.Headers) > 0 {
+		if !first {
+			buf.WriteString(",")
+		}
+		buf.WriteString(`"headers":{`)
+		headerFirst := true
+		for k, v := range srv.Headers {
+			if !headerFirst {
+				buf.WriteString(",")
+			}
+			fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
+			headerFirst = false
+		}
+		buf.WriteString("}")
+		first = false
+	}
+
+	buf.WriteString("}")
+	return buf.String()
 }
 
 // migrateLegacyGlobalAgents moves any flat-layout agent files at

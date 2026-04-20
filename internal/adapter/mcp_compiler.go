@@ -4,11 +4,13 @@
 package adapter
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
@@ -223,6 +225,11 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 		return ctx.FileRecords, nil
 	}
 
+	// Task 010: Try CLI-driven reconciliation if claude is on PATH.
+	// Always write .mcp.json as the canonical project-scope config (backup/audit trail).
+	useCliForMCP(ctx, servers)
+
+	// Write .mcp.json for both CLI and fallback paths.
 	mcpPath := filepath.Join(ctx.TargetDir, ".mcp.json")
 	content := toClaudeCodeMcp(servers)
 
@@ -234,6 +241,54 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 	return append(ctx.FileRecords, types.TrackedFile{
 		Path: ".mcp.json", Hash: hash, Source: "compiled:mcp", Owner: types.FileOwnerLibrary,
 	}), nil
+}
+
+// useCliForMCP attempts to reconcile MCP servers via the claude CLI.
+// Returns true if reconciliation succeeded, false if CLI unavailable or error (fallback will run).
+func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
+	_, found := LookupClaudeBinary()
+	if !found {
+		return false
+	}
+
+	runner := &DefaultClaudeCLIRunner{}
+	runCtx := context.Background()
+
+	// For project/workspace scopes, use -s project with the target dir as working dir.
+	scopeFlag := "project"
+	workingDir := ctx.TargetDir
+
+	// Register all enabled servers via CLI.
+	for name, srv := range servers {
+		if !srv.isEnabled() {
+			continue
+		}
+
+		// Pre-check: is server already registered?
+		checkCtx, cancel := context.WithTimeout(runCtx, 10*time.Second)
+		_, _, err := runner.Run(checkCtx, workingDir, "mcp", "get", name)
+		cancel()
+		if err == nil {
+			// Already registered, skip it.
+			log.Printf("[compile-mcp] server %q already registered, skipping", name)
+			continue
+		}
+
+		// Not found, add it via CLI.
+		payload := mcpServerToJSON(srv)
+		addCtx, cancel := context.WithTimeout(runCtx, 30*time.Second)
+		_, stderr, err := runner.Run(addCtx, workingDir, "mcp", "add-json", name, payload, "-s", scopeFlag)
+		cancel()
+		if err != nil {
+			log.Printf("[compile-mcp] mcp add-json %q failed: %v\nstderr: %s", name, err, string(stderr))
+			// CLI error — fall back to direct-write.
+			return false
+		}
+
+		log.Printf("[compile-mcp] registered server %q via CLI", name)
+	}
+
+	return true
 }
 
 func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {

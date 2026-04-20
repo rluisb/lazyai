@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bytes"
 	"path/filepath"
 	"testing"
 
@@ -98,5 +99,129 @@ func TestClaudeCode_GlobalPersonalCLAUDEMDPreserved(t *testing.T) {
 	}
 	if string(got) != string(personal) {
 		t.Errorf("~/.claude/CLAUDE.md was overwritten\nwant: %q\n got: %q", string(personal), string(got))
+	}
+}
+
+// TestClaudeCode_SampleRuleSourced verifies that the TypeScript sample rule
+// matches the library source byte-for-byte (spec 012 task 003).
+func TestClaudeCode_SampleRuleSourced(t *testing.T) {
+	ctx, _, home := newScopeTestContext(t, types.SetupScopeGlobal)
+
+	if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	libContent, err := ReadSampleRuleContent(ctx)
+	if err != nil {
+		t.Fatalf("read library rule: %v", err)
+	}
+
+	installed := filepath.Join(home, ".claude", "rules", "typescript.md")
+	installedContent, err := files.ReadFile(installed)
+	if err != nil {
+		t.Fatalf("read installed rule: %v", err)
+	}
+
+	if !bytes.Equal(libContent, installedContent) {
+		t.Errorf("installed rule does not match library source\nlibrary:\n%q\n\ninstalled:\n%q",
+			string(libContent), string(installedContent))
+	}
+}
+
+// TestClaudeCode_CommandsAndOutputStylesScopeParity verifies that commands and
+// output-styles are copied at every scope (spec 012 task 007).
+func TestClaudeCode_CommandsAndOutputStylesScopeParity(t *testing.T) {
+	cases := []struct {
+		name  string
+		scope types.SetupScope
+		root  func(target, home string) string
+	}{
+		{"project", types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".claude") }},
+		{"workspace", types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".claude") }},
+		{"global", types.SetupScopeGlobal, func(_, h string) string { return filepath.Join(h, ".claude") }},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			root := c.root(target, home)
+
+			// Check commands directory exists
+			commandsDir := filepath.Join(root, "commands")
+			if !files.DirExists(commandsDir) {
+				t.Errorf("commands directory missing at %q", commandsDir)
+			}
+
+			// Check output-styles directory exists
+			stylesDir := filepath.Join(root, "output-styles")
+			if !files.DirExists(stylesDir) {
+				t.Errorf("output-styles directory missing at %q", stylesDir)
+			}
+
+			// Check a few sample files exist
+			expectedFiles := []string{
+				filepath.Join(commandsDir, "review.md"),
+				filepath.Join(commandsDir, "test.md"),
+				filepath.Join(commandsDir, "commit.md"),
+				filepath.Join(stylesDir, "terse.md"),
+				filepath.Join(stylesDir, "explanatory.md"),
+			}
+			for _, f := range expectedFiles {
+				if !files.FileExists(f) {
+					t.Errorf("expected file missing: %q", f)
+				}
+			}
+		})
+	}
+}
+
+// TestClaudeCode_OrchestratorScopeParity is the regression guard for spec 012,
+// task 002: when `orchestrator` is in EnableServers, the orchestrator agent
+// must be emitted at every scope (the previous `!isGlobal` gate silently
+// skipped global).
+func TestClaudeCode_OrchestratorScopeParity(t *testing.T) {
+	cases := []struct {
+		name  string
+		scope types.SetupScope
+		root  func(target, home string) string
+	}{
+		{"project", types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".claude") }},
+		{"workspace", types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".claude") }},
+		{"global", types.SetupScopeGlobal, func(_, h string) string { return filepath.Join(h, ".claude") }},
+	}
+
+	for _, c := range cases {
+		t.Run("enabled_"+c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+			ctx.EnableServers = []string{"orchestrator"}
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
+			if !files.FileExists(orch) {
+				t.Errorf("expected orchestrator agent at %q, missing", orch)
+			}
+		})
+
+		t.Run("disabled_"+c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+			// EnableServers intentionally unset.
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
+			if files.FileExists(orch) {
+				t.Errorf("orchestrator agent present at %q despite being disabled", orch)
+			}
+		})
 	}
 }

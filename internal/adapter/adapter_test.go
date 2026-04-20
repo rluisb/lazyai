@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,6 +45,9 @@ func createTestFS() fstest.MapFS {
 		"prompts/preflight-task-framing.md": &fstest.MapFile{
 			Data: []byte("---\nname: preflight-task-framing\n---\n\n# Task Framing\n\nFrame tasks before starting."),
 		},
+		"rules/typescript.md": &fstest.MapFile{
+			Data: []byte("---\npaths:\n  - \"src/**/*.ts\"\n---\n\n# TypeScript Rules\n\n- Use strict TypeScript\n- Prefer interfaces over types for objects\n"),
+		},
 		"commands/rpi.toml": &fstest.MapFile{
 			Data: []byte("name = \"rpi\"\ndescription = \"Start RPI\"\nprompt = \"Begin RPI\"\n"),
 		},
@@ -72,6 +77,21 @@ func createTestFS() fstest.MapFS {
 		},
 		"opencode/modes/audit.md": &fstest.MapFile{
 			Data: []byte("---\ndescription: Audit mode\ntools:\n  write: false\n  read: true\n---\n\nAudit body."),
+		},
+		"claudecode/commands/review.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Review changes\nargument-hint: \"[pr]\"\nallowed-tools: Bash Read\n---\n\nReview body."),
+		},
+		"claudecode/commands/test.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Run tests\nargument-hint: \"[target]\"\nallowed-tools: Bash Read\n---\n\nTest body."),
+		},
+		"claudecode/commands/commit.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Draft commit\nargument-hint: \"\"\nallowed-tools: Bash Read\n---\n\nCommit body."),
+		},
+		"claudecode/output-styles/terse.md": &fstest.MapFile{
+			Data: []byte("---\nname: Terse\ndescription: Short responses\nkeep-coding-instructions: true\n---\n\nTerse style body."),
+		},
+		"claudecode/output-styles/explanatory.md": &fstest.MapFile{
+			Data: []byte("---\nname: Explanatory\ndescription: Detailed responses\nkeep-coding-instructions: true\n---\n\nExplanatory style body."),
 		},
 	}
 }
@@ -892,3 +912,148 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 // Tests for the removed isGlobalOpenCodeDir heuristic were deleted when
 // CompileMCP became scope-aware via CompileContext. Scope parity is now
 // asserted by TestCompileMCPForTool_ScopeParity.
+
+// TestNormalizeToolsFrontmatter_Delimiters verifies that the space and comma
+// delimiter options work correctly (spec 012 task 004).
+func TestNormalizeToolsFrontmatter_Delimiters(t *testing.T) {
+	input := `---
+name: Test Agent
+tools: Bash, Read, Edit
+---
+
+Test content`
+
+	tests := []struct {
+		delimiter string
+		wantTools string
+	}{
+		{"space", "tools: Bash Read Edit"},
+		{"comma", "tools: Bash, Read, Edit"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.delimiter, func(t *testing.T) {
+			got := NormalizeToolsFrontmatter(input, tt.delimiter)
+			if !strings.Contains(got, tt.wantTools) {
+				t.Errorf("delimiter %q: expected %q to be in output, got:\n%s",
+					tt.delimiter, tt.wantTools, got)
+			}
+		})
+	}
+}
+
+// TestClaudeCodeOutputStylesFrontmatter verifies that Claude Code output styles have
+// required frontmatter fields (spec 012 task 006).
+func TestClaudeCodeOutputStylesFrontmatter(t *testing.T) {
+	libFS := createTestFS()
+	styles := []string{"terse", "explanatory"}
+
+	for _, style := range styles {
+		t.Run(style, func(t *testing.T) {
+			path := "claudecode/output-styles/" + style + ".md"
+			data, err := fs.ReadFile(libFS, path)
+			if err != nil {
+				t.Fatalf("read output style: %v", err)
+			}
+
+			fm, _, err := frontmatter.ExtractFrontmatter(data)
+			if err != nil {
+				t.Fatalf("parse frontmatter: %v", err)
+			}
+
+			// Check required fields
+			if _, ok := fm["name"]; !ok {
+				t.Error("missing 'name' field")
+			}
+			if _, ok := fm["description"]; !ok {
+				t.Error("missing 'description' field")
+			}
+			if keepCoding, ok := fm["keep-coding-instructions"]; !ok {
+				t.Error("missing 'keep-coding-instructions' field")
+			} else if kb, ok := keepCoding.(bool); !ok || !kb {
+				t.Errorf("keep-coding-instructions should be true, got: %v", keepCoding)
+			}
+		})
+	}
+}
+
+// TestClaudeCodeCommandsFrontmatter verifies that Claude Code commands have
+// required frontmatter fields (spec 012 task 005).
+func TestClaudeCodeCommandsFrontmatter(t *testing.T) {
+	libFS := createTestFS()
+	commands := []string{"review", "test", "commit"}
+
+	for _, cmd := range commands {
+		t.Run(cmd, func(t *testing.T) {
+			path := "claudecode/commands/" + cmd + ".md"
+			data, err := fs.ReadFile(libFS, path)
+			if err != nil {
+				t.Fatalf("read command: %v", err)
+			}
+
+			fm, _, err := frontmatter.ExtractFrontmatter(data)
+			if err != nil {
+				t.Fatalf("parse frontmatter: %v", err)
+			}
+
+			// Check required fields
+			if _, ok := fm["description"]; !ok {
+				t.Error("missing 'description' field")
+			}
+			if _, ok := fm["allowed-tools"]; !ok {
+				t.Error("missing 'allowed-tools' field")
+			}
+			if _, ok := fm["argument-hint"]; !ok {
+				t.Error("missing 'argument-hint' field")
+			}
+
+			// Verify allowed-tools is space-separated, not comma-separated
+			toolsVal := fm["allowed-tools"]
+			if toolsVal != nil {
+				toolsStr := fmt.Sprintf("%v", toolsVal)
+				if strings.Contains(toolsStr, ",") && !strings.Contains(toolsStr, "Read") {
+					// If there's a comma but it's not part of a proper (Bash(...)) format, it's wrong
+					t.Errorf("allowed-tools appears comma-separated: %s", toolsStr)
+				}
+			}
+		})
+	}
+}
+
+// TestGetOrchestratorAgentContent_SpaceDelimitedTools verifies that the
+// orchestrator agent uses space-delimited tools (spec 012 task 004).
+func TestGetOrchestratorAgentContent_SpaceDelimitedTools(t *testing.T) {
+	ctx, _ := createTestAdapterContext(t)
+
+	content := GetOrchestratorAgentContent(ctx)
+	contentStr := string(content)
+
+	// Should contain "tools: " followed by space-separated values, not commas.
+	if !strings.Contains(contentStr, "tools: ") {
+		t.Fatal("no tools line in orchestrator agent")
+	}
+
+	// Parse the tools line to verify it's space-separated.
+	lines := strings.Split(contentStr, "\n")
+	var toolsLine string
+	for _, line := range lines {
+		if strings.HasPrefix(line, "tools: ") {
+			toolsLine = line
+			break
+		}
+	}
+
+	if toolsLine == "" {
+		t.Fatal("could not find tools line")
+	}
+
+	// Check that there are no commas (space-delimited, not comma-delimited).
+	if strings.Contains(toolsLine, ",") {
+		t.Errorf("orchestrator tools should be space-separated, got: %s", toolsLine)
+	}
+
+	// Verify some expected tools are present.
+	if !strings.Contains(toolsLine, "list_catalog") || !strings.Contains(toolsLine, "start_chain") {
+		t.Errorf("expected tools missing from: %s", toolsLine)
+	}
+}

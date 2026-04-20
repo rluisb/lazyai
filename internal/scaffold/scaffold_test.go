@@ -100,6 +100,9 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"rules/code-style.md": &fstest.MapFile{
 			Data: []byte("# Code Style Rules\n\nProject: {{PROJECT_NAME}}"),
 		},
+		"rules/typescript.md": &fstest.MapFile{
+			Data: []byte("---\npaths:\n  - \"src/**/*.ts\"\n---\n\n# TypeScript Rules\n\n- Use strict TypeScript\n- Prefer interfaces over types for objects\n"),
+		},
 
 		// Infra
 		"infra/CODEOWNERS.template": &fstest.MapFile{
@@ -112,6 +115,25 @@ func createMinimalLibraryFS() fstest.MapFS {
 		// Fragments
 		"fragments/quality-gates.md": &fstest.MapFile{
 			Data: []byte("## Quality Gates\n\nProject: {{PROJECT_NAME}}"),
+		},
+
+		// Claude Code commands
+		"claudecode/commands/review.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Review changes\nargument-hint: \"[pr]\"\nallowed-tools: Bash Read\n---\n\nReview body."),
+		},
+		"claudecode/commands/test.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Run tests\nargument-hint: \"[target]\"\nallowed-tools: Bash Read\n---\n\nTest body."),
+		},
+		"claudecode/commands/commit.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Draft commit\nargument-hint: \"\"\nallowed-tools: Bash Read\n---\n\nCommit body."),
+		},
+
+		// Claude Code output styles
+		"claudecode/output-styles/terse.md": &fstest.MapFile{
+			Data: []byte("---\nname: Terse\ndescription: Short responses\nkeep-coding-instructions: true\n---\n\nTerse body."),
+		},
+		"claudecode/output-styles/explanatory.md": &fstest.MapFile{
+			Data: []byte("---\nname: Explanatory\ndescription: Detailed responses\nkeep-coding-instructions: true\n---\n\nExplanatory body."),
 		},
 	}
 }

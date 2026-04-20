@@ -4,6 +4,7 @@ package adapter
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -68,8 +69,11 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	// Write sample rule if it doesn't exist.
 	if !files.FileExists(sampleRulePath) {
-		content := "---\npaths:\n  - \"src/**/*.ts\"\n---\n\n# TypeScript Rules\n\n- Use strict TypeScript\n- Prefer interfaces over types for objects\n"
-		if err := files.WriteFile(sampleRulePath, []byte(content), 0o644); err != nil {
+		content, err := ReadSampleRuleContent(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("read sample rule from library: %w", err)
+		}
+		if err := files.WriteFile(sampleRulePath, content, 0o644); err != nil {
 			return nil, err
 		}
 		relPath, _ := filepath.Rel(ctx.TargetDir, sampleRulePath)
@@ -96,8 +100,9 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Orchestrator agent if enabled.
-	if !isGlobal && IsOrchestratorEnabled(ctx) {
+	// Orchestrator agent if enabled. Spec 012 / Task 002: ship at all scopes;
+	// the previous `!isGlobal` gate silently skipped it at global scope.
+	if IsOrchestratorEnabled(ctx) {
 		content := GetOrchestratorAgentContent(ctx)
 		if err := CopyWithRecord("agents/orchestrator.md",
 			filepath.Join(claudeDir, "agents", "orchestrator.md"),
@@ -116,6 +121,30 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		ToDestPath: func(file string) string {
 			name := fileID(file)
 			return filepath.Join(claudeDir, "skills", name, "SKILL.md")
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy Claude Code commands (starter set).
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "claudecode/commands",
+		SelectionKey: "claudecode/commands",
+		ToDestPath: func(file string) string {
+			return filepath.Join(claudeDir, "commands", file)
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy Claude Code output styles (starter set).
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "claudecode/output-styles",
+		SelectionKey: "claudecode/output-styles",
+		ToDestPath: func(file string) string {
+			return filepath.Join(claudeDir, "output-styles", file)
 		},
 	}); err != nil {
 		return nil, err

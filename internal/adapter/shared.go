@@ -541,6 +541,27 @@ func readOrchestratorAgentSource(ctx *AdapterContext) string {
 	return strings.Join(lines, "\n")
 }
 
+// ReadSampleRuleContent reads the TypeScript sample rule from the library.
+// Returns an error if the file is not found (not a silent skip).
+func ReadSampleRuleContent(ctx *AdapterContext) ([]byte, error) {
+	libFS := ctx.LibraryFS
+	if libFS != nil {
+		data, err := fs.ReadFile(libFS, "rules/typescript.md")
+		if err == nil {
+			return data, nil
+		}
+	} else if ctx.LibraryDir != "" {
+		sourcePath := filepath.Join(ctx.LibraryDir, "rules", "typescript.md")
+		if files.FileExists(sourcePath) {
+			data, err := files.ReadFile(sourcePath)
+			if err == nil {
+				return data, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("sample rule library/rules/typescript.md not found")
+}
+
 // ExtractTools parses the tools list from YAML frontmatter in content.
 func ExtractTools(content string) []string {
 	fm, _, err := frontmatter.ExtractFrontmatter([]byte(content))
@@ -669,10 +690,10 @@ func EnsureModeAgentFrontmatter(content string) string {
 }
 
 // GetOrchestratorAgentContent returns the orchestrator agent content with
-// comma-delimited tools in the frontmatter.
+// whitespace-delimited tools in the frontmatter (per Claude Code spec).
 func GetOrchestratorAgentContent(ctx *AdapterContext) []byte {
 	source := readOrchestratorAgentSource(ctx)
-	return []byte(NormalizeToolsFrontmatter(source, "comma"))
+	return []byte(NormalizeToolsFrontmatter(source, "space"))
 }
 
 // GetOrchestratorSkillContent returns the orchestrator as a skill file.

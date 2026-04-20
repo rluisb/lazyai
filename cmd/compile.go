@@ -26,6 +26,7 @@ var compileCmd = &cobra.Command{
 func init() {
 	compileCmd.Flags().String("tool", "", "Compile only for a specific tool")
 	compileCmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
+	compileCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP writes to gitignored .claude/settings.local.json")
 	rootCmd.AddCommand(compileCmd)
 }
 
@@ -42,6 +43,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	}
 	toolFilter, _ := cmd.Flags().GetString("tool")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 
 	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
 	if !fileExists(mcpConfigPath) {
@@ -172,10 +174,11 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		// Build CompileContext with scope info from the store.
 		homeDir, _ := os.UserHomeDir()
 		compileCtx := adapter.CompileContext{
-			TargetDir:   dir,
-			HomeDir:     homeDir,
-			SetupScope:  storeData.Config.SetupScope,
-			FileRecords: newFileRecords,
+			TargetDir:    dir,
+			HomeDir:      homeDir,
+			SetupScope:   storeData.Config.SetupScope,
+			FileRecords:  newFileRecords,
+			LocalSecrets: localSecrets,
 		}
 
 		// Actually compile

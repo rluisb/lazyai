@@ -45,6 +45,10 @@ type ScaffoldContext struct {
 	// DriveCLI, when true, asks adapters that support it to delegate
 	// scaffolding to the tool's own CLI (e.g. `gemini mcp add`).
 	DriveCLI bool
+	// LocalSecrets, when true, routes Claude Code MCP/settings writes to
+	// the gitignored .claude/settings.local.json instead of committed
+	// surfaces (.mcp.json / .claude/settings.json). Opt-in; default false.
+	LocalSecrets bool
 	// Agents lists agent IDs to install.
 	Agents []types.AgentId
 	// Skills lists skill IDs to install.

@@ -35,6 +35,10 @@ type AdapterContext struct {
 	// direct-write. Falls back silently to direct-write when the binary is
 	// absent or the CLI call fails.
 	DriveCLI bool
+	// LocalSecrets, when true, routes Claude Code MCP/settings writes to the
+	// gitignored `.claude/settings.local.json` instead of committed surfaces
+	// (`.mcp.json` / `.claude/settings.json`). Opt-in; default false.
+	LocalSecrets bool
 	// Strategy controls how file conflicts are handled.
 	Strategy types.ConflictStrategy
 	// PerFileOverrides allows per-file conflict strategy overrides.
@@ -68,6 +72,9 @@ type CompileContext struct {
 	SetupScope types.SetupScope
 	// FileRecords accumulates records of all files written during compile.
 	FileRecords []types.TrackedFile
+	// LocalSecrets, when true, routes Claude Code MCP to the gitignored
+	// `.claude/settings.local.json` instead of the committed `.mcp.json`.
+	LocalSecrets bool
 }
 
 // toAdapterContext builds a minimal AdapterContext suitable for calling

@@ -18,6 +18,7 @@
 | 012 | Claude Code deep setup (global/project/workspace agents, rules, commands, output-styles) | ✅ Complete | `feature/go-migration` |
 | 013 | GitHub Copilot deep setup (agents, instructions, chatmodes, MCP, global probe gating) | ✅ Complete | `feature/go-migration` (0b26dd1) |
 | 014 | Copilot global MCP compile (`~/.copilot/mcp-config.json` + VS Code mcp.json split) | ✅ Complete | `feature/go-migration` |
+| 015 | Claude Code `--local-secrets` flag routing MCP to `.claude/settings.local.json` | ✅ Complete | `feature/go-migration` |
 
 ## Key Architecture Decisions
 
@@ -54,6 +55,8 @@
 | `internal/adapter/copilot_cli.go` | `CopilotCLIRunner` interface, `LookupCopilotBinary()`, `CopilotHomePresent()` — Copilot probe helpers (spec 013) |
 | `internal/adapter/mcp_compiler.go#toCopilotServerEntries` | Shared per-server translation for Copilot; callers `toCopilotVSCodeMcp` (uses `servers`) and `toCopilotCLIMcp` (uses `mcpServers`) split the two schema surfaces (spec 014) |
 | `internal/adapter/mcp_compiler.go#compileCopilotCLIMcp` | Deep-merge emitter for `~/.copilot/mcp-config.json`; runs at every scope when probe passes (spec 014) |
+| `internal/adapter/mcp_compiler.go#writeClaudeSettingsLocal` | Deep-merge emitter for `.claude/settings.local.json` when `--local-secrets` flag is set (spec 015) |
+| `internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 
@@ -79,5 +82,5 @@
 - [ ] CI-side validation with opencode binary (deferred in spec 011)
 - [x] ~~`claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)~~ — spec 012 task 010
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
-- [ ] `settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)
+- [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)
 - [ ] Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)

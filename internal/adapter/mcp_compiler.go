@@ -231,8 +231,14 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 	// Claude Code has two distinct config surfaces:
 	//   - project: <target>/.mcp.json (user-committed project-scope MCP file)
 	//   - global:  ~/.claude/settings.json (mcpServers merged by init's Install)
-	// At global scope we skip compile entirely — init has already merged the
-	// canonical MCP list into settings.json via configmerge.MergeJSONFile.
+	// When LocalSecrets is set, route the project catalog to the gitignored
+	// .claude/settings.local.json instead of the committed .mcp.json, and at
+	// global scope write to ~/.claude/settings.local.json (ai-setup convention).
+	if ctx.LocalSecrets {
+		return writeClaudeSettingsLocal(ctx, servers)
+	}
+
+	// Default path: at global, skip (settings.json merge at init time covers it).
 	if ctx.SetupScope == types.SetupScopeGlobal {
 		log.Println("[compile] claude-code × global: mcpServers live in settings.json; skipping")
 		return ctx.FileRecords, nil
@@ -253,6 +259,44 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 	hash, _ := files.FileHash(mcpPath)
 	return append(ctx.FileRecords, types.TrackedFile{
 		Path: ".mcp.json", Hash: hash, Source: "compiled:mcp", Owner: types.FileOwnerLibrary,
+	}), nil
+}
+
+// writeClaudeSettingsLocal routes the MCP catalog into the gitignored
+// .claude/settings.local.json (project/workspace) or ~/.claude/settings.local.json
+// (global, ai-setup convention). Uses configmerge.MergeJSONFile so user-authored
+// keys are preserved and a .bak is created on first touch.
+func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	var settingsPath string
+	switch ctx.SetupScope {
+	case types.SetupScopeGlobal:
+		home := ctx.HomeDir
+		if home == "" {
+			var err error
+			home, err = os.UserHomeDir()
+			if err != nil {
+				return ctx.FileRecords, fmt.Errorf("resolve home dir: %w", err)
+			}
+		}
+		settingsPath = filepath.Join(home, ".claude", "settings.local.json")
+		log.Printf("[compile] claude-code × global --local-secrets: writing %s (ai-setup convention, not a standard Claude path)", settingsPath)
+	default:
+		settingsPath = filepath.Join(ctx.TargetDir, ".claude", "settings.local.json")
+	}
+
+	_ = files.EnsureDir(filepath.Dir(settingsPath))
+	patch := map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
+	if _, err := configmerge.MergeJSONFile(settingsPath, patch); err != nil {
+		return ctx.FileRecords, fmt.Errorf("merge %s: %w", settingsPath, err)
+	}
+
+	relPath := settingsPath
+	if rel, err := filepath.Rel(ctx.TargetDir, settingsPath); err == nil {
+		relPath = rel
+	}
+	hash, _ := files.FileHash(settingsPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path: relPath, Hash: hash, Source: "compiled:mcp:claude-local", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 
@@ -304,7 +348,10 @@ func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
 	return true
 }
 
-func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
+// toClaudeCodeMcpInner builds the raw mcpServers map without the top-level
+// "mcpServers" wrapper. Shared between the committed .mcp.json output and the
+// settings.local.json merge payload.
+func toClaudeCodeMcpInner(servers map[string]McpServer) map[string]any {
 	mcpServers := make(map[string]any)
 	for name, server := range servers {
 		if server.URL != "" {
@@ -324,7 +371,11 @@ func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 		}
 		mcpServers[name] = entry
 	}
-	return map[string]any{"mcpServers": mcpServers}
+	return mcpServers
+}
+
+func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
+	return map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
 }
 
 // ---------------------------------------------------------------------------

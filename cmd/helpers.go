@@ -159,6 +159,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Force:            config.Force,
 		DryRun:           config.DryRun,
 		DriveCLI:         config.CLIDriveCLI,
+		LocalSecrets:     config.CLILocalSecrets,
 		Organization:     firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
 		Team:             firstNonEmpty(result.Phase1.Team, config.CLITeam),
 		Agents:           agents,

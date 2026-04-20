@@ -4,6 +4,7 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
@@ -176,6 +177,9 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 			log.Println("[claude] MCP servers registered via CLI")
 		}
 	}
+
+	// Post-install verification summary (non-fatal on failure).
+	displayInstallSummary(ctx, claudeDir, isGlobal)
 
 	return ctx.FileRecords, nil
 }
@@ -404,4 +408,83 @@ func (a *ClaudeCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
 
 	log.Printf("[claude-code] headless validation succeeded")
 	return nil
+}
+
+// displayInstallSummary prints a post-install summary of registered tools.
+// Non-fatal on failure — it's informational only.
+func displayInstallSummary(ctx *AdapterContext, claudeDir string, isGlobal bool) {
+	// Only attempt if claude is on PATH.
+	_, found := LookupClaudeBinary()
+	if !found {
+		return
+	}
+
+	// Count installed artifacts by walking directories.
+	agents := countDirEntries(filepath.Join(claudeDir, "agents"))
+	skills := countDirEntries(filepath.Join(claudeDir, "skills"))
+	commands := countDirEntries(filepath.Join(claudeDir, "commands"))
+	styles := countDirEntries(filepath.Join(claudeDir, "output-styles"))
+
+	// Try to get MCP server count from settings.json or direct CLI query.
+	mcpCount := 0
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	if settingsData, err := files.ReadFile(settingsPath); err == nil {
+		// Simple heuristic: count occurrences of "mcp" key as estimate.
+		mcpCount = strings.Count(string(settingsData), `"mcp"`)
+		// More accurate: try to parse and count mcpServers entries.
+		var parsed map[string]any
+		if err := json.Unmarshal(settingsData, &parsed); err == nil {
+			if mcpServersRaw, ok := parsed["mcp"].(map[string]any); ok {
+				mcpCount = len(mcpServersRaw)
+			}
+		}
+	}
+
+	// Format scope label
+	scopeLabel := "project"
+	if isGlobal {
+		scopeLabel = "user"
+	}
+
+	// Emit summary
+	log.Printf("[claude] Install summary (scope: %s)", scopeLabel)
+	if mcpCount > 0 {
+		log.Printf("  • %d MCP server(s) registered", mcpCount)
+	}
+	if agents > 0 {
+		log.Printf("  • %d agent(s) available", agents)
+	}
+	if skills > 0 {
+		log.Printf("  • %d skill(s) available", skills)
+	}
+	if commands > 0 {
+		log.Printf("  • %d command(s) available", commands)
+	}
+	if styles > 0 {
+		log.Printf("  • %d output style(s) available", styles)
+	}
+}
+
+// countDirEntries returns the count of files in a directory (non-recursive).
+// Returns 0 if dir doesn't exist or can't be read.
+func countDirEntries(dirPath string) int {
+	entries := files.ListDir(dirPath)
+	count := 0
+	for _, entry := range entries {
+		// Count files, not subdirectories, for most counts.
+		// But for skills, each skill is a directory, so include those.
+		fullPath := filepath.Join(dirPath, entry)
+		if strings.HasSuffix(dirPath, "skills") {
+			// Skills are directories; count any entry.
+			if !files.IsDirectory(fullPath) {
+				continue
+			}
+		}
+		// For others (agents, commands, output-styles), count files.
+		if files.IsDirectory(fullPath) {
+			continue
+		}
+		count++
+	}
+	return count
 }

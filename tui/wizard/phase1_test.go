@@ -199,14 +199,10 @@ func TestToolOptionsForScope_FiltersCopilotGlobal(t *testing.T) {
 	t.Parallel()
 
 	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	for _, opt := range globalOpts {
-		if opt.Value == string(types.ToolIdCopilot) {
-			t.Errorf("copilot must not appear at scope=global")
-		}
-	}
-	// Count: 5 tools total minus copilot = 4.
-	if len(globalOpts) != 4 {
-		t.Errorf("global options count = %d, want 4", len(globalOpts))
+	// Copilot now appears at scope=global (with probe gating at adapter level)
+	// Count: all 5 tools at all scopes
+	if len(globalOpts) != 5 {
+		t.Errorf("global options count = %d, want 5", len(globalOpts))
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
@@ -229,13 +225,10 @@ func TestFilterToolsByScope_DropsIncompatible(t *testing.T) {
 		types.ToolIdGemini,
 	}
 	got := filterToolsByScope(tools, types.SetupScopeGlobal)
-	for _, t2 := range got {
-		if t2 == types.ToolIdCopilot {
-			t.Errorf("copilot should be dropped at scope=global")
-		}
-	}
-	if len(got) != 2 {
-		t.Errorf("filtered tools count = %d, want 2", len(got))
+	// Copilot is now supported at global scope (with probe gating)
+	// All 3 tools should remain
+	if len(got) != 3 {
+		t.Errorf("filtered tools count = %d, want 3", len(got))
 	}
 }
 

@@ -27,12 +27,26 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 		log.Printf("[copilot] scope %q not supported; skipping install", ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
+	// At global scope, check if copilot CLI or ~/.copilot/ is present.
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		_, found := LookupCopilotBinary()
+		if !found {
+			// Check if ~/.copilot/ exists in the context's home directory
+			home, err := resolveHomeDir(ctx)
+			if err != nil || !files.DirExists(filepath.Join(home, ".copilot")) {
+				log.Printf("[copilot] copilot CLI or ~/.copilot/ not found; skipping global install")
+				return ctx.FileRecords, nil
+			}
+		}
+	}
 	githubDir, err := ResolveToolRoot(types.ToolIdCopilot, ctx.SetupScope, ctx)
 	if err != nil {
 		return nil, err
 	}
 	_ = files.EnsureDir(githubDir)
 
+	agentsDir := filepath.Join(githubDir, "agents")
+	_ = files.EnsureDir(agentsDir)
 	instructionsDir := filepath.Join(githubDir, "instructions")
 	_ = files.EnsureDir(instructionsDir)
 	promptsDir := filepath.Join(githubDir, "prompts")
@@ -43,25 +57,24 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	selectedSkills := selectionSet(ctx.Selections.Skills)
 	selectedPrompts := selectionSet(ctx.Selections.Prompts)
 
+	// Copy agents from library to .github/agents/.
+	if err := a.copyCopilotAgents(ctx, agentsDir); err != nil {
+		return nil, err
+	}
+
+	// Copy instructions from library to .github/instructions/.
+	if err := a.copyCopilotInstructions(ctx, instructionsDir); err != nil {
+		return nil, err
+	}
+
 	// Copy prompts as Copilot .prompt.md files.
 	if err := a.copyLibrarySubdirAsPrompts(ctx, "prompts", selectedPrompts, promptsDir); err != nil {
 		return nil, err
 	}
 
-	// Copy skills as Copilot prompt files.
-	if err := a.copyLibrarySubdirAsSkillPrompts(ctx, "skills", selectedSkills, promptsDir); err != nil {
+	// Copy skills as Copilot agent files.
+	if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
 		return nil, err
-	}
-
-	// Orchestrator as a prompt file if enabled.
-	if IsOrchestratorEnabled(ctx) {
-		content := GetOrchestratorPromptContent(ctx)
-		if err := WriteContentWithRecord(
-			filepath.Join(promptsDir, "orchestrator.prompt.md"),
-			content, ctx, "generated:orchestrator-prompt", false,
-		); err != nil {
-			return nil, err
-		}
 	}
 
 	// Copy chat modes to .github/chatmodes/<name>.chatmode.md.
@@ -135,61 +148,6 @@ func (a *CopilotAdapter) copySubdirAsPromptsFromFS(ctx *AdapterContext, libFS fs
 	return nil
 }
 
-// copyLibrarySubdirAsSkillPrompts copies skill files as Copilot prompt files.
-func (a *CopilotAdapter) copyLibrarySubdirAsSkillPrompts(ctx *AdapterContext, subdir string, selected map[types.SkillId]bool, promptsDir string) error {
-	libFS := ctx.LibraryFS
-	if libFS != nil {
-		return a.copySubdirAsSkillPromptsFromFS(ctx, libFS, subdir, selected, promptsDir)
-	}
-	// Fallback: disk mode
-	srcDir := filepath.Join(ctx.LibraryDir, subdir)
-	if !files.DirExists(srcDir) {
-		return nil
-	}
-	for _, file := range files.ListDir(srcDir) {
-		srcPath := filepath.Join(srcDir, file)
-		if files.IsDirectory(srcPath) {
-			continue
-		}
-		fileIDVal := fileID(file)
-		if selected != nil && !selected[types.SkillId(fileIDVal)] {
-			continue
-		}
-		destFile := fileIDVal + ".prompt.md"
-		dest := filepath.Join(promptsDir, destFile)
-		libRelPath := subdir + "/" + file
-		if err := a.copySkillAsPromptWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// copySubdirAsSkillPromptsFromFS copies skill files from FS as Copilot prompts.
-func (a *CopilotAdapter) copySubdirAsSkillPromptsFromFS(ctx *AdapterContext, libFS fs.FS, subdir string, selected map[types.SkillId]bool, promptsDir string) error {
-	entries, err := fs.ReadDir(libFS, subdir)
-	if err != nil {
-		return nil
-	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		file := entry.Name()
-		fileIDVal := fileID(file)
-		if selected != nil && !selected[types.SkillId(fileIDVal)] {
-			continue
-		}
-		destFile := fileIDVal + ".prompt.md"
-		dest := filepath.Join(promptsDir, destFile)
-		libRelPath := subdir + "/" + file
-		if err := a.copySkillAsPromptFromFS(ctx, libFS, libRelPath, dest); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // copyFileWithRecord copies a file from disk with conflict resolution and tracking.
 // src is an absolute filesystem path; sourcePath is the library-relative path for tracking.
 func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContext, sourcePath string) error {
@@ -227,9 +185,85 @@ func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContex
 	return nil
 }
 
-// copySkillAsPromptWithRecord reads a skill file from disk, transforms it to a Copilot
-// prompt format (mode: agent frontmatter), and writes it.
-func (a *CopilotAdapter) copySkillAsPromptWithRecord(ctx *AdapterContext, src, dest string, sourcePath string) error {
+// copyCopilotAgents copies agent files from library/copilot/agents/ to the target agents directory.
+func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string) error {
+	return CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "copilot/agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(agentsDir, filepath.Base(file))
+		},
+	})
+}
+
+// copyCopilotInstructions copies instruction files from library/copilot/instructions/ to the target instructions directory.
+func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructionsDir string) error {
+	return CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "copilot/instructions",
+		ToDestPath: func(file string) string {
+			return filepath.Join(instructionsDir, filepath.Base(file))
+		},
+	})
+}
+
+// copySkillsAsAgents converts skill files to .agent.yaml format in the agents directory.
+func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
+	libFS := ctx.LibraryFS
+	if libFS != nil {
+		return a.copySkillsAsAgentsFromFS(ctx, libFS, agentsDir, selected)
+	}
+	// Fallback: disk mode
+	srcDir := filepath.Join(ctx.LibraryDir, "skills")
+	if !files.DirExists(srcDir) {
+		return nil
+	}
+	for _, file := range files.ListDir(srcDir) {
+		srcPath := filepath.Join(srcDir, file)
+		if files.IsDirectory(srcPath) {
+			continue
+		}
+		fileIDVal := fileID(file)
+		if selected != nil && !selected[types.SkillId(fileIDVal)] {
+			continue
+		}
+		destFile := fileIDVal + ".agent.yaml"
+		dest := filepath.Join(agentsDir, destFile)
+		libRelPath := "skills/" + file
+		if err := a.copySkillAsAgentWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copySkillsAsAgentsFromFS copies skills from the library FS as agent YAML files.
+func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.FS, agentsDir string, selected map[types.SkillId]bool) error {
+	entries, err := fs.ReadDir(libFS, "skills")
+	if err != nil {
+		return nil
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		file := entry.Name()
+		fileIDVal := fileID(file)
+		if selected != nil && !selected[types.SkillId(fileIDVal)] {
+			continue
+		}
+		destFile := fileIDVal + ".agent.yaml"
+		dest := filepath.Join(agentsDir, destFile)
+		libRelPath := "skills/" + file
+		if err := a.copySkillAsAgentFromFS(ctx, libFS, libRelPath, dest); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copySkillAsAgentWithRecord reads a skill from disk and converts it to agent YAML format.
+func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, dest string, sourcePath string) error {
 	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
 
 	effectiveStrategy := ctx.Strategy
@@ -258,9 +292,11 @@ func (a *CopilotAdapter) copySkillAsPromptWithRecord(ctx *AdapterContext, src, d
 		return err
 	}
 
-	// Strip frontmatter, then add mode: agent frontmatter.
-	_, body := frontmatter.SplitYamlFrontmatter(string(data))
-	transformed := EnsureModeAgentFrontmatter(strings.TrimSpace(body))
+	// Transform skill to agent YAML format
+	transformed, err := skillToAgentYAML(src, string(data))
+	if err != nil {
+		return err
+	}
 
 	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
 		return err
@@ -276,8 +312,8 @@ func (a *CopilotAdapter) copySkillAsPromptWithRecord(ctx *AdapterContext, src, d
 	return nil
 }
 
-// copySkillAsPromptFromFS reads a skill from the library FS, transforms to Copilot prompt.
-func (a *CopilotAdapter) copySkillAsPromptFromFS(ctx *AdapterContext, libFS fs.FS, src, dest string) error {
+// copySkillAsAgentFromFS reads a skill from the library FS and converts it to agent YAML.
+func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS, src, dest string) error {
 	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
 
 	effectiveStrategy := ctx.Strategy
@@ -306,9 +342,11 @@ func (a *CopilotAdapter) copySkillAsPromptFromFS(ctx *AdapterContext, libFS fs.F
 		return fmt.Errorf("read FS %s: %w", src, err)
 	}
 
-	// Strip frontmatter, then add mode: agent frontmatter.
-	_, body := frontmatter.SplitYamlFrontmatter(string(data))
-	transformed := EnsureModeAgentFrontmatter(strings.TrimSpace(body))
+	// Transform skill to agent YAML format
+	transformed, err := skillToAgentYAML(src, string(data))
+	if err != nil {
+		return err
+	}
 
 	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
 		return err
@@ -322,6 +360,61 @@ func (a *CopilotAdapter) copySkillAsPromptFromFS(ctx *AdapterContext, libFS fs.F
 		Path: relPath, Hash: hash, Source: src, Owner: types.FileOwnerLibrary,
 	})
 	return nil
+}
+
+// skillToAgentYAML transforms a skill markdown file into Copilot agent YAML format.
+func skillToAgentYAML(skillName string, skillContent string) (string, error) {
+	_, body := frontmatter.SplitYamlFrontmatter(skillContent)
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return "", fmt.Errorf("skill %s has no content", skillName)
+	}
+
+	// Extract skill ID from filename (e.g., "skills/review.md" → "review")
+	// First get just the basename in case skillName includes path components
+	basename := filepath.Base(skillName)
+	skillID := strings.TrimSuffix(basename, filepath.Ext(basename))
+
+	// Build agent YAML
+	yaml := fmt.Sprintf(`name: %s
+displayName: %s
+description: >
+  %s skill for the ai-setup orchestrator.
+model: claude-sonnet-4.5
+tools:
+  - "*"
+promptParts:
+  includeAISafety: true
+  includeToolInstructions: true
+  includeParallelToolCalling: true
+  includeCustomAgentInstructions: false
+prompt: |
+%s
+`, skillID, toDisplayName(skillID), skillID, indentLines(body, "  "))
+
+	return yaml, nil
+}
+
+// toDisplayName converts "foo-bar" to "Foo Bar".
+func toDisplayName(s string) string {
+	parts := strings.Split(s, "-")
+	for i, part := range parts {
+		if len(part) > 0 {
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+// indentLines prefixes each line of text with the given indent string.
+func indentLines(text, indent string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if line != "" || i < len(lines)-1 {
+			lines[i] = indent + line
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (a *CopilotAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

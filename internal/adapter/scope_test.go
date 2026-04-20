@@ -27,7 +27,7 @@ func TestIsScopeSupported(t *testing.T) {
 		{types.ToolIdCodex, types.SetupScopeGlobal, true},
 		{types.ToolIdCodex, types.SetupScopeWorkspace, true},
 		{types.ToolIdCopilot, types.SetupScopeProject, true},
-		{types.ToolIdCopilot, types.SetupScopeGlobal, false}, // only unsupported pair
+		{types.ToolIdCopilot, types.SetupScopeGlobal, true}, // now supported with probe gating
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, true},
 	}
 	for _, tc := range tests {
@@ -71,7 +71,8 @@ func TestResolveToolRoot_AllPairs(t *testing.T) {
 		// copilot
 		{types.ToolIdCopilot, types.SetupScopeProject, want{filepath.Join(target, ".github"), false}},
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, want{filepath.Join(target, ".github"), false}},
-		{types.ToolIdCopilot, types.SetupScopeGlobal, want{"", true}},
+		{types.ToolIdCopilot, types.SetupScopeGlobal, want{filepath.Join(home, ".copilot"), false}}, // now supported
+
 	}
 
 	for _, c := range cases {

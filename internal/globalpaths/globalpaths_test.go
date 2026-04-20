@@ -17,7 +17,7 @@ func TestResolveGlobalToolTargetDir(t *testing.T) {
 		{types.ToolIdClaudeCode, filepath.Join(home, ".claude")},
 		{types.ToolIdGemini, filepath.Join(home, ".gemini")},
 		{types.ToolIdCodex, filepath.Join(home, ".codex")},
-		{types.ToolIdCopilot, ""},
+		{types.ToolIdCopilot, filepath.Join(home, ".copilot")},
 	}
 	for _, c := range cases {
 		got, err := ResolveGlobalToolTargetDir(c.tool, home)
@@ -49,7 +49,7 @@ func TestIsGlobalSupportedTool(t *testing.T) {
 		{types.ToolIdOpenCode, true},
 		{types.ToolIdGemini, true},
 		{types.ToolIdCodex, true},
-		{types.ToolIdCopilot, false},
+		{types.ToolIdCopilot, true}, // now supported with probe gating
 	}
 	for _, c := range cases {
 		got := IsGlobalSupportedTool(c.tool)

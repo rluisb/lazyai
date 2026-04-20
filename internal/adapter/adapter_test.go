@@ -486,22 +486,23 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("prompt .prompt.md was not created in .github/prompts/")
 	}
 
-	// --- Skill transformed with mode: agent frontmatter ---
-	skillPromptFile := filepath.Join(promptsDir, "implement.prompt.md")
-	if _, err := os.Stat(skillPromptFile); os.IsNotExist(err) {
-		t.Error("skill prompt .prompt.md was not created")
+	// --- Skill transformed to agent YAML format ---
+	agentsDir := filepath.Join(targetDir, ".github", "agents")
+	skillAgentFile := filepath.Join(agentsDir, "implement.agent.yaml")
+	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
+		t.Error("skill agent .agent.yaml was not created")
 	}
-	data, _ := os.ReadFile(skillPromptFile)
+	data, _ := os.ReadFile(skillAgentFile)
 	content := string(data)
-	if !strings.Contains(content, "mode: agent") {
-		t.Error("skill prompt missing mode: agent frontmatter")
+	if !strings.Contains(content, "name: implement") {
+		t.Error("skill agent missing 'name: implement' in YAML")
 	}
 
 	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
 	// scaffold.ScaffoldCompiledRoot (scope-aware) rather than the adapter;
 	// asserting them here would test the wrong layer.
 
-	// --- Tracked file records created (prompts only) ---
+	// --- Tracked file records created (prompts + agents) ---
 	if len(ctx.FileRecords) < 2 {
 		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
 	}
@@ -511,7 +512,7 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
-		case ".github/prompts/implement.prompt.md":
+		case ".github/agents/implement.agent.yaml":
 			hasImplement = true
 		}
 	}
@@ -519,7 +520,7 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("no tracked record for preflight-task-framing.prompt.md")
 	}
 	if !hasImplement {
-		t.Error("no tracked record for implement.prompt.md")
+		t.Error("no tracked record for implement.agent.yaml")
 	}
 }
 

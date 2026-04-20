@@ -20,12 +20,10 @@ var ErrScopeUnsupported = errors.New("scope not supported for this tool")
 
 // IsScopeSupported reports whether the given tool has a defined on-disk layout
 // for the given scope. Wizard + non-interactive callers use this to filter the
-// tool list before invoking adapters.
+// tool list before invoking adapters. Copilot now supports global scope; the
+// adapter itself probes for CLI/home presence and skips if not available.
 func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
 	if !types.IsValidSetupScope(scope) || !types.IsValidToolId(tool) {
-		return false
-	}
-	if tool == types.ToolIdCopilot && scope == types.SetupScopeGlobal {
 		return false
 	}
 	return true

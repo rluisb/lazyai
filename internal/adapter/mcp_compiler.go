@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -59,10 +60,31 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return ctx.FileRecords, nil
 	}
 
-	// Copilot × global is unsupported upstream — skip with no error.
+	// Skip unsupported scopes.
 	if !IsScopeSupported(toolId, ctx.SetupScope) {
 		log.Printf("[compile] %s × %s scope is unsupported; skipping", toolId, ctx.SetupScope)
 		return ctx.FileRecords, nil
+	}
+
+	// Copilot × global requires CLI or ~/.copilot/ to be present.
+	if toolId == types.ToolIdCopilot && ctx.SetupScope == types.SetupScopeGlobal {
+		_, found := LookupCopilotBinary()
+		if !found {
+			// Check if ~/.copilot/ exists
+			home := ctx.HomeDir
+			if home == "" {
+				var err error
+				home, err = os.UserHomeDir()
+				if err != nil {
+					log.Printf("[compile] cannot determine home directory; skipping global MCP compilation")
+					return ctx.FileRecords, nil
+				}
+			}
+			if !files.DirExists(filepath.Join(home, ".copilot")) {
+				log.Printf("[compile] copilot CLI or ~/.copilot/ not found; skipping global MCP compilation")
+				return ctx.FileRecords, nil
+			}
+		}
 	}
 
 	switch toolId {
@@ -338,6 +360,8 @@ func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]type
 
 func toCopilotMcp(servers map[string]McpServer) map[string]any {
 	result := make(map[string]any)
+	placeholderIDs := make(map[string]bool)
+
 	for name, server := range servers {
 		if server.URL != "" {
 			entry := map[string]any{
@@ -357,10 +381,36 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 		}
 		if server.Env != nil {
 			entry["env"] = server.Env
+			// Scan for placeholder patterns ${VAR}
+			for _, val := range server.Env {
+				matches := envPattern.FindAllStringSubmatch(val, -1)
+				for _, match := range matches {
+					if len(match) > 1 {
+						placeholderIDs[match[1]] = true
+					}
+				}
+			}
 		}
 		result[name] = entry
 	}
-	return map[string]any{"servers": result}
+
+	output := map[string]any{"servers": result}
+
+	// Add inputs for discovered placeholders
+	if len(placeholderIDs) > 0 {
+		inputs := make([]map[string]any, 0, len(placeholderIDs))
+		for id := range placeholderIDs {
+			inputs = append(inputs, map[string]any{
+				"type":        "promptString",
+				"id":          id,
+				"description": id,
+				"password":    true,
+			})
+		}
+		output["inputs"] = inputs
+	}
+
+	return output
 }
 
 // ---------------------------------------------------------------------------

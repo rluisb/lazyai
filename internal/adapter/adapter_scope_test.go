@@ -106,7 +106,7 @@ func TestAdapter_ScopeParity(t *testing.T) {
 }
 
 // TestCopilotAdapter_GlobalScope_Skips verifies the adapter early-returns
-// (no error, no records, no writes) when scope=global.
+// (no error, no records, no writes) when scope=global and probes fail.
 func TestCopilotAdapter_GlobalScope_Skips(t *testing.T) {
 	ctx, target, home := newScopeTestContext(t, types.SetupScopeGlobal)
 	adapter := &CopilotAdapter{}
@@ -122,6 +122,33 @@ func TestCopilotAdapter_GlobalScope_Skips(t *testing.T) {
 	}
 	if files.DirExists(filepath.Join(target, ".github")) {
 		t.Error("copilot must not create <target>/.github at scope=global")
+	}
+}
+
+// TestCopilotAdapter_GlobalScope_Emits verifies the adapter correctly emits
+// agents, instructions, and chatmodes under ~/.copilot/ at global scope.
+func TestCopilotAdapter_GlobalScope_Emits(t *testing.T) {
+	ctx, _, home := newScopeTestContext(t, types.SetupScopeGlobal)
+	// Create ~/.copilot/ so the probe passes
+	copilotHome := filepath.Join(home, ".copilot")
+	if err := files.EnsureDir(copilotHome); err != nil {
+		t.Fatalf("EnsureDir: %v", err)
+	}
+	adapter := &CopilotAdapter{}
+	records, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("Install at scope=global: %v", err)
+	}
+	if len(records) == 0 {
+		t.Errorf("expected records at scope=global with ~/.copilot/, got 0")
+	}
+	// Verify agents directory was created
+	if !files.DirExists(filepath.Join(copilotHome, "agents")) {
+		t.Error("agents directory not created under ~/.copilot/")
+	}
+	// Verify instructions directory was created
+	if !files.DirExists(filepath.Join(copilotHome, "instructions")) {
+		t.Error("instructions directory not created under ~/.copilot/")
 	}
 }
 

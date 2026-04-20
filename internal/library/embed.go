@@ -173,3 +173,9 @@ func ToolAgentsDir() string { return filepath.Join(Root(), "tool-agents") }
 
 // ToolTemplatesDir returns the path to the tool-templates directory.
 func ToolTemplatesDir() string { return filepath.Join(Root(), "tool-templates") }
+
+// CopilotAgentsDir returns the path to the copilot agents directory.
+func CopilotAgentsDir() string { return filepath.Join(Root(), "copilot", "agents") }
+
+// CopilotInstructionsDir returns the path to the copilot instructions directory.
+func CopilotInstructionsDir() string { return filepath.Join(Root(), "copilot", "instructions") }

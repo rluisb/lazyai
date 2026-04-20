@@ -54,6 +54,8 @@ func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, erro
 		return filepath.Join(homeDir, ".claude"), nil
 	case types.ToolIdGemini:
 		return filepath.Join(homeDir, ".gemini"), nil
+	case types.ToolIdCopilot:
+		return filepath.Join(homeDir, ".copilot"), nil
 	case types.ToolIdCodex:
 		return filepath.Join(homeDir, ".codex"), nil
 	default:
@@ -68,16 +70,21 @@ func ResolveCodexSkillsGlobalDir(homeDir string) string {
 }
 
 // IsGlobalSupportedTool reports whether a tool supports file-based global config.
-// Only Copilot lacks a meaningful repo-scaffolding global surface.
+// All five tools now support global config. Use adapter.IsScopeSupported for
+// probe-aware gating (e.g., Copilot requires the copilot CLI or ~/.copilot/ presence).
 func IsGlobalSupportedTool(tool types.ToolId) bool {
-	return tool != types.ToolIdCopilot
+	switch tool {
+	case types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdGemini, types.ToolIdCopilot, types.ToolIdCodex:
+		return true
+	default:
+		return false
+	}
 }
 
 // LogUnsupportedGlobalTool prints a message for tools that don't support global config.
 // Deprecated: prefer adapter.ErrScopeUnsupported and the wizard/non-interactive scope
 // filters; this helper remains for callers that still need a simple stderr warning.
+// (No tools are currently unsupported globally.)
 func LogUnsupportedGlobalTool(tool types.ToolId) {
-	if tool == types.ToolIdCopilot {
-		fmt.Fprintln(os.Stderr, "Copilot doesn't support file-based global config. Use project scope instead.")
-	}
+	// All tools now support global scope (some conditionally).
 }

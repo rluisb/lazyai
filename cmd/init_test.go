@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -50,9 +49,9 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	}
 }
 
-// TestInitNonInteractiveScopeFilter_MixedList verifies that tools not
-// supported at the chosen scope (copilot × global) are skipped with a WARN
-// and the install proceeds for the remaining tools.
+// TestInitNonInteractiveScopeFilter_MixedList verifies that when copilot
+// is requested at global scope but the probes fail (no CLI or ~/.copilot/),
+// the install proceeds for the remaining tools.
 func TestInitNonInteractiveScopeFilter_MixedList(t *testing.T) {
 	dir := t.TempDir()
 	ensureTestLibraryFS(t)
@@ -70,25 +69,18 @@ func TestInitNonInteractiveScopeFilter_MixedList(t *testing.T) {
 		CLIName:     "global",
 	}
 
-	_, stderr := captureOutput(t, func() {
+	_, _ = captureOutput(t, func() {
 		if err := runInitNonInteractive(config); err != nil {
 			t.Fatalf("runInitNonInteractive: %v", err)
 		}
 	})
-	if !strings.Contains(stderr, "skipping tool \"copilot\"") {
-		t.Errorf("expected WARN about skipping copilot, got stderr:\n%s", stderr)
-	}
-	// Copilot is dropped; claude-code remains. config.CLITools should no
-	// longer contain copilot after runInitNonInteractive returns.
-	for _, tool := range config.CLITools {
-		if tool == types.ToolIdCopilot {
-			t.Errorf("copilot was not filtered out of config.CLITools")
-		}
-	}
+	// Copilot is now supported at scope level (filtered at adapter level when probes fail)
+	// The install should proceed with both tools; Copilot skips silently
 }
 
-// TestInitNonInteractiveScopeFilter_AllUnsupported verifies that a tool list
-// containing only incompatible tools returns a non-nil error.
+// TestInitNonInteractiveScopeFilter_AllUnsupported verifies that when copilot
+// is the only tool at global scope, the install still proceeds (even though
+// the adapter will skip due to failed probes).
 func TestInitNonInteractiveScopeFilter_AllUnsupported(t *testing.T) {
 	dir := t.TempDir()
 	ensureTestLibraryFS(t)
@@ -104,11 +96,10 @@ func TestInitNonInteractiveScopeFilter_AllUnsupported(t *testing.T) {
 		CLIName:     "global",
 	}
 
+	// Copilot is now supported at scope level; install should proceed
+	// (adapter skips silently when probes fail)
 	err := runInitNonInteractive(config)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "no tools remain") {
-		t.Errorf("expected 'no tools remain' error, got: %v", err)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

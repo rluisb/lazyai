@@ -17,6 +17,7 @@
 | 011 | OpenCode deep setup (config, frontmatter, MCP merge, commands/modes, validation, plugins) | ✅ Complete | `feature/go-migration` (556db86) |
 | 012 | Claude Code deep setup (global/project/workspace agents, rules, commands, output-styles) | ✅ Complete | `feature/go-migration` |
 | 013 | GitHub Copilot deep setup (agents, instructions, chatmodes, MCP, global probe gating) | ✅ Complete | `feature/go-migration` (0b26dd1) |
+| 014 | Copilot global MCP compile (`~/.copilot/mcp-config.json` + VS Code mcp.json split) | ✅ Complete | `feature/go-migration` |
 
 ## Key Architecture Decisions
 
@@ -50,6 +51,9 @@
 | `library/opencode/modes/` | OpenCode chat mode templates (plan, audit) |
 | `library/opencode/plugins.json` | Curated list of installable plugin module names |
 | `internal/adapter/claude_cli.go` | `ClaudeCLIRunner` interface, `LookupClaudeBinary()` — testable substrate for `claude` CLI invocations (spec 012) |
+| `internal/adapter/copilot_cli.go` | `CopilotCLIRunner` interface, `LookupCopilotBinary()`, `CopilotHomePresent()` — Copilot probe helpers (spec 013) |
+| `internal/adapter/mcp_compiler.go#toCopilotServerEntries` | Shared per-server translation for Copilot; callers `toCopilotVSCodeMcp` (uses `servers`) and `toCopilotCLIMcp` (uses `mcpServers`) split the two schema surfaces (spec 014) |
+| `internal/adapter/mcp_compiler.go#compileCopilotCLIMcp` | Deep-merge emitter for `~/.copilot/mcp-config.json`; runs at every scope when probe passes (spec 014) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 
@@ -70,7 +74,8 @@
 - [x] ~~Post-install opencode debug validation~~ — spec 011
 - [x] ~~OpenCode plugin install flow~~ — spec 011
 - [ ] Snapshot tests for library assets + compiled output (deferred in spec 009)
-- [ ] `--drive-cli` for OpenCode (interactive-only upstream) / Copilot (flag surface unverified)
+- [ ] `--drive-cli` for OpenCode (interactive-only upstream — permanently deferred)
+- [x] ~~`--drive-cli` for Copilot (renamed to global MCP compile; no scriptable `copilot mcp add` upstream)~~ — spec 014
 - [ ] CI-side validation with opencode binary (deferred in spec 011)
 - [x] ~~`claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)~~ — spec 012 task 010
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014

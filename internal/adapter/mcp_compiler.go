@@ -6,6 +6,7 @@ package adapter
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -66,24 +67,14 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return ctx.FileRecords, nil
 	}
 
-	// Copilot × global requires CLI or ~/.copilot/ to be present.
+	// Copilot × global requires CLI or ~/.copilot/ to be present; at global
+	// scope with probes failing we bail out of the whole compile. At
+	// project/workspace the VS Code surface still writes regardless (the
+	// CLI surface is gated internally in compileCopilotMCP).
 	if toolId == types.ToolIdCopilot && ctx.SetupScope == types.SetupScopeGlobal {
-		_, found := LookupCopilotBinary()
-		if !found {
-			// Check if ~/.copilot/ exists
-			home := ctx.HomeDir
-			if home == "" {
-				var err error
-				home, err = os.UserHomeDir()
-				if err != nil {
-					log.Printf("[compile] cannot determine home directory; skipping global MCP compilation")
-					return ctx.FileRecords, nil
-				}
-			}
-			if !files.DirExists(filepath.Join(home, ".copilot")) {
-				log.Printf("[compile] copilot CLI or ~/.copilot/ not found; skipping global MCP compilation")
-				return ctx.FileRecords, nil
-			}
+		if !copilotProbePasses(ctx) {
+			log.Printf("[compile] copilot CLI or ~/.copilot/ not found; skipping global MCP compilation")
+			return ctx.FileRecords, nil
 		}
 	}
 
@@ -340,27 +331,98 @@ func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 // Copilot MCP compilation
 // ---------------------------------------------------------------------------
 
-func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	// Copilot × global is filtered upstream in CompileMCPForTool; this code
-	// path always runs at project or workspace scope.
-	vscodeDir := filepath.Join(ctx.TargetDir, ".vscode")
-	_ = files.EnsureDir(vscodeDir)
-	vscodeMcpPath := filepath.Join(vscodeDir, "mcp.json")
-	content := toCopilotMcp(servers)
+// copilotProbePasses returns true if the Copilot CLI is on PATH or the
+// ~/.copilot/ directory exists (i.e., the standalone CLI is installed or has
+// been used at least once).
+func copilotProbePasses(ctx CompileContext) bool {
+	if _, found := LookupCopilotBinary(); found {
+		return true
+	}
+	home := ctx.HomeDir
+	if home == "" {
+		var err error
+		home, err = os.UserHomeDir()
+		if err != nil {
+			return false
+		}
+	}
+	return files.DirExists(filepath.Join(home, ".copilot"))
+}
 
-	if err := WriteJSONFile(vscodeMcpPath, content); err != nil {
-		return ctx.FileRecords, err
+// resolveCopilotHomeDir returns the home directory that should hold
+// ~/.copilot/mcp-config.json, preferring ctx.HomeDir for test isolation.
+func resolveCopilotHomeDir(ctx CompileContext) (string, error) {
+	if ctx.HomeDir != "" {
+		return ctx.HomeDir, nil
+	}
+	return os.UserHomeDir()
+}
+
+func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	// At project/workspace scope, emit the VS Code mcp.json unconditionally;
+	// the CLI mcp-config.json is only written if the Copilot CLI probe passes.
+	// At global scope, skip the VS Code emit entirely — no project directory
+	// to anchor it to — and rely on the CLI emit (already probe-gated upstream).
+	if ctx.SetupScope != types.SetupScopeGlobal {
+		vscodeDir := filepath.Join(ctx.TargetDir, ".vscode")
+		_ = files.EnsureDir(vscodeDir)
+		vscodeMcpPath := filepath.Join(vscodeDir, "mcp.json")
+		content := toCopilotVSCodeMcp(servers)
+
+		if err := WriteJSONFile(vscodeMcpPath, content); err != nil {
+			return ctx.FileRecords, err
+		}
+
+		hash, _ := files.FileHash(vscodeMcpPath)
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path: ".vscode/mcp.json", Hash: hash, Source: "compiled:mcp:copilot", Owner: types.FileOwnerLibrary,
+		})
 	}
 
-	hash, _ := files.FileHash(vscodeMcpPath)
+	// Emit ~/.copilot/mcp-config.json for the standalone CLI whenever the
+	// probe passes (all scopes). At global scope the caller has already
+	// verified the probe; at project/workspace we check here and silently
+	// skip if Copilot CLI is not installed.
+	if !copilotProbePasses(ctx) {
+		return ctx.FileRecords, nil
+	}
+	return compileCopilotCLIMcp(ctx, servers)
+}
+
+// compileCopilotCLIMcp writes ~/.copilot/mcp-config.json via deep-merge so
+// user-authored server entries and other keys are preserved across re-runs.
+func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	home, err := resolveCopilotHomeDir(ctx)
+	if err != nil {
+		log.Printf("[compile] copilot: cannot resolve home dir: %v", err)
+		return ctx.FileRecords, nil
+	}
+	copilotDir := filepath.Join(home, ".copilot")
+	_ = files.EnsureDir(copilotDir)
+	cfgPath := filepath.Join(copilotDir, "mcp-config.json")
+
+	patch := toCopilotCLIMcp(servers)
+	if _, err := configmerge.MergeJSONFile(cfgPath, patch); err != nil {
+		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
+	}
+
+	relPath := cfgPath
+	if rel, err := filepath.Rel(ctx.TargetDir, cfgPath); err == nil {
+		relPath = rel
+	}
+	hash, _ := files.FileHash(cfgPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path: ".vscode/mcp.json", Hash: hash, Source: "compiled:mcp:copilot", Owner: types.FileOwnerLibrary,
+		Path: relPath, Hash: hash, Source: "compiled:mcp:copilot-cli", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 
-func toCopilotMcp(servers map[string]McpServer) map[string]any {
-	result := make(map[string]any)
-	placeholderIDs := make(map[string]bool)
+// toCopilotServerEntries translates the canonical server map into the
+// per-server shape shared by both the VS Code extension and the standalone
+// Copilot CLI. It also returns the set of ${VAR} placeholder IDs discovered
+// in env values (used by VS Code for its "inputs" prompt UI).
+func toCopilotServerEntries(servers map[string]McpServer) (entries map[string]any, placeholderIDs map[string]bool) {
+	entries = make(map[string]any)
+	placeholderIDs = make(map[string]bool)
 
 	for name, server := range servers {
 		if server.URL != "" {
@@ -371,7 +433,7 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 			if server.Headers != nil {
 				entry["headers"] = server.Headers
 			}
-			result[name] = entry
+			entries[name] = entry
 			continue
 		}
 		entry := map[string]any{
@@ -381,7 +443,6 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 		}
 		if server.Env != nil {
 			entry["env"] = server.Env
-			// Scan for placeholder patterns ${VAR}
 			for _, val := range server.Env {
 				matches := envPattern.FindAllStringSubmatch(val, -1)
 				for _, match := range matches {
@@ -391,12 +452,17 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 				}
 			}
 		}
-		result[name] = entry
+		entries[name] = entry
 	}
+	return entries, placeholderIDs
+}
 
-	output := map[string]any{"servers": result}
+// toCopilotVSCodeMcp builds the .vscode/mcp.json payload: uses the "servers"
+// top-level key and adds an "inputs" prompt array for each placeholder.
+func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
+	entries, placeholderIDs := toCopilotServerEntries(servers)
+	output := map[string]any{"servers": entries}
 
-	// Add inputs for discovered placeholders
 	if len(placeholderIDs) > 0 {
 		inputs := make([]map[string]any, 0, len(placeholderIDs))
 		for id := range placeholderIDs {
@@ -409,8 +475,15 @@ func toCopilotMcp(servers map[string]McpServer) map[string]any {
 		}
 		output["inputs"] = inputs
 	}
-
 	return output
+}
+
+// toCopilotCLIMcp builds the ~/.copilot/mcp-config.json payload: uses the
+// "mcpServers" top-level key. Unlike VS Code, the standalone CLI reads
+// env variables from the process environment directly — no "inputs" prompts.
+func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
+	entries, _ := toCopilotServerEntries(servers)
+	return map[string]any{"mcpServers": entries}
 }
 
 // ---------------------------------------------------------------------------

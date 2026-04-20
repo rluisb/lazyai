@@ -28,7 +28,7 @@ One-command AI development environment scaffold. Installs per-tool configuration
 | Component | Responsibility | Path |
 |-----------|---------------|------|
 | CLI entry points | `init`, `add`, `compile` cobra commands | `cmd/` |
-| Adapter layer | Per-tool Install() + scope resolver | `internal/adapter/` |
+| Adapter layer | Per-tool Install() + scope resolver + CLI probe/runner | `internal/adapter/` |
 | Config merge | Deep-merge JSON/TOML with backup-on-first-touch | `internal/configmerge/` |
 | Compiler | Assembles CLAUDE.md / AGENTS.md root files | `internal/compiler/` |
 | Scaffold | Orchestrates all file-write steps | `internal/scaffold/` |

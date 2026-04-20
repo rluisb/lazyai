@@ -15,7 +15,7 @@
 | 009 | Compile-time scope awareness & artifact parity | ✅ Complete | `feature/go-migration` (1dca890) |
 | 010 | Wizard selection UI + Codex drive-cli + CLAUDE.md hybrid fill | ✅ Complete | `feature/go-migration` (1ee3e9f) |
 | 011 | OpenCode deep setup (config, frontmatter, MCP merge, commands/modes, validation, plugins) | ✅ Complete | `feature/go-migration` (556db86) |
-| 012 | Claude Code deep setup (global/project/workspace agents, rules, commands, output-styles) | 🔄 In Progress | `feature/go-migration` |
+| 012 | Claude Code deep setup (global/project/workspace agents, rules, commands, output-styles) | ✅ Complete | `feature/go-migration` |
 
 ## Key Architecture Decisions
 
@@ -71,6 +71,7 @@
 - [ ] Snapshot tests for library assets + compiled output (deferred in spec 009)
 - [ ] `--drive-cli` for OpenCode (interactive-only upstream) / Copilot (flag surface unverified)
 - [ ] CI-side validation with opencode binary (deferred in spec 011)
-- [ ] `claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)
-- [ ] Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)
+- [x] ~~`claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)~~ — spec 012 task 010
+- [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [ ] `settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)
+- [ ] Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)

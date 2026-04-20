@@ -19,6 +19,7 @@
 | 013 | GitHub Copilot deep setup (agents, instructions, chatmodes, MCP, global probe gating) | ✅ Complete | `feature/go-migration` (0b26dd1) |
 | 014 | Copilot global MCP compile (`~/.copilot/mcp-config.json` + VS Code mcp.json split) | ✅ Complete | `feature/go-migration` |
 | 015 | Claude Code `--local-secrets` flag routing MCP to `.claude/settings.local.json` | ✅ Complete | `feature/go-migration` |
+| 016 | `ai-setup build-plugin` — generate Claude Code plugin from library (agents + skills + commands + output styles) | ✅ Complete | `feature/go-migration` |
 
 ## Key Architecture Decisions
 
@@ -57,6 +58,8 @@
 | `internal/adapter/mcp_compiler.go#compileCopilotCLIMcp` | Deep-merge emitter for `~/.copilot/mcp-config.json`; runs at every scope when probe passes (spec 014) |
 | `internal/adapter/mcp_compiler.go#writeClaudeSettingsLocal` | Deep-merge emitter for `.claude/settings.local.json` when `--local-secrets` flag is set (spec 015) |
 | `internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
+| `internal/plugin/plugin.go#Build` | Generates a Claude Code plugin directory from the library FS: manifest, agents (forbidden-field stripping), skills (flat → `<name>/SKILL.md`), commands, output styles (spec 016) |
+| `cmd/build_plugin.go` | `ai-setup build-plugin --out <path> [--force]` cobra subcommand (spec 016) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 
@@ -83,4 +86,4 @@
 - [x] ~~`claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)~~ — spec 012 task 010
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)
-- [ ] Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)
+- [x] ~~Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)~~ — spec 016 (`ai-setup build-plugin` generator)

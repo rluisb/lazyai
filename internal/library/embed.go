@@ -180,6 +180,20 @@ func CopilotAgentsDir() string { return filepath.Join(Root(), "copilot", "agents
 // CopilotInstructionsDir returns the path to the copilot instructions directory.
 func CopilotInstructionsDir() string { return filepath.Join(Root(), "copilot", "instructions") }
 
+// CodexSubdir is the library-relative subdirectory holding Codex-specific
+// starter assets (AGENTS.override template, and future Codex skills). Added
+// in spec 018 for parity with library/claudecode, library/opencode,
+// library/copilot, library/gemini.
+const CodexSubdir = "codex"
+
+// CodexAgentsOverrideTemplate is the library-relative path to the raw
+// AGENTS.override.md starter template Codex users fill with their team's
+// conventions.
+const CodexAgentsOverrideTemplate = "codex/AGENTS.override.template.md"
+
+// CodexAssetsDir returns the absolute path to library/codex.
+func CodexAssetsDir() string { return filepath.Join(Root(), CodexSubdir) }
+
 // GeminiCommandsSubdir is the library-relative subdirectory containing
 // Gemini custom slash command TOML files. Spec 017 moved these from the
 // generic "commands" top-level to per-tool "gemini/commands" for parity

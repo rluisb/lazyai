@@ -40,13 +40,38 @@ function isSseRequest(req: http.IncomingMessage): boolean {
 
 export async function startHttpServer(options: HttpServerOptions): Promise<HttpServerContext> {
   const log = (options.logger ?? createNoopLogger()).child({ component: 'http-server' })
-  const { server: mcpServer } = createOrchestratorServer(options)
 
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => crypto.randomUUID(),
-  })
+  // One transport+server pair per client session. Each initialize POST creates a
+  // new entry; subsequent requests (GET SSE or POST with mcp-session-id) route to
+  // the existing session. This is required because StreamableHTTPServerTransport
+  // is not designed to handle concurrent clients on a single instance.
+  const sessions = new Map<string, StreamableHTTPServerTransport>()
 
-  await mcpServer.connect(transport)
+  async function routeRequest(req: http.IncomingMessage, res: http.ServerResponse, parsedBody: unknown): Promise<void> {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined
+
+    if (sessionId) {
+      const existing = sessions.get(sessionId)
+      if (!existing) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Session not found' }))
+        return
+      }
+      await existing.handleRequest(req, res, parsedBody)
+      return
+    }
+
+    // No session ID → new initialize request; create a dedicated transport+server pair
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+      onsessioninitialized: (id) => { sessions.set(id, transport) },
+      onsessionclosed: (id) => { sessions.delete(id) },
+    })
+
+    const { server: mcpServer } = createOrchestratorServer(options)
+    await mcpServer.connect(transport)
+    await transport.handleRequest(req, res, parsedBody)
+  }
 
   let tracker: ClientTracker | undefined
   let shutdownSignaled = false
@@ -81,7 +106,7 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
         const raw = await readBody(req)
         parsedBody = raw.length > 0 ? (JSON.parse(raw) as unknown) : undefined
       }
-      await transport.handleRequest(req, res, parsedBody)
+      await routeRequest(req, res, parsedBody)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log.error('request error', { error: msg })
@@ -111,7 +136,8 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
     shutdownSignaled = true
     tracker?.clear()
     if (options.writeDiscoveryFile) clearDiscovery()
-    await transport.close()
+    await Promise.all([...sessions.values()].map((t) => t.close().catch(() => { /* best-effort */ })))
+    sessions.clear()
     await new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()))
     })

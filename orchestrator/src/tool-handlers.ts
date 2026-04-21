@@ -6,7 +6,7 @@ import {
   escalateChainStep,
   retryChainStep,
 } from './chain-machine.js'
-import { buildBudgetPolicy, compileChainDefinition, validateStepOutput } from './compiler.js'
+import { buildBudgetPolicy, compileChainDefinition, getCliContext, getOutputContract, validateStepOutput } from './compiler.js'
 import { composeAgent as composePromptLayers } from './composer.js'
 import {
   appendErrorJournalEntry,
@@ -48,6 +48,9 @@ import type {
   ChainStepStatus,
   ComposedAgentSpec,
   CompleteTaskInput,
+  CompiledStepPlan,
+  DefinitionSource,
+  ExecutionPlan,
   HandoffDocument,
   OrchestrationCatalog,
   RootContextLayer,
@@ -58,10 +61,21 @@ import type {
   WorkflowState,
 } from './types.js'
 
+import type { Logger } from './logging/logger.js'
+import { createNoopLogger } from './logging/logger.js'
+import { getPersistenceDb } from './persistence.js'
+import { resolveCatalog } from './catalog/resolver.js'
+import type { HostCli } from './types.js'
+import { getEventBus } from './events/bus.js'
+import { JobQueue } from './queue/queue.js'
+import { CatalogStore } from './catalog/store.js'
+
 export interface ToolHandlerOptions {
   projectRoot: string
   libraryOrchestrationRoot?: string
   libraryAgentsRoot?: string
+  logger?: Logger
+  hostCli?: HostCli
 }
 
 export interface ComposeAgentInput {
@@ -109,6 +123,23 @@ export interface EscalateStepInput {
   reason?: string
 }
 
+export interface InvokeAgentInput {
+  agent: string
+  task: string
+  version?: number
+  domainSkill?: string
+  modeSkill?: string
+}
+
+export interface InvokeAgentResult {
+  invocationId: string
+  agentName: string
+  displayName: string
+  source: DefinitionSource
+  resolvedVersion?: number
+  composed: ComposedAgentSpec
+}
+
 export interface HandoffInput {
   runId: string
   kind: 'chain'
@@ -118,7 +149,10 @@ export interface HandoffInput {
 }
 
 export class OrchestratorToolHandlers {
-  constructor(private readonly options: ToolHandlerOptions) {}
+  private readonly logger: Logger
+  constructor(private readonly options: ToolHandlerOptions) {
+    this.logger = (options.logger ?? createNoopLogger()).child({ component: 'tool-handlers' })
+  }
 
   listCatalog(input: ListCatalogInput = {}): { items: CatalogItem[] } {
     const catalog = this.getCatalog()
@@ -211,6 +245,7 @@ export class OrchestratorToolHandlers {
   }
 
   startChain(input: StartChainInput) {
+    this.logger.info('startChain', { chain: input.chain, task: input.task })
     const catalog = this.getCatalog()
     const plan = compileChainDefinition({
       catalog,
@@ -231,6 +266,18 @@ export class OrchestratorToolHandlers {
     state.budget = createBudgetState(plan.budgetPolicy)
     saveChainState(this.options.projectRoot, state)
 
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'chain.started',
+      runId: state.chainId,
+      runKind: 'chain',
+      payload: {
+        definitionName: state.definitionName,
+        task: state.task,
+        currentStepId: state.currentStepId,
+        state: state.state,
+      },
+    })
+
     return {
       chainId: state.chainId,
       state: state.state,
@@ -241,6 +288,11 @@ export class OrchestratorToolHandlers {
   }
 
   advanceChain(input: AdvanceChainInput): AdvanceChainResult {
+    this.logger.debug('advanceChain', {
+      chainId: input.chainId,
+      stepId: input.stepId,
+      outcome: input.outcome,
+    })
     const state = loadChainState(this.options.projectRoot, input.chainId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
     const currentStep = this.requireCurrentStep(state)
@@ -317,6 +369,32 @@ export class OrchestratorToolHandlers {
       )
     }
 
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: `chain.${result.state}`,
+      runId: state.chainId,
+      runKind: 'chain',
+      payload: {
+        stepId: input.stepId,
+        outcome: input.outcome,
+        state: result.state,
+        ...(result.nextStep ? { nextStepId: result.nextStep.stepId } : {}),
+        ...(result.error ? { error: result.error.code } : {}),
+      },
+    })
+
+    // Enqueue a durable retry job so the step survives an orchestrator restart.
+    if (result.recovery?.type === 'retry') {
+      new JobQueue(getPersistenceDb()).enqueue({
+        jobType: 'chain_retry',
+        payload: {
+          chainId: state.chainId,
+          stepId: input.stepId,
+          projectRoot: this.options.projectRoot,
+        },
+        priority: 5,
+      })
+    }
+
     return {
       state: result.state,
       nextStep: result.nextStep,
@@ -341,6 +419,13 @@ export class OrchestratorToolHandlers {
     })
     saveTeamState(this.options.projectRoot, state)
 
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'team.started',
+      runId: state.teamId,
+      runKind: 'team',
+      payload: { definitionName: state.definitionName, task: state.task, readyTaskIds: state.readyTaskIds },
+    })
+
     return {
       teamId: state.teamId,
       state: state.state,
@@ -359,6 +444,13 @@ export class OrchestratorToolHandlers {
       ...(typeof input.claim === 'boolean' ? { claim: input.claim } : {}),
     })
     saveTeamState(this.options.projectRoot, assigned.state)
+
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'team.task.assigned',
+      runId: assigned.state.teamId,
+      runKind: 'team',
+      payload: { taskId: input.taskId, assignee: input.assignee, state: assigned.state.state },
+    })
 
     return {
       teamId: assigned.state.teamId,
@@ -394,6 +486,19 @@ export class OrchestratorToolHandlers {
       )
     }
 
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: `team.${completion.state.state}`,
+      runId: completion.state.teamId,
+      runKind: 'team',
+      payload: {
+        taskId: input.taskId,
+        outcome: input.outcome,
+        state: completion.state.state,
+        readyTaskIds: completion.state.readyTaskIds,
+        ...(input.error ? { error: (input.error as { code?: string }).code } : {}),
+      },
+    })
+
     return {
       teamId: completion.state.teamId,
       state: completion.state.state,
@@ -425,6 +530,18 @@ export class OrchestratorToolHandlers {
     const state = this.materializeWorkflowAction(created.state, created.nextAction)
     this.refreshWorkflowBudget(state)
     saveWorkflowState(this.options.projectRoot, state)
+
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'workflow.started',
+      runId: state.workflowId,
+      runKind: 'workflow',
+      payload: {
+        definitionName: state.definitionName,
+        task: state.task,
+        currentPhaseId: state.currentPhaseId ?? null,
+        state: state.state,
+      },
+    })
 
     return {
       workflowId: state.workflowId,
@@ -460,6 +577,17 @@ export class OrchestratorToolHandlers {
         }),
       )
     }
+
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: `workflow.${nextState.state}`,
+      runId: nextState.workflowId,
+      runKind: 'workflow',
+      payload: {
+        state: nextState.state,
+        currentPhaseId: nextState.currentPhaseId ?? null,
+        ...(nextState.lastError ? { error: nextState.lastError.code } : {}),
+      },
+    })
 
     return {
       workflowId: nextState.workflowId,
@@ -562,6 +690,13 @@ export class OrchestratorToolHandlers {
     retried.state.budget = budgetUpdate.budget
     saveChainState(this.options.projectRoot, retried.state)
 
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'chain.retrying',
+      runId: retried.state.chainId,
+      runKind: 'chain',
+      payload: { stepId: input.stepId, attemptsRemaining: retried.attemptsRemaining, state: retried.state.state },
+    })
+
     return {
       runId: retried.state.chainId,
       stepId: input.stepId,
@@ -577,6 +712,13 @@ export class OrchestratorToolHandlers {
 
     saveExecutionPlan(this.options.projectRoot, escalated.plan)
     saveChainState(this.options.projectRoot, escalated.state)
+
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'chain.escalated',
+      runId: escalated.state.chainId,
+      runKind: 'chain',
+      payload: { stepId: input.stepId, targetAgent: input.targetAgent, state: escalated.state.state },
+    })
 
     return {
       runId: escalated.state.chainId,
@@ -614,6 +756,137 @@ export class OrchestratorToolHandlers {
       path: filePath,
       summary: handoff.summary,
       resumable: true,
+    }
+  }
+
+  invokeAgent(input: InvokeAgentInput): InvokeAgentResult {
+    this.logger.info('invokeAgent', { agent: input.agent, task: input.task, version: input.version })
+    const catalog = this.getCatalog()
+    let agent = this.requireAgent(catalog, input.agent)
+
+    // If a version pin is provided, override the resolved agent body from DB.
+    if (input.version !== undefined) {
+      const store = new CatalogStore(getPersistenceDb())
+      const row = store.getVersion('agent', input.agent, input.version)
+      if (!row) throw new Error(`Version ${input.version} of agent/${input.agent} not found`)
+      const fm = JSON.parse(row.frontmatterJson) as Record<string, unknown>
+      agent = {
+        ...agent,
+        prompt: row.body,
+        ...(typeof fm.model === 'string' ? { modelHint: fm.model } : {}),
+      }
+    }
+
+    const domain = input.domainSkill ? catalog.domains[input.domainSkill] : undefined
+    const mode = input.modeSkill ? catalog.modes[input.modeSkill] : undefined
+
+    const composed = composePromptLayers({
+      base: {
+        source: 'base',
+        name: agent.name,
+        prompt: agent.prompt,
+        allowedTools: agent.allowedTools,
+        ...(agent.modelHint ? { modelHint: agent.modelHint } : {}),
+        constraints: agent.constraints,
+        approvalPolicy: 'minimal',
+      },
+      ...(domain
+        ? {
+            domain: {
+              source: 'domain',
+              name: domain.name,
+              prompt: domain.prompt,
+              ...(domain.allowedTools ? { allowedTools: domain.allowedTools } : {}),
+              ...(domain.modelHint ? { modelHint: domain.modelHint } : {}),
+              constraints: domain.constraints,
+              ...(domain.approvalPolicy ? { approvalPolicy: domain.approvalPolicy } : {}),
+            },
+          }
+        : {}),
+      ...(mode
+        ? {
+            mode: {
+              source: 'mode',
+              name: mode.name,
+              prompt: mode.prompt,
+              ...(mode.allowedTools ? { allowedTools: mode.allowedTools } : {}),
+              ...(mode.modelHint ? { modelHint: mode.modelHint } : {}),
+              constraints: mode.constraints,
+              ...(mode.approvalPolicy ? { approvalPolicy: mode.approvalPolicy } : {}),
+            },
+          }
+        : {}),
+      step: {
+        source: 'step',
+        name: 'invoke-task',
+        prompt: input.task,
+        constraints: [],
+        approvalPolicy: 'minimal',
+      },
+    })
+
+    // Build a real single-step chain run so subscribe_run, budget, and journal all apply.
+    const stepId = 'invoke-step'
+    const now = new Date().toISOString()
+    const outputContract = getOutputContract('custom')
+    const compiledStep: CompiledStepPlan = {
+      id: stepId,
+      kind: 'step',
+      agent: agent.name,
+      skills: [],
+      stepType: 'custom',
+      instructions: input.task,
+      allowedTools: composed.tools,
+      model: composed.model,
+      outputContract,
+      transitions: { success: 'done', failure: 'done' },
+      composedAgent: composed,
+      ...(input.domainSkill ? { domainSkill: input.domainSkill } : {}),
+      ...(input.modeSkill ? { modeSkill: input.modeSkill } : {}),
+    }
+    const plan: ExecutionPlan = {
+      id: crypto.randomUUID(),
+      kind: 'chain',
+      definition: {
+        kind: 'chain',
+        name: `agent:${agent.name}`,
+        version: agent.version ?? '1.0.0',
+        source: agent.source,
+        path: agent.path,
+      },
+      cli: getCliContext(),
+      project: { rootPath: this.options.projectRoot },
+      budgetPolicy: buildBudgetPolicy('chain'),
+      entrypoint: stepId,
+      compiledSteps: [compiledStep],
+      createdAt: now,
+      task: input.task,
+    }
+    const chainState = createChainState(plan)
+    chainState.budget = createBudgetState(plan.budgetPolicy)
+    saveExecutionPlan(this.options.projectRoot, plan)
+    saveChainState(this.options.projectRoot, chainState)
+
+    getEventBus().emit(getPersistenceDb(), {
+      eventType: 'agent.invoked',
+      runId: chainState.chainId,
+      runKind: 'chain',
+      payload: {
+        agentName: input.agent,
+        task: input.task,
+        ...(input.version !== undefined ? { version: input.version } : {}),
+        ...(input.domainSkill ? { domainSkill: input.domainSkill } : {}),
+        ...(input.modeSkill ? { modeSkill: input.modeSkill } : {}),
+      },
+    })
+
+    return {
+      invocationId: chainState.chainId,
+      agentName: agent.name,
+      displayName: agent.displayName,
+      source: agent.source,
+      ...(input.version !== undefined ? { resolvedVersion: input.version } : {}),
+      composed,
     }
   }
 
@@ -686,10 +959,19 @@ export class OrchestratorToolHandlers {
   }
 
   private getCatalog(): OrchestrationCatalog {
-    return loadCatalog({
+    const base = loadCatalog({
       projectRoot: this.options.projectRoot,
       ...(this.options.libraryOrchestrationRoot ? { libraryOrchestrationRoot: this.options.libraryOrchestrationRoot } : {}),
       ...(this.options.libraryAgentsRoot ? { libraryAgentsRoot: this.options.libraryAgentsRoot } : {}),
+    })
+    const hostCli = this.options.hostCli
+    const resolverHostCli = hostCli === 'opencode' || hostCli === 'claude-code' || hostCli === 'codex'
+      ? hostCli
+      : undefined
+    return resolveCatalog(base, {
+      db: getPersistenceDb(),
+      projectRoot: this.options.projectRoot,
+      ...(resolverHostCli !== undefined ? { hostCli: resolverHostCli } : {}),
     })
   }
 

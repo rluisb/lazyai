@@ -1,4 +1,4 @@
-export type DefinitionSource = 'library' | 'project'
+export type DefinitionSource = 'library' | 'project' | 'db' | 'user_project' | 'user_global'
 export type CatalogKind = 'agent' | 'domain' | 'mode' | 'chain' | 'team' | 'workflow'
 export type HostCli = 'claude-code' | 'codex' | 'opencode' | 'gemini' | 'copilot'
 export type DispatchMode = 'task-tool' | 'native-subagent' | 'sdk-session' | 'instruction-only'

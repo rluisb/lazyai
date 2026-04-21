@@ -14,6 +14,8 @@ import type {
 
 const DEFAULT_ALLOWED_TOOLS = ['Read', 'Grep', 'Glob', 'Edit', 'Write', 'Bash']
 
+export type { ParsedFrontmatter }
+
 export interface LoaderOptions {
   projectRoot: string
   libraryOrchestrationRoot?: string
@@ -177,7 +179,7 @@ function loadAgents(dirPath: string, source: DefinitionSource): Record<string, B
   return records
 }
 
-function parseMarkdownFrontmatter(content: string): ParsedFrontmatter {
+export function parseMarkdownFrontmatter(content: string): ParsedFrontmatter {
   if (!content.startsWith('---\n')) {
     return { attributes: {}, body: content }
   }

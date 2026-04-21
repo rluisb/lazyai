@@ -12,6 +12,7 @@ import (
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
+	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -86,16 +87,24 @@ func (a *GeminiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error
 		}
 	}
 
-	// Copy custom slash commands (TOML files).
-	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-		Ctx:          ctx,
-		SourceSubdir: "commands",
-		SelectionKey: "commands",
-		ToDestPath: func(file string) string {
-			return filepath.Join(geminiDir, "commands", filepath.Base(file))
-		},
-	}); err != nil {
-		return nil, err
+	// Copy custom slash commands (TOML files). Spec 017: prefer the
+	// per-tool `library/gemini/commands/` subdir; fall back to the legacy
+	// top-level `library/commands/` for one release.
+	commandsSubdir := library.ResolveGeminiCommandsSubdir(ctx.LibraryFS)
+	if commandsSubdir != "" {
+		if commandsSubdir == library.GeminiCommandsSubdirLegacy {
+			log.Println("[gemini] using legacy library/commands/ path; please regenerate or migrate to library/gemini/commands/")
+		}
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: commandsSubdir,
+			SelectionKey: "commands",
+			ToDestPath: func(file string) string {
+				return filepath.Join(geminiDir, "commands", filepath.Base(file))
+			},
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	// Root GEMINI.md placement is handled centrally by scaffold/root.go.
@@ -166,4 +175,15 @@ func (a *GeminiAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, err
 
 func (a *GeminiAdapter) CanRunHeadless() bool { return false }
 
-func (a *GeminiAdapter) RunHeadlessValidation(ctx *AdapterContext) error { return nil }
+// RunHeadlessValidation performs a best-effort post-install probe.
+// Gemini has no non-interactive `--version` / `doctor` subcommand as of the
+// 2026 reference cutoff, so the strongest signal we can emit is whether
+// the `gemini` binary is discoverable on PATH. Non-fatal either way.
+func (a *GeminiAdapter) RunHeadlessValidation(_ *AdapterContext) error {
+	if _, err := exec.LookPath("gemini"); err != nil {
+		log.Println("[gemini] binary not found on PATH; files installed but CLI is not wired up yet")
+		return nil
+	}
+	log.Println("[gemini] binary found on PATH")
+	return nil
+}

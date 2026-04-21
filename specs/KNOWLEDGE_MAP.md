@@ -20,6 +20,7 @@
 | 014 | Copilot global MCP compile (`~/.copilot/mcp-config.json` + VS Code mcp.json split) | ✅ Complete | `feature/go-migration` |
 | 015 | Claude Code `--local-secrets` flag routing MCP to `.claude/settings.local.json` | ✅ Complete | `feature/go-migration` |
 | 016 | `ai-setup build-plugin` — generate Claude Code plugin from library (agents + skills + commands + output styles) | ✅ Complete | `feature/go-migration` |
+| 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
 
 ## Key Architecture Decisions
 
@@ -60,6 +61,10 @@
 | `internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
 | `internal/plugin/plugin.go#Build` | Generates a Claude Code plugin directory from the library FS: manifest, agents (forbidden-field stripping), skills (flat → `<name>/SKILL.md`), commands, output styles (spec 016) |
 | `cmd/build_plugin.go` | `ai-setup build-plugin --out <path> [--force]` cobra subcommand (spec 016) |
+| `cmd/build_helpers.go#preflightOutDir` | Shared out-dir preflight logic reused by `build-plugin` and `build-gemini-extension` (spec 017) |
+| `internal/library/embed.go#ResolveGeminiCommandsSubdir` | Resolves preferred `gemini/commands` with fallback to legacy top-level `commands/` for one release (spec 017) |
+| `internal/geminiext/geminiext.go#Build` | Generates a Gemini CLI extension directory: `gemini-extension.json`, raw `GEMINI.md`, commands (with namespacing), static-only `mcpServers` (spec 017) |
+| `cmd/build_gemini_extension.go` | `ai-setup build-gemini-extension --out <path> [--force]` cobra subcommand (spec 017) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 

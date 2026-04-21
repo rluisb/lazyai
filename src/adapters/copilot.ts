@@ -56,7 +56,7 @@ export class CopilotAdapter implements ToolAdapter {
     if (isOrchestratorEnabled(ctx)) {
       await writeContentWithRecord({
         dest: path.join(promptsDir, 'orchestrator.prompt.md'),
-        content: getOrchestratorPromptContent(),
+        content: getOrchestratorPromptContent(ctx),
         ctx,
         source: 'generated:orchestrator-prompt',
       })

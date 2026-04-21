@@ -95,7 +95,7 @@
       "description": "Optional orchestration control plane for chains, teams, and workflows",
       "command": "npx",
       "args": ["-y", "@ai-setup/orchestrator"],
-      "tools": ["compose_agent", "start_chain", "advance_chain", "build_team", "start_workflow", "get_status", "list_catalog"],
+      "tools": ["list_catalog", "compose_agent", "start_chain", "advance_chain", "get_status", "get_budget", "retry_step", "escalate_step", "handoff"],
       "enabled": false,
       "requiresInstall": false
     }

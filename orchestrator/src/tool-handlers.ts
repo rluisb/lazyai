@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { runBootstrap } from './bootstrap.js'
 import { aggregateBudgets, createBudgetState, evaluateBudgetHealth, updateBudget } from './budget-tracker.js'
 import {
   advanceChainState,
@@ -14,10 +15,18 @@ import {
   createStructuredError,
   readErrorJournal,
 } from './error-journal.js'
+import {
+  combineHousekeepingReports,
+  runInlineMemoryExtraction,
+  runPostTaskHousekeeping,
+  runPreTaskHousekeeping,
+} from './housekeeping.js'
 import { loadCatalog } from './loader.js'
 import {
   loadChainState,
   loadExecutionPlan,
+  readMaintenanceContracts,
+  readSyncState,
   loadTeamState,
   loadWorkflowState,
   saveChainState,
@@ -263,6 +272,16 @@ export class OrchestratorToolHandlers {
     saveExecutionPlan(this.options.projectRoot, plan)
 
     const state = createChainState(plan)
+    try {
+      state.bootstrapReport = runBootstrap({
+        projectRoot: this.options.projectRoot,
+        memoryPath: 'specs/memory',
+        syncState: readSyncState(this.options.projectRoot),
+        contracts: readMaintenanceContracts(this.options.projectRoot),
+      })
+    } catch {
+      // bootstrap is intentionally non-blocking
+    }
     state.budget = createBudgetState(plan.budgetPolicy)
     saveChainState(this.options.projectRoot, state)
 
@@ -352,6 +371,35 @@ export class OrchestratorToolHandlers {
       ...(input.output ? { output: input.output } : {}),
       ...(validationError ? { validationError } : {}),
     })
+
+    try {
+      const syncState = readSyncState(this.options.projectRoot)
+      const contracts = readMaintenanceContracts(this.options.projectRoot)
+      const inlineReport = runInlineMemoryExtraction({
+        stepId: input.stepId,
+        contracts,
+        ...(input.output ? { stepOutput: input.output } : {}),
+      })
+      const postReport = runPostTaskHousekeeping({
+        syncState,
+        contracts,
+        stagedMemoryEntries: inlineReport.stagedMemoryEntries,
+      })
+      const completedStep = result.stateSnapshot.steps.find((step) => step.stepId === input.stepId)
+      if (completedStep) {
+        completedStep.housekeepingReport = combineHousekeepingReports(inlineReport, postReport)
+      }
+
+      if (result.nextStep) {
+        const preReport = runPreTaskHousekeeping({ syncState, contracts })
+        const nextStepState = result.stateSnapshot.steps.find((step) => step.stepId === result.nextStep?.stepId)
+        if (nextStepState) {
+          nextStepState.housekeepingReport = preReport
+        }
+      }
+    } catch {
+      // housekeeping is intentionally non-blocking
+    }
 
     result.stateSnapshot.budget = nextBudget
     saveChainState(this.options.projectRoot, result.stateSnapshot)

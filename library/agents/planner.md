@@ -1,6 +1,7 @@
 ---
 name: Planner
 model: opus
+tools: memory context7 fetch
 ---
 
 # Planner Agent

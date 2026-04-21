@@ -23,6 +23,7 @@ export const skillIdSchema = z.enum([
   'implement',
   'iterate',
   'memory-write',
+  'orchestrate',
   'parallel-execution',
   'plan',
   'research',

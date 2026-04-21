@@ -14,6 +14,7 @@ import { registerInit } from './commands/init.js'
 import { registerList } from './commands/list.js'
 import { registerOrchestration } from './commands/orchestration.js'
 import { createMigrateCommand } from './commands/migrate.js'
+import { registerServer } from './commands/server.js'
 import { registerStatus } from './commands/status.js'
 import { registerUpdate } from './commands/update.js'
 
@@ -54,6 +55,7 @@ export function createProgram(): Command {
   registerList(program)
   registerInfo(program)
   registerOrchestration(program)
+  registerServer(program)
   registerCompletions(program)
 
   // Add migration commands

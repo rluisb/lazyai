@@ -93,7 +93,20 @@ describe('tool adapters', () => {
     ensureDir(path.join(libraryDir, 'prompts'))
     ensureDir(path.join(libraryDir, 'tool-agents'))
     writeFile(path.join(libraryDir, 'agents/builder.md'), '# builder')
-    writeFile(path.join(libraryDir, 'agents/orchestrator.md'), '---\nname: Orchestrator\nmodel: opus\n---\n\n# Orchestrator\n\nUse start_chain, build_team, and get_status.')
+    writeFile(
+      path.join(libraryDir, 'agents/orchestrator.md'),
+      [
+        '---',
+        'name: Orchestrator',
+        'model: opus',
+        'tools: list_catalog compose_agent start_chain advance_chain get_status get_budget retry_step escalate_step handoff',
+        '---',
+        '',
+        '# Orchestrator',
+        '',
+        'Use start_chain, advance_chain, and get_status.',
+      ].join('\n'),
+    )
     writeFile(path.join(libraryDir, 'agents/reviewer.md'), '# reviewer')
     writeFile(path.join(libraryDir, 'prompts/plan.md'), '# plan')
     writeFile(path.join(libraryDir, 'tool-agents/agents-dir.md'), '# agents context')
@@ -385,10 +398,33 @@ describe('tool adapters', () => {
       enableServers: ['orchestrator'],
     })
 
-    expect(readFile(path.join(claudeTarget, '.claude/agents/orchestrator.md'))).toContain('start_chain')
-    expect(readFile(path.join(opencodeTarget, '.opencode/agents/orchestrator.md'))).toContain('start_chain')
-    expect(readFile(path.join(codexTarget, '.agents/skills/orchestrator/SKILL.md'))).toContain('build_team')
-    expect(readFile(path.join(geminiTarget, '.gemini/skills/orchestrator/SKILL.md'))).toContain('get_status')
-    expect(readFile(path.join(copilotTarget, '.github/prompts/orchestrator.prompt.md'))).toContain('start_chain')
+    const claudeOut = readFile(path.join(claudeTarget, '.claude/agents/orchestrator.md'))
+    const opencodeOut = readFile(path.join(opencodeTarget, '.opencode/agents/orchestrator.md'))
+    const codexOut = readFile(path.join(codexTarget, '.agents/skills/orchestrator/SKILL.md'))
+    const geminiOut = readFile(path.join(geminiTarget, '.gemini/skills/orchestrator/SKILL.md'))
+    const copilotOut = readFile(path.join(copilotTarget, '.github/prompts/orchestrator.prompt.md'))
+
+    expect(claudeOut).toContain('tools: list_catalog, compose_agent, start_chain, advance_chain, get_status, get_budget, retry_step, escalate_step, handoff')
+    expect(claudeOut).toContain('# Orchestrator')
+
+    expect(opencodeOut).toContain('<!-- allowed-tools: list_catalog, compose_agent, start_chain, advance_chain, get_status, get_budget, retry_step, escalate_step, handoff -->')
+    expect(opencodeOut).toContain('<!-- Recommended model: opus -->')
+
+    for (const out of [codexOut, geminiOut, copilotOut]) {
+      expect(out).toContain('## Allowed MCP Tools')
+      expect(out).toContain('- list_catalog')
+      expect(out).toContain('- compose_agent')
+      expect(out).toContain('- start_chain')
+      expect(out).toContain('- advance_chain')
+      expect(out).toContain('- get_status')
+      expect(out).toContain('- get_budget')
+      expect(out).toContain('- retry_step')
+      expect(out).toContain('- escalate_step')
+      expect(out).toContain('- handoff')
+    }
+
+    expect(codexOut).not.toContain('build_team')
+    expect(geminiOut).not.toContain('build_team')
+    expect(copilotOut).not.toContain('build_team')
   })
 })

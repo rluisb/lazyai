@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { loadChainState } from '../persistence.js'
 import { OrchestratorToolHandlers } from '../tool-handlers.js'
 import type { ChainStepStatus } from '../types.js'
 
@@ -216,4 +217,40 @@ describe('tool-handlers', () => {
     expect(budget.scope).toBe('workflow')
     expect(budget.tokens.consumed).toBeGreaterThanOrEqual(30)
   })
+
+  it('attaches bootstrap and housekeeping reports to chain state', () => {
+    const handlers = setupFixture()
+
+    const started = handlers.startChain({
+      chain: 'repair',
+      task: 'Fix auth regression',
+    })
+
+    const initial = handlers.getStatus({ runId: started.chainId, kind: 'chain' })
+    if (initial.kind !== 'chain') throw new Error('expected chain status')
+    expect(loadChainState(projectRootFromHandlers(handlers), started.chainId).bootstrapReport?.memoryPath).toBe('specs/memory')
+
+    const current = initial.current
+    if (!isChainStepStatus(current)) throw new Error('expected chain step status')
+
+    handlers.advanceChain({
+      chainId: started.chainId,
+      stepId: current.stepId,
+      outcome: 'success',
+      output: {
+        summary: 'done',
+        status: 'ok',
+        files_changed: ['src/auth.ts'],
+        tests_passed: true,
+      },
+    })
+
+    const completed = handlers.getStatus({ runId: started.chainId, kind: 'chain' })
+    if (completed.kind !== 'chain') throw new Error('expected chain status')
+    expect(loadChainState(projectRootFromHandlers(handlers), started.chainId).steps[0]?.housekeepingReport?.phase).toBe('combined')
+  })
 })
+
+function projectRootFromHandlers(handlers: OrchestratorToolHandlers): string {
+  return (handlers as unknown as { options: { projectRoot: string } }).options.projectRoot
+}

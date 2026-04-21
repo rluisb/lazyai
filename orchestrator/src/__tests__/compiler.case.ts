@@ -55,6 +55,7 @@ const catalog: OrchestrationCatalog = {
           id: 'implement-fix',
           agent: 'builder',
           skills: ['typescript'],
+          taskType: 'adr',
           description: 'Fix the issue',
           prompt: 'Repair it',
           transitions: { success: 'done', failure: { retry: 1, then: 'done' } },
@@ -80,7 +81,10 @@ describe('compiler', () => {
     expect(plan.definition.name).toBe('repair')
     expect(plan.entrypoint).toBe('implement-fix')
     expect(plan.compiledSteps?.[0]?.stepType).toBe('implement')
+    expect(plan.compiledSteps?.[0]?.taskType).toBe('adr')
     expect(plan.compiledSteps?.[0]?.domainSkill).toBe('typescript')
+    expect(plan.compiledSteps?.[0]?.instructions).toContain('Task Type: adr')
+    expect(plan.compiledSteps?.[0]?.instructions).toContain('ADR Rules')
     expect(plan.compiledSteps?.[0]?.outputContract.requiredFields).toEqual([
       'summary',
       'status',

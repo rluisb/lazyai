@@ -1,6 +1,7 @@
 ---
 name: Builder
 model: sonnet
+tools: filesystem ripgrep memory
 ---
 
 # Builder Agent

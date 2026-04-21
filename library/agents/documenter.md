@@ -1,6 +1,7 @@
 ---
 name: Documenter
 model: sonnet
+tools: fetch memory filesystem
 ---
 
 # Documenter Agent

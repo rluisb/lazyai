@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import { z } from 'zod'
 import { composeAgent } from './composer.js'
+import { resolveSpecAgentContent } from './loader.js'
 import type {
   ApprovalPolicy,
   BudgetPolicy,
@@ -260,7 +261,8 @@ function compileStep(
   const outputContract = getOutputContract(stepType)
   const stepAllowedTools = step.allowedTools
   const stepApprovalPolicy: ApprovalPolicy = step.gate ? 'strict' : 'minimal'
-  const instructions = buildStepInstructions(step, outputContract)
+  const specAgentContent = resolveSpecAgentContent(step.taskType)
+  const instructions = buildStepInstructions(step, outputContract, specAgentContent)
 
   const composed = composeAgent({
     ...(rootContext
@@ -328,6 +330,7 @@ function compileStep(
     kind: 'step',
     agent: agent.name,
     skills: step.skills,
+    ...(step.taskType ? { taskType: step.taskType } : {}),
     stepType,
     ...(domain ? { domainSkill: domain.name } : {}),
     ...(mode ? { modeSkill: mode.name } : {}),
@@ -350,15 +353,21 @@ function shouldInjectSkill(
   return true
 }
 
-function buildStepInstructions(step: ChainStepDefinition, outputContract: StepOutputContract): string {
+function buildStepInstructions(
+  step: ChainStepDefinition,
+  outputContract: StepOutputContract,
+  specAgentContent?: string,
+): string {
   const sections = [
     `Step: ${step.id}`,
     step.description,
     step.prompt,
+    step.taskType ? `Task Type: ${step.taskType}` : undefined,
     step.skills.length > 0 ? `Apply supporting skills: ${step.skills.join(', ')}.` : undefined,
     `Return structured output with required fields: ${outputContract.requiredFields.join(', ')}.`,
     `Valid outcomes: ${Object.keys(step.transitions).join(', ')}.`,
     step.gate ? `A ${step.gate} gate must be satisfied before the chain can continue.` : undefined,
+    specAgentContent ? `Relevant spec-agent guidance:\n\n${specAgentContent}` : undefined,
   ]
 
   return sections.filter(Boolean).join('\n\n')

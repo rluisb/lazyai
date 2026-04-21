@@ -1,6 +1,7 @@
 ---
 name: Scout
 model: sonnet
+tools: ripgrep filesystem memory codegraph
 ---
 
 # Scout Agent

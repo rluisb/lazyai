@@ -30,7 +30,8 @@ export class OpenCodeAdapter implements ToolAdapter {
 
     if (!isGlobal) {
       const configPath = path.join(ctx.targetDir, 'opencode.json')
-      if (!files.fileExists(configPath)) {
+      const jsoncConfigPath = path.join(ctx.targetDir, 'opencode.jsonc')
+      if (!files.fileExists(configPath) && !files.fileExists(jsoncConfigPath)) {
         const defaultConfig = {
           $schema: 'https://opencode.ai/config.json',
           instructions: ['AGENTS.md'],

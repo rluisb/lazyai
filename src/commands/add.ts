@@ -8,6 +8,7 @@ import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import { createStore, writeStore } from '../store/index.js'
 import type { FileRecord, ToolId } from '../types.js'
 import { fileExists, resolveLibraryDir } from '../utils/files.js'
+import { formatOrchestratorHintBody } from '../utils/orchestrator-hints.js'
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
 
@@ -94,6 +95,10 @@ export function registerAdd(program: Command): void {
       ]
 
       await writeStore(targetDir, data)
+
+      if (data.config.enableServers?.includes('orchestrator')) {
+        p.note(formatOrchestratorHintBody(toolId), '💡 Orchestrator MCP is configured')
+      }
 
       p.outro(`✅ Successfully added ${toolId}!`)
     })

@@ -190,6 +190,7 @@ export function registerCompile(program: Command): void {
           force: opts.force,
           strategy,
           selections,
+          ...(store.config.enableServers != null ? { enableServers: store.config.enableServers } : {}),
         })
 
         await compileMcp({

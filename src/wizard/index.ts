@@ -48,6 +48,7 @@ import {
   resolveGlobalToolTargetDir,
 } from '../utils/global-paths.js'
 import { extractSelections, readManifest } from '../utils/manifest.js'
+import { formatOrchestratorHintBody } from '../utils/orchestrator-hints.js'
 import { GO_BACK, showPhaseComplete, showPhaseProgress } from '../utils/ui.js'
 import { runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
@@ -787,6 +788,12 @@ export async function runWizard(opts: {
       await writeStore(effectiveTargetDir, storeData)
       await appendOperation(effectiveTargetDir, tracker.toOperation())
       checkGitignoreGuidance(effectiveTargetDir)
+
+      if (enableServers?.includes('orchestrator') && installableTools.length > 0) {
+        const representativeTool = installableTools[0] as ToolId
+        p.note(formatOrchestratorHintBody(representativeTool), '💡 Orchestrator MCP is configured')
+      }
+
       outroSuccess(config)
 
       // Break out of the outer while(true) loop — installation complete

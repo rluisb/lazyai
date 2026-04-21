@@ -44,7 +44,7 @@
         },
         "orchestrator": {
             "type": "stdio",
-            "command": "/Users/ricardoborges/.nvm/versions/node/v24.14.0/bin/ai-setup-orchestrator",
+            "command": "ai-setup-orchestrator",
             "args": [
                 "connect"
             ]

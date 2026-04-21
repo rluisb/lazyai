@@ -12,13 +12,16 @@ import { getLogDir, getPort } from './config/paths.js'
 import { createLogger, type Logger } from './logging/logger.js'
 import { createFileSink } from './logging/sink.js'
 import { findRunningServer } from './daemon/discovery.js'
+import { startStdioServer } from './server.js'
 
 export * from './budget-tracker.js'
+export * from './bootstrap.js'
 export * from './chain-machine.js'
 export * from './compiler.js'
 export { composeAgent } from './composer.js'
 export type { ComposeAgentInput as ComposePromptInput } from './composer.js'
 export * from './error-journal.js'
+export * from './housekeeping.js'
 export * from './loader.js'
 export * from './logging/logger.js'
 export * from './logging/sink.js'
@@ -110,21 +113,8 @@ async function main(): Promise<void> {
     return
   }
 
-  // Default: print status / usage hint
-  const existing = await findRunningServer()
-  if (existing) {
-    process.stdout.write(
-      `Orchestrator is running at http://127.0.0.1:${existing.port}/mcp (pid ${existing.pid})\n` +
-      `Point your MCP client at that URL or run \`ai-setup-orchestrator tail\` to stream logs.\n`,
-    )
-  } else {
-    process.stdout.write(
-      `Orchestrator is not running.\n` +
-      `Run \`ai-setup-orchestrator serve\` or \`ai-setup-orchestrator start\` to start it.\n` +
-      `Then configure your MCP client:\n` +
-      `  { "type": "http", "url": "http://127.0.0.1:${getPort()}/mcp" }\n`,
-    )
-  }
+  // Default: stdio MCP server (backward compat — use `connect` for the HTTP+bridge mode)
+  await startStdioServer({ projectRoot: process.cwd() })
 }
 
 function isEntrypoint(): boolean {

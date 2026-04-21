@@ -17,6 +17,20 @@ const CANONICAL_TOOLS = [
   'retry_step',
   'escalate_step',
   'handoff',
+  'catalog_list',
+  'catalog_list_versions',
+  'catalog_get_version',
+  'catalog_create_version',
+  'catalog_set_active',
+  'catalog_diff',
+  'catalog_export_version',
+  'catalog_import',
+  'invoke_agent',
+  'subscribe_run',
+  'unsubscribe_run',
+  'enqueue_job',
+  'get_job',
+  'list_jobs',
 ] as const
 
 function readRegisteredTools(): string[] {

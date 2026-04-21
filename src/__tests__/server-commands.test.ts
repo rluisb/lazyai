@@ -184,7 +184,7 @@ describe('runHealthChecks stdio handshake (integration)', () => {
   const distExists = fs.existsSync(dogfoodDist)
 
   it.skipIf(!distExists)(
-    'handshakes the real orchestrator dist and finds all 9 tools',
+    'handshakes the real orchestrator dist and finds all 23 tools',
     async () => {
       const targetDir = makeTempDir()
       const catalog: Catalog = {
@@ -194,15 +194,12 @@ describe('runHealthChecks stdio handshake (integration)', () => {
             command: 'node',
             args: [dogfoodDist],
             tools: [
-              'list_catalog',
-              'compose_agent',
-              'start_chain',
-              'advance_chain',
-              'get_status',
-              'get_budget',
-              'retry_step',
-              'escalate_step',
-              'handoff',
+              'list_catalog', 'compose_agent', 'start_chain', 'advance_chain',
+              'get_status', 'get_budget', 'retry_step', 'escalate_step', 'handoff',
+              'catalog_list', 'catalog_list_versions', 'catalog_get_version',
+              'catalog_create_version', 'catalog_set_active', 'catalog_diff',
+              'catalog_export_version', 'catalog_import', 'invoke_agent',
+              'subscribe_run', 'unsubscribe_run', 'enqueue_job', 'get_job', 'list_jobs',
             ],
             enabled: true,
           },
@@ -214,7 +211,7 @@ describe('runHealthChecks stdio handshake (integration)', () => {
       const report = await runHealthChecks(targetDir, 'orchestrator', catalog, [], 10000)
       const handshake = report.checks.find((c) => c.name === 'stdio handshake')
       expect(handshake?.status).toBe('pass')
-      expect(handshake?.message).toContain('9 tools')
+      expect(handshake?.message).toContain('23 tools')
     },
     15000,
   )

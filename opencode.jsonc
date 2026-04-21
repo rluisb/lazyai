@@ -77,6 +77,11 @@
         "--headless"
       ]
     },
+    "orchestrator": {
+      "type": "local",
+      "enabled": true,
+      "command": ["/Users/ricardoborges/.nvm/versions/node/v24.14.0/bin/ai-setup-orchestrator", "connect"]
+    },
     "context7": {
       "type": "remote",
       "enabled": false,

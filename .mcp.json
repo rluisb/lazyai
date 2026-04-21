@@ -1,56 +1,53 @@
 {
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "."
-      ]
-    },
-    "ripgrep": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-ripgrep"
-      ]
-    },
-    "memoria": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@byronwade/memoria"
-      ]
-    },
-    "codegraph": {
-      "command": "codegraph",
-      "args": [
-        "serve",
-        "--mcp"
-      ]
-    },
-    "qmd": {
-      "command": "qmd",
-      "args": [
-        "mcp"
-      ]
+    "mcpServers": {
+        "memory": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-memory"
+            ]
+        },
+        "filesystem": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "."
+            ]
+        },
+        "ripgrep": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-ripgrep"
+            ]
+        },
+        "memoria": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@byronwade/memoria"
+            ]
+        },
+        "codegraph": {
+            "command": "codegraph",
+            "args": [
+                "serve",
+                "--mcp"
+            ]
+        },
+        "qmd": {
+            "command": "qmd",
+            "args": [
+                "mcp"
+            ]
+        },
+        "orchestrator": {
+            "type": "stdio",
+            "command": "/Users/ricardoborges/.nvm/versions/node/v24.14.0/bin/ai-setup-orchestrator",
+            "args": [
+                "connect"
+            ]
+        }
     }
-  }
 }

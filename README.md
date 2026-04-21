@@ -54,9 +54,11 @@ This launches the setup wizard, where you choose:
 
 - scope: `project`, `global`, or `workspace`
 - AI tools: OpenCode, Claude Code, Gemini CLI, GitHub Copilot, Codex
+- CLI tools: which locally installed CLI tools to use as execution surfaces
 - optional MCP integrations
 - optional orchestration scaffolding via `orchestrator`
 - feature preset and git conventions
+- Codex install detection (skips Codex adapter when Codex CLI is not installed)
 
 ### Non-interactive setup
 
@@ -265,7 +267,7 @@ MCP server registration is compiled for tools that have project-local MCP config
   - Example request: `Use the orchestrator agent and start the feature chain for the payments refactor.`
 
 - **OpenCode**
-  - Reads: `opencode.jsonc` + `.opencode/agents/orchestrator.md`
+  - Reads: `.opencode/opencode.jsonc` + `.opencode/agents/orchestrator.md`
   - Best for: orchestrator agent + task-based coordination
   - Example request: `Use the orchestrator to start the bugfix chain for the login failure.`
 
@@ -429,12 +431,12 @@ my-app/
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── GEMINI.md
-├── opencode.json
-├── opencode.jsonc
 ├── .mcp.json
 ├── .vscode/
 │   └── mcp.json
 ├── .opencode/
+│   ├── opencode.json
+│   ├── opencode.jsonc
 │   ├── agents/
 │   ├── skills/
 │   └── commands/
@@ -591,10 +593,10 @@ planning-repo/                          ← workspace root (everything lives her
 ├── .ai-setup.json
 ├── AGENTS.md                           ← includes "Workspace Repos" section with detected stacks
 ├── CLAUDE.md                           ← includes "Workspace Repos" section with detected stacks
-├── opencode.json
-├── opencode.jsonc
 ├── .mcp.json
 ├── .opencode/
+│   ├── opencode.json
+│   ├── opencode.jsonc
 │   ├── agents/
 │   ├── skills/
 │   └── commands/
@@ -648,9 +650,9 @@ _Referenced repos are never modified. Their detected stack info (language, frame
 - **Description:** project instructions for OpenCode plus agent, skill, and command directories
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.opencode/`
-- **Additional project config:** `opencode.json`
+- **Project config:** `.opencode/opencode.json`
 - **Global scope support:** **Yes** — `~/.config/opencode/`
-- **MCP config:** `opencode.jsonc`
+- **MCP config:** `.opencode/opencode.jsonc`
 - **MCP format:** OpenCode `mcp` object with `local`/`remote` entries and `enabled` flags
 - **Special behavior:** agent YAML frontmatter is stripped and a `<!-- Recommended model: ... -->` comment is injected when a `model:` frontmatter key exists
 
@@ -659,9 +661,9 @@ _Referenced repos are never modified. Their detected stack info (language, frame
 
 ```text
 AGENTS.md
-opencode.json
-opencode.jsonc
 .opencode/
+├── opencode.json
+├── opencode.jsonc
 ├── AGENTS.md
 ├── agents/
 │   ├── AGENTS.md
@@ -1461,7 +1463,7 @@ This file contains the full catalog of bundled servers, including:
 
 | Tool | Compiled MCP output | Notes |
 |---|---|---|
-| OpenCode | `opencode.jsonc` | Includes enabled + disabled servers with OpenCode-specific structure |
+| OpenCode | `.opencode/opencode.jsonc` | Includes enabled + disabled servers with OpenCode-specific structure |
 | Claude Code | `.mcp.json` | Includes only enabled servers |
 | GitHub Copilot | `.vscode/mcp.json` | Includes only enabled servers |
 | Gemini CLI | `.gemini/settings.json` | Includes only enabled stdio servers; remote servers are skipped |

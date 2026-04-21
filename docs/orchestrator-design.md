@@ -2,6 +2,8 @@
 
 This document defines the technical design for the optional orchestration layer in ai-setup. It covers the architecture, definitions, schemas, runtime model, tool surface, composition algorithm, and control policies for sections 1-13 of the full design.
 
+> **⚠ Scope note — shipped vs. aspirational.** This document describes the full aspirational orchestrator design across all phases. The **shipped Phase 2 MCP server** at [`orchestrator/src/server.ts`](../orchestrator/src/server.ts) registers exactly 9 tools: `list_catalog`, `compose_agent`, `start_chain`, `advance_chain`, `get_status`, `get_budget`, `retry_step`, `escalate_step`, `handoff`. Any other tool mentioned below — including `build_team`, `start_workflow`, `advance_workflow`, `assign_task`, `complete_task`, `list_agents`, `list_skills` — is **future work**, not currently implemented. Treat sections that reference those tools as roadmap, not contract.
+
 > For the **current shipped user-facing workflow**, see [`docs/orchestration-usage.md`](./orchestration-usage.md). This design document includes rollout planning and future-facing architecture context; the usage guide is the source for what Phase 5 documents as available now.
 
 ---

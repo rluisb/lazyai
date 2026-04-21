@@ -1,6 +1,7 @@
 ---
 name: Red-Team
 model: opus
+tools: playwright fetch memoria
 ---
 
 # Red-Team Agent

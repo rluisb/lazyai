@@ -1,0 +1,40 @@
+name: Parity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Runs the cross-runtime parity harness which checks that `ai-setup init`
+# produces byte-identical (modulo runtime-specific artifacts) output trees
+# from both the Go and TS runtimes.
+#
+# Currently advisory — divergences are surfaced in CI logs but don't block
+# merges. Elevate to required once the known gaps (see scripts/PARITY.md)
+# are closed.
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "pnpm"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Run parity harness
+        run: bash scripts/parity-check.sh --verbose

@@ -35,6 +35,22 @@ export interface FileRecord {
   owner?: 'library' | 'user' | 'migrated'
 }
 
+/**
+ * Housekeeping integration config. Mirrors Go's
+ * `internal/types.HousekeepingConfig` in packages/ai-setup-go. When provided,
+ * `scaffoldHousekeeping` emits `.ai/housekeeping/sync-state.json` tracking
+ * QMD/CodeGraph drift status and repair proposals.
+ */
+export interface HousekeepingConfig {
+  memoryPath?: string
+  enableObsidian?: boolean
+  obsidianVaultPath?: string
+  enableQmd?: boolean
+  qmdIndexPath?: string
+  enableCodegraph?: boolean
+  codegraphDataPath?: string
+}
+
 export interface RepoPermissions {
   read: boolean
   write: boolean

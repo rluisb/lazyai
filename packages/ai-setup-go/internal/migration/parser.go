@@ -34,8 +34,14 @@ func parseDetectedSetup(ctx *MigrationContext, detection DetectionResult) (*Pars
 	switch detection.AdapterID {
 	case "opencode":
 		return parseOpenCodeSetup(ctx.SourcePath)
+	case "claude-code":
+		return parseClaudeSetup(ctx.SourcePath)
+	case "gemini":
+		return parseGeminiSetup(ctx.SourcePath)
+	case "copilot":
+		return parseCopilotSetup(ctx.SourcePath)
 	default:
-		return nil, fmt.Errorf("unsupported detected setup")
+		return nil, fmt.Errorf("unsupported detected setup: %s", detection.AdapterID)
 	}
 }
 

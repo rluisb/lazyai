@@ -177,7 +177,9 @@ describe('wizard integration (non-interactive)', () => {
 
     const canonicalDir = path.join(homeDir, '.ai')
     expect(existsSync(path.join(canonicalDir, '.ai-setup.json'))).toBe(true)
-    expect(existsSync(path.join(canonicalDir, 'specs', 'templates', 'task.md'))).toBe(true)
+    // Global scope defaults to the 'minimal' preset (specs dirs: standards, memory).
+    expect(existsSync(path.join(canonicalDir, 'specs', 'standards'))).toBe(true)
+    expect(existsSync(path.join(canonicalDir, 'specs', 'memory'))).toBe(true)
 
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'agents', 'builder.md'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)

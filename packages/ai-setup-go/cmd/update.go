@@ -3,13 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/db"
-	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
 	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
@@ -142,10 +140,6 @@ func runUpdateInteractive(
 		return fmt.Errorf("scaffold failed: %w", err)
 	}
 
-	if err := removeMigratedStrayAgentsArtifacts(ctx.TargetDir, storeData.Files); err != nil {
-		return fmt.Errorf("removing migrated stray AGENTS.md artifacts: %w", err)
-	}
-
 	// Update the store with the new file records.
 	if err := writeStoreFromScaffoldResult(database, ctx, presetLevel, result); err != nil {
 		return fmt.Errorf("writing store data: %w", err)
@@ -164,14 +158,11 @@ func runUpdateNonInteractive(
 	presetLevel types.PresetLevel,
 	storeData *types.StoreData,
 ) error {
+	_ = storeData
 	// Run the scaffold pipeline.
 	result, err := scaffold.ScaffoldAll(ctx)
 	if err != nil {
 		return fmt.Errorf("scaffold failed: %w", err)
-	}
-
-	if err := removeMigratedStrayAgentsArtifacts(ctx.TargetDir, storeData.Files); err != nil {
-		return fmt.Errorf("removing migrated stray AGENTS.md artifacts: %w", err)
 	}
 
 	// Update the store with the new file records.
@@ -186,40 +177,3 @@ func runUpdateNonInteractive(
 	return nil
 }
 
-var migratedStrayAgentsPaths = []string{
-	"specs/adrs/AGENTS.md",
-	"specs/features/AGENTS.md",
-}
-
-func removeMigratedStrayAgentsArtifacts(targetDir string, trackedFiles []types.TrackedFile) error {
-	trackedByPath := make(map[string]types.TrackedFile, len(trackedFiles))
-	for _, tracked := range trackedFiles {
-		trackedByPath[filepath.ToSlash(tracked.Path)] = tracked
-	}
-
-	for _, relPath := range migratedStrayAgentsPaths {
-		tracked, ok := trackedByPath[relPath]
-		if !ok {
-			continue
-		}
-
-		absPath := filepath.Join(targetDir, filepath.FromSlash(relPath))
-		if !files.FileExists(absPath) {
-			continue
-		}
-
-		currentHash, err := files.FileHash(absPath)
-		if err != nil {
-			return err
-		}
-		if tracked.Hash == "" || currentHash != tracked.Hash {
-			continue
-		}
-
-		if err := os.Remove(absPath); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	return nil
-}

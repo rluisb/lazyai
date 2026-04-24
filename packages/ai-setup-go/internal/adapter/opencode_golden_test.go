@@ -73,7 +73,7 @@ func TestOpenCodeConfig_Golden(t *testing.T) {
 			t.Fatalf("Install: %v", err)
 		}
 		checkGolden(t,
-			filepath.Join(targetDir, ".opencode", "opencode.jsonc"),
+			filepath.Join(targetDir, "opencode.jsonc"),
 			"opencode_install_project.jsonc",
 		)
 	})

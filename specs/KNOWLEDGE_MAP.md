@@ -24,6 +24,9 @@
 | 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
 | 019 | OpenCode-only consolidation (remove non-OpenCode providers from both Go and TS runtimes) | ✅ Complete | `main` |
 | 020 | Runtime parity backport — port configmerge + opencode_validate from Go to TS; fix MCP compiler server-clobber bug | ✅ Complete | `main` |
+| 021 | Runtime parity phase 2 — port housekeeping scaffold Go→TS, diff3 + claude/gemini/copilot migration parsers TS→Go | ✅ Complete | `feature/022-monorepo-restructure` |
+| 022 | Monorepo restructure — pnpm workspaces + `go.work`; `packages/ai-setup-go`, `packages/ai-setup-ts`, `packages/orchestrator`; `library/` as symlink | ✅ Complete | `feature/022-monorepo-restructure` |
+| 023 | Cross-runtime parity harness — `scripts/parity-check.sh` + advisory CI job (`continue-on-error: true`) | ✅ Complete | `feature/022-monorepo-restructure` |
 
 ## Key Architecture Decisions
 
@@ -81,6 +84,12 @@
 | `src/adapters/opencode-validate.ts` | TS counterpart of `internal/adapter/opencode_validate.go`; `validateOpenCodeInstall` runs `opencode debug config/agent` probes via injectable `CmdRunner`; honors `AI_SETUP_SKIP_VALIDATION=1` (spec 020) |
 | `src/adapters/mcp-compiler.ts#mergeOpenCodeMcpServers` | Per-server merge helper ported from Go's `mergeOpenCodeMcpServers` — preserves user-authored MCP entries not in the managed set (spec 020 bug fix) |
 | `vitest.config.ts` + `src/__tests__/setup.ts` | Sets `AI_SETUP_SKIP_VALIDATION=1` globally for TS tests to keep the suite fast when `opencode` is installed (spec 020) |
+| `packages/ai-setup-ts/src/scaffold/housekeeping.ts` | TS counterpart of `internal/scaffold/housekeeping.go`; emits `.ai/housekeeping/sync-state.json` with v1 schema when a `HousekeepingConfig` is provided (spec 021) |
+| `packages/ai-setup-go/internal/diff3/` | Go counterpart of `src/migration/diff/diff3.ts`; three-way merge + `ResolveConflicts(Ours\|Theirs\|Base)` utilities (spec 021) |
+| `packages/ai-setup-go/internal/migration/{claude,gemini,copilot}_parser.go` | Go counterparts of TS's Claude / Gemini / Copilot migration parsers — each reads a project's existing configuration and emits the canonical `ParsedSetup`; dispatched from `parseDetectedSetup` in parser.go (spec 021) |
+| `packages/` directory structure | Monorepo layout: `ai-setup-go`, `ai-setup-ts`, `orchestrator` as peer workspace packages; root `library/` is a symlink to `packages/ai-setup-go/library/` (spec 022) |
+| `pnpm-workspace.yaml` + `go.work` + root `Makefile` | Multi-language monorepo orchestration — pnpm for JS/TS, `go.work` for Go, Makefile delegates to per-package targets (spec 022) |
+| `scripts/parity-check.sh` + `scripts/PARITY.md` + `.github/workflows/parity.yml` | Cross-runtime parity harness: builds both binaries, runs `init` via each, diffs output trees. Currently advisory (`continue-on-error: true`); PARITY.md tracks known divergences that must close before promoting to blocking (spec 023) |
 
 ## Pending / Follow-up
 
@@ -106,5 +115,6 @@
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)
 - [x] ~~Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)~~ — spec 016 (`ai-setup build-plugin` generator)
-- [ ] **Spec 021 — Parity phase 2**: port Go's `internal/scaffold/housekeeping.go` to TS; port TS's Claude/Gemini/Copilot migration parsers to Go; port TS's `src/migration/diff/diff3.ts` to Go (deferred from spec 020)
-- [ ] Cross-runtime parity harness (byte-identical `ai-setup init` outputs between Go and TS for the same inputs) — enforces the runtime parity rule on CI
+- [x] ~~**Spec 021 — Parity phase 2**: port housekeeping Go→TS; port claude/gemini/copilot migration parsers + diff3 TS→Go~~ — spec 021
+- [x] ~~Cross-runtime parity harness~~ — spec 023 (advisory CI; promote to blocking once known divergences close)
+- [ ] **Parity divergence cleanup** (surfaced by spec 023 harness on first run): align `opencode.jsonc` emission, `specs/*/AGENTS.md` per-dir guides, `specs/refactors/` + `specs/tech-debt/` dirs, rules/templates manifest. See `scripts/PARITY.md` for the full table.

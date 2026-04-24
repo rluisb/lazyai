@@ -409,9 +409,10 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		t.Fatal("expected at least one tracked file record")
 	}
 
-	// Check that key files were created inside the .opencode/ tool directory.
+	// Check that key files were created. Config lives at project root
+	// (OpenCode CLI reads config from CWD), tool assets live inside .opencode/.
 	keyFiles := []string{
-		".opencode/opencode.jsonc",
+		"opencode.jsonc",
 		".opencode/agents/builder.md",
 		".opencode/agents/orchestrator.md",
 		".opencode/skills/implement/SKILL.md",
@@ -419,7 +420,7 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		".opencode/AGENTS.md",
 	}
 	// The pre-unification .json variant must never be produced on a fresh install.
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(targetDir, "opencode.json")); err == nil {
 		t.Error("opencode.json should not exist; install must target opencode.jsonc only")
 	}
 	for _, f := range keyFiles {
@@ -599,14 +600,14 @@ func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
 		Skills: []types.SkillId{"implement"},
 	}
 
-	// Seed a pre-existing opencode.json inside .opencode/ — that is where
-	// the adapter looks for the legacy file to migrate.
-	ocDir := filepath.Join(targetDir, ".opencode")
-	if err := files.EnsureDir(ocDir); err != nil {
+	// Seed a pre-existing opencode.json at the project root — the config
+	// lives at project root for project scope, and that's where the adapter
+	// looks for the legacy file to migrate.
+	if err := files.EnsureDir(targetDir); err != nil {
 		t.Fatalf("EnsureDir: %v", err)
 	}
-	jsonPath := filepath.Join(ocDir, "opencode.json")
-	jsoncPath := filepath.Join(ocDir, "opencode.jsonc")
+	jsonPath := filepath.Join(targetDir, "opencode.json")
+	jsoncPath := filepath.Join(targetDir, "opencode.jsonc")
 	original := []byte(`{
   "$schema": "https://opencode.ai/config.json",
   "permission": { "edit": "allow" },
@@ -761,12 +762,12 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 		{
 			name:   "project",
 			scope:  types.SetupScopeProject,
-			rootFn: func(targetDir, _ string) string { return filepath.Join(targetDir, ".opencode") },
+			rootFn: func(targetDir, _ string) string { return targetDir },
 		},
 		{
 			name:   "workspace",
 			scope:  types.SetupScopeWorkspace,
-			rootFn: func(targetDir, _ string) string { return filepath.Join(targetDir, ".opencode") },
+			rootFn: func(targetDir, _ string) string { return targetDir },
 		},
 		{
 			name:   "global",
@@ -793,6 +794,15 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 
 			if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
 				t.Fatalf("Install (%s): %v", tc.name, err)
+			}
+
+			// The full wizard flow emits AGENTS.md at the project root via
+			// scaffoldCompiledRoot; the adapter-only test needs to simulate
+			// that step so the config's `instructions: ["AGENTS.md"]` can
+			// resolve. For global scope AGENTS.md lives inside ocDir and is
+			// written by the adapter itself.
+			if tc.scope != types.SetupScopeGlobal {
+				_ = os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte("# root agents\n"), 0o644)
 			}
 
 			root := tc.rootFn(targetDir, homeDir)

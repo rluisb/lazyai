@@ -59,11 +59,12 @@ describe('cli init integration', () => {
       '--no-interactive',
     ])
 
+    // Non-interactive default preset is 'standard' which excludes
+    // refactors/tech-debt/prompts. To match Go's default, these dirs
+    // are only scaffolded under the 'full' preset.
     const expectedPaths = [
       'specs/features',
       'specs/bugfixes',
-      'specs/refactors',
-      'specs/tech-debt',
       'specs/adrs',
       'specs/memory',
       'specs/standards',
@@ -71,8 +72,6 @@ describe('cli init integration', () => {
       'specs/rules',
       'specs/features/AGENTS.md',
       'specs/bugfixes/AGENTS.md',
-      'specs/refactors/AGENTS.md',
-      'specs/tech-debt/AGENTS.md',
       'specs/adrs/AGENTS.md',
       'specs/memory/AGENTS.md',
       'specs/standards/AGENTS.md',

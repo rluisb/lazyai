@@ -24,7 +24,7 @@ var initCmd = &cobra.Command{
 
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
-	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, gemini, copilot, codex)")
+	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
 	initCmd.Flags().StringSlice("disable-features", []string{}, "Features to disable")
@@ -170,7 +170,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(config.CLITools) == 0 {
-		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode)")
 	}
 
 	// Drop tools that don't support the chosen scope (e.g. copilot × global).

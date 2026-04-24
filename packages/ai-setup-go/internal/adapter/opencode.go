@@ -42,11 +42,18 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	log.Println("Installing OpenCode tools...")
 
-	// Config lives inside the tool directory at every scope:
-	//   project/workspace → {targetDir}/.opencode/opencode.jsonc
+	// OpenCode CLI reads the config from the current working directory, so
+	// the default config file belongs at the project root for project/
+	// workspace scope. For global scope, it lives inside ocDir
+	// (~/.config/opencode/) which is what OpenCode uses as the global home.
+	//   project/workspace → {targetDir}/opencode.jsonc
 	//   global            → ~/.config/opencode/opencode.jsonc
-	jsonPath := filepath.Join(ocDir, "opencode.json")
-	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
+	configRoot := ocDir
+	if ctx.SetupScope != types.SetupScopeGlobal {
+		configRoot = ctx.TargetDir
+	}
+	jsonPath := filepath.Join(configRoot, "opencode.json")
+	jsoncPath := filepath.Join(configRoot, OpenCodeConfigFilename)
 
 	// One-shot migration: collapse any pre-existing opencode.json onto
 	// opencode.jsonc. The original .json is preserved as a .bak sidecar so

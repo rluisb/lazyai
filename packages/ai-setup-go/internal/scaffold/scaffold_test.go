@@ -209,15 +209,14 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 		t.Error("constitution.md was not created")
 	}
 
-	// opencode.jsonc lives inside the .opencode/ tool directory.
-	if !fileExistsInDir(targetDir, ".opencode/opencode.jsonc") {
-		t.Error("opencode.jsonc was not created in .opencode/")
+	// The default config lives at project root (OpenCode CLI reads config
+	// from CWD). The MCP-scoped `.opencode/opencode.jsonc` is written by the
+	// separate `ai-setup compile` flow (not exercised by ScaffoldAll).
+	if !fileExistsInDir(targetDir, "opencode.jsonc") {
+		t.Error("opencode.jsonc was not created at the project root")
 	}
-	if fileExistsInDir(targetDir, ".opencode/opencode.json") {
+	if fileExistsInDir(targetDir, "opencode.json") {
 		t.Error("opencode.json must not coexist with opencode.jsonc")
-	}
-	if fileExistsInDir(targetDir, "opencode.json") || fileExistsInDir(targetDir, "opencode.jsonc") {
-		t.Error("opencode config must not be created at the project root")
 	}
 
 	// Check .opencode directory was created.

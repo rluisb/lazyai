@@ -170,9 +170,14 @@ export async function runPhase2Features(opts: {
       }
     }
 
-    // Infer preset from final resolved features (when no explicit --preset)
+    // Pick a preset for the scope (when no explicit --preset). This
+    // controls which specs dirs, templates, and rules get scaffolded and
+    // must match Go's `PresetLevelStandard` non-interactive default.
+    // Individual feature flags remain driven by DEFAULT_FEATURES or CLI
+    // overrides — the preset only affects artifact *scope*, not feature
+    // toggles.
     if (!opts.cliOverrides?.preset) {
-      preset = inferPresetFromFeatures(features) ?? defaultPresetForScope(opts.setupScope ?? 'project')
+      preset = defaultPresetForScope(opts.setupScope ?? 'project')
     }
 
     // Git conventions

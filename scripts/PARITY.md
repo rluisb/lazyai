@@ -35,19 +35,33 @@ The harness intentionally ignores:
 - File hashes — both runtimes compute per-file content hashes, but since content can differ (e.g. trailing newlines), the 16-char hash strings often differ too.
 - `.git/`, `node_modules/` — independently initialized in each temp dir.
 
-## Known unexpected divergences (2026-04-24)
+## Closed divergences (fixed in the same commit that elevates PARITY.md)
 
-First run of the harness surfaces these real gaps. Each deserves a follow-up spec or bugfix:
+The harness originally surfaced five divergences. All are now closed:
+
+| Path | Fix |
+|---|---|
+| `opencode.jsonc` (project root) | Go adapter now writes the default config at project root for project/workspace scope; global still targets `~/.config/opencode/`. Matches TS. |
+| `specs/{adrs,bugfixes,features,memory,prompts,rules,standards,templates}/AGENTS.md` | Go's `ScaffoldSpecs` now copies `library/specs-agents/<category>.md` → `specs/<category>/AGENTS.md` for each specs dir the preset scaffolds. Matches TS. |
+| `specs/refactors/`, `specs/tech-debt/` directories | TS non-interactive default preset is now `standard` (matching Go), which excludes these dirs. The `full` preset still creates them via `--preset full`. |
+| `specs/rules/*.md` (extra rule files) | Closed by the preset alignment above — `standard` preset's rule manifest is identical across runtimes. |
+| `specs/templates/*.md` (extra template files) | Same — closed by preset alignment. |
+
+## Known remaining divergences (surfaced by the harness on subsequent runs)
+
+Now that the most visible divergences are closed, the harness exposes deeper systemic gaps. These warrant their own follow-up specs:
 
 | Path | Go | TS | Investigation |
 |---|---|---|---|
-| `opencode.jsonc` (project root) | absent | present | Adapter writes to different locations between runtimes after the spec 019 consolidation — verify both target `<target>/opencode.jsonc` for project scope. |
-| `specs/{adrs,bugfixes,features,memory,prompts,rules,standards,templates}/AGENTS.md` | absent | present | TS scaffolds per-spec-dir AGENTS.md guides; Go does not. Decide whether Go should (add scaffold step) or TS shouldn't (remove — but users rely on them). |
-| `specs/refactors/`, `specs/tech-debt/` (directories) | absent | present | TS creates these spec category dirs; Go does not. Minor scaffold parity gap. |
-| `specs/rules/{agent-security,cost,review,tool-use}.md` | absent | present | TS copies these rule templates from the library; Go copies a different subset. Audit the rules copy step in both adapters. |
-| `specs/templates/{code-review-template,postmortem-template,tech-debt-template}.md` | absent | present | Same pattern — TS copies more templates than Go. Align the template manifest. |
+| `.ai/housekeeping/` | always created | only when `cliOverrides.housekeeping` is set | Go's `ScaffoldHousekeeping` runs unconditionally when `ctx.Housekeeping != nil`; TS wires a gated call at the wizard level. Either gate Go the same way or change TS to always run with a default config. |
+| `.ai/orchestration/` | created | absent | TS wizard only calls `scaffoldOrchestration` when `enableServers` includes `orchestrator`; Go scaffolds unconditionally. Align. |
+| `.opencode/opencode.jsonc` (MCP-scoped) | absent | created | TS MCP compiler runs during init; Go MCP compiler runs only on explicit `compile` command. Audit the scaffold pipeline and add the MCP compile step to Go's init flow. |
+| `.ai/mcp.json` | content differs | content differs | Probably ordering/formatting only; verify and align via `marshalSortedJson` on the TS side. |
+| `.opencode/agents/*.md` | content differs | content differs | Frontmatter transforms produce different output. Audit `stripFrontmatterAndInjectModel` vs Go's equivalent. |
+| `.ai-setup.json` (manifest) | absent (uses `.ai-setup.db`) | present | Fundamental state-storage divergence: Go uses SQLite, TS uses lowdb JSON. Structural comparison would require its own tool — document as an intentional divergence. |
+| `AGENTS.md` (project root compiled) | content differs | content differs | Template compiler output differs. Audit `scaffoldCompiledRoot` / Go's compiler output for placeholder interpolation differences. |
 
-Each row is a small fix (~10–40 LOC in most cases). They're deferred from the harness-introduction commit because fixing them requires touching both runtimes and warrants individual review rather than a big bundled change.
+Each row is follow-up work. None are blocking — the harness is still advisory (`continue-on-error: true`).
 
 ## When to update this file
 

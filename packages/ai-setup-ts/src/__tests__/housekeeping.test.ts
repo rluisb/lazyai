@@ -41,7 +41,7 @@ describe('scaffoldHousekeeping', () => {
 
   it('writes sync-state.json with v1 schema when config is provided', () => {
     const dir = makeTempDir()
-    const fileRecords: Array<{ path: string; hash: string; source: string; owner?: string }> = []
+    const fileRecords: Array<{ path: string; hash: string; source: string; owner?: 'library' | 'user' | 'migrated' }> = []
 
     scaffoldHousekeeping({
       targetDir: dir,

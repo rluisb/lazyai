@@ -1,8 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [
-    "AGENTS.md"
-  ],
   "mcp": {
     "filesystem": {
       "command": [
@@ -25,9 +22,5 @@
       },
       "type": "local"
     }
-  },
-  "permission": {
-    "bash": "ask",
-    "edit": "ask"
   }
 }

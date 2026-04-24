@@ -7,6 +7,7 @@ import * as p from '@clack/prompts'
 import { compileMcp } from '../adapters/mcp-compiler.js'
 import { formatWarning, validateOpenCodeInstall } from '../adapters/opencode-validate.js'
 import { AdapterRegistry } from '../adapters/registry.js'
+import { scaffoldHousekeeping } from '../scaffold/housekeeping.js'
 import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
 import { writeToCanonical } from '../migration/canonical-writer.js'
@@ -29,6 +30,7 @@ import { appendOperation, writeStore } from '../store/index.js'
 import type { FeatureFlags, GitConventions, StoreData } from '../store/schema.js'
 import type {
   FileRecord,
+  HousekeepingConfig,
   PresetLevel,
   SetupScope,
   SetupType,
@@ -152,6 +154,7 @@ async function runPhase12Loop(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
+    housekeeping?: HousekeepingConfig
   }
   targetDir: string
 }): Promise<WizardState> {
@@ -312,6 +315,7 @@ export async function runWizard(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
+    housekeeping?: HousekeepingConfig
   }
   targetDir: string
 }): Promise<void> {
@@ -667,6 +671,15 @@ export async function runWizard(opts: {
           ...(opts.force !== undefined ? { force: opts.force } : {}),
         })
         tracker.trackSuccess('scaffold:agents-skills-prompts')
+
+        if (opts.cliOverrides.housekeeping) {
+          scaffoldHousekeeping({
+            targetDir: effectiveTargetDir,
+            config: opts.cliOverrides.housekeeping,
+            fileRecords,
+          })
+          tracker.trackSuccess('scaffold:housekeeping')
+        }
 
         for (const tool of installableTools) {
           await compileMcp({

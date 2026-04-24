@@ -33,7 +33,18 @@ type CliTool struct {
 func loadMcpCatalog() (*McpCatalog, error) {
 	paths := []string{filepath.Join("library", "mcp", "catalog.json")}
 	if _, file, _, ok := runtime.Caller(0); ok {
-		paths = append(paths, filepath.Join(filepath.Dir(file), "..", "..", "library", "mcp", "catalog.json"))
+		// Walk up from the source file looking for library/mcp/catalog.json.
+		// Layout-agnostic: works whether the source file lives at
+		// `<repo>/tui/wizard/` (pre-monorepo) or `<repo>/packages/ai-setup-go/tui/wizard/` (monorepo).
+		dir := filepath.Dir(file)
+		for i := 0; i < 10; i++ {
+			paths = append(paths, filepath.Join(dir, "library", "mcp", "catalog.json"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
 	}
 
 	var data []byte

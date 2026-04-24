@@ -1,55 +1,63 @@
-.PHONY: build test lint vet clean install release cross-build checksums
+.PHONY: help build test typecheck lint clean \
+        build-go test-go build-ts test-ts typecheck-ts lint-ts \
+        install
 
-BINARY_NAME=ai-setup
-VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-MODULE=github.com/ricardoborges-teachable/ai-setup
-LDFLAGS=-ldflags "-s -w -X $(MODULE)/cmd.Version=$(VERSION)"
-GO=go
+help:
+	@echo "ai-setup monorepo — root targets"
+	@echo ""
+	@echo "Cross-language:"
+	@echo "  make install      - Install JS deps (pnpm) and tidy Go modules"
+	@echo "  make build        - Build both runtimes"
+	@echo "  make test         - Run both test suites"
+	@echo "  make typecheck    - TS typecheck (no Go equivalent)"
+	@echo "  make lint         - Lint both"
+	@echo "  make clean        - Remove build artifacts"
+	@echo ""
+	@echo "Go-only (packages/ai-setup-go):"
+	@echo "  make build-go | test-go | cross-build-go"
+	@echo ""
+	@echo "TS-only (packages/ai-setup-ts):"
+	@echo "  make build-ts | test-ts | typecheck-ts | lint-ts"
 
-build:
-	$(GO) build $(LDFLAGS) -o $(BINARY_NAME) .
+install:
+	pnpm install
+	$(MAKE) -C packages/ai-setup-go tidy
 
-test:
-	$(GO) test ./... -v -count=1
+build: build-go build-ts
 
-test-short:
-	$(GO) test ./... -short -count=1
+test: test-go test-ts
 
-test-coverage:
-	$(GO) test ./... -coverprofile=coverage.out -count=1
-	$(GO) tool cover -html=coverage.out -o coverage.html
+typecheck: typecheck-ts
 
-vet:
-	$(GO) vet ./...
-
-lint: vet
-	@echo "Linting Go files..."
-
-fmt:
-	gofmt -w .
-	goimports -w .
-
-tidy:
-	$(GO) mod tidy
+lint: lint-ts
+	$(MAKE) -C packages/ai-setup-go vet
 
 clean:
-	rm -f $(BINARY_NAME) coverage.out coverage.html
-	rm -rf dist/
+	$(MAKE) -C packages/ai-setup-go clean
+	rm -rf packages/ai-setup-ts/dist
+	rm -rf packages/orchestrator/dist
 
-install: build
-	cp $(BINARY_NAME) /usr/local/bin/
+# ---------- Go targets (delegate) ----------
 
-cross-build:
-	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-arm64 .
-	GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-amd64 .
-	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 .
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 .
-	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
+build-go:
+	$(MAKE) -C packages/ai-setup-go build
 
-checksums: cross-build
-	cd dist && shasum -a 256 * > checksums.txt
+test-go:
+	$(MAKE) -C packages/ai-setup-go test
 
-dev:
-	$(GO) build -o $(BINARY_NAME) . && ./$(BINARY_NAME) $(ARGS)
+cross-build-go:
+	$(MAKE) -C packages/ai-setup-go cross-build
 
-all: vet test build
+# ---------- TS targets (delegate via pnpm) ----------
+
+build-ts:
+	pnpm --filter ./packages/ai-setup-ts run build
+
+test-ts:
+	pnpm --filter ./packages/ai-setup-ts run test
+
+typecheck-ts:
+	pnpm --filter ./packages/ai-setup-ts run typecheck
+
+lint-ts:
+	pnpm --filter ./packages/ai-setup-ts run lint

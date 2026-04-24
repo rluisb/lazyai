@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { extractTools } from '../utils/frontmatter.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(__dirname, '..', '..')
+// In the monorepo, walk up from packages/ai-setup-ts/src/__tests__/ → repo root.
+const repoRoot = path.resolve(__dirname, '..', '..', '..', '..')
 
 const CANONICAL_TOOLS = [
   'list_catalog',
@@ -34,7 +35,7 @@ const CANONICAL_TOOLS = [
 ] as const
 
 function readRegisteredTools(): string[] {
-  const serverPath = path.join(repoRoot, 'orchestrator', 'src', 'server.ts')
+  const serverPath = path.join(repoRoot, 'packages', 'orchestrator', 'src', 'server.ts')
   const source = fs.readFileSync(serverPath, 'utf8')
   const registerRegex = /server\.registerTool\(\s*['"]([a-z_]+)['"]/g
   const names: string[] = []

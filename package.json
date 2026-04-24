@@ -1,51 +1,24 @@
 {
-  "name": "@ricardoborges-teachable/ai-setup",
-  "version": "0.2.0",
-  "description": "One-command AI development environment scaffold",
+  "name": "ai-setup-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for ai-setup (Go + TypeScript peer implementations, orchestrator)",
   "type": "module",
-  "bin": {
-    "ai-setup": "./bin/ai-setup.js"
-  },
-  "files": [
-    "dist",
-    "bin",
-    "library"
-  ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "lint": "biome check .",
-    "prepare:orchestrator": "npm --prefix orchestrator install && npm --prefix orchestrator run build",
-    "prepare": "npm run build && npm run prepare:orchestrator"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.2.0",
-    "@modelcontextprotocol/sdk": "^1.18.1",
-    "commander": "^12.1.0",
-    "glob": "^13.0.6",
-    "lowdb": "^7.0.1",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.10",
-    "@types/node": "^22.0.0",
-    "tsup": "^8.3.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.6.0",
-    "vitest": "^2.1.0"
+    "build": "pnpm -r --filter=./packages/* run build",
+    "test": "pnpm -r --filter=./packages/* run test",
+    "typecheck": "pnpm -r --filter=./packages/* run typecheck",
+    "lint": "pnpm -r --filter=./packages/* run lint",
+    "build:go": "make -C packages/ai-setup-go build",
+    "test:go": "make -C packages/ai-setup-go test",
+    "test:all": "pnpm run test && pnpm run test:go"
   },
   "engines": {
-    "node": ">=20.12.0"
+    "node": ">=20.12.0",
+    "pnpm": ">=9"
   },
-  "keywords": [
-    "ai",
-    "scaffold",
-    "cli",
-    "setup",
-    "agents"
-  ],
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10"
+  },
   "license": "MIT"
 }

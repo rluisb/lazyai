@@ -19,7 +19,19 @@ function makeTempDir(prefix: string): string {
 }
 
 function resolveLibraryDir(): string {
-  return path.resolve(process.cwd(), 'library')
+  // Walk up from cwd (which is packages/ai-setup-ts/ under pnpm) until
+  // we find the sentinel library/mcp/catalog.json.
+  let dir = process.cwd()
+  for (let i = 0; i < 20; i++) {
+    const candidate = path.join(dir, 'library')
+    if (fs.existsSync(path.join(candidate, 'mcp', 'catalog.json'))) {
+      return candidate
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  throw new Error(`Could not find library directory from: ${process.cwd()}`)
 }
 
 describe('scaffoldCompiledRoot', () => {

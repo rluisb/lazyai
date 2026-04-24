@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { type FragmentContext, FragmentResolver, TemplateCompiler, type ToolId } from '../compiler/index.js'
+import { findMonorepoLibraryDir } from './test-helpers.js'
 
-const libraryDir = path.resolve(process.cwd(), 'library')
+const libraryDir = findMonorepoLibraryDir()
 
 describe('FragmentResolver', () => {
   let tempDir: string

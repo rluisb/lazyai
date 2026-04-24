@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type {
@@ -52,13 +53,23 @@ interface ParsedFrontmatter {
 
 export function getDefaultLibraryRoots(): { orchestrationRoot: string; agentsRoot: string } {
   const currentDir = path.dirname(fileURLToPath(import.meta.url))
-  const packageRoot = path.resolve(currentDir, '..')
-  const repoRoot = path.resolve(packageRoot, '..')
-
-  return {
-    orchestrationRoot: path.join(repoRoot, 'library', 'orchestration'),
-    agentsRoot: path.join(repoRoot, 'library', 'agents'),
+  // Walk up from src/ looking for the library/ directory. Layout-agnostic:
+  // works whether the package lives at `<repo>/orchestrator/` (pre-monorepo)
+  // or `<repo>/packages/orchestrator/` (monorepo).
+  let dir = currentDir
+  for (let i = 0; i < 10; i++) {
+    const candidate = path.join(dir, 'library')
+    if (existsSync(path.join(candidate, 'mcp', 'catalog.json'))) {
+      return {
+        orchestrationRoot: path.join(candidate, 'orchestration'),
+        agentsRoot: path.join(candidate, 'agents'),
+      }
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
   }
+  throw new Error(`Could not locate library directory from: ${currentDir}`)
 }
 
 export function loadCatalog(options: LoaderOptions): OrchestrationCatalog {

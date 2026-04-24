@@ -1,0 +1,52 @@
+{
+  "name": "@ricardoborges-teachable/ai-setup",
+  "version": "0.2.0",
+  "description": "One-command AI development environment scaffold",
+  "type": "module",
+  "bin": {
+    "ai-setup": "./bin/ai-setup.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "library"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "prepublishOnly": "rm -rf ./library && cp -R ../../library ./library && pnpm run build",
+    "postpublish": "rm -rf ./library"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.2.0",
+    "@modelcontextprotocol/sdk": "^1.18.1",
+    "commander": "^12.1.0",
+    "glob": "^13.0.6",
+    "lowdb": "^7.0.1",
+    "picocolors": "^1.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "keywords": [
+    "ai",
+    "scaffold",
+    "cli",
+    "setup",
+    "agents"
+  ],
+  "license": "MIT"
+}

@@ -20,10 +20,26 @@ export function findPackageRoot(startDir: string): string {
 
 /**
  * Resolve the bundled library directory regardless of whether we are running
- * from compiled output (dist/) or TypeScript source (src/).
+ * from compiled output, TypeScript source, or a monorepo layout.
+ *
+ * Walks up from `fromDir` looking for a directory named `library` that
+ * contains the sentinel file `mcp/catalog.json`. The sentinel distinguishes
+ * our library from unrelated `library/` directories (e.g. macOS `/Library`).
+ *
+ * Mirrors Go's `walkUpFromLibrary` in `internal/library/embed.go`.
  */
 export function resolveLibraryDir(fromDir: string): string {
-  return path.join(findPackageRoot(fromDir), 'library')
+  let dir = fromDir
+  for (let i = 0; i < 20; i++) {
+    const candidate = path.join(dir, 'library')
+    if (fs.existsSync(path.join(candidate, 'mcp', 'catalog.json'))) {
+      return candidate
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  throw Errors.dirNotFound(`Could not find library directory from: ${fromDir}`)
 }
 
 export function ensureDir(dirPath: string): void {

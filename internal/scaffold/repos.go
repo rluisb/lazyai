@@ -1,7 +1,6 @@
 package scaffold
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -99,35 +98,6 @@ func ScaffoldRepoRoots(repos []types.RepoInfo, planningRepoPath string, tools []
 			})
 		}
 
-		// Check if claude-code is in the tools list.
-		hasClaudeCode := false
-		for _, t := range tools {
-			if t == types.ToolIdClaudeCode {
-				hasClaudeCode = true
-				break
-			}
-		}
-
-		if hasClaudeCode {
-			settings := GenerateClaudeSettings(DefaultRepoPermissions())
-			claudeDir := filepath.Join(repoAbsPath, ".claude")
-			_ = files.EnsureDir(claudeDir)
-
-			settingsPath := filepath.Join(claudeDir, "settings.json")
-			action, err := conflict.ApplyStrategy(settingsPath, strategy, perFileOverrides, repoAbsPath)
-			if err == nil && action != "skip" {
-				content, _ := json.MarshalIndent(settings, "", "  ")
-				if err := files.WriteFile(settingsPath, content, 0o644); err == nil {
-					hash, _ := files.FileHash(settingsPath)
-					records = append(records, types.TrackedFile{
-						Path:   repo.Name + "/.claude/settings.json",
-						Hash:   hash,
-						Source: "workspace:permissions",
-						Owner:  types.FileOwnerLibrary,
-					})
-				}
-			}
-		}
 
 		results[repo.Name] = records
 	}
@@ -135,30 +105,6 @@ func ScaffoldRepoRoots(repos []types.RepoInfo, planningRepoPath string, tools []
 	return results
 }
 
-// GenerateClaudeSettings generates Claude Code settings for a repo.
-func GenerateClaudeSettings(permissions RepoPermissions) map[string]any {
-	var allow []string
-	allow = append(allow, "Read")
-
-	if permissions.Write {
-		allow = append(allow, "Edit")
-	}
-
-	var deny []string
-	if !permissions.RunDestructive {
-		deny = append(deny, "Bash(rm -rf *)")
-	}
-	if !permissions.GitOperations {
-		deny = append(deny, "Bash(git push*)", "Bash(git push --force*)")
-	}
-
-	return map[string]any{
-		"permissions": map[string]any{
-			"allow": allow,
-			"deny":  deny,
-		},
-	}
-}
 
 // ScaffoldRepoLedgers creates activity ledger and state files for each workspace repo.
 // Ported from src/scaffold/repo-roots.ts scaffoldRepoLedgers.

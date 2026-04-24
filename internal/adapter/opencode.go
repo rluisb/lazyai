@@ -42,6 +42,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	log.Println("Installing OpenCode tools...")
 
+	// Config lives inside the tool directory at every scope:
+	//   project/workspace → {targetDir}/.opencode/opencode.jsonc
+	//   global            → ~/.config/opencode/opencode.jsonc
 	jsonPath := filepath.Join(ocDir, "opencode.json")
 	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
 
@@ -70,6 +73,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	// merge on pre-existing configs preserves user customizations (e.g., a
 	// hand-tuned `permission.edit` value) across re-runs.
 	if !files.FileExists(jsoncPath) {
+		// "AGENTS.md" resolves relative to the config file's directory (ocDir),
+		// so it points at the AGENTS.md installed in the same tool directory at
+		// every scope — no scope-conditional path needed.
 		defaultConfig := map[string]any{
 			"$schema":      "https://opencode.ai/config.json",
 			"instructions": []any{"AGENTS.md"},

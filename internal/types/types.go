@@ -26,11 +26,7 @@ const (
 type ToolId string
 
 const (
-	ToolIdOpenCode   ToolId = "opencode"
-	ToolIdClaudeCode ToolId = "claude-code"
-	ToolIdGemini     ToolId = "gemini"
-	ToolIdCopilot    ToolId = "copilot"
-	ToolIdCodex      ToolId = "codex"
+	ToolIdOpenCode ToolId = "opencode"
 )
 
 // AgentId identifies a specialized agent role.
@@ -71,25 +67,6 @@ const (
 	PromptIdLocalExample PromptId = "local-example"
 	PromptIdPlan         PromptId = "plan"
 	PromptIdResearch     PromptId = "research"
-)
-
-// CommandId identifies a Gemini custom slash command (TOML file under
-// <geminiRoot>/commands/).
-type CommandId string
-
-const (
-	CommandIdRpi    CommandId = "rpi"
-	CommandIdReview CommandId = "review"
-	CommandIdPlan   CommandId = "plan"
-)
-
-// ChatModeId identifies a GitHub Copilot chat mode (markdown file under
-// <githubDir>/chatmodes/).
-type ChatModeId string
-
-const (
-	ChatModeIdArchitect ChatModeId = "architect"
-	ChatModeIdReviewer  ChatModeId = "reviewer"
 )
 
 // OpenCodeCommandId identifies an opencode slash command (markdown file
@@ -363,17 +340,6 @@ var (
 		PromptIdResearch,
 	}
 
-	ALL_COMMANDS = []CommandId{
-		CommandIdRpi,
-		CommandIdReview,
-		CommandIdPlan,
-	}
-
-	ALL_CHATMODES = []ChatModeId{
-		ChatModeIdArchitect,
-		ChatModeIdReviewer,
-	}
-
 	ALL_OPENCODE_COMMANDS = []OpenCodeCommandId{
 		OpenCodeCommandIdReview,
 		OpenCodeCommandIdTest,
@@ -506,8 +472,6 @@ type WizardSelections struct {
 	Agents           []AgentId           `json:"agents"`
 	Skills           []SkillId           `json:"skills"`
 	Prompts          []PromptId          `json:"prompts"`
-	Commands         []CommandId         `json:"commands"`
-	ChatModes        []ChatModeId        `json:"chatmodes"`
 	OpenCodeCommands []OpenCodeCommandId `json:"opencodeCommands"`
 	OpenCodeModes    []OpenCodeModeId    `json:"opencodeModes"`
 	OpenCodePlugins  []string            `json:"opencodePlugins"`
@@ -691,12 +655,7 @@ func IsValidSetupScope(s SetupScope) bool {
 
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
-	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex:
-		return true
-	default:
-		return false
-	}
+	return t == ToolIdOpenCode
 }
 
 // ParseOperationResult parses a string into an OperationResult, returning an

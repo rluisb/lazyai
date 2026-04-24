@@ -7,10 +7,6 @@ import type { PlannedFile } from './planner.js'
 function formatTools(tools: ToolId[]): string {
   const toolNames: Record<ToolId, string> = {
     opencode: 'OpenCode',
-    'claude-code': 'Claude Code',
-    gemini: 'Gemini CLI',
-    copilot: 'GitHub Copilot',
-    codex: 'Codex',
   }
   return tools.map((t) => toolNames[t] || t).join(', ')
 }

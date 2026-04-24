@@ -13,7 +13,7 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 
 	defaults := &Phase1Result{
 		Scope:         types.SetupScopeProject,
-		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Tools:         []types.ToolId{types.ToolIdOpenCode},
 		ProjectName:   "demo-app",
 		CliTools:      []string{"gh"},
 		EnableServers: []string{"filesystem"},
@@ -49,7 +49,7 @@ func TestBuildPhase1Result(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCodex}
+			tools := []types.ToolId{types.ToolIdOpenCode}
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
 
@@ -71,7 +71,7 @@ func TestBuildPhase1Result(t *testing.T) {
 				t.Fatalf("EnableServers = %#v, want %#v", result.EnableServers, servers)
 			}
 
-			tools[0] = types.ToolIdGemini
+			tools[0] = types.ToolId("mutated")
 			cliTools[0] = "rtk"
 			servers[0] = "memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
@@ -147,12 +147,12 @@ func TestPhase1StepInfoFor(t *testing.T) {
 
 	defaults := &Phase1Result{
 		Scope:       types.SetupScopeProject,
-		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Tools:       []types.ToolId{types.ToolIdOpenCode},
 		ProjectName: "demo-app",
 	}
 
 	info := phase1StepInfoFor(2, types.SetupScopeProject, defaults)
-	if got, want := info.Title(), "Setup Context — 2/6: AI Tools (previous: opencode, gemini)"; got != want {
+	if got, want := info.Title(), "Setup Context — 2/6: AI Tools (previous: opencode)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
@@ -195,40 +195,36 @@ func TestDetectInstalledCliTools(t *testing.T) {
 	}
 }
 
-func TestToolOptionsForScope_FiltersCopilotGlobal(t *testing.T) {
+func TestToolOptionsForScope_OnlyOpenCode(t *testing.T) {
 	t.Parallel()
 
-	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	// Copilot now appears at scope=global (with probe gating at adapter level)
-	// Count: all 5 tools at all scopes
-	if len(globalOpts) != 5 {
-		t.Errorf("global options count = %d, want 5", len(globalOpts))
-	}
-
-	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	if len(projectOpts) != 5 {
-		t.Errorf("project options count = %d, want 5", len(projectOpts))
-	}
-
-	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	if len(workspaceOpts) != 5 {
-		t.Errorf("workspace options count = %d, want 5", len(workspaceOpts))
+	for _, scope := range []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace} {
+		opts := toolOptionsForScope(scope)
+		if len(opts) != 1 {
+			t.Errorf("toolOptionsForScope(%s) count = %d, want 1", scope, len(opts))
+		}
+		if len(opts) > 0 && opts[0].Value != "opencode" {
+			t.Errorf("toolOptionsForScope(%s)[0] = %q, want opencode", scope, opts[0].Value)
+		}
 	}
 }
 
-func TestFilterToolsByScope_DropsIncompatible(t *testing.T) {
+func TestFilterToolsByScope_KeepsOpenCode(t *testing.T) {
 	t.Parallel()
 
-	tools := []types.ToolId{
-		types.ToolIdClaudeCode,
-		types.ToolIdCopilot,
-		types.ToolIdGemini,
+	tools := []types.ToolId{types.ToolIdOpenCode}
+	for _, scope := range []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace} {
+		got := filterToolsByScope(tools, scope)
+		if len(got) != 1 || got[0] != types.ToolIdOpenCode {
+			t.Errorf("filterToolsByScope(%s) = %v, want [opencode]", scope, got)
+		}
 	}
-	got := filterToolsByScope(tools, types.SetupScopeGlobal)
-	// Copilot is now supported at global scope (with probe gating)
-	// All 3 tools should remain
-	if len(got) != 3 {
-		t.Errorf("filtered tools count = %d, want 3", len(got))
+
+	// Invalid tool IDs are filtered out.
+	invalid := []types.ToolId{types.ToolId("claude-code"), types.ToolId("gemini")}
+	got := filterToolsByScope(invalid, types.SetupScopeGlobal)
+	if len(got) != 0 {
+		t.Errorf("invalid tools should be filtered, got %v", got)
 	}
 }
 

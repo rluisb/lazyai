@@ -409,9 +409,7 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		t.Fatal("expected at least one tracked file record")
 	}
 
-	// Check that key files were created. The root AGENTS.md at .opencode/
-	// is the target of the `instructions: ["AGENTS.md"]` key and must exist
-	// at every scope (see TestOpenCodeAdapter_InstructionsKeyResolves).
+	// Check that key files were created inside the .opencode/ tool directory.
 	keyFiles := []string{
 		".opencode/opencode.jsonc",
 		".opencode/agents/builder.md",
@@ -459,70 +457,6 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	}
 }
 
-// --- Test: Copilot adapter with fs.FS ---
-
-func TestCopilotAdapter_Install_FromFS(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-	ctx.Selections = AdapterSelections{
-		Agents:  types.ALL_AGENTS[:],
-		Skills:  types.ALL_SKILLS[:],
-		Prompts: []types.PromptId{"preflight-task-framing"},
-	}
-
-	adapter := &CopilotAdapter{}
-	records, err := adapter.Install(ctx)
-	if err != nil {
-		t.Fatalf("Copilot Install failed: %v", err)
-	}
-
-	if len(records) == 0 {
-		t.Fatal("expected at least one tracked file record")
-	}
-
-	// --- Prompts copied to .github/prompts/*.prompt.md ---
-	promptsDir := filepath.Join(targetDir, ".github", "prompts")
-	promptFile := filepath.Join(promptsDir, "preflight-task-framing.prompt.md")
-	if _, err := os.Stat(promptFile); os.IsNotExist(err) {
-		t.Error("prompt .prompt.md was not created in .github/prompts/")
-	}
-
-	// --- Skill transformed to agent YAML format ---
-	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	skillAgentFile := filepath.Join(agentsDir, "implement.agent.yaml")
-	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
-		t.Error("skill agent .agent.yaml was not created")
-	}
-	data, _ := os.ReadFile(skillAgentFile)
-	content := string(data)
-	if !strings.Contains(content, "name: implement") {
-		t.Error("skill agent missing 'name: implement' in YAML")
-	}
-
-	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
-	// scaffold.ScaffoldCompiledRoot (scope-aware) rather than the adapter;
-	// asserting them here would test the wrong layer.
-
-	// --- Tracked file records created (prompts + agents) ---
-	if len(ctx.FileRecords) < 2 {
-		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
-	}
-	hasPreFlight := false
-	hasImplement := false
-	for _, rec := range ctx.FileRecords {
-		switch rec.Path {
-		case ".github/prompts/preflight-task-framing.prompt.md":
-			hasPreFlight = true
-		case ".github/agents/implement.agent.yaml":
-			hasImplement = true
-		}
-	}
-	if !hasPreFlight {
-		t.Error("no tracked record for preflight-task-framing.prompt.md")
-	}
-	if !hasImplement {
-		t.Error("no tracked record for implement.agent.yaml")
-	}
-}
 
 // --- Test: Disk fallback mode ---
 
@@ -665,8 +599,8 @@ func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
 		Skills: []types.SkillId{"implement"},
 	}
 
-	// Seed a pre-existing opencode.json with a user-authored key that must
-	// survive the migration unchanged.
+	// Seed a pre-existing opencode.json inside .opencode/ — that is where
+	// the adapter looks for the legacy file to migrate.
 	ocDir := filepath.Join(targetDir, ".opencode")
 	if err := files.EnsureDir(ocDir); err != nil {
 		t.Fatalf("EnsureDir: %v", err)
@@ -825,25 +759,19 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 
 	cases := []scopeCase{
 		{
-			name:  "project",
-			scope: types.SetupScopeProject,
-			rootFn: func(targetDir, _ string) string {
-				return filepath.Join(targetDir, ".opencode")
-			},
+			name:   "project",
+			scope:  types.SetupScopeProject,
+			rootFn: func(targetDir, _ string) string { return filepath.Join(targetDir, ".opencode") },
 		},
 		{
-			name:  "workspace",
-			scope: types.SetupScopeWorkspace,
-			rootFn: func(targetDir, _ string) string {
-				return filepath.Join(targetDir, ".opencode")
-			},
+			name:   "workspace",
+			scope:  types.SetupScopeWorkspace,
+			rootFn: func(targetDir, _ string) string { return filepath.Join(targetDir, ".opencode") },
 		},
 		{
-			name:  "global",
-			scope: types.SetupScopeGlobal,
-			rootFn: func(_ , homeDir string) string {
-				return filepath.Join(homeDir, ".config", "opencode")
-			},
+			name:   "global",
+			scope:  types.SetupScopeGlobal,
+			rootFn: func(_, homeDir string) string { return filepath.Join(homeDir, ".config", "opencode") },
 		},
 	}
 

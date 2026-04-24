@@ -1,9 +1,7 @@
 import path from 'node:path'
 import {
   type ConflictStrategy,
-  DEFAULT_REPO_PERMISSIONS,
   type FileRecord,
-  type RepoPermissions,
   type ToolId,
 } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
@@ -66,23 +64,6 @@ export async function scaffoldRepoRoots(opts: RepoRootOptions): Promise<Map<stri
       })
     }
 
-    if (opts.tools.includes('claude-code')) {
-      const settings = generateClaudeSettings(DEFAULT_REPO_PERMISSIONS, stack)
-      const claudeDir = path.join(repoAbsPath, '.claude')
-      ensureDir(claudeDir)
-
-      const settingsPath = path.join(claudeDir, 'settings.json')
-      const action = applyStrategy(settingsPath, opts.strategy, opts.perFileOverrides, repoAbsPath)
-      if (action !== 'skip') {
-        writeFile(settingsPath, JSON.stringify(settings, null, 2))
-        records.push({
-          path: `${repo.name}/.claude/settings.json`,
-          hash: fileHash(settingsPath),
-          source: 'workspace:permissions',
-          owner: 'library',
-        })
-      }
-    }
 
     results.set(repo.name, records)
   }
@@ -160,28 +141,6 @@ function generateRepoRootContent(opts: {
   return lines.join('\n')
 }
 
-export function generateClaudeSettings(permissions: RepoPermissions, stack: ProjectStack): object {
-  const allow: string[] = ['Read']
-
-  if (permissions.write) allow.push('Edit')
-  if (permissions.runCommands) {
-    if (stack.commands.test) allow.push(`Bash(${stack.commands.test})`)
-    if (stack.commands.lint) allow.push(`Bash(${stack.commands.lint})`)
-    if (stack.commands.build) allow.push(`Bash(${stack.commands.build})`)
-  }
-
-  const deny: string[] = []
-  if (!permissions.runDestructive) {
-    deny.push('Bash(rm -rf *)')
-    if (stack.language === 'Ruby') deny.push('Bash(rails db:drop*)', 'Bash(rails db:reset*)')
-    if (stack.packageManager) deny.push(`Bash(${stack.packageManager} publish*)`)
-  }
-  if (!permissions.gitOperations) {
-    deny.push('Bash(git push*)', 'Bash(git push --force*)')
-  }
-
-  return { permissions: { allow, deny } }
-}
 
 export async function scaffoldRepoLedgers(opts: {
   planningRepoPath: string

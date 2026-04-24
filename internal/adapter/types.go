@@ -30,15 +30,6 @@ type AdapterContext struct {
 	Force bool
 	// DryRun reports what would be done without writing files.
 	DryRun bool
-	// DriveCLI, when true, asks adapters that support it to delegate
-	// scaffolding to the tool's own CLI (e.g. `gemini mcp add`) instead of
-	// direct-write. Falls back silently to direct-write when the binary is
-	// absent or the CLI call fails.
-	DriveCLI bool
-	// LocalSecrets, when true, routes Claude Code MCP/settings writes to the
-	// gitignored `.claude/settings.local.json` instead of committed surfaces
-	// (`.mcp.json` / `.claude/settings.json`). Opt-in; default false.
-	LocalSecrets bool
 	// Strategy controls how file conflicts are handled.
 	Strategy types.ConflictStrategy
 	// PerFileOverrides allows per-file conflict strategy overrides.
@@ -52,8 +43,6 @@ type AdapterSelections struct {
 	Agents           []types.AgentId
 	Skills           []types.SkillId
 	Prompts          []types.PromptId
-	Commands         []types.CommandId
-	ChatModes        []types.ChatModeId
 	OpenCodeCommands []types.OpenCodeCommandId
 	OpenCodeModes    []types.OpenCodeModeId
 	OpenCodePlugins  []string
@@ -72,13 +61,9 @@ type CompileContext struct {
 	SetupScope types.SetupScope
 	// FileRecords accumulates records of all files written during compile.
 	FileRecords []types.TrackedFile
-	// LocalSecrets, when true, routes Claude Code MCP to the gitignored
-	// `.claude/settings.local.json` instead of the committed `.mcp.json`.
-	LocalSecrets bool
 }
 
-// toAdapterContext builds a minimal AdapterContext suitable for calling
-// ResolveToolRoot / ResolveCodexRoots from a CompileContext.
+// toAdapterContext builds a minimal AdapterContext for scope resolution.
 func (c CompileContext) toAdapterContext() *AdapterContext {
 	return &AdapterContext{
 		TargetDir:  c.TargetDir,

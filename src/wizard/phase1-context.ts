@@ -242,7 +242,7 @@ export async function runPhase1(opts: {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
     }
     if (!tools || tools.length === 0) {
-      throw new Error('--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)')
+      throw new Error('--tools is required in non-interactive mode (opencode)')
     }
     if (!projectName) {
       throw new Error('Project name is required in non-interactive mode (use --name or provide via config)')
@@ -346,11 +346,7 @@ export async function runPhase1(opts: {
   // --- Prompt 2: Tools selection ---
   // Always show the prompt, pre-fill with prior tools if available
   const toolOptions = [
-    { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
-    { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
-    { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
-    { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
-    { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
+    { value: 'opencode', label: 'OpenCode', hint: 'Uses .opencode/ directory + AGENTS.md' },
   ]
 
   const toolsMessage = priorTools && priorTools.length > 0

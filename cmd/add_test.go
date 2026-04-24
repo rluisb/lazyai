@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -14,7 +13,7 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 
 	if _, _ = captureOutput(t, func() {
 		if err := runAddNonInteractive(
-			[]types.ToolId{types.ToolIdClaudeCode},
+			nil,
 			[]string{string(types.AgentIdBuilder)},
 			[]string{string(types.SkillIdPlan)},
 		); err != nil {
@@ -24,12 +23,9 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	}
 
 	storeData := readSeededStoreData(t, dir)
-	assertToolSet(t, storeData.Config.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
+	assertToolSet(t, storeData.Config.Tools, types.ToolIdOpenCode)
 	assertAgentSet(t, storeData.Selections.Agents, types.AgentIdBuilder)
 	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdPlan)
-	if !fileExists(filepath.Join(dir, "CLAUDE.md")) {
-		t.Fatal("expected CLAUDE.md to exist after adding claude-code")
-	}
 }
 
 func assertToolSet(t *testing.T, got []types.ToolId, want ...types.ToolId) {

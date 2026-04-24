@@ -186,7 +186,7 @@ describe('scaffoldRootFiles', () => {
     await scaffoldRootFiles({
       targetDir: tempDir,
       libraryDir,
-      tools: ['opencode', 'copilot'],
+      tools: ['opencode'],
       projectName: 'my-test-project',
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
@@ -194,7 +194,6 @@ describe('scaffoldRootFiles', () => {
     })
 
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.github', 'copilot-instructions.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })

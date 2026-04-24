@@ -32,8 +32,6 @@ func init() {
 	initCmd.Flags().String("branch-pattern", "", "Git branch naming pattern")
 	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
-	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini, Claude Code, Codex)")
-	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
 	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in CLAUDE.md)")
 	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in CLAUDE.md)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
@@ -67,8 +65,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
-	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
 
@@ -90,8 +86,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 		Interactive:          !nonInteractive,
 		Force:                force,
 		DryRun:               dryRun,
-		CLIDriveCLI:          driveCLI,
-		CLILocalSecrets:      localSecrets,
 		CLIOrg:               orgName,
 		CLITeam:              teamName,
 		HomeDir:              homeDir,

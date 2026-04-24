@@ -132,7 +132,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 11: .gitignore guidance.
-	CheckGitignoreGuidance(ctx.TargetDir, ctx.LocalSecrets)
+	CheckGitignoreGuidance(ctx.TargetDir, false)
 
 	log.Printf("Scaffold complete: %d files, %d errors", len(result.Files), len(result.Errors))
 

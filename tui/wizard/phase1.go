@@ -8,7 +8,6 @@ import (
 	"charm.land/huh/v2"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
-	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -67,7 +66,7 @@ func runPhase1NonInteractive(defaults *Phase1Result) (*Phase1Result, PhaseAction
 		return nil, PhaseCancel, fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(defaults.Tools) == 0 {
-		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
+		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode)")
 	}
 	if defaults.ProjectName == "" {
 		return nil, PhaseCancel, fmt.Errorf("project name is required in non-interactive mode")
@@ -237,11 +236,7 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 	}
 
 	tools := stringsToToolIDs(selectedTools)
-	filteredTools, err := filterUninstalledCodex(tools)
-	if err != nil {
-		return nil, PhaseCancel, err
-	}
-	return filteredTools, PhaseContinue, nil
+	return tools, PhaseContinue, nil
 }
 
 // toolOptionsForScope returns the AI tool multi-select options filtered to
@@ -249,10 +244,6 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 	all := []huh.Option[string]{
 		huh.NewOption("OpenCode", "opencode"),
-		huh.NewOption("Claude Code", "claude-code"),
-		huh.NewOption("Gemini CLI", "gemini"),
-		huh.NewOption("GitHub Copilot", "copilot"),
-		huh.NewOption("Codex (OpenAI)", "codex"),
 	}
 	if scope == "" {
 		return all
@@ -382,32 +373,6 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 	return strings.TrimSpace(org), strings.TrimSpace(team), PhaseContinue, nil
 }
 
-func filterUninstalledCodex(tools []types.ToolId) ([]types.ToolId, error) {
-	if !containsTool(tools, string(types.ToolIdCodex)) || detect.IsCodexInstalled() {
-		return tools, nil
-	}
-
-	confirm := false
-	if err := huh.NewConfirm().
-		Title(fmt.Sprintf("Codex CLI is not installed.\n\n%s\n\nContinue anyway?", detect.CodexInstallHint())).
-		Affirmative("Continue").
-		Negative("Remove codex from selection").
-		Value(&confirm).
-		Run(); err != nil {
-		return nil, fmt.Errorf("phase 1 cancelled: %w", err)
-	}
-	if confirm {
-		return tools, nil
-	}
-
-	filtered := make([]types.ToolId, 0, len(tools))
-	for _, tool := range tools {
-		if tool != types.ToolIdCodex {
-			filtered = append(filtered, tool)
-		}
-	}
-	return filtered, nil
-}
 
 func validateProjectName(name string) error {
 	if name == "" || strings.TrimSpace(name) == "" {

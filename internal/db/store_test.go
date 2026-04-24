@@ -86,7 +86,7 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 		},
 		Config: types.Config{
 			SetupScope:  types.SetupScopeProject,
-			Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
+			Tools:       []types.ToolId{types.ToolIdOpenCode},
 			ProjectName: "test-project",
 			TargetDir:   "/tmp/test",
 		},
@@ -96,8 +96,6 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			Agents:       []types.AgentId{types.AgentIdBuilder},
 			Skills:       []types.SkillId{types.SkillIdPlan},
 			Prompts:      []types.PromptId{types.PromptIdCompact},
-			Commands:         []types.CommandId{types.CommandIdRpi},
-			ChatModes:        []types.ChatModeId{types.ChatModeIdArchitect},
 			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
 			OpenCodePlugins:  []string{"@opencode/git-tools"},
@@ -155,8 +153,8 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	if got.Config.ProjectName != original.Config.ProjectName {
 		t.Errorf("ProjectName = %q, want %q", got.Config.ProjectName, original.Config.ProjectName)
 	}
-	if len(got.Config.Tools) != 2 {
-		t.Errorf("Tools length = %d, want 2", len(got.Config.Tools))
+	if len(got.Config.Tools) != 1 {
+		t.Errorf("Tools length = %d, want 1", len(got.Config.Tools))
 	}
 	if len(got.Files) != 1 {
 		t.Errorf("Files length = %d, want 1", len(got.Files))
@@ -175,12 +173,6 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if got.Selections.Features == nil || !got.Selections.Features.QualityGates {
 		t.Error("Features.QualityGates not preserved")
-	}
-	if len(got.Selections.Commands) != 1 || got.Selections.Commands[0] != types.CommandIdRpi {
-		t.Errorf("Commands not preserved: got %v", got.Selections.Commands)
-	}
-	if len(got.Selections.ChatModes) != 1 || got.Selections.ChatModes[0] != types.ChatModeIdArchitect {
-		t.Errorf("ChatModes not preserved: got %v", got.Selections.ChatModes)
 	}
 	if len(got.Selections.OpenCodeCommands) != 1 || got.Selections.OpenCodeCommands[0] != types.OpenCodeCommandIdReview {
 		t.Errorf("OpenCodeCommands not preserved: got %v", got.Selections.OpenCodeCommands)

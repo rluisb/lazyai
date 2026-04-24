@@ -49,11 +49,11 @@ describe('scaffoldCompiledRoot', () => {
     }
   })
 
-  it('generates correct root filenames per tool', async () => {
+  it('generates AGENTS.md for opencode', async () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'],
+      tools: ['opencode'],
       projectName: 'test-project',
       planningDir: '.ai/planning',
       fileRecords,
@@ -61,26 +61,15 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // Check that the expected shared/tool-specific root files were created
-    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
-    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
-
-    // Verify file records have correct source annotations
-    const claudeRecord = fileRecords.find((r) => r.path === 'CLAUDE.md')
-    expect(claudeRecord?.source).toBe('compiled:claude-code')
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(false)
+    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(false)
 
     const agentsRecord = fileRecords.find((r) => r.path === 'AGENTS.md')
     expect(agentsRecord?.source).toBe('compiled:opencode')
-
-    const copilotRecord = fileRecords.find((r) => r.path === '.github/copilot-instructions.md')
-    expect(copilotRecord?.source).toBe('compiled:copilot')
   })
 
   it('passes through feature flags in context', async () => {
-    // Test with decision protocol disabled (default behavior)
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
@@ -157,34 +146,6 @@ describe('scaffoldCompiledRoot', () => {
     expect(agentsContent).toContain('<decision-protocol>')
   })
 
-  it('compiles shared root outputs for all supported tools with camelCase feature conditions', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
-
-    await scaffoldCompiledRoot({
-      targetDir,
-      libraryDir,
-      tools: [...tools],
-      projectName: 'all-tools-camelcase-test',
-      planningDir: '.ai/planning',
-      fileRecords,
-      strategy: 'skip' as ConflictStrategy,
-      perFileOverrides: new Map(),
-    })
-
-    const rootFiles = [
-      'CLAUDE.md',
-      'AGENTS.md',
-      '.github/copilot-instructions.md',
-      'GEMINI.md',
-    ]
-
-    for (const rootFile of rootFiles) {
-      const content = readFile(path.join(targetDir, rootFile))
-      expect(content).toContain('<context-discipline>')
-      expect(content).toContain('<quality-gates>')
-    }
-  })
-
   it('interpolates planningDir variable in output', async () => {
     await scaffoldCompiledRoot({
       targetDir,
@@ -198,8 +159,6 @@ describe('scaffoldCompiledRoot', () => {
     })
 
     const agentsContent = readFile(path.join(targetDir, 'AGENTS.md'))
-    // The compiled output should reference the planning directory
-    // (actual content depends on the template, but it should be present)
     expect(agentsContent).toBeTruthy()
     expect(fileRecords.length).toBeGreaterThan(0)
   })
@@ -208,7 +167,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'gemini'],
+      tools: ['opencode'],
       projectName: 'records-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -216,27 +175,24 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // Every file record should have a source starting with 'compiled:'
     expect(fileRecords.length).toBeGreaterThan(0)
     for (const record of fileRecords) {
       expect(record.source).toMatch(/^compiled:/)
       expect(record.hash).toBeTruthy()
-      expect(record.hash.length).toBe(16) // fileHash returns 16-char hash
+      expect(record.hash.length).toBe(16)
     }
   })
 
   it('skip strategy prevents overwriting existing files', async () => {
-    // Create an existing file
-    const existingPath = path.join(targetDir, 'CLAUDE.md')
+    const existingPath = path.join(targetDir, 'AGENTS.md')
     ensureDir(path.dirname(existingPath))
     writeFile(existingPath, 'EXISTING CONTENT')
-    const originalHash = fs.readFileSync(existingPath, 'utf-8')
+    const originalContent = fs.readFileSync(existingPath, 'utf-8')
 
-    // Run scaffoldCompiledRoot with skip strategy
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code'],
+      tools: ['opencode'],
       projectName: 'skip-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -244,32 +200,11 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // File should not have been modified
     const currentContent = readFile(existingPath)
-    expect(currentContent).toBe(originalHash)
+    expect(currentContent).toBe(originalContent)
 
-    // File should NOT be in records if skipped
-    const record = fileRecords.find((r) => r.path === 'CLAUDE.md')
+    const record = fileRecords.find((r) => r.path === 'AGENTS.md')
     expect(record).toBeUndefined()
-  })
-
-  it('handles multiple tools with distinct output files', async () => {
-    await scaffoldCompiledRoot({
-      targetDir,
-      libraryDir,
-      tools: ['opencode', 'codex'],
-      projectName: 'multi-tool-test',
-      planningDir: '.ai/planning',
-      fileRecords,
-      strategy: 'skip' as ConflictStrategy,
-      perFileOverrides: new Map(),
-    })
-
-    // Both opencode and codex write AGENTS.md, but they have different source origins
-    // There may be one AGENTS.md file with the last tool's source, or multiple records
-    // This is a behavior test: verify that both tools processed
-    expect(fileRecords.length).toBeGreaterThan(0)
-    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
   })
 
   it('includes additional context in fragment compilation', async () => {
@@ -315,57 +250,29 @@ describe('scaffoldCompiledRoot', () => {
     expect(content).toContain('### backend')
   })
 
-  it('writes files to correct directories maintaining structure', async () => {
-    await scaffoldCompiledRoot({
-      targetDir,
-      libraryDir,
-      tools: ['copilot'],
-      projectName: 'dir-structure-test',
-      planningDir: '.ai/planning',
-      fileRecords,
-      strategy: 'skip' as ConflictStrategy,
-      perFileOverrides: new Map(),
-    })
+  it('generates valid content for opencode', async () => {
+    const toolTargetDir = makeTempDir('ai-setup-tool-opencode-')
+    const toolFileRecords: FileRecord[] = []
 
-    // Copilot should write to .github/copilot-instructions.md
-    const copilotPath = path.join(targetDir, '.github/copilot-instructions.md')
-    expect(fileExists(copilotPath)).toBe(true)
-    expect(fileExists(path.dirname(copilotPath))).toBe(true)
+    try {
+      await scaffoldCompiledRoot({
+        targetDir: toolTargetDir,
+        libraryDir,
+        tools: ['opencode'],
+        projectName: 'test-opencode',
+        planningDir: '.ai/planning',
+        fileRecords: toolFileRecords,
+        strategy: 'skip' as ConflictStrategy,
+        perFileOverrides: new Map(),
+      })
 
-    // Verify the record path is relative
-    const record = fileRecords.find((r) => r.path === '.github/copilot-instructions.md')
-    expect(record).toBeDefined()
-  })
+      expect(toolFileRecords.length).toBeGreaterThan(0)
 
-  it('generates valid content for all supported tools', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
-
-    for (const tool of tools) {
-      const toolTargetDir = makeTempDir(`ai-setup-tool-${tool}-`)
-      const toolFileRecords: FileRecord[] = []
-
-      try {
-        await scaffoldCompiledRoot({
-          targetDir: toolTargetDir,
-          libraryDir,
-          tools: [tool],
-          projectName: `test-${tool}`,
-          planningDir: '.ai/planning',
-          fileRecords: toolFileRecords,
-          strategy: 'skip' as ConflictStrategy,
-          perFileOverrides: new Map(),
-        })
-
-        // Each tool should produce at least one file record
-        expect(toolFileRecords.length).toBeGreaterThan(0)
-
-        // At least one file should exist in the target directory
-        const files = fs.readdirSync(toolTargetDir, { recursive: true })
-        expect(files.length).toBeGreaterThan(0)
-      } finally {
-        if (fileExists(toolTargetDir)) {
-          fs.rmSync(toolTargetDir, { recursive: true, force: true })
-        }
+      const files = fs.readdirSync(toolTargetDir, { recursive: true })
+      expect(files.length).toBeGreaterThan(0)
+    } finally {
+      if (fileExists(toolTargetDir)) {
+        fs.rmSync(toolTargetDir, { recursive: true, force: true })
       }
     }
   })

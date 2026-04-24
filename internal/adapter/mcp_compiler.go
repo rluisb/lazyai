@@ -1,20 +1,13 @@
 // Package adapter provides the MCP compiler that generates per-tool MCP
 // configuration files from the canonical .ai/mcp.json.
-// Ported from the TypeScript mcp-compiler.ts.
 package adapter
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
-	"time"
 
-	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/jsonc"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -47,50 +40,22 @@ func (s McpServer) isEnabled() bool {
 }
 
 // CompileMCPForTool reads the canonical .ai/mcp.json and generates the
-// tool-specific MCP configuration file. The ctx carries scope information so
-// each adapter writes to the correct path per scope. Tools with no global
-// layout (Copilot × global) are skipped cleanly.
+// tool-specific MCP configuration file.
 func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.TrackedFile, error) {
 	catalog := readCanonicalMcp(ctx.TargetDir)
 	if catalog == nil {
 		return ctx.FileRecords, nil
 	}
 
-	enabledServers := getEnabledServers(catalog)
-	if len(enabledServers) == 0 {
-		return ctx.FileRecords, nil
-	}
-
-	// Skip unsupported scopes.
 	if !IsScopeSupported(toolId, ctx.SetupScope) {
 		log.Printf("[compile] %s × %s scope is unsupported; skipping", toolId, ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
 
-	// Copilot × global requires CLI or ~/.copilot/ to be present; at global
-	// scope with probes failing we bail out of the whole compile. At
-	// project/workspace the VS Code surface still writes regardless (the
-	// CLI surface is gated internally in compileCopilotMCP).
-	if toolId == types.ToolIdCopilot && ctx.SetupScope == types.SetupScopeGlobal {
-		if !copilotProbePasses(ctx) {
-			log.Printf("[compile] copilot CLI or ~/.copilot/ not found; skipping global MCP compilation")
-			return ctx.FileRecords, nil
-		}
-	}
-
 	switch toolId {
 	case types.ToolIdOpenCode:
 		return compileOpenCodeMCP(ctx, catalog)
-	case types.ToolIdClaudeCode:
-		return compileClaudeCodeMCP(ctx, enabledServers)
-	case types.ToolIdCopilot:
-		return compileCopilotMCP(ctx, enabledServers)
-	case types.ToolIdGemini:
-		return compileGeminiMCP(ctx, enabledServers)
-	case types.ToolIdCodex:
-		return compileCodexMCP(ctx, enabledServers)
 	default:
-		// Tool has no MCP config format — return unchanged.
 		return ctx.FileRecords, nil
 	}
 }
@@ -112,34 +77,22 @@ func readCanonicalMcp(targetDir string) *McpCatalog {
 	return &catalog
 }
 
-// getEnabledServers returns only the servers that are enabled.
-func getEnabledServers(catalog *McpCatalog) map[string]McpServer {
-	result := make(map[string]McpServer)
-	for name, server := range catalog.Servers {
-		if server.isEnabled() {
-			result[name] = server
-		}
-	}
-	return result
-}
-
 // ---------------------------------------------------------------------------
 // OpenCode MCP compilation
 // ---------------------------------------------------------------------------
 
 func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.TrackedFile, error) {
+	// Config always lives inside the tool directory:
+	//   project/workspace → {targetDir}/.opencode/opencode.jsonc
+	//   global            → ~/.config/opencode/opencode.jsonc
 	root, err := ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx.toAdapterContext())
 	if err != nil {
 		return ctx.FileRecords, err
 	}
-	// Global root is ~/.config/opencode — opencode.jsonc lives directly in it.
-	// Project/workspace root is <target>/.opencode — same placement. The
-	// filename constant is shared with OpenCodeAdapter.Install so install and
-	// compile always target the same file (no .json/.jsonc split).
 	configPath := filepath.Join(root, OpenCodeConfigFilename)
+
 	ocMcp := toOpenCodeMcp(catalog.Servers)
 
-	// Read existing config and merge.
 	var existingConfig map[string]any
 	if files.FileExists(configPath) {
 		parsed, err := jsonc.ReadJSONCFile(configPath)
@@ -169,21 +122,14 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 }
 
 // mergeOpenCodeMcpServers merges the ai-setup-managed mcp map into whatever
-// the user currently has under `mcp` in their opencode.jsonc. Managed
-// servers (those present in `managed`) are upserted; any existing entry
-// keyed by a name NOT in `managed` is preserved untouched — so a user who
-// hand-adds an MCP server directly in opencode.jsonc does not lose it on
-// the next `ai-setup compile`.
-//
-// Documented limit: if a user hand-authors a server with the same name as a
-// managed server, the managed definition wins (this matches the catalog's
-// intent that `ai-setup` owns the named server).
+// the user currently has under `mcp` in their opencode.jsonc. Managed servers
+// win on key collision; user-authored servers not in the managed set are kept.
 func mergeOpenCodeMcpServers(existingRaw any, managed map[string]any) map[string]any {
 	merged := make(map[string]any, len(managed))
 	if existing, ok := existingRaw.(map[string]any); ok {
 		for name, entry := range existing {
 			if _, isManaged := managed[name]; isManaged {
-				continue // skip; managed entry wins
+				continue
 			}
 			merged[name] = entry
 		}
@@ -224,372 +170,11 @@ func toOpenCodeMcp(servers map[string]McpServer) map[string]any {
 }
 
 // ---------------------------------------------------------------------------
-// Claude Code MCP compilation
-// ---------------------------------------------------------------------------
-
-func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	// Claude Code has two distinct config surfaces:
-	//   - project: <target>/.mcp.json (user-committed project-scope MCP file)
-	//   - global:  ~/.claude/settings.json (mcpServers merged by init's Install)
-	// When LocalSecrets is set, route the project catalog to the gitignored
-	// .claude/settings.local.json instead of the committed .mcp.json, and at
-	// global scope write to ~/.claude/settings.local.json (ai-setup convention).
-	if ctx.LocalSecrets {
-		return writeClaudeSettingsLocal(ctx, servers)
-	}
-
-	// Default path: at global, skip (settings.json merge at init time covers it).
-	if ctx.SetupScope == types.SetupScopeGlobal {
-		log.Println("[compile] claude-code × global: mcpServers live in settings.json; skipping")
-		return ctx.FileRecords, nil
-	}
-
-	// Task 010: Try CLI-driven reconciliation if claude is on PATH.
-	// Always write .mcp.json as the canonical project-scope config (backup/audit trail).
-	useCliForMCP(ctx, servers)
-
-	// Write .mcp.json for both CLI and fallback paths.
-	mcpPath := filepath.Join(ctx.TargetDir, ".mcp.json")
-	content := toClaudeCodeMcp(servers)
-
-	if err := WriteJSONFile(mcpPath, content); err != nil {
-		return ctx.FileRecords, err
-	}
-
-	hash, _ := files.FileHash(mcpPath)
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: ".mcp.json", Hash: hash, Source: "compiled:mcp", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-// writeClaudeSettingsLocal routes the MCP catalog into the gitignored
-// .claude/settings.local.json (project/workspace) or ~/.claude/settings.local.json
-// (global, ai-setup convention). Uses configmerge.MergeJSONFile so user-authored
-// keys are preserved and a .bak is created on first touch.
-func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	var settingsPath string
-	switch ctx.SetupScope {
-	case types.SetupScopeGlobal:
-		home := ctx.HomeDir
-		if home == "" {
-			var err error
-			home, err = os.UserHomeDir()
-			if err != nil {
-				return ctx.FileRecords, fmt.Errorf("resolve home dir: %w", err)
-			}
-		}
-		settingsPath = filepath.Join(home, ".claude", "settings.local.json")
-		log.Printf("[compile] claude-code × global --local-secrets: writing %s (ai-setup convention, not a standard Claude path)", settingsPath)
-	default:
-		settingsPath = filepath.Join(ctx.TargetDir, ".claude", "settings.local.json")
-	}
-
-	_ = files.EnsureDir(filepath.Dir(settingsPath))
-	patch := map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
-	if _, err := configmerge.MergeJSONFile(settingsPath, patch); err != nil {
-		return ctx.FileRecords, fmt.Errorf("merge %s: %w", settingsPath, err)
-	}
-
-	relPath := settingsPath
-	if rel, err := filepath.Rel(ctx.TargetDir, settingsPath); err == nil {
-		relPath = rel
-	}
-	hash, _ := files.FileHash(settingsPath)
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: "compiled:mcp:claude-local", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-// useCliForMCP attempts to reconcile MCP servers via the claude CLI.
-// Returns true if reconciliation succeeded, false if CLI unavailable or error (fallback will run).
-func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
-	_, found := LookupClaudeBinary()
-	if !found {
-		return false
-	}
-
-	runner := &DefaultClaudeCLIRunner{}
-	runCtx := context.Background()
-
-	// For project/workspace scopes, use -s project with the target dir as working dir.
-	scopeFlag := "project"
-	workingDir := ctx.TargetDir
-
-	// Register all enabled servers via CLI.
-	for name, srv := range servers {
-		if !srv.isEnabled() {
-			continue
-		}
-
-		// Pre-check: is server already registered?
-		checkCtx, cancel := context.WithTimeout(runCtx, 10*time.Second)
-		_, _, err := runner.Run(checkCtx, workingDir, "mcp", "get", name)
-		cancel()
-		if err == nil {
-			// Already registered, skip it.
-			log.Printf("[compile-mcp] server %q already registered, skipping", name)
-			continue
-		}
-
-		// Not found, add it via CLI.
-		payload := mcpServerToJSON(srv)
-		addCtx, cancel := context.WithTimeout(runCtx, 30*time.Second)
-		_, stderr, err := runner.Run(addCtx, workingDir, "mcp", "add-json", name, payload, "-s", scopeFlag)
-		cancel()
-		if err != nil {
-			log.Printf("[compile-mcp] mcp add-json %q failed: %v\nstderr: %s", name, err, string(stderr))
-			// CLI error — fall back to direct-write.
-			return false
-		}
-
-		log.Printf("[compile-mcp] registered server %q via CLI", name)
-	}
-
-	return true
-}
-
-// toClaudeCodeMcpInner builds the raw mcpServers map without the top-level
-// "mcpServers" wrapper. Shared between the committed .mcp.json output and the
-// settings.local.json merge payload.
-func toClaudeCodeMcpInner(servers map[string]McpServer) map[string]any {
-	mcpServers := make(map[string]any)
-	for name, server := range servers {
-		if server.URL != "" {
-			entry := map[string]any{"url": server.URL}
-			if server.Headers != nil {
-				entry["headers"] = server.Headers
-			}
-			mcpServers[name] = entry
-			continue
-		}
-		entry := map[string]any{
-			"command": server.Command,
-			"args":    server.Args,
-		}
-		if server.Env != nil {
-			entry["env"] = server.Env
-		}
-		mcpServers[name] = entry
-	}
-	return mcpServers
-}
-
-func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
-	return map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
-}
-
-// ---------------------------------------------------------------------------
-// Copilot MCP compilation
-// ---------------------------------------------------------------------------
-
-// copilotProbePasses returns true if the Copilot CLI is on PATH or the
-// ~/.copilot/ directory exists (i.e., the standalone CLI is installed or has
-// been used at least once).
-func copilotProbePasses(ctx CompileContext) bool {
-	if _, found := LookupCopilotBinary(); found {
-		return true
-	}
-	home := ctx.HomeDir
-	if home == "" {
-		var err error
-		home, err = os.UserHomeDir()
-		if err != nil {
-			return false
-		}
-	}
-	return files.DirExists(filepath.Join(home, ".copilot"))
-}
-
-// resolveCopilotHomeDir returns the home directory that should hold
-// ~/.copilot/mcp-config.json, preferring ctx.HomeDir for test isolation.
-func resolveCopilotHomeDir(ctx CompileContext) (string, error) {
-	if ctx.HomeDir != "" {
-		return ctx.HomeDir, nil
-	}
-	return os.UserHomeDir()
-}
-
-func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	// At project/workspace scope, emit the VS Code mcp.json unconditionally;
-	// the CLI mcp-config.json is only written if the Copilot CLI probe passes.
-	// At global scope, skip the VS Code emit entirely — no project directory
-	// to anchor it to — and rely on the CLI emit (already probe-gated upstream).
-	if ctx.SetupScope != types.SetupScopeGlobal {
-		vscodeDir := filepath.Join(ctx.TargetDir, ".vscode")
-		_ = files.EnsureDir(vscodeDir)
-		vscodeMcpPath := filepath.Join(vscodeDir, "mcp.json")
-		content := toCopilotVSCodeMcp(servers)
-
-		if err := WriteJSONFile(vscodeMcpPath, content); err != nil {
-			return ctx.FileRecords, err
-		}
-
-		hash, _ := files.FileHash(vscodeMcpPath)
-		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path: ".vscode/mcp.json", Hash: hash, Source: "compiled:mcp:copilot", Owner: types.FileOwnerLibrary,
-		})
-	}
-
-	// Emit ~/.copilot/mcp-config.json for the standalone CLI whenever the
-	// probe passes (all scopes). At global scope the caller has already
-	// verified the probe; at project/workspace we check here and silently
-	// skip if Copilot CLI is not installed.
-	if !copilotProbePasses(ctx) {
-		return ctx.FileRecords, nil
-	}
-	return compileCopilotCLIMcp(ctx, servers)
-}
-
-// compileCopilotCLIMcp writes ~/.copilot/mcp-config.json via deep-merge so
-// user-authored server entries and other keys are preserved across re-runs.
-func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	home, err := resolveCopilotHomeDir(ctx)
-	if err != nil {
-		log.Printf("[compile] copilot: cannot resolve home dir: %v", err)
-		return ctx.FileRecords, nil
-	}
-	copilotDir := filepath.Join(home, ".copilot")
-	_ = files.EnsureDir(copilotDir)
-	cfgPath := filepath.Join(copilotDir, "mcp-config.json")
-
-	patch := toCopilotCLIMcp(servers)
-	if _, err := configmerge.MergeJSONFile(cfgPath, patch); err != nil {
-		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
-	}
-
-	relPath := cfgPath
-	if rel, err := filepath.Rel(ctx.TargetDir, cfgPath); err == nil {
-		relPath = rel
-	}
-	hash, _ := files.FileHash(cfgPath)
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: "compiled:mcp:copilot-cli", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-// toCopilotServerEntries translates the canonical server map into the
-// per-server shape shared by both the VS Code extension and the standalone
-// Copilot CLI. It also returns the set of ${VAR} placeholder IDs discovered
-// in env values (used by VS Code for its "inputs" prompt UI).
-func toCopilotServerEntries(servers map[string]McpServer) (entries map[string]any, placeholderIDs map[string]bool) {
-	entries = make(map[string]any)
-	placeholderIDs = make(map[string]bool)
-
-	for name, server := range servers {
-		if server.URL != "" {
-			entry := map[string]any{
-				"type": "sse",
-				"url":  server.URL,
-			}
-			if server.Headers != nil {
-				entry["headers"] = server.Headers
-			}
-			entries[name] = entry
-			continue
-		}
-		entry := map[string]any{
-			"type":    "stdio",
-			"command": server.Command,
-			"args":    server.Args,
-		}
-		if server.Env != nil {
-			entry["env"] = server.Env
-			for _, val := range server.Env {
-				matches := envPattern.FindAllStringSubmatch(val, -1)
-				for _, match := range matches {
-					if len(match) > 1 {
-						placeholderIDs[match[1]] = true
-					}
-				}
-			}
-		}
-		entries[name] = entry
-	}
-	return entries, placeholderIDs
-}
-
-// toCopilotVSCodeMcp builds the .vscode/mcp.json payload: uses the "servers"
-// top-level key and adds an "inputs" prompt array for each placeholder.
-func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
-	entries, placeholderIDs := toCopilotServerEntries(servers)
-	output := map[string]any{"servers": entries}
-
-	if len(placeholderIDs) > 0 {
-		inputs := make([]map[string]any, 0, len(placeholderIDs))
-		for id := range placeholderIDs {
-			inputs = append(inputs, map[string]any{
-				"type":        "promptString",
-				"id":          id,
-				"description": id,
-				"password":    true,
-			})
-		}
-		output["inputs"] = inputs
-	}
-	return output
-}
-
-// toCopilotCLIMcp builds the ~/.copilot/mcp-config.json payload: uses the
-// "mcpServers" top-level key. Unlike VS Code, the standalone CLI reads
-// env variables from the process environment directly — no "inputs" prompts.
-func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
-	entries, _ := toCopilotServerEntries(servers)
-	return map[string]any{"mcpServers": entries}
-}
-
-// ---------------------------------------------------------------------------
-// Gemini MCP compilation
-// ---------------------------------------------------------------------------
-
-func compileGeminiMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	root, err := ResolveToolRoot(types.ToolIdGemini, ctx.SetupScope, ctx.toAdapterContext())
-	if err != nil {
-		return ctx.FileRecords, err
-	}
-	_ = files.EnsureDir(root)
-	settingsPath := filepath.Join(root, "settings.json")
-	content := toGeminiSettings(servers)
-
-	if err := WriteJSONFile(settingsPath, content); err != nil {
-		return ctx.FileRecords, err
-	}
-
-	hash, _ := files.FileHash(settingsPath)
-	recordPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
-	if recordPath == "" || recordPath == "." {
-		recordPath = settingsPath
-	}
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: recordPath, Hash: hash, Source: "compiled:mcp:gemini", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-func toGeminiSettings(servers map[string]McpServer) map[string]any {
-	mcpServers := make(map[string]any)
-	for name, server := range servers {
-		if server.URL != "" {
-			log.Printf("Skipping remote server %q for gemini (not supported)", name)
-			continue
-		}
-		entry := map[string]any{
-			"command": server.Command,
-			"args":    server.Args,
-		}
-		if server.Env != nil {
-			entry["env"] = transformEnvSyntax(server.Env, "$$$1")
-		}
-		mcpServers[name] = entry
-	}
-	return map[string]any{"mcpServers": mcpServers}
-}
-
-// ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
 var envPattern = regexp.MustCompile(`\$\{(\w+)\}`)
 
-// transformEnvSyntax replaces ${VAR} patterns with the target pattern.
 func transformEnvSyntax(envObj map[string]string, targetPattern string) map[string]string {
 	result := make(map[string]string, len(envObj))
 	for key, value := range envObj {
@@ -597,51 +182,3 @@ func transformEnvSyntax(envObj map[string]string, targetPattern string) map[stri
 	}
 	return result
 }
-
-// ---------------------------------------------------------------------------
-// Codex MCP compilation
-// ---------------------------------------------------------------------------
-
-// compileCodexMCP writes enabled MCP servers into the scope-correct config.toml
-// under the [mcp_servers.*] tables using deep-merge so user-authored keys survive.
-func compileCodexMCP(ctx CompileContext, enabledServers map[string]McpServer) ([]types.TrackedFile, error) {
-	configRoot, _, err := ResolveCodexRoots(ctx.SetupScope, ctx.toAdapterContext())
-	if err != nil {
-		return ctx.FileRecords, err
-	}
-	configPath := filepath.Join(configRoot, "config.toml")
-
-	mcpServers := make(map[string]any, len(enabledServers))
-	for name, srv := range enabledServers {
-		entry := map[string]any{}
-		if srv.Command != "" {
-			entry["command"] = srv.Command
-		}
-		if len(srv.Args) > 0 {
-			entry["args"] = srv.Args
-		}
-		if len(srv.Env) > 0 {
-			entry["env"] = srv.Env
-		}
-		mcpServers[name] = entry
-	}
-
-	patch := map[string]any{"mcp_servers": mcpServers}
-	if _, err := configmerge.MergeTOMLFile(configPath, patch); err != nil {
-		return ctx.FileRecords, err
-	}
-
-	hash, _ := files.FileHash(configPath)
-	recordPath, _ := filepath.Rel(ctx.TargetDir, configPath)
-	if recordPath == "" || recordPath == "." {
-		recordPath = configPath
-	}
-	log.Printf("[codex] compiled MCP config -> %s (%d servers)", configPath, len(enabledServers))
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: recordPath, Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-// Ensure all format strings with %s in log statements are correct.
-// This blank import ensures strings is available.
-var _ = strings.TrimSpace

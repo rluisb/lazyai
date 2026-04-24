@@ -227,7 +227,7 @@ func writeConfig(exec sqlExecutor, c *types.Config) error {
 // ReadSelections reads the selections table.
 func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 	var templatesJSON, rulesJSON, agentsJSON, skillsJSON, promptsJSON string
-	var commandsJSON, chatmodesJSON string
+	var commandsJSON, chatmodesJSON string // read but discarded (legacy columns)
 	var opencodeCommandsJSON, opencodeModesJSON, opencodePluginsJSON string
 	var infraJSON, constitutionJSON, featuresJSON, gitConventionsJSON, preset string
 
@@ -240,6 +240,7 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		&infraJSON, &constitutionJSON, &featuresJSON, &gitConventionsJSON, &preset,
 		&commandsJSON, &chatmodesJSON,
 		&opencodeCommandsJSON, &opencodeModesJSON, &opencodePluginsJSON)
+	_, _ = commandsJSON, chatmodesJSON // legacy columns, no longer in WizardSelections
 	if err != nil {
 		return nil, fmt.Errorf("query selections: %w", err)
 	}
@@ -283,14 +284,6 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		return nil, fmt.Errorf("unmarshal gitConventions: %w", err)
 	}
 
-	var commands []types.CommandId
-	if err := json.Unmarshal([]byte(commandsJSON), &commands); err != nil {
-		return nil, fmt.Errorf("unmarshal commands: %w", err)
-	}
-	var chatmodes []types.ChatModeId
-	if err := json.Unmarshal([]byte(chatmodesJSON), &chatmodes); err != nil {
-		return nil, fmt.Errorf("unmarshal chatmodes: %w", err)
-	}
 	var opencodeCommands []types.OpenCodeCommandId
 	if err := json.Unmarshal([]byte(opencodeCommandsJSON), &opencodeCommands); err != nil {
 		return nil, fmt.Errorf("unmarshal opencode_commands: %w", err)
@@ -310,8 +303,6 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,
-		Commands:         commands,
-		ChatModes:        chatmodes,
 		OpenCodeCommands: opencodeCommands,
 		OpenCodeModes:    opencodeModes,
 		OpenCodePlugins:  opencodePlugins,
@@ -372,14 +363,9 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 		gitConventionsJSON = []byte("{}")
 	}
 
-	commandsJSON, err := json.Marshal(s.Commands)
-	if err != nil {
-		return fmt.Errorf("marshal commands: %w", err)
-	}
-	chatmodesJSON, err := json.Marshal(s.ChatModes)
-	if err != nil {
-		return fmt.Errorf("marshal chatmodes: %w", err)
-	}
+	// legacy columns — write empty JSON arrays to satisfy NOT NULL constraints
+	commandsJSON := []byte("[]")
+	chatmodesJSON := []byte("[]")
 	opencodeCommandsJSON, err := json.Marshal(s.OpenCodeCommands)
 	if err != nil {
 		return fmt.Errorf("marshal opencode_commands: %w", err)

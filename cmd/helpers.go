@@ -86,8 +86,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var agents []types.AgentId
 	var skills []types.SkillId
 	var prompts []types.PromptId
-	var commands []types.CommandId
-	var chatmodes []types.ChatModeId
 	var opencodeCommands []types.OpenCodeCommandId
 	var opencodeModes []types.OpenCodeModeId
 	var opencodePlugins []string
@@ -97,23 +95,12 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		agents = types.ALL_AGENTS[:]
 		skills = types.ALL_SKILLS[:]
 		prompts = types.ALL_PROMPTS[:]
-		commands = types.ALL_COMMANDS[:]
-		chatmodes = types.ALL_CHATMODES[:]
 		opencodeCommands = types.ALL_OPENCODE_COMMANDS[:]
 		opencodeModes = types.ALL_OPENCODE_MODES[:]
 		infra = types.ALL_INFRA[:]
 	}
 
-	// When the user picked the custom preset AND went through the wizard's
-	// commands/chatmodes selection, honour their explicit choice instead of
-	// the ALL_* defaults.
 	if presetLevel == types.PresetLevelCustom {
-		if result.Phase2.Commands != nil {
-			commands = result.Phase2.Commands
-		}
-		if result.Phase2.ChatModes != nil {
-			chatmodes = result.Phase2.ChatModes
-		}
 		if result.Phase2.OpenCodeCommands != nil {
 			opencodeCommands = result.Phase2.OpenCodeCommands
 		}
@@ -158,15 +145,11 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Strategy:         types.ConflictStrategyAlign,
 		Force:            config.Force,
 		DryRun:           config.DryRun,
-		DriveCLI:         config.CLIDriveCLI,
-		LocalSecrets:     config.CLILocalSecrets,
 		Organization:     firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
 		Team:             firstNonEmpty(result.Phase1.Team, config.CLITeam),
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,
-		Commands:         commands,
-		ChatModes:        chatmodes,
 		OpenCodeCommands: opencodeCommands,
 		OpenCodeModes:    opencodeModes,
 		OpenCodePlugins:  opencodePlugins,
@@ -207,8 +190,6 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.Agents = ctx.Agents
 	storeData.Selections.Skills = ctx.Skills
 	storeData.Selections.Prompts = ctx.Prompts
-	storeData.Selections.Commands = ctx.Commands
-	storeData.Selections.ChatModes = ctx.ChatModes
 	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
 	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes
 	storeData.Selections.OpenCodePlugins = ctx.OpenCodePlugins

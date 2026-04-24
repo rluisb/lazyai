@@ -52,11 +52,7 @@ interface ServerHealthReport {
 }
 
 const PER_TOOL_MCP_CONFIG: Record<ToolId, string | null> = {
-  opencode: 'opencode.jsonc',
-  'claude-code': '.mcp.json',
-  copilot: '.vscode/mcp.json',
-  gemini: '.gemini/settings.json',
-  codex: null,
+  opencode: '.opencode/opencode.jsonc',
 }
 
 export function registerServer(program: Command): void {
@@ -647,16 +643,8 @@ function readCatalog(): Catalog {
 }
 
 function getOrchestratorAgentPathForTool(tool: ToolId, targetDir: string): string | null {
-  switch (tool) {
-    case 'opencode':
-      return join(targetDir, '.opencode', 'agents', 'orchestrator.md')
-    case 'claude-code':
-      return join(targetDir, '.claude', 'agents', 'orchestrator.md')
-    case 'gemini':
-      return join(targetDir, '.gemini', 'skills', 'orchestrator', 'SKILL.md')
-    case 'codex':
-      return join(targetDir, '.agents', 'skills', 'orchestrator', 'SKILL.md')
-    case 'copilot':
-      return join(targetDir, '.github', 'prompts', 'orchestrator.prompt.md')
+  if (tool === 'opencode') {
+    return join(targetDir, '.opencode', 'agents', 'orchestrator.md')
   }
+  return null
 }

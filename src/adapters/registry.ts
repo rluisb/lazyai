@@ -1,8 +1,4 @@
 import type { ToolId } from '../types.js'
-import { ClaudeCodeAdapter } from './claude-code.js'
-import { CodexAdapter } from './codex.js'
-import { CopilotAdapter } from './copilot.js'
-import { GeminiAdapter } from './gemini.js'
 import { OpenCodeAdapter } from './opencode.js'
 import type { ToolAdapter } from './types.js'
 
@@ -11,10 +7,6 @@ export class AdapterRegistry {
 
   constructor() {
     this.register(new OpenCodeAdapter())
-    this.register(new ClaudeCodeAdapter())
-    this.register(new GeminiAdapter())
-    this.register(new CopilotAdapter())
-    this.register(new CodexAdapter())
   }
 
   register(adapter: ToolAdapter): void {

@@ -32,9 +32,6 @@ func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, hom
 	case types.SetupScopeProject, types.SetupScopeWorkspace, "":
 		return filepath.Join(targetDir, outputFile), nil
 	case types.SetupScopeGlobal:
-		if tool == types.ToolIdCopilot {
-			return "", errMemoryDocScopeUnsupported
-		}
 		root, err := globalpaths.ResolveGlobalToolTargetDir(tool, homeDir)
 		if err != nil {
 			return "", err

@@ -14,10 +14,6 @@ func TestResolveGlobalToolTargetDir(t *testing.T) {
 		want string
 	}{
 		{types.ToolIdOpenCode, filepath.Join(home, ".config", "opencode")},
-		{types.ToolIdClaudeCode, filepath.Join(home, ".claude")},
-		{types.ToolIdGemini, filepath.Join(home, ".gemini")},
-		{types.ToolIdCodex, filepath.Join(home, ".codex")},
-		{types.ToolIdCopilot, filepath.Join(home, ".copilot")},
 	}
 	for _, c := range cases {
 		got, err := ResolveGlobalToolTargetDir(c.tool, home)
@@ -31,12 +27,14 @@ func TestResolveGlobalToolTargetDir(t *testing.T) {
 	}
 }
 
-func TestResolveCodexSkillsGlobalDir(t *testing.T) {
+func TestResolveGlobalToolTargetDir_UnknownTool(t *testing.T) {
 	home := "/tmp/fakehome"
-	got := ResolveCodexSkillsGlobalDir(home)
-	want := filepath.Join(home, ".agents", "skills")
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
+	got, err := ResolveGlobalToolTargetDir("unknown-tool", home)
+	if err != nil {
+		t.Errorf("ResolveGlobalToolTargetDir(unknown): unexpected error: %v", err)
+	}
+	if got != "" {
+		t.Errorf("ResolveGlobalToolTargetDir(unknown) = %q, want empty", got)
 	}
 }
 
@@ -45,11 +43,11 @@ func TestIsGlobalSupportedTool(t *testing.T) {
 		tool types.ToolId
 		want bool
 	}{
-		{types.ToolIdClaudeCode, true},
 		{types.ToolIdOpenCode, true},
-		{types.ToolIdGemini, true},
-		{types.ToolIdCodex, true},
-		{types.ToolIdCopilot, true}, // now supported with probe gating
+		{types.ToolId("claude-code"), false},
+		{types.ToolId("gemini"), false},
+		{types.ToolId("codex"), false},
+		{types.ToolId("copilot"), false},
 	}
 	for _, c := range cases {
 		got := IsGlobalSupportedTool(c.tool)

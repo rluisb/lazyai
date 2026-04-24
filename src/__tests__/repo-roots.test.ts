@@ -3,11 +3,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  generateClaudeSettings,
   scaffoldRepoLedgers,
   scaffoldRepoRoots,
 } from '../scaffold/repo-roots.js'
-import { DEFAULT_REPO_PERMISSIONS } from '../types.js'
 
 function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
@@ -68,42 +66,6 @@ describe('workspace repo roots', () => {
     )
   })
 
-  it('generateClaudeSettings produces correct allow and deny lists', () => {
-    const settings = generateClaudeSettings(
-      DEFAULT_REPO_PERMISSIONS,
-      {
-        language: 'Ruby',
-        framework: 'Rails',
-        packageManager: 'bundle',
-        commands: {
-          test: 'bundle exec rspec',
-          lint: 'bundle exec rubocop',
-          build: 'bundle exec rails assets:precompile',
-        },
-      },
-    )
-
-    expect(settings).toEqual({
-      permissions: {
-        allow: [
-          'Read',
-          'Edit',
-          'Bash(bundle exec rspec)',
-          'Bash(bundle exec rubocop)',
-          'Bash(bundle exec rails assets:precompile)',
-        ],
-        deny: [
-          'Bash(rm -rf *)',
-          'Bash(rails db:drop*)',
-          'Bash(rails db:reset*)',
-          'Bash(bundle publish*)',
-          'Bash(git push*)',
-          'Bash(git push --force*)',
-        ],
-      },
-    })
-  })
-
   it('handles missing repo paths gracefully', async () => {
     const workspaceRoot = makeTempDir('ai-setup-missing-repo-')
     tempDirs.push(workspaceRoot)
@@ -115,7 +77,7 @@ describe('workspace repo roots', () => {
       scaffoldRepoRoots({
         repos: [{ name: 'missing-repo', path: '../missing-repo', type: 'unknown' }],
         planningRepoPath,
-        tools: ['opencode', 'claude-code'],
+        tools: ['opencode'],
         strategy: 'skip',
         perFileOverrides: new Map(),
       }),

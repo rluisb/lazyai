@@ -209,8 +209,7 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 		t.Error("constitution.md was not created")
 	}
 
-	// Check opencode.jsonc was created in the correct subdirectory (install
-	// and compile both target .jsonc per the spec 011 unification).
+	// opencode.jsonc lives inside the .opencode/ tool directory.
 	if !fileExistsInDir(targetDir, ".opencode/opencode.jsonc") {
 		t.Error("opencode.jsonc was not created in .opencode/")
 	}
@@ -234,45 +233,25 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 	t.Logf("Scaffold created %d files, %d directories", len(result.Files), len(result.Directories))
 }
 
-func TestScaffoldAll_ClaudeCode(t *testing.T) {
-	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdClaudeCode})
-	result, err := ScaffoldAll(ctx)
-	if err != nil {
-		t.Fatalf("ScaffoldAll failed: %v", err)
+func TestScaffoldAll_MultipleScopes(t *testing.T) {
+	for _, scope := range []types.SetupScope{types.SetupScopeProject, types.SetupScopeWorkspace} {
+		scope := scope
+		t.Run(string(scope), func(t *testing.T) {
+			ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
+			ctx.SetupScope = scope
+			result, err := ScaffoldAll(ctx)
+			if err != nil {
+				t.Fatalf("ScaffoldAll failed: %v", err)
+			}
+			if len(result.Files) == 0 {
+				t.Fatal("expected at least one tracked file")
+			}
+			if !fileExistsInDir(targetDir, ".opencode/agents/builder.md") {
+				t.Error(".opencode/agents/builder.md was not created")
+			}
+			t.Logf("Scaffold created %d files for scope=%s", len(result.Files), scope)
+		})
 	}
-
-	if len(result.Files) == 0 {
-		t.Fatal("expected at least one tracked file")
-	}
-
-	// Check .claude directory was created.
-	if !fileExistsInDir(targetDir, ".claude/agents/builder.md") {
-		t.Error(".claude/agents/builder.md was not created")
-	}
-
-	t.Logf("Scaffold created %d files", len(result.Files))
-}
-
-func TestScaffoldAll_MultipleTools(t *testing.T) {
-	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode})
-	result, err := ScaffoldAll(ctx)
-	if err != nil {
-		t.Fatalf("ScaffoldAll failed: %v", err)
-	}
-
-	if len(result.Files) == 0 {
-		t.Fatal("expected at least one tracked file")
-	}
-
-	// Both tool directories should exist.
-	if !fileExistsInDir(targetDir, ".opencode/agents/builder.md") {
-		t.Error(".opencode/agents/builder.md was not created")
-	}
-	if !fileExistsInDir(targetDir, ".claude/agents/builder.md") {
-		t.Error(".claude/agents/builder.md was not created")
-	}
-
-	t.Logf("Scaffold created %d files for 2 tools", len(result.Files))
 }
 
 func TestScaffoldAll_DryRun(t *testing.T) {

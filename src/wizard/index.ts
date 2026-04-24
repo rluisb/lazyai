@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import { compileMcp } from '../adapters/mcp-compiler.js'
+import { formatWarning, validateOpenCodeInstall } from '../adapters/opencode-validate.js'
 import { AdapterRegistry } from '../adapters/registry.js'
 import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
@@ -725,6 +726,21 @@ export async function runWizard(opts: {
         }
       }
 
+      const runPostInstallValidation = (): void => {
+        if (!installableTools.includes('opencode')) return
+
+        const ocDir =
+          setupScope === 'global'
+            ? resolveGlobalToolTargetDir('opencode', userHomeDir)
+            : path.join(effectiveTargetDir, '.opencode')
+        if (!ocDir) return
+
+        const warnings = validateOpenCodeInstall({ ocDir })
+        for (const w of warnings) {
+          console.warn(formatWarning(w))
+        }
+      }
+
       if (opts.interactive) {
         const s = p.spinner()
         s.start('Installing files...')
@@ -743,6 +759,8 @@ export async function runWizard(opts: {
         await installFiles()
         await installGlobalAdapters()
       }
+
+      runPostInstallValidation()
 
       const now = new Date().toISOString()
       const storeData: StoreData = {

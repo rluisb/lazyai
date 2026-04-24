@@ -20,10 +20,6 @@ func NewRegistry() *Registry {
 	}
 
 	r.register(&OpenCodeAdapter{})
-	r.register(&ClaudeCodeAdapter{})
-	r.register(&GeminiAdapter{})
-	r.register(&CopilotAdapter{})
-	r.register(&CodexAdapter{})
 
 	return r
 }

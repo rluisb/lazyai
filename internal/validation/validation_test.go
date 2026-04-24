@@ -109,7 +109,7 @@ func TestSanitizeName(t *testing.T) {
 func TestValidateToolId(t *testing.T) {
 	t.Parallel()
 
-	validTools := []string{"opencode", "claude-code", "gemini", "copilot", "codex"}
+	validTools := []string{"opencode"}
 	for _, tool := range validTools {
 		if err := ValidateToolId(tool); err != nil {
 			t.Errorf("ValidateToolId(%q) returned error: %v", tool, err)

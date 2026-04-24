@@ -67,15 +67,6 @@ type WizardConfig struct {
 	CLIEnableCodegraph   bool
 	CLICodegraphDataPath string
 
-	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
-	// scaffolding to the tool's own CLI instead of direct-write.
-	CLIDriveCLI bool
-
-	// CLILocalSecrets, when true, routes Claude Code MCP/settings writes to
-	// .claude/settings.local.json (gitignored) instead of the committed
-	// surfaces (.mcp.json / .claude/settings.json). Opt-in; default false.
-	CLILocalSecrets bool
-
 	// CLIOrg and CLITeam populate [YOUR_ORG] / [YOUR_TEAM] in the generated
 	// CLAUDE.md. Empty values become <!-- fill-in --> markers.
 	CLIOrg  string

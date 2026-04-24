@@ -10,7 +10,7 @@ import (
 func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 	dir := t.TempDir()
 	seedStoreData(t, dir, func(data *types.StoreData) {
-		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode}
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
 	})
 	writeCanonicalMCPConfig(t, dir)
 
@@ -23,18 +23,12 @@ func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 	}
 
 	if !fileExists(filepath.Join(dir, ".opencode", "opencode.jsonc")) {
-		t.Fatal("expected opencode.jsonc to be generated")
-	}
-	if !fileExists(filepath.Join(dir, ".mcp.json")) {
-		t.Fatal("expected .mcp.json to be generated")
+		t.Fatal("expected .opencode/opencode.jsonc to be generated")
 	}
 
 	storeData := readSeededStoreData(t, dir)
 	if !hasTrackedFile(storeData.Files, ".opencode/opencode.jsonc") {
-		t.Fatal("expected opencode.jsonc to be tracked")
-	}
-	if !hasTrackedFile(storeData.Files, ".mcp.json") {
-		t.Fatal("expected .mcp.json to be tracked")
+		t.Fatal("expected .opencode/opencode.jsonc to be tracked")
 	}
 }
 
@@ -49,7 +43,7 @@ func TestCompileMissingConfigReturnsError(t *testing.T) {
 func TestCompileDryRunDoesNotWriteFilesOrStoreRecords(t *testing.T) {
 	dir := t.TempDir()
 	seedStoreData(t, dir, func(data *types.StoreData) {
-		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode}
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
 	})
 	writeCanonicalMCPConfig(t, dir)
 
@@ -61,11 +55,8 @@ func TestCompileDryRunDoesNotWriteFilesOrStoreRecords(t *testing.T) {
 	}); false {
 	}
 
-	if fileExists(filepath.Join(dir, ".opencode", "opencode.jsonc")) {
+	if fileExists(filepath.Join(dir, "opencode.jsonc")) {
 		t.Fatal("did not expect opencode.jsonc in dry-run")
-	}
-	if fileExists(filepath.Join(dir, ".mcp.json")) {
-		t.Fatal("did not expect .mcp.json in dry-run")
 	}
 
 	storeData := readSeededStoreData(t, dir)

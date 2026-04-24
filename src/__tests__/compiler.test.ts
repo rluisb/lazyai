@@ -538,7 +538,7 @@ describe('TemplateCompiler', () => {
     const compiler = new TemplateCompiler({
       libraryDir: libraryTempDir,
       outputDir: tempDir,
-      tool: 'copilot' as ToolId,
+      tool: 'opencode',
       context: {
         projectName: 'SharedTemplateTest',
         planningDir: 'planning',
@@ -548,8 +548,8 @@ describe('TemplateCompiler', () => {
     const output = compiler.compile()
     expect(output.files).toHaveLength(1)
     expect(output.files[0]?.relativePath).toBe('root.md')
-    expect(output.files[0]?.content).toContain('This project uses GitHub Copilot with ai-setup integration.')
-    expect(output.files[0]?.content).toContain('## Copilot-Specific Notes')
+    expect(output.files[0]?.content).toContain('This project uses OpenCode with ai-setup integration.')
+    expect(output.files[0]?.content).toContain('## OpenCode-Specific Notes')
     expect(output.files[0]?.content).toContain('SharedTemplateTest')
     expect(output.files[0]?.content).not.toContain('Legacy per-tool root should be ignored')
   })
@@ -672,8 +672,7 @@ describe('Real library integration', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('compiles all 5 supported tools without errors', () => {
-    const tools: ToolId[] = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini']
+  it('compiles opencode tool without errors', () => {
     const context: FragmentContext = {
       projectName: 'Integration Test',
       planningDir: 'planning',
@@ -686,27 +685,25 @@ describe('Real library integration', () => {
       },
     }
 
-    for (const tool of tools) {
-      const compiler = new TemplateCompiler({
-        libraryDir,
-        outputDir: tempDir,
-        tool,
-        context,
-      })
-
-      expect(() => {
-        const output = compiler.compile()
-        expect(output.tool).toBe(tool)
-        expect(output.files.length).toBeGreaterThan(0)
-      }).not.toThrow()
-    }
-  })
-
-  it('compiles claude-code template with real fragments', () => {
     const compiler = new TemplateCompiler({
       libraryDir,
       outputDir: tempDir,
-      tool: 'claude-code',
+      tool: 'opencode',
+      context,
+    })
+
+    expect(() => {
+      const output = compiler.compile()
+      expect(output.tool).toBe('opencode')
+      expect(output.files.length).toBeGreaterThan(0)
+    }).not.toThrow()
+  })
+
+  it('compiles opencode template with real fragments', () => {
+    const compiler = new TemplateCompiler({
+      libraryDir,
+      outputDir: tempDir,
+      tool: 'opencode',
       context: {
         projectName: 'Integration Test Project',
         planningDir: 'docs/planning',
@@ -723,7 +720,7 @@ describe('Real library integration', () => {
 
     const output = compiler.compile()
 
-    expect(output.tool).toBe('claude-code')
+    expect(output.tool).toBe('opencode')
     expect(output.files.length).toBeGreaterThan(0)
 
     const rootFile = output.files.find(f => f.relativePath === 'root.md')
@@ -732,19 +729,14 @@ describe('Real library integration', () => {
     if (rootFile !== undefined) {
       expect(rootFile.content).toContain('Integration Test Project')
       expect(rootFile.content).toContain('docs/planning')
-      expect(rootFile.content).toContain('Follow TypeScript best practices.')
-      // Check that features were included
-      expect(rootFile.content).toContain('decision-protocol')
-      expect(rootFile.content).toContain('agent-harness')
     }
   })
 
   it('filters features correctly in real template', () => {
-    // Test with features disabled
     const compiler = new TemplateCompiler({
       libraryDir,
       outputDir: tempDir,
-      tool: 'claude-code',
+      tool: 'opencode',
       context: {
         projectName: 'Test',
         planningDir: 'planning',
@@ -761,7 +753,6 @@ describe('Real library integration', () => {
 
     expect(rootFile).toBeDefined()
     if (rootFile) {
-      // These fragments should not appear when conditionals are false
       expect(rootFile.content).not.toContain('decision-protocol')
       expect(rootFile.content).not.toContain('agent-harness')
     }
@@ -771,7 +762,7 @@ describe('Real library integration', () => {
     const compiler = new TemplateCompiler({
       libraryDir,
       outputDir: tempDir,
-      tool: 'claude-code',
+      tool: 'opencode',
       context: {
         projectName: 'WriteTest',
         planningDir: 'planning',

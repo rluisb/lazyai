@@ -38,27 +38,6 @@ function getEnabledServers(catalog: McpCatalog): Record<string, McpServer> {
   return result
 }
 
-function toMcpJson(servers: Record<string, McpServer>): Record<string, unknown> {
-  const mcpServers: Record<string, unknown> = {}
-  for (const [name, server] of Object.entries(servers)) {
-    if (server.url) {
-      const entry: Record<string, unknown> = {
-        url: server.url,
-      }
-      if (server.headers) entry.headers = server.headers
-      mcpServers[name] = entry
-      continue
-    }
-    const entry: Record<string, unknown> = {
-      command: server.command,
-      args: server.args,
-    }
-    if (server.env) entry.env = server.env
-    mcpServers[name] = entry
-  }
-  return { mcpServers }
-}
-
 function toOpenCodeJsonc(allServers: Record<string, McpServer>): Record<string, unknown> {
   const mcp: Record<string, unknown> = {}
   for (const [name, server] of Object.entries(allServers)) {
@@ -83,46 +62,6 @@ function toOpenCodeJsonc(allServers: Record<string, McpServer>): Record<string, 
   return mcp
 }
 
-function toCopilotMcp(servers: Record<string, McpServer>): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const [name, server] of Object.entries(servers)) {
-    if (server.url) {
-      const entry: Record<string, unknown> = {
-        type: 'sse',
-        url: server.url,
-      }
-      if (server.headers) entry.headers = server.headers
-      result[name] = entry
-      continue
-    }
-    const entry: Record<string, unknown> = {
-      type: 'stdio',
-      command: server.command,
-      args: server.args,
-    }
-    if (server.env) entry.env = server.env
-    result[name] = entry
-  }
-  return { servers: result }
-}
-
-function toGeminiSettings(servers: Record<string, McpServer>): Record<string, unknown> {
-  const mcpServers: Record<string, unknown> = {}
-  for (const [name, server] of Object.entries(servers)) {
-    if (server.url) {
-      console.warn(`⚠️  Skipping remote server "${name}" for gemini (not supported)`)
-      continue
-    }
-    const entry: Record<string, unknown> = {
-      command: server.command,
-      args: server.args,
-    }
-    if (server.env) entry.env = transformEnvSyntax(server.env, '$$$1')
-    mcpServers[name] = entry
-  }
-  return { mcpServers }
-}
-
 function transformEnvSyntax(envObj: Record<string, string>, targetPattern: string): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [key, value] of Object.entries(envObj)) {
@@ -145,77 +84,53 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
   const enabledServers = getEnabledServers(catalog)
   if (Object.keys(enabledServers).length === 0) return
 
-  switch (opts.toolId) {
-    case 'opencode': {
-      const configPath = path.join(opts.toolTargetDir, 'opencode.jsonc')
-      const ocMcpContent = toOpenCodeJsonc(catalog.servers)
+  const ocDir = path.join(opts.toolTargetDir, '.opencode')
+  const configPath = path.join(ocDir, 'opencode.jsonc')
+  const ocMcpContent = toOpenCodeJsonc(catalog.servers)
 
-      let existingConfig: Record<string, unknown> = {}
-      if (fileExists(configPath)) {
-        try {
-          const raw = readFile(configPath)
-          existingConfig = JSON.parse(stripJsonComments(raw)) as Record<string, unknown>
-        } catch {
-          // If parse fails, start fresh
-        }
-      }
-
-      const merged = {
-        ...existingConfig,
-        $schema: 'https://opencode.ai/config.json',
-        mcp: ocMcpContent,
-      }
-
-      writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`)
-      opts.fileRecords.push({
-        path: 'opencode.jsonc',
-        hash: fileHash(configPath),
-        source: 'compiled:mcp:opencode',
-        owner: 'library',
-      })
-      break
+  let existingConfig: Record<string, unknown> = {}
+  if (fileExists(configPath)) {
+    try {
+      const raw = readFile(configPath)
+      existingConfig = JSON.parse(stripJsonComments(raw)) as Record<string, unknown>
+    } catch {
+      // If parse fails, start fresh
     }
-
-    case 'claude-code': {
-      const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
-      const content = toMcpJson(enabledServers)
-      writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
-      opts.fileRecords.push({
-        path: '.mcp.json',
-        hash: fileHash(mcpPath),
-        source: 'compiled:mcp',
-        owner: 'library',
-      })
-      break
-    }
-
-    case 'copilot': {
-      const vscodeMcpPath = path.join(opts.toolTargetDir, '.vscode', 'mcp.json')
-      ensureDir(path.join(opts.toolTargetDir, '.vscode'))
-      const content = toCopilotMcp(enabledServers)
-      writeFile(vscodeMcpPath, `${JSON.stringify(content, null, 2)}\n`)
-      opts.fileRecords.push({
-        path: '.vscode/mcp.json',
-        hash: fileHash(vscodeMcpPath),
-        source: 'compiled:mcp:copilot',
-        owner: 'library',
-      })
-      break
-    }
-
-    case 'gemini': {
-      const settingsPath = path.join(opts.toolTargetDir, '.gemini', 'settings.json')
-      ensureDir(path.join(opts.toolTargetDir, '.gemini'))
-      const content = toGeminiSettings(enabledServers)
-      writeFile(settingsPath, `${JSON.stringify(content, null, 2)}\n`)
-      opts.fileRecords.push({
-        path: '.gemini/settings.json',
-        hash: fileHash(settingsPath),
-        source: 'compiled:mcp:gemini',
-        owner: 'library',
-      })
-      break
-    }
-
   }
+
+  existingConfig.$schema = 'https://opencode.ai/config.json'
+  existingConfig.mcp = mergeOpenCodeMcpServers(existingConfig.mcp, ocMcpContent)
+
+  ensureDir(ocDir)
+  writeFile(configPath, `${JSON.stringify(existingConfig, null, 2)}\n`)
+  opts.fileRecords.push({
+    path: '.opencode/opencode.jsonc',
+    hash: fileHash(configPath),
+    source: 'compiled:mcp:opencode',
+    owner: 'library',
+  })
+}
+
+/**
+ * Merge ai-setup-managed MCP entries into whatever the user currently has
+ * under `mcp` in their opencode.jsonc. User-authored servers NOT in the
+ * managed set are preserved; managed servers win on key collision.
+ *
+ * Mirrors Go's `mergeOpenCodeMcpServers` at internal/adapter/mcp_compiler.go.
+ */
+function mergeOpenCodeMcpServers(
+  existingRaw: unknown,
+  managed: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = {}
+  if (existingRaw !== null && typeof existingRaw === 'object' && !Array.isArray(existingRaw)) {
+    for (const [name, entry] of Object.entries(existingRaw)) {
+      if (name in managed) continue
+      merged[name] = entry
+    }
+  }
+  for (const [name, entry] of Object.entries(managed)) {
+    merged[name] = entry
+  }
+  return merged
 }

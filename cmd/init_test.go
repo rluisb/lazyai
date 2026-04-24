@@ -49,10 +49,9 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	}
 }
 
-// TestInitNonInteractiveScopeFilter_MixedList verifies that when copilot
-// is requested at global scope but the probes fail (no CLI or ~/.copilot/),
-// the install proceeds for the remaining tools.
-func TestInitNonInteractiveScopeFilter_MixedList(t *testing.T) {
+// TestInitNonInteractiveGlobalScope verifies that OpenCode at global scope
+// installs correctly when HomeDir is provided.
+func TestInitNonInteractiveGlobalScope(t *testing.T) {
 	dir := t.TempDir()
 	ensureTestLibraryFS(t)
 	withWorkingDir(t, dir)
@@ -64,7 +63,7 @@ func TestInitNonInteractiveScopeFilter_MixedList(t *testing.T) {
 		HomeDir:     home,
 		TargetDir:   dir,
 		CLIScope:    types.SetupScopeGlobal,
-		CLITools:    []types.ToolId{types.ToolIdClaudeCode, types.ToolIdCopilot},
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
 		CLIPreset:   types.PresetLevelMinimal,
 		CLIName:     "global",
 	}
@@ -74,32 +73,4 @@ func TestInitNonInteractiveScopeFilter_MixedList(t *testing.T) {
 			t.Fatalf("runInitNonInteractive: %v", err)
 		}
 	})
-	// Copilot is now supported at scope level (filtered at adapter level when probes fail)
-	// The install should proceed with both tools; Copilot skips silently
-}
-
-// TestInitNonInteractiveScopeFilter_AllUnsupported verifies that when copilot
-// is the only tool at global scope, the install still proceeds (even though
-// the adapter will skip due to failed probes).
-func TestInitNonInteractiveScopeFilter_AllUnsupported(t *testing.T) {
-	dir := t.TempDir()
-	ensureTestLibraryFS(t)
-	withWorkingDir(t, dir)
-
-	config := &wizard.WizardConfig{
-		Interactive: false,
-		HomeDir:     t.TempDir(),
-		TargetDir:   dir,
-		CLIScope:    types.SetupScopeGlobal,
-		CLITools:    []types.ToolId{types.ToolIdCopilot},
-		CLIPreset:   types.PresetLevelMinimal,
-		CLIName:     "global",
-	}
-
-	// Copilot is now supported at scope level; install should proceed
-	// (adapter skips silently when probes fail)
-	err := runInitNonInteractive(config)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
 }

@@ -32,27 +32,10 @@ const INFRA_FILE_MAP: Record<WizardConfig['selections']['infra'][number], { dest
 }
 
 const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promptDir?: string; rulesDir?: string; commandDir?: string }> = {
-  'claude-code': {
-    agentDir: '.claude/agents',
-    skillDir: '.claude/skills',
-    rulesDir: '.claude/rules',
-  },
   opencode: {
     agentDir: '.opencode/agents',
     skillDir: '.opencode/skills',
     commandDir: '.opencode/commands',
-  },
-  gemini: {
-    skillDir: '.gemini/skills',
-  },
-  copilot: {
-    // Copilot uses AGENTS.md at the repository root for agent instructions.
-    skillDir: '.github/prompts',
-    promptDir: '.github/prompts',
-  },
-  codex: {
-    // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
-    skillDir: '.agents/skills',
   },
 }
 
@@ -135,41 +118,17 @@ export async function computePlan(
     }
 
     for (const skillId of selections.skills) {
-      const skillDestPath = tool === 'copilot'
-        ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini'
-          ? `${skillId}/SKILL.md`
-          : `${skillId}.md`
       planned.push(
         makePlannedFile(
           targetDir,
-          path.posix.join(paths.skillDir, skillDestPath),
+          path.posix.join(paths.skillDir, `${skillId}/SKILL.md`),
           `skills/${skillId}.md`,
           'skill',
         ),
       )
     }
 
-    if (tool === 'claude-code' || tool === 'opencode' || tool === 'codex') {
-      continue
-    }
-
-    // Only add prompts if tool supports them
-    if (paths.promptDir) {
-      for (const promptId of selections.prompts) {
-        const promptDestPath = tool === 'copilot'
-          ? `${promptId}.prompt.md`
-          : `${promptId}.md`
-        planned.push(
-          makePlannedFile(
-            targetDir,
-            path.posix.join(paths.promptDir, promptDestPath),
-            `prompts/${promptId}.md`,
-            'prompt',
-          ),
-        )
-      }
-    }
+    // opencode has no separate prompt directory
   }
 
   return planned

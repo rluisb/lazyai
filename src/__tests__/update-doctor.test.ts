@@ -25,7 +25,7 @@ describe('update and doctor commands', () => {
     const config: SetupConfig = {
       setupScope: 'project',
       setupType: 'project',
-      tools: ['opencode', 'claude-code'],
+      tools: ['opencode'],
       projectName: 'test-project',
       targetDir: tempDir,
     }

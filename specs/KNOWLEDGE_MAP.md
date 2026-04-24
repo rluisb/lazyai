@@ -22,6 +22,8 @@
 | 016 | `ai-setup build-plugin` — generate Claude Code plugin from library (agents + skills + commands + output styles) | ✅ Complete | `feature/go-migration` |
 | 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
 | 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
+| 019 | OpenCode-only consolidation (remove non-OpenCode providers from both Go and TS runtimes) | ✅ Complete | `main` |
+| 020 | Runtime parity backport — port configmerge + opencode_validate from Go to TS; fix MCP compiler server-clobber bug | ✅ Complete | `main` |
 
 ## Key Architecture Decisions
 
@@ -36,6 +38,8 @@
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
 | OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
 | OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
+| TS and Go runtimes must stay at feature parity — any feature added to one must be added to the other in the same change set | — | The repo ships both as peer implementations via `go` binary and npm `@ricardoborges-teachable/ai-setup`; users pick their entry point and expect identical behavior |
+| `AI_SETUP_SKIP_VALIDATION=1` env var disables post-install `opencode debug` probes | — | TS test suite sets this (via `vitest.config.ts` setupFile) to keep test runs under 10s when `opencode` is installed on the CI/dev machine; real users never set it and always get validation |
 
 ## Packages Reference
 
@@ -72,6 +76,11 @@
 | `internal/adapter/codex.go#codexExecValidationArgs` | Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
+| `src/utils/configmerge.ts` | TS counterpart of `internal/configmerge/`; `mergeJsonFile` deep-merges JSON/JSONC with `.bak` sidecar on first touch (spec 020) |
+| `src/utils/jsonc.ts#parseJsonc`, `#readJsoncFile` | TS wrappers matching Go's `jsonc.ParseJSONC` / `ReadJSONCFile` surface (spec 020) |
+| `src/adapters/opencode-validate.ts` | TS counterpart of `internal/adapter/opencode_validate.go`; `validateOpenCodeInstall` runs `opencode debug config/agent` probes via injectable `CmdRunner`; honors `AI_SETUP_SKIP_VALIDATION=1` (spec 020) |
+| `src/adapters/mcp-compiler.ts#mergeOpenCodeMcpServers` | Per-server merge helper ported from Go's `mergeOpenCodeMcpServers` — preserves user-authored MCP entries not in the managed set (spec 020 bug fix) |
+| `vitest.config.ts` + `src/__tests__/setup.ts` | Sets `AI_SETUP_SKIP_VALIDATION=1` globally for TS tests to keep the suite fast when `opencode` is installed (spec 020) |
 
 ## Pending / Follow-up
 
@@ -97,3 +106,5 @@
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)
 - [x] ~~Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)~~ — spec 016 (`ai-setup build-plugin` generator)
+- [ ] **Spec 021 — Parity phase 2**: port Go's `internal/scaffold/housekeeping.go` to TS; port TS's Claude/Gemini/Copilot migration parsers to Go; port TS's `src/migration/diff/diff3.ts` to Go (deferred from spec 020)
+- [ ] Cross-runtime parity harness (byte-identical `ai-setup init` outputs between Go and TS for the same inputs) — enforces the runtime parity rule on CI

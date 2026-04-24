@@ -53,7 +53,7 @@ describe('e2e project workflows', () => {
     expect(fs.existsSync(path.join(tempDir, '.opencode', 'agents', 'builder.md'))).toBe(true)
   }, 20000)
 
-  it('runs project init with opencode + claude-code outputs', async () => {
+  it('runs project init with opencode and verifies key outputs', async () => {
     const tempDir = makeTempRepo()
     process.chdir(tempDir)
 
@@ -62,15 +62,15 @@ describe('e2e project workflows', () => {
       '--scope',
       'project',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
-      'e2e-multi-tool',
+      'e2e-opencode-verify',
       '--no-interactive',
     )
 
     expect(fs.existsSync(path.join(tempDir, '.opencode'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.claude'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode', 'opencode.jsonc'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
   }, 20000)
 })

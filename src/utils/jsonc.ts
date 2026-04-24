@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 /**
  * Strip line (`// ...`) and block (`/* ... *\/`) comments from a JSONC string
  * without mangling comment-like sequences that appear inside string literals
@@ -46,4 +48,16 @@ export function stripJsonComments(input: string): string {
     i++
   }
   return out
+}
+
+/** Strip comments from JSONC input and parse the result as a JSON object. */
+export function parseJsonc(input: string): Record<string, unknown> {
+  const stripped = stripJsonComments(input)
+  return JSON.parse(stripped) as Record<string, unknown>
+}
+
+/** Read a file from disk and parse it as JSONC. */
+export function readJsoncFile(path: string): Record<string, unknown> {
+  const data = readFileSync(path, 'utf-8')
+  return parseJsonc(data)
 }

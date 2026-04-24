@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { compileMcp } from '../adapters/mcp-compiler.js'
 import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
@@ -129,7 +129,7 @@ describe('MCP scaffold and compile', () => {
     expect(catalog.servers.memory.enabled).toBe(true)
   })
 
-  it('compileMcp generates opencode.jsonc with mcp config for opencode', async () => {
+  it('compileMcp generates .opencode/opencode.jsonc with mcp config for opencode', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -145,7 +145,7 @@ describe('MCP scaffold and compile', () => {
       fileRecords,
     })
 
-    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
     expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
     expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
     expect(opencodeConfig.mcp.stdioEnabled.environment.API_KEY).toBe('{env:API_KEY}')
@@ -154,7 +154,7 @@ describe('MCP scaffold and compile', () => {
     expect(opencodeConfig.mcp.remoteDisabled.headers.REMOTE_API_KEY).toBe('{env:REMOTE_API_KEY}')
   })
 
-  it('compileMcp merges existing opencode.jsonc and preserves non-mcp keys', async () => {
+  it('compileMcp preserves user-authored MCP servers and non-mcp keys on re-run', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -163,22 +163,23 @@ describe('MCP scaffold and compile', () => {
       perFileOverrides: new Map(),
     })
 
+    ensureDir(path.join(targetDir, '.opencode'))
     writeFile(
-      path.join(targetDir, 'opencode.jsonc'),
+      path.join(targetDir, '.opencode', 'opencode.jsonc'),
       `${JSON.stringify(
         {
           plugin: ['foo-plugin'],
           permission: { default: 'allow' },
           mcp: {
-            legacy: {
+            userOwned: {
               type: 'local',
-              command: ['legacy-cmd'],
+              command: ['user-cmd'],
             },
           },
         },
         null,
         2,
-      )}\n`
+      )}\n`,
     )
 
     await compileMcp({
@@ -188,15 +189,15 @@ describe('MCP scaffold and compile', () => {
       fileRecords,
     })
 
-    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
     expect(opencodeConfig.plugin).toEqual(['foo-plugin'])
     expect(opencodeConfig.permission).toEqual({ default: 'allow' })
     expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
-    expect(opencodeConfig.mcp.legacy).toBeUndefined()
+    expect(opencodeConfig.mcp.userOwned).toEqual({ type: 'local', command: ['user-cmd'] })
     expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
   })
 
-  it('compileMcp generates .vscode/mcp.json for copilot with stdio and remote types', async () => {
+  it('compileMcp managed servers win on key collision with user-authored entries', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -205,69 +206,29 @@ describe('MCP scaffold and compile', () => {
       perFileOverrides: new Map(),
     })
 
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'copilot',
-      fileRecords,
-    })
-
-    const copilot = JSON.parse(readFile(path.join(targetDir, '.vscode', 'mcp.json')))
-    expect(copilot.servers.stdioEnabled.type).toBe('stdio')
-    expect(copilot.servers.remoteEnabled.type).toBe('sse')
-    expect(copilot.servers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
-    expect(copilot.servers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
-    expect(copilot.servers.remoteDisabled).toBeUndefined()
-    expect(copilot.servers.stdioDisabled).toBeUndefined()
-  })
-
-  it('compileMcp generates .gemini/settings.json with $VAR env syntax and warns on remote servers', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
+    ensureDir(path.join(targetDir, '.opencode'))
+    writeFile(
+      path.join(targetDir, '.opencode', 'opencode.jsonc'),
+      `${JSON.stringify(
+        {
+          mcp: {
+            stdioEnabled: { type: 'local', command: ['user-override'] },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    )
 
     await compileMcp({
       canonicalDir: targetDir,
       toolTargetDir: targetDir,
-      toolId: 'gemini',
+      toolId: 'opencode',
       fileRecords,
     })
 
-    const gemini = JSON.parse(readFile(path.join(targetDir, '.gemini', 'settings.json')))
-    expect(gemini.mcpServers.stdioEnabled.env.API_KEY).toBe('$API_KEY')
-    expect(gemini.mcpServers.stdioEnabled.includeTools).toBeUndefined()
-    expect(warnSpy).toHaveBeenCalledWith('⚠️  Skipping remote server "remoteEnabled" for gemini (not supported)')
-    warnSpy.mockRestore()
-    expect(gemini.mcpServers.remoteDisabled).toBeUndefined()
-    expect(gemini.mcpServers.remoteEnabled).toBeUndefined()
-  })
-
-  it('compileMcp generates .mcp.json for claude-code', async () => {
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'claude-code',
-      fileRecords,
-    })
-
-    const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
-    expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
+    expect(opencodeConfig.mcp.stdioEnabled.command).toEqual(['npx', '-y', 'mcp-stdio-enabled'])
   })
 
   it('enableServers option enables disabled MCP servers by name', async () => {
@@ -283,53 +244,6 @@ describe('MCP scaffold and compile', () => {
     const catalog = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
     expect(catalog.servers.stdioDisabled.enabled).toBe(true)
     expect(catalog.servers.stdioEnabled.enabled).toBe(true)
-  })
-
-  it('compileMcp includes orchestrator when explicitly enabled', async () => {
-    writeFile(
-      path.join(libraryDir, 'mcp', 'catalog.json'),
-      JSON.stringify(
-        {
-          servers: {
-            memory: {
-              command: 'npx',
-              args: ['-y', '@modelcontextprotocol/server-memory'],
-              enabled: true,
-            },
-            orchestrator: {
-              command: 'npx',
-              args: ['-y', '@ai-setup/orchestrator'],
-              enabled: false,
-            },
-          },
-        },
-        null,
-        2,
-      ),
-    )
-
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-      enableServers: ['orchestrator'],
-    })
-
-    const canonical = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
-    expect(canonical.servers.orchestrator.enabled).toBe(true)
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'claude-code',
-      fileRecords,
-    })
-
-    const compiled = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
-    expect(compiled.mcpServers.orchestrator.command).toBe('npx')
-    expect(compiled.mcpServers.orchestrator.args).toEqual(['-y', '@ai-setup/orchestrator'])
   })
 
   it('enableServers ignores unknown server names', async () => {

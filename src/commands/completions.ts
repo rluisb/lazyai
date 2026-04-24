@@ -12,7 +12,7 @@ type Shell = 'bash' | 'zsh' | 'fish'
 
 const COMMANDS = ['init', 'add', 'update', 'doctor', 'status', 'compile', 'eject', 'list', 'info', 'create', 'completions']
 
-const TOOLS = ['opencode', 'claude-code', 'copilot', 'gemini', 'codex']
+const TOOLS = ['opencode']
 
 const SCOPES = ['project', 'global', 'workspace']
 

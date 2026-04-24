@@ -94,8 +94,8 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 		t.Fatalf("write mcp.json: %v", err)
 	}
 
-	// Pre-seed opencode.jsonc with a user-authored MCP entry under a name
-	// that ai-setup does not manage.
+	// Pre-seed opencode.jsonc inside .opencode/ with a user-authored MCP entry
+	// under a name that ai-setup does not manage.
 	ocDir := filepath.Join(targetDir, ".opencode")
 	_ = files.EnsureDir(ocDir)
 	preExisting := `{
@@ -144,10 +144,10 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ocDir := filepath.Join(targetDir, ".opencode")
-	_ = files.EnsureDir(ocDir)
+	ocDir2 := filepath.Join(targetDir, ".opencode")
+	_ = files.EnsureDir(ocDir2)
 	preExisting := `{"mcp":{"memory":{"type":"local","command":["user-override"]}}}`
-	if err := os.WriteFile(filepath.Join(ocDir, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(ocDir2, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -158,7 +158,7 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, _ := os.ReadFile(filepath.Join(ocDir, "opencode.jsonc"))
+	data, _ := os.ReadFile(filepath.Join(ocDir2, "opencode.jsonc"))
 	if strings.Contains(string(data), "user-override") {
 		t.Errorf("user-override survived; managed entry should have won:\n%s", data)
 	}
@@ -167,58 +167,3 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 	}
 }
 
-// TestCompileMCPForTool_CopilotGlobalSkips verifies that Copilot × global scope
-// is a clean no-op (no error, no records).
-func TestCompileMCPForTool_CopilotGlobalSkips(t *testing.T) {
-	targetDir := t.TempDir()
-	homeDir := t.TempDir()
-
-	aiDir := filepath.Join(targetDir, ".ai")
-	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y"]}}}`
-	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	records, err := CompileMCPForTool(types.ToolIdCopilot, CompileContext{
-		TargetDir:  targetDir,
-		HomeDir:    homeDir,
-		SetupScope: types.SetupScopeGlobal,
-	})
-	if err != nil {
-		t.Fatalf("Copilot × global must not error, got: %v", err)
-	}
-	if len(records) != 0 {
-		t.Errorf("Copilot × global must produce 0 records, got %d", len(records))
-	}
-}
-
-// TestCompileMCPForTool_ClaudeGlobalSkips verifies that Claude Code × global
-// skips compile (init's settings.json merge already handles mcpServers).
-func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
-	targetDir := t.TempDir()
-	homeDir := t.TempDir()
-
-	aiDir := filepath.Join(targetDir, ".ai")
-	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"memory":{"command":"npx"}}}`
-	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	records, err := CompileMCPForTool(types.ToolIdClaudeCode, CompileContext{
-		TargetDir:  targetDir,
-		HomeDir:    homeDir,
-		SetupScope: types.SetupScopeGlobal,
-	})
-	if err != nil {
-		t.Fatalf("Claude × global must not error, got: %v", err)
-	}
-	if len(records) != 0 {
-		t.Errorf("Claude × global must produce 0 records; init handles settings.json")
-	}
-	// No .mcp.json should have been written.
-	if files.FileExists(filepath.Join(targetDir, ".mcp.json")) {
-		t.Error("Claude × global must not write project-scope .mcp.json")
-	}
-}

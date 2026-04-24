@@ -45,13 +45,13 @@ describe('wizard phases 1 and 3', () => {
     const result = await runPhase1({
       interactive: false,
       prior: {},
-      cliOverrides: { scope: 'project', tools: ['opencode', 'claude-code'], name: 'my-project' },
+      cliOverrides: { scope: 'project', tools: ['opencode'], name: 'my-project' },
       targetDir: '/tmp',
     })
 
     expect(result).toEqual({
       setupScope: 'project',
-      tools: ['opencode', 'claude-code'],
+      tools: ['opencode'],
       projectName: 'my-project',
     })
   })

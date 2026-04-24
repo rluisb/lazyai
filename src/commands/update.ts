@@ -6,7 +6,6 @@ import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
 import { appendOperation, createStore, writeStore } from '../store/index.js'
 import type { StoreData, TrackedFile } from '../store/schema.js'
-import type { ToolId } from '../types.js'
 import { ALL_SKILLS } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
@@ -88,48 +87,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     }
   }
 
-  const addSkillsAndPromptsForTool = (tool: ToolId): void => {
-    const addSkill = (name: string, targetPath: string): void => {
-      addFile(`skills/${name}.md`, join(targetDir, targetPath))
-    }
-    const addPrompt = (name: string, targetPath: string): void => {
-      addFile(`prompts/${name}.md`, join(targetDir, targetPath))
-    }
-
-    if (tool === 'opencode') {
-      for (const name of ALL_SKILLS) {
-        addSkill(name, `.opencode/skills/${name}/SKILL.md`)
-      }
-    }
-
-    if (tool === 'claude-code') {
-      for (const name of ALL_SKILLS) {
-        addSkill(name, `.claude/skills/${name}/SKILL.md`)
-      }
-    }
-
-    if (tool === 'gemini') {
-      for (const name of ALL_SKILLS) {
-        addSkill(name, `.gemini/skills/${name}/SKILL.md`)
-      }
-      // Gemini has no templates/ concept — skip prompts
-    }
-
-    if (tool === 'copilot') {
-      for (const name of ALL_SKILLS) {
-        const source = `skills/${name}.md`
-        const srcPath = join(libraryDir, source)
-        if (fileExists(srcPath)) {
-          const transformed = `---\nmode: agent\n---\n\n${readFile(srcPath)}`
-          addContent(`.github/prompts/${name}.prompt.md`, source, transformed)
-        }
-      }
-      for (const name of ['research', 'plan', 'implement', 'compact', 'local-example']) {
-        addPrompt(name, `.github/prompts/${name}.prompt.md`)
-      }
-    }
-  }
-
   addDir('templates', 'specs/templates')
   addDir('rules', 'specs/rules')
   addSpecsAgents()
@@ -145,55 +102,16 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
   const rootAgentsTemplatePath = join(libraryDir, 'root/AGENTS.template.md')
   if (fileExists(rootAgentsTemplatePath)) {
     const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName)
-    if (
-      data.config.tools.includes('opencode')
-      || data.config.tools.includes('copilot')
-      || data.config.tools.includes('codex')
-    ) {
+    if (data.config.tools.includes('opencode')) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
     }
   }
 
-  if (data.config.tools.includes('claude-code')) {
-    const rootClaudeTemplatePath = join(libraryDir, 'root/CLAUDE.template.md')
-    if (fileExists(rootClaudeTemplatePath)) {
-      addContent(
-        'CLAUDE.md',
-        'root/CLAUDE.template.md',
-        readFile(rootClaudeTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
-      )
+  for (const _tool of data.config.tools) {
+    addDir('agents', '.opencode/agents', stripFrontmatterAndInjectModel)
+    for (const name of ALL_SKILLS) {
+      addFile(`skills/${name}.md`, join(targetDir, `.opencode/skills/${name}/SKILL.md`))
     }
-  }
-
-  if (data.config.tools.includes('gemini')) {
-    const rootGeminiTemplatePath = join(libraryDir, 'root/GEMINI.template.md')
-    if (fileExists(rootGeminiTemplatePath)) {
-      addContent(
-        'GEMINI.md',
-        'root/GEMINI.template.md',
-        readFile(rootGeminiTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
-      )
-    }
-  }
-
-  if (data.config.tools.includes('copilot')) {
-    const rootCopilotTemplatePath = join(libraryDir, 'root/copilot-instructions.template.md')
-    if (fileExists(rootCopilotTemplatePath)) {
-      addContent(
-        '.github/copilot-instructions.md',
-        'root/copilot-instructions.template.md',
-        readFile(rootCopilotTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
-      )
-    }
-  }
-
-  for (const tool of data.config.tools) {
-    if (tool === 'opencode' || tool === 'claude-code') {
-      const targetSubdir = tool === 'opencode' ? '.opencode/agents' : '.claude/agents'
-      const transform = tool === 'opencode' ? stripFrontmatterAndInjectModel : undefined
-      addDir('agents', targetSubdir, transform)
-    }
-    addSkillsAndPromptsForTool(tool)
   }
 
   return expected

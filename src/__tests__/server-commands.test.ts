@@ -58,7 +58,8 @@ function seedOpencodeConfig(targetDir: string, serverName: string): void {
       [serverName]: { type: 'local', command: ['node', '-e', 'process.exit(0)'] },
     },
   }
-  writeFile(path.join(targetDir, 'opencode.jsonc'), JSON.stringify(content, null, 2))
+  ensureDir(path.join(targetDir, '.opencode'))
+  writeFile(path.join(targetDir, '.opencode', 'opencode.jsonc'), JSON.stringify(content, null, 2))
 }
 
 describe('runHealthChecks', () => {
@@ -147,7 +148,7 @@ describe('runHealthChecks', () => {
     const catalog = buildCatalog()
     seedCanonicalMcp(targetDir, catalog)
     ensureDir(path.join(targetDir, '.ai', 'orchestration', 'chains'))
-    // intentionally do NOT create opencode.jsonc
+    // intentionally do NOT create .opencode/opencode.jsonc
     const report = await runHealthChecks(targetDir, 'orchestrator', catalog, ['opencode'], 1000)
     const check = report.checks.find((c) => c.name === 'opencode mcp config')
     expect(check?.status).toBe('fail')
@@ -159,23 +160,15 @@ describe('runHealthChecks', () => {
     seedCanonicalMcp(targetDir, catalog)
     ensureDir(path.join(targetDir, '.ai', 'orchestration', 'chains'))
     // opencode config exists but has a different server
+    ensureDir(path.join(targetDir, '.opencode'))
     writeFile(
-      path.join(targetDir, 'opencode.jsonc'),
+      path.join(targetDir, '.opencode', 'opencode.jsonc'),
       JSON.stringify({ $schema: 'https://opencode.ai/config.json', mcp: { memory: {} } }),
     )
     const report = await runHealthChecks(targetDir, 'orchestrator', catalog, ['opencode'], 1000)
     const check = report.checks.find((c) => c.name === 'opencode mcp config')
     expect(check?.status).toBe('fail')
     expect(check?.message).toContain("does not contain 'orchestrator'")
-  })
-
-  it('skips per-tool mcp check for codex (no project-local config)', async () => {
-    const catalog = buildCatalog()
-    seedCanonicalMcp(targetDir, catalog)
-    ensureDir(path.join(targetDir, '.ai', 'orchestration', 'chains'))
-    const report = await runHealthChecks(targetDir, 'orchestrator', catalog, ['codex'], 1000)
-    const check = report.checks.find((c) => c.name === 'codex mcp config')
-    expect(check?.status).toBe('skip')
   })
 })
 

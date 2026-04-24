@@ -32,11 +32,6 @@ describe('cli init integration', () => {
     await program.parseAsync(['node', 'ai-setup', 'status'])
   }
 
-  const _runEject = async (): Promise<void> => {
-    const program = createProgram()
-    await program.parseAsync(['node', 'ai-setup', 'eject'])
-  }
-
   const runAdd = async (tool: string): Promise<void> => {
     const program = createProgram()
     await program.parseAsync(['node', 'ai-setup', 'add', tool])
@@ -58,7 +53,7 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
       'integration-test',
       '--no-interactive',
@@ -84,10 +79,7 @@ describe('cli init integration', () => {
       'specs/templates/AGENTS.md',
       'specs/rules/AGENTS.md',
       'AGENTS.md',
-      'CLAUDE.md',
       '.git/hooks/pre-commit',
-      '.claude/agents',
-      '.claude/skills',
       '.opencode/agents',
       '.opencode/skills',
       '.ai-setup.json',
@@ -100,11 +92,9 @@ describe('cli init integration', () => {
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('integration-test')
     expect(config.config.setupScope).toBe('project')
-    expect(config.config.tools).toEqual(['opencode', 'claude-code'])
+    expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.length).toBeGreaterThan(20)
-    expect(config.files.some((f: { path: string }) => f.path === '.claude/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === '.claude/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === 'specs/templates/task.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
@@ -118,7 +108,7 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
       'rerun-test',
       '--no-interactive',
@@ -130,10 +120,9 @@ describe('cli init integration', () => {
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.projectName).toBe('rerun-test')
     expect(config.config.setupScope).toBe('project')
-    expect(config.config.tools).toEqual(['opencode', 'claude-code'])
+    expect(config.config.tools).toEqual(['opencode'])
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.claude/agents'))).toBe(true)
   }, 15000)
 
   it('supports partial tool selection with --tools opencode', async () => {
@@ -151,7 +140,7 @@ describe('cli init integration', () => {
     ])
 
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'opencode.json'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'opencode.jsonc'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/skills'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(true)
@@ -200,16 +189,14 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
       'compile-project-test',
       '--no-interactive',
     ])
 
     const opencodeAgent = path.join(tempDir, '.opencode/agents/builder.md')
-    const claudeAgent = path.join(tempDir, '.claude/agents/builder.md')
     fs.rmSync(opencodeAgent)
-    fs.rmSync(claudeAgent)
 
     const storePath = path.join(tempDir, '.ai-setup.json')
     const beforeStore = fs.readFileSync(storePath, 'utf-8')
@@ -219,7 +206,6 @@ describe('cli init integration', () => {
     const afterStore = fs.readFileSync(storePath, 'utf-8')
     expect(afterStore).toBe(beforeStore)
     expect(fs.existsSync(opencodeAgent)).toBe(true)
-    expect(fs.existsSync(claudeAgent)).toBe(false)
   })
 
   it('compile uses stored phase-2 settings for compiled root regeneration', async () => {
@@ -265,20 +251,16 @@ describe('cli init integration', () => {
         '--scope',
         'global',
         '--tools',
-        'opencode,claude-code',
+        'opencode',
         '--no-interactive',
       ])
 
       const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
-      const claudeAgent = path.join(tempHome, '.claude/builder.md')
-
       fs.rmSync(opencodeAgent)
-      fs.rmSync(claudeAgent, { recursive: true, force: true })
 
       await runCompile(['--scope', 'global'])
 
       expect(fs.existsSync(opencodeAgent)).toBe(true)
-      expect(fs.existsSync(claudeAgent)).toBe(true)
       expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
       expect(fs.existsSync(path.join(tempHome, '.ai/.ai-setup.json'))).toBe(true)
     } finally {
@@ -328,7 +310,7 @@ describe('cli init integration', () => {
     logSpy.mockRestore()
   })
 
-  it('compile global uses native global target paths and logs unsupported tools', async () => {
+  it('compile global restores opencode agent and targets native global paths', async () => {
     const tempDir = makeTempRepo()
     const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
     const originalHome = process.env.HOME
@@ -340,22 +322,16 @@ describe('cli init integration', () => {
         '--scope',
         'global',
         '--tools',
-        'opencode,claude-code,copilot',
+        'opencode',
         '--no-interactive',
       ])
 
       const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
-      const claudeAgent = path.join(tempHome, '.claude/builder.md')
       fs.rmSync(opencodeAgent)
-      fs.rmSync(claudeAgent, { recursive: true, force: true })
 
-      const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
-      await runCompile(['--scope', 'global', '--tools', 'opencode,copilot'])
+      await runCompile(['--scope', 'global', '--tools', 'opencode'])
 
       expect(fs.existsSync(opencodeAgent)).toBe(true)
-      expect(fs.existsSync(claudeAgent)).toBe(false)
-      expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
-      infoSpy.mockRestore()
     } finally {
       if (originalHome === undefined) {
         delete process.env.HOME
@@ -374,7 +350,7 @@ describe('cli init integration', () => {
       '--scope',
       'project',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
       'status-test',
       '--no-interactive',
@@ -384,12 +360,10 @@ describe('cli init integration', () => {
     await runStatus()
 
     const output = writeSpy.mock.calls.map((call) => String(call[0])).join('')
-    // New summary box format
     expect(output).toContain('Scope')
     expect(output).toContain('project')
-    expect(output).toContain('opencode, claude-code')
+    expect(output).toContain('opencode')
     expect(output).toContain('Planning dir')
-    expect(output).toContain('.planning')
     expect(output).toContain('Features')
     expect(output).toContain('Git Conventions')
     expect(output).toContain('File Health')
@@ -421,7 +395,7 @@ describe('cli init integration', () => {
     expect(fs.existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(false)
   })
 
-  it('add installs claude-code files and updates manifest tools list', async () => {
+  it('add with unknown tool throws an error', async () => {
     const tempDir = makeTempRepo()
     process.chdir(tempDir)
 
@@ -435,19 +409,7 @@ describe('cli init integration', () => {
       '--no-interactive',
     ])
 
-    expect(fs.existsSync(path.join(tempDir, '.claude'))).toBe(false)
-
-    await runAdd('claude-code')
-
-    expect(fs.existsSync(path.join(tempDir, '.claude', 'skills'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, '.claude', 'rules'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
-    const compiledRootContent = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8')
-    expect(compiledRootContent).toContain('<system-context>')
-
-    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
-    expect(config.config.tools).toContain('claude-code')
-    expect(config.files.some((f: { path: string }) => f.path.startsWith('.claude/'))).toBe(true)
+    await expect(runAdd('claude-code')).rejects.toThrow(/unknown tool/)
   })
 
   it('supports workspace init + workspace compile from planning repo', async () => {
@@ -470,7 +432,7 @@ describe('cli init integration', () => {
       '--repos',
       '../fedora,../creator-checkout',
       '--tools',
-      'opencode,claude-code',
+      'opencode',
       '--name',
       'teachable-workspace',
       '--no-interactive',

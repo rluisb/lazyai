@@ -70,7 +70,7 @@ func runPhase1NonInteractive(defaults *Phase1Result) (*Phase1Result, PhaseAction
 		return nil, PhaseCancel, fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(defaults.Tools) == 0 {
-		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
+		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex, pi)")
 	}
 	if defaults.ProjectName == "" {
 		return nil, PhaseCancel, fmt.Errorf("project name is required in non-interactive mode")
@@ -306,6 +306,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 		huh.NewOption("Gemini CLI", "gemini"),
 		huh.NewOption("GitHub Copilot", "copilot"),
 		huh.NewOption("Codex (OpenAI)", "codex"),
+		huh.NewOption("Pi", "pi"),
 	}
 	if scope == "" {
 		return all

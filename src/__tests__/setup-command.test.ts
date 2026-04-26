@@ -395,6 +395,38 @@ Checks pull requests.
     ])
   })
 
+  it('setup --list includes agents when .ai/agents directory exists', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-list-agents-')
+    const resolvedRepoDir = realPath(repoDir)
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+
+    const agentDir = path.join(resolvedRepoDir, '.ai', 'agents', 'reviewer')
+    fs.mkdirSync(agentDir, { recursive: true })
+    fs.writeFileSync(path.join(agentDir, 'AGENT.md'), `---
+title: Review Agent
+description: Finds issues
+tools:
+  - write
+  - bash
+---
+# Reviewer
+`, 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--list'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      mode: string
+      agents?: Array<{ id: string; status: string; title?: string }>
+    }
+
+    expect(result.mode).toBe('list')
+    expect(result.agents).toBeDefined()
+    expect(result.agents?.some(({ id }) => id === 'reviewer')).toBe(true)
+  })
+
   it('rejects unknown setup tools', async () => {
     const repoDir = makeTempRepo('ai-setup-setup-unknown-')
     process.chdir(repoDir)
@@ -582,7 +614,7 @@ Checks pull requests.
       }
     }
 
-    expect(result.operation.mode).toBe('adopt+import')
+    expect(result.operation.mode).toBe('adopt-import')
     expect(result.operation.adopted?.some(({ targetId }) => targetId === 'claude-code')).toBe(true)
     expect(result.operation.imported?.some(({ targetId }) => targetId === 'claude-code')).toBe(true)
   })

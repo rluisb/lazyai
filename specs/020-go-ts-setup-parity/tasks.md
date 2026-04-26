@@ -2,56 +2,56 @@
 
 ## Phase 1 — Contracts
 
-- [ ] Add schemas for list, dry-run, and inventory outputs.
-- [ ] Add tool target registry from Go source of truth.
-- [ ] Add MCP preset and resource state data.
-- [ ] Add normalization and parity rules.
+- [x] Add schemas for list, dry-run, and inventory outputs.
+- [x] Add tool target registry from Go source of truth.
+- [x] Add MCP preset and resource state data.
+- [x] Add normalization and parity rules.
 
 ## Phase 2 — TS setup list/dry-run
 
-- [ ] Register TS `setup` command.
-- [ ] Implement `setup --list`.
-- [ ] Implement `setup --dry-run`.
-- [ ] Implement `--tool`, `--all`, and `--global` filtering to match Go.
-- [ ] Add TS conformance tests against contract expected output.
+- [x] Register TS `setup` command.
+- [x] Implement `setup --list`.
+- [x] Implement `setup --dry-run`.
+- [x] Implement `--tool`, `--all`, and `--global` filtering to match Go.
+- [x] Add TS conformance tests against contract expected output.
 
 ## Phase 3 — TS scan
 
-- [ ] Implement TS target scan inventory.
-- [ ] Add TS reusable agent scan for `.ai/agents/<id>/AGENT.md`.
-- [ ] Validate optional `mcp.json` with top-level `mcpServers`.
-- [ ] Add TS scan fixtures matching Go.
+- [x] Implement TS target scan inventory.
+- [x] Add TS reusable agent scan for `.ai/agents/<id>/AGENT.md`.
+- [x] Validate optional `mcp.json` with top-level `mcpServers`.
+- [x] Add TS scan fixtures matching Go.
 
 ## Phase 4 — TS adopt/import
 
-- [ ] Implement shared registry semantics.
-- [ ] Implement adopt behavior for adoptable resources.
-- [ ] Implement import behavior with backups.
-- [ ] Add state transition tests.
+- [x] Implement shared registry semantics.
+- [x] Implement adopt behavior for adoptable resources.
+- [x] Implement import behavior with backups.
+- [x] Add state transition tests.
 
 ## Phase 5 — MCP and orchestrator parity
 
-- [ ] Align OpenCode config paths with Go.
-- [ ] Add TS Codex MCP compilation.
-- [ ] Align Copilot global behavior.
-- [ ] Align Claude global/local secrets behavior.
-- [ ] Align orchestrator MCP local build/path/smoke behavior.
+- [x] Align OpenCode config paths with Go.
+- [x] Add TS Codex MCP compilation.
+- [x] Align Copilot global behavior.
+- [x] Align Claude global/local secrets behavior.
+- [x] Align orchestrator MCP local build/path/smoke behavior.
 
 ## Phase 6 — Wizard parity
 
-- [ ] Align TS wizard step order with Go.
-- [ ] Align defaults for tools, skills, agents, MCP preset, and servers.
-- [ ] Add wizard state parity tests.
+- [x] Align TS wizard step order with Go.
+- [x] Align defaults for tools, skills, agents, MCP preset, and servers.
+- [x] Add wizard state parity tests.
 
 ## Dependency order
 
-1. Contracts
-2. TS list/dry-run
-3. TS scan
-4. TS adopt/import
-5. TS MCP/orchestrator parity
-6. TS wizard parity
-7. Full validation
+1. Contracts ✅
+2. TS list/dry-run ✅
+3. TS scan ✅
+4. TS adopt/import ✅
+5. TS MCP/orchestrator parity ✅
+6. TS wizard parity ✅
+7. Full validation — see Phase 5 verification below
 
 ## Validation
 

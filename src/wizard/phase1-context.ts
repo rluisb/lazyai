@@ -290,7 +290,7 @@ export async function runPhase1(opts: {
     const projectName =
       setupScope === 'workspace'
         ? path.basename(path.resolve(opts.cliOverrides.planningRepo ?? opts.targetDir))
-        : opts.cliOverrides.name ?? (setupScope === 'global' ? 'global' : undefined)
+        : opts.cliOverrides.name ?? (setupScope === 'global' ? 'global' : 'my-project')
     const workspaceName = setupScope === 'workspace' ? opts.cliOverrides.name : undefined
     const planningRepoPath = opts.cliOverrides.planningRepo
       ? path.resolve(opts.cliOverrides.planningRepo)
@@ -708,7 +708,7 @@ export async function runPhase1(opts: {
     }
   } else {
     // Prompt 7: Project name — always show, pre-fill with prior if available
-    const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
+    const defaultName = setupScope === 'global' ? 'global' : 'my-project'
     const nameDefault = priorProjectName ?? defaultName
     const projectNameMessage = priorProjectName
       ? `Project name? (previous: ${priorProjectName})`

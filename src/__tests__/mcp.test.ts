@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { compileMcp } from '../adapters/mcp-compiler.js'
+import { compileMcp, mcpCompilerInternals } from '../adapters/mcp-compiler.js'
 import { scaffoldEnvExample } from '../scaffold/env-example.js'
 import { scaffoldMcp } from '../scaffold/mcp.js'
 import type { FileRecord } from '../types.js'
@@ -66,6 +66,7 @@ describe('MCP scaffold and compile', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     rmSync(targetDir, { recursive: true, force: true })
     rmSync(libraryDir, { recursive: true, force: true })
   })
@@ -267,6 +268,13 @@ describe('MCP scaffold and compile', () => {
   })
 
   it('compileMcp generates .mcp.json for claude-code', async () => {
+    vi.spyOn(mcpCompilerInternals, 'execFileSync').mockImplementation((file, args) => {
+      if (file === 'claude' && Array.isArray(args) && args[0] === '--version') {
+        throw new Error('claude unavailable')
+      }
+      return Buffer.from('')
+    })
+
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -286,6 +294,107 @@ describe('MCP scaffold and compile', () => {
     const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
     expect(Object.keys(mcpJson.mcpServers)).toEqual(['stdioEnabled', 'stdioDefaultEnabled', 'remoteEnabled'])
     expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+  })
+
+  it('compileMcp deep merges claude local secrets and creates backup on first write', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.claude'))
+    const settingsPath = path.join(targetDir, '.claude', 'settings.local.json')
+    writeFile(
+      settingsPath,
+      `${JSON.stringify(
+        {
+          existingTopLevel: true,
+          mcpServers: {
+            oldServer: {
+              command: 'old',
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    )
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'project',
+      localSecrets: true,
+    })
+
+    const settingsLocal = JSON.parse(readFile(settingsPath))
+    expect(settingsLocal.existingTopLevel).toBe(true)
+    expect(settingsLocal.mcpServers.oldServer).toEqual({ command: 'old' })
+    expect(settingsLocal.mcpServers.stdioEnabled.command).toBe('npx')
+
+    const backupPath = `${settingsPath}.ai-setup-backup`
+    expect(fileExists(backupPath)).toBe(true)
+    expect(JSON.parse(readFile(backupPath))).toEqual({
+      existingTopLevel: true,
+      mcpServers: {
+        oldServer: {
+          command: 'old',
+        },
+      },
+    })
+  })
+
+  it('compileMcp attempts Claude CLI reconciliation before file fallback', async () => {
+    const execSpy = vi.spyOn(mcpCompilerInternals, 'execFileSync').mockImplementation((file, args) => {
+      if (file === 'claude' && Array.isArray(args) && args[0] === '--version') {
+        return Buffer.from('claude 1.0.0')
+      }
+
+      if (file === 'claude' && Array.isArray(args) && args[0] === 'mcp') {
+        return Buffer.from('ok')
+      }
+
+      return Buffer.from('')
+    })
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'project',
+    })
+
+    expect(execSpy).toHaveBeenCalledWith('claude', ['--version'], { stdio: 'ignore' })
+    expect(execSpy).toHaveBeenCalledWith(
+      'claude',
+      [
+        'mcp',
+        'add-json',
+        'stdioEnabled',
+        JSON.stringify({
+          command: 'npx',
+          args: ['-y', 'mcp-stdio-enabled'],
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
+          env: { API_KEY: '${API_KEY}' },
+        }),
+      ],
+      { stdio: 'pipe' },
+    )
+    expect(fileExists(path.join(targetDir, '.mcp.json'))).toBe(false)
   })
 
   it('enableServers option enables disabled MCP servers by name', async () => {

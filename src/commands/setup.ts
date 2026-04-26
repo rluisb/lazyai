@@ -44,7 +44,7 @@ interface SetupListResult {
   scopeFilter?: SetupScope
   sharedPaths: Array<{ id: string; description: string; path: string }>
   targets: SetupListTarget[]
-  agents?: []
+  agents?: ObservedAgent[]
 }
 
 interface SetupDryRunResult {
@@ -164,7 +164,7 @@ interface SetupSelection {
 }
 
 interface SetupOperationResult {
-  mode: 'adopt' | 'import' | 'adopt+import'
+  mode: 'adopt' | 'import' | 'adopt-import'
   registryPath: string
   importRoot: string
   backups?: string[]
@@ -868,7 +868,7 @@ function upsertImportRecord(registry: ScanRegistry, record: ImportRecord): void 
 
 function operationMode(adopt: boolean, shouldImport: boolean): SetupOperationResult['mode'] {
   if (adopt && shouldImport) {
-    return 'adopt+import'
+    return 'adopt-import'
   }
   if (adopt) {
     return 'adopt'
@@ -1074,11 +1074,17 @@ function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, sh
     importRoot,
   }
   const backupSet = new Set<string>()
+  const adoptSeenRoots = new Map<string, boolean>()
+  const importSeenRoots = new Map<string, boolean>()
   const now = new Date().toISOString()
 
   if (adopt) {
     for (const target of inventory.currentState.targets) {
       for (const detection of target.detections) {
+        const rootKey = `${target.id}::${detection.rootPath}`
+        if (adoptSeenRoots.has(rootKey)) {
+          continue
+        }
         if (detection.state !== RESOURCE_STATE_ADOPTABLE) {
           operation.skipped = [...(operation.skipped ?? []), {
             targetId: target.id,
@@ -1090,6 +1096,11 @@ function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, sh
           }]
           continue
         }
+        const mcpEntries = snapshotMcpEntries(detection.rootPath, detection.observedFiles).map(({ entry, fingerprint }) => ({
+          name: entry.name,
+          configPath: entry.configPath,
+          fingerprint,
+        }))
         upsertResourceRecord(registry, {
           targetId: target.id,
           scope: detection.scope,
@@ -1097,13 +1108,10 @@ function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, sh
           rootPath: detection.rootPath,
           state: 'managed',
           observedPaths: snapshotObservedPaths(detection.rootPath, detection.observedFiles),
-          mcpEntries: snapshotMcpEntries(detection.rootPath, detection.observedFiles).map(({ entry, fingerprint }) => ({
-            name: entry.name,
-            configPath: entry.configPath,
-            fingerprint,
-          })),
+          ...(mcpEntries.length > 0 ? { mcpEntries } : {}),
           updatedAt: now,
         })
+        adoptSeenRoots.set(rootKey, true)
         operation.adopted = [...(operation.adopted ?? []), {
           targetId: target.id,
           scope: detection.scope,
@@ -1118,6 +1126,10 @@ function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, sh
     ensureDir(importRoot)
     for (const target of inventory.currentState.targets) {
       for (const detection of target.detections) {
+        const rootKey = `${target.id}::${detection.rootPath}`
+        if (importSeenRoots.has(rootKey)) {
+          continue
+        }
         if (!canImportState(detection.state)) {
           operation.skipped = [...(operation.skipped ?? []), {
             targetId: target.id,
@@ -1159,6 +1171,7 @@ function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, sh
           destinationRoot,
           updatedAt: now,
         })
+        importSeenRoots.set(rootKey, true)
       }
     }
   }
@@ -1459,11 +1472,14 @@ function buildListResult(selection: SetupSelection, scope: SetupScope | undefine
     })),
   }))
 
+  const agents = observeAgents(targetDir)
+
   return {
     mode: 'list',
     ...(scope ? { scopeFilter: scope } : {}),
     sharedPaths: buildSharedPaths(targetDir, homeDir, scope),
     targets,
+    ...(agents.length > 0 ? { agents } : {}),
   }
 }
 

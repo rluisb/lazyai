@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import * as childProcess from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import type { FileRecord, SetupScope, ToolId } from '../types.js'
@@ -25,6 +25,12 @@ interface CopilotPromptInput {
   id: string
   description: string
   password: true
+}
+
+export const mcpCompilerInternals = {
+  execFileSync(file: string, args: readonly string[], options?: childProcess.ExecFileSyncOptions) {
+    return childProcess.execFileSync(file, args, options)
+  },
 }
 
 function readCanonicalMcp(targetDir: string): McpCatalog | null {
@@ -222,19 +228,75 @@ function resolveHomeDir(homeDir?: string): string {
   return homeDir ?? homedir()
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...target }
+
+  for (const [key, value] of Object.entries(source)) {
+    if (isPlainObject(value) && isPlainObject(result[key])) {
+      result[key] = deepMerge(result[key], value)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
+function backupJsonFile(pathname: string): void {
+  if (!fileExists(pathname)) return
+
+  const existingContent = readFile(pathname)
+  if (existingContent.length === 0) return
+
+  const backupPath = `${pathname}.ai-setup-backup`
+  if (fileExists(backupPath)) return
+
+  writeFile(backupPath, existingContent)
+}
+
 function mergeJsonFile(pathname: string, patch: Record<string, unknown>): Record<string, unknown> {
   let existing: Record<string, unknown> = {}
   if (fileExists(pathname)) {
     try {
-      existing = JSON.parse(readFile(pathname)) as Record<string, unknown>
+      const parsed = JSON.parse(readFile(pathname)) as unknown
+      existing = isPlainObject(parsed) ? parsed : {}
     } catch {
       existing = {}
     }
   }
 
-  const merged = { ...existing, ...patch }
+  const merged = deepMerge(existing, patch)
+  backupJsonFile(pathname)
   writeFile(pathname, `${JSON.stringify(merged, null, 2)}\n`)
   return merged
+}
+
+function claudeCliAvailable(): boolean {
+  try {
+    mcpCompilerInternals.execFileSync('claude', ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function reconcileClaudeMcp(servers: Record<string, McpServer>): boolean {
+  if (!claudeCliAvailable()) return false
+
+  try {
+    for (const [name, config] of Object.entries(servers)) {
+      mcpCompilerInternals.execFileSync('claude', ['mcp', 'add-json', name, JSON.stringify(config)], {
+        stdio: 'pipe',
+      })
+    }
+    return true
+  } catch {
+    return false
+  }
 }
 
 function copilotProbePasses(homeDir: string): boolean {
@@ -243,7 +305,7 @@ function copilotProbePasses(homeDir: string): boolean {
   }
 
   try {
-    execFileSync('copilot', ['--version'], { stdio: 'ignore' })
+    mcpCompilerInternals.execFileSync('copilot', ['--version'], { stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -393,6 +455,9 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
 
       const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
       const content = toMcpJson(enabledServers)
+      if (reconcileClaudeMcp(content.mcpServers as Record<string, McpServer>)) {
+        break
+      }
       writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
       upsertFileRecord(opts.fileRecords, {
         path: '.mcp.json',

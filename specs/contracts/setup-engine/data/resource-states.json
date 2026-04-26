@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "canonicalSource": "go",
+  "sourceFiles": ["internal/setupscan/absorb.go"],
+  "states": [
+    {
+      "id": "missing",
+      "meaning": "No expected file, optional path, or countRootOnly root was observed for the target detection.",
+      "adoptable": false,
+      "importable": false,
+      "preserveExistingInDryRun": false
+    },
+    {
+      "id": "adoptable",
+      "meaning": "External config was detected and no matching ai-setup registry record exists.",
+      "adoptable": true,
+      "importable": true,
+      "preserveExistingInDryRun": true
+    },
+    {
+      "id": "managed",
+      "meaning": "Detected config matches a managed registry record and fingerprints agree.",
+      "adoptable": false,
+      "importable": true,
+      "preserveExistingInDryRun": true
+    },
+    {
+      "id": "conflict",
+      "meaning": "Detected config conflicts with registry state, could not be snapshotted, or has unexpected/missing/changed paths or MCP entries.",
+      "adoptable": false,
+      "importable": false,
+      "preserveExistingInDryRun": true
+    },
+    {
+      "id": "user-owned",
+      "meaning": "Registry marks the config as intentionally user-owned.",
+      "adoptable": false,
+      "importable": true,
+      "preserveExistingInDryRun": true
+    }
+  ],
+  "operationModes": ["adopt", "import", "adopt+import"],
+  "adoptRules": {
+    "eligibleState": "adoptable",
+    "ineligibleReason": "not-adoptable",
+    "resultArray": "operation.adopted",
+    "registryStateAfterAdopt": "managed"
+  },
+  "importRules": {
+    "eligibleStates": ["adoptable", "managed", "user-owned"],
+    "ineligibleReason": "not-importable",
+    "resultArray": "operation.imported",
+    "registryArray": "imports"
+  },
+  "conflictReasons": {
+    "paths": ["missing-path:<relativePath>", "changed-path:<relativePath>", "unexpected-path:<relativePath>"],
+    "mcpEntries": [
+      "unexpected-mcp-entry:<configPath>:<name>",
+      "mcp-entry-changed:<configPath>:<name>",
+      "missing-mcp-entry:<configPath>:<name>"
+    ],
+    "snapshot": ["snapshot-failed:<error>", "mcp-parse-failed:<error>", "unsupported-registry-state"]
+  }
+}

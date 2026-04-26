@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "canonicalSource": "go",
+  "sourceFiles": [
+    "internal/types/types.go",
+    "internal/adapter/registry.go",
+    "internal/adapter/scope.go",
+    "internal/globalpaths/globalpaths.go",
+    "internal/setupscan/setupscan.go"
+  ],
+  "pathTokens": {
+    "targetDir": "<TARGET_DIR>",
+    "homeDir": "<HOME_DIR>"
+  },
+  "ordering": {
+    "tools": "lexicographic-by-id",
+    "candidateRoots": "lexicographic-by-origin-then-scope-then-rootPath",
+    "desiredExpectedFiles": "lexicographic"
+  },
+  "tools": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "supportedScopes": ["global", "project", "workspace"],
+      "roots": [
+        {
+          "scope": "global",
+          "origin": "global",
+          "rootPath": "<HOME_DIR>/.claude",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["settings.local.json", "agents", "skills", "commands", "output-styles"],
+          "desiredExpectedFiles": ["agents", "commands", "output-styles", "settings.json", "settings.local.json", "skills"],
+          "versionFiles": ["settings.json"]
+        },
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.claude",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["settings.local.json", "agents", "skills", "commands", "output-styles"],
+          "desiredExpectedFiles": ["agents", "commands", "output-styles", "settings.json", "settings.local.json", "skills"],
+          "versionFiles": ["settings.json"]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.claude",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["settings.local.json", "agents", "skills", "commands", "output-styles"],
+          "desiredExpectedFiles": ["agents", "commands", "output-styles", "settings.json", "settings.local.json", "skills"],
+          "versionFiles": ["settings.json"]
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "supportedScopes": ["global", "project", "workspace"],
+      "roots": [
+        {
+          "scope": "global",
+          "origin": "global",
+          "rootPath": "<HOME_DIR>/.codex",
+          "countRootOnly": false,
+          "expectedFiles": ["config.toml"],
+          "optionalPaths": [],
+          "desiredExpectedFiles": ["config.toml"],
+          "versionFiles": ["config.toml"],
+          "secondaryRoots": [{"id": "skills", "rootPath": "<HOME_DIR>/.agents/skills"}]
+        },
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.codex",
+          "countRootOnly": false,
+          "expectedFiles": ["config.toml"],
+          "optionalPaths": [],
+          "desiredExpectedFiles": ["config.toml"],
+          "versionFiles": ["config.toml"],
+          "secondaryRoots": [{"id": "skills", "rootPath": "<TARGET_DIR>/.agents/skills"}]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.codex",
+          "countRootOnly": false,
+          "expectedFiles": ["config.toml"],
+          "optionalPaths": [],
+          "desiredExpectedFiles": ["config.toml"],
+          "versionFiles": ["config.toml"],
+          "secondaryRoots": [{"id": "skills", "rootPath": "<TARGET_DIR>/.agents/skills"}]
+        }
+      ]
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot CLI",
+      "supportedScopes": ["global", "project", "workspace"],
+      "roots": [
+        {
+          "scope": "global",
+          "origin": "global",
+          "rootPath": "<HOME_DIR>/.copilot",
+          "countRootOnly": true,
+          "expectedFiles": ["mcp-config.json"],
+          "optionalPaths": [],
+          "desiredExpectedFiles": ["mcp-config.json"],
+          "versionFiles": ["mcp-config.json"]
+        },
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.github",
+          "countRootOnly": false,
+          "expectedFiles": ["copilot-instructions.md"],
+          "optionalPaths": ["agents", "instructions", "prompts", "chatmodes"],
+          "desiredExpectedFiles": ["agents", "chatmodes", "copilot-instructions.md", "instructions", "prompts"],
+          "versionFiles": ["copilot-instructions.md"]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.github",
+          "countRootOnly": false,
+          "expectedFiles": ["copilot-instructions.md"],
+          "optionalPaths": ["agents", "instructions", "prompts", "chatmodes"],
+          "desiredExpectedFiles": ["agents", "chatmodes", "copilot-instructions.md", "instructions", "prompts"],
+          "versionFiles": ["copilot-instructions.md"]
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini CLI",
+      "supportedScopes": ["global", "project", "workspace"],
+      "roots": [
+        {
+          "scope": "global",
+          "origin": "global",
+          "rootPath": "<HOME_DIR>/.gemini",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["commands"],
+          "desiredExpectedFiles": ["commands", "settings.json"],
+          "versionFiles": ["settings.json"]
+        },
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.gemini",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["commands"],
+          "desiredExpectedFiles": ["commands", "settings.json"],
+          "versionFiles": ["settings.json"]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.gemini",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["commands"],
+          "desiredExpectedFiles": ["commands", "settings.json"],
+          "versionFiles": ["settings.json"]
+        }
+      ]
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "supportedScopes": ["global", "project", "workspace"],
+      "roots": [
+        {
+          "scope": "global",
+          "origin": "global",
+          "rootPath": "<HOME_DIR>/.config/opencode",
+          "countRootOnly": false,
+          "expectedFiles": ["opencode.jsonc"],
+          "optionalPaths": ["opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"],
+          "desiredExpectedFiles": ["AGENTS.md", "agents", "commands", "modes", "opencode.json", "opencode.jsonc", "skills"],
+          "versionFiles": ["opencode.jsonc"]
+        },
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.opencode",
+          "countRootOnly": false,
+          "expectedFiles": ["opencode.jsonc"],
+          "optionalPaths": ["opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"],
+          "desiredExpectedFiles": ["AGENTS.md", "agents", "commands", "modes", "opencode.json", "opencode.jsonc", "skills"],
+          "versionFiles": ["opencode.jsonc"]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.opencode",
+          "countRootOnly": false,
+          "expectedFiles": ["opencode.jsonc"],
+          "optionalPaths": ["opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"],
+          "desiredExpectedFiles": ["AGENTS.md", "agents", "commands", "modes", "opencode.json", "opencode.jsonc", "skills"],
+          "versionFiles": ["opencode.jsonc"]
+        }
+      ]
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "supportedScopes": ["project", "workspace"],
+      "roots": [
+        {
+          "scope": "project",
+          "origin": "project",
+          "rootPath": "<TARGET_DIR>/.pi",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["skills", "prompts"],
+          "desiredExpectedFiles": ["prompts", "settings.json", "skills"],
+          "versionFiles": ["settings.json"]
+        },
+        {
+          "scope": "workspace",
+          "origin": "workspace",
+          "rootPath": "<TARGET_DIR>/.pi",
+          "countRootOnly": false,
+          "expectedFiles": ["settings.json"],
+          "optionalPaths": ["skills", "prompts"],
+          "desiredExpectedFiles": ["prompts", "settings.json", "skills"],
+          "versionFiles": ["settings.json"]
+        }
+      ]
+    }
+  ]
+}

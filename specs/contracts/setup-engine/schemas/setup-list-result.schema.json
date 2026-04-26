@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-setup.local/contracts/setup-engine/setup-list-result.schema.json",
+  "title": "Setup List Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "sharedPaths", "targets"],
+  "properties": {
+    "mode": {"const": "list"},
+    "scopeFilter": {"$ref": "#/$defs/setupScope"},
+    "sharedPaths": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/desiredPath"}
+    },
+    "targets": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/desiredTarget"}
+    },
+    "agents": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/observedAgent"}
+    }
+  },
+  "$defs": {
+    "setupScope": {
+      "type": "string",
+      "enum": ["global", "project", "workspace"]
+    },
+    "toolId": {
+      "type": "string",
+      "enum": ["claude-code", "codex", "copilot", "gemini", "opencode", "pi"]
+    },
+    "resourceState": {
+      "type": "string",
+      "enum": ["managed", "adoptable", "conflict", "user-owned", "missing"]
+    },
+    "desiredPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "path"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "description": {"type": "string"},
+        "path": {"type": "string", "minLength": 1}
+      }
+    },
+    "desiredTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "supportedScopes", "candidateRoots"],
+      "properties": {
+        "id": {"$ref": "#/$defs/toolId"},
+        "name": {"type": "string", "minLength": 1},
+        "supportedScopes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/setupScope"},
+          "uniqueItems": true
+        },
+        "candidateRoots": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/desiredRoot"}
+        }
+      }
+    },
+    "desiredRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "origin", "rootPath", "expectedFiles"],
+      "properties": {
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "rootPath": {"type": "string", "minLength": 1},
+        "expectedFiles": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "observedAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "directory", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "directory": {"type": "string", "minLength": 1},
+        "promptPath": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "enum": ["detected", "invalid"]},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "tools": {"type": "array", "items": {"type": "string"}},
+        "mcp": {"$ref": "#/$defs/observedAgentMcp"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "observedAgentMcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configPath", "scoped", "serverCount"],
+      "properties": {
+        "configPath": {"type": "string", "minLength": 1},
+        "scoped": {"type": "boolean"},
+        "serverNames": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "serverCount": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

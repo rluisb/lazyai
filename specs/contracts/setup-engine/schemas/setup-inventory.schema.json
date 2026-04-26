@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-setup.local/contracts/setup-engine/setup-inventory.schema.json",
+  "title": "Setup Scan Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["currentState", "desiredState"],
+  "properties": {
+    "currentState": {"$ref": "#/$defs/currentState"},
+    "desiredState": {"$ref": "#/$defs/desiredState"},
+    "operation": {"$ref": "#/$defs/operationResult"}
+  },
+  "$defs": {
+    "setupScope": {
+      "type": "string",
+      "enum": ["global", "project", "workspace"]
+    },
+    "toolId": {
+      "type": "string",
+      "enum": ["claude-code", "codex", "copilot", "gemini", "opencode", "pi"]
+    },
+    "resourceState": {
+      "type": "string",
+      "enum": ["managed", "adoptable", "conflict", "user-owned", "missing"]
+    },
+    "currentState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sharedPaths", "targets"],
+      "properties": {
+        "sharedPaths": {"type": "array", "items": {"$ref": "#/$defs/observedPath"}},
+        "targets": {"type": "array", "items": {"$ref": "#/$defs/observedTarget"}},
+        "agents": {"type": "array", "items": {"$ref": "#/$defs/observedAgent"}}
+      }
+    },
+    "desiredState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sharedPaths", "targets"],
+      "properties": {
+        "sharedPaths": {"type": "array", "items": {"$ref": "#/$defs/desiredPath"}},
+        "targets": {"type": "array", "items": {"$ref": "#/$defs/desiredTarget"}}
+      }
+    },
+    "observedPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "exists"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "exists": {"type": "boolean"}
+      }
+    },
+    "desiredPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "path"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "description": {"type": "string"},
+        "path": {"type": "string", "minLength": 1}
+      }
+    },
+    "observedTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "detections"],
+      "properties": {
+        "id": {"$ref": "#/$defs/toolId"},
+        "name": {"type": "string", "minLength": 1},
+        "detections": {"type": "array", "items": {"$ref": "#/$defs/targetDetection"}}
+      }
+    },
+    "targetDetection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "origin", "rootPath", "status", "state", "version", "observedFiles"],
+      "properties": {
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "rootPath": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "enum": ["missing", "detected"]},
+        "state": {"$ref": "#/$defs/resourceState"},
+        "version": {"type": "string"},
+        "observedFiles": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "reasons": {"type": "array", "items": {"type": "string"}},
+        "mcpEntries": {"type": "array", "items": {"$ref": "#/$defs/mcpEntry"}}
+      }
+    },
+    "mcpEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "configPath", "state"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "configPath": {"type": "string", "minLength": 1},
+        "state": {"$ref": "#/$defs/resourceState"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "desiredTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "supportedScopes", "candidateRoots"],
+      "properties": {
+        "id": {"$ref": "#/$defs/toolId"},
+        "name": {"type": "string", "minLength": 1},
+        "supportedScopes": {"type": "array", "items": {"$ref": "#/$defs/setupScope"}, "uniqueItems": true},
+        "candidateRoots": {"type": "array", "items": {"$ref": "#/$defs/desiredRoot"}}
+      }
+    },
+    "desiredRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "origin", "rootPath", "expectedFiles"],
+      "properties": {
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "rootPath": {"type": "string", "minLength": 1},
+        "expectedFiles": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "observedAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "directory", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "directory": {"type": "string", "minLength": 1},
+        "promptPath": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "enum": ["detected", "invalid"]},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "tools": {"type": "array", "items": {"type": "string"}},
+        "mcp": {"$ref": "#/$defs/observedAgentMcp"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "observedAgentMcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configPath", "scoped", "serverCount"],
+      "properties": {
+        "configPath": {"type": "string", "minLength": 1},
+        "scoped": {"type": "boolean"},
+        "serverNames": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "serverCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "operationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "registryPath"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["adopt", "import", "adopt+import"]},
+        "registryPath": {"type": "string", "minLength": 1},
+        "importRoot": {"type": "string", "minLength": 1},
+        "backups": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "adopted": {"type": "array", "items": {"$ref": "#/$defs/operationTarget"}},
+        "imported": {"type": "array", "items": {"$ref": "#/$defs/importedResource"}},
+        "skipped": {"type": "array", "items": {"$ref": "#/$defs/skippedOperation"}}
+      }
+    },
+    "operationTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targetId", "scope", "origin", "rootPath"],
+      "properties": {
+        "targetId": {"$ref": "#/$defs/toolId"},
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "rootPath": {"type": "string", "minLength": 1}
+      }
+    },
+    "importedResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targetId", "scope", "origin", "sourcePath", "destinationPath"],
+      "properties": {
+        "targetId": {"$ref": "#/$defs/toolId"},
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "sourcePath": {"type": "string", "minLength": 1},
+        "destinationPath": {"type": "string", "minLength": 1}
+      }
+    },
+    "skippedOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targetId", "scope", "origin", "rootPath", "state", "reason"],
+      "properties": {
+        "targetId": {"$ref": "#/$defs/toolId"},
+        "scope": {"$ref": "#/$defs/setupScope"},
+        "origin": {"type": "string", "enum": ["global", "project", "workspace"]},
+        "rootPath": {"type": "string", "minLength": 1},
+        "state": {"$ref": "#/$defs/resourceState"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -4,7 +4,8 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
-import type { SetupScope, SetupType, ToolId, WizardSelections } from '../types.js'
+import type { AgentId, SetupScope, SetupType, SkillId, ToolId, WizardSelections } from '../types.js'
+import { ALL_AGENTS, ALL_SKILLS } from '../types.js'
 import { fileExists, isDirectory, readFile, resolveLibraryDir } from '../utils/files.js'
 import { readManifest } from '../utils/manifest.js'
 import { detectRepoInfo, scanWorkspaceRepos } from '../utils/repo-detection.js'
@@ -12,6 +13,7 @@ import { GO_BACK, isGoBack } from '../utils/ui.js'
 import { validateFilesystemSafeName } from '../utils/validation.js'
 
 interface McpServerConfig {
+  enabled?: boolean
   requiresInstall?: boolean
   installHint?: string
 }
@@ -19,6 +21,7 @@ interface McpServerConfig {
 interface McpCliToolConfig {
   installHint?: string
   enabled?: boolean
+  description?: string
 }
 
 interface CliToolOption {
@@ -45,9 +48,98 @@ interface McpCatalog {
   cliTools?: Record<string, McpCliToolConfig>
 }
 
+export type McpWizardPreset = 'minimal' | 'recommended' | 'full'
+
+const MCP_PRESET_OPTIONS: Array<{ value: McpWizardPreset; label: string; hint: string }> = [
+  { value: 'minimal', label: 'Minimal', hint: 'Core local setup tools only.' },
+  { value: 'recommended', label: 'Recommended', hint: 'Balanced default from enabled catalog servers.' },
+  { value: 'full', label: 'Full', hint: 'All catalog server IDs.' },
+]
+
+const TOOL_OPTIONS: Array<{ value: ToolId; label: string; hint: string }> = [
+  { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
+  { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
+  { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
+  { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
+  { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
+  { value: 'pi', label: 'Pi', hint: 'Uses .pi/ with settings.json, skills, and prompts' },
+]
+
+function loadMcpCatalog(_targetDir: string): McpCatalog | null {
+  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
+  const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
+  if (!fileExists(catalogPath)) return null
+
+  try {
+    return JSON.parse(readFile(catalogPath)) as McpCatalog
+  } catch {
+    return null
+  }
+}
+
+export function normalizeMcpPreset(preset: string | undefined): McpWizardPreset {
+  switch (preset) {
+    case 'minimal':
+    case 'full':
+    case 'recommended':
+      return preset
+    default:
+      return 'recommended'
+  }
+}
+
+function sortedCatalogServerIDs(catalog: McpCatalog): string[] {
+  return Object.keys(catalog.servers).sort((a, b) => a.localeCompare(b))
+}
+
+export function defaultMcpServersForPreset(preset: McpWizardPreset, targetDir: string): string[] {
+  const catalog = loadMcpCatalog(targetDir)
+  if (!catalog) return []
+
+  const serverIds = sortedCatalogServerIDs(catalog)
+  switch (normalizeMcpPreset(preset)) {
+    case 'minimal':
+      return serverIds.filter((serverId) => serverId === 'filesystem' || serverId === 'ripgrep')
+    case 'full':
+      return serverIds
+    default:
+      return serverIds.filter((serverId) => catalog.servers[serverId]?.enabled)
+  }
+}
+
+function defaultMcpSelection(current: string[] | undefined, preset: McpWizardPreset, targetDir: string): string[] {
+  if (current && current.length > 0) {
+    return [...current].sort((a, b) => a.localeCompare(b))
+  }
+
+  return defaultMcpServersForPreset(preset, targetDir)
+}
+
+export function filterToolsByScope(tools: ToolId[], scope: SetupScope): ToolId[] {
+  return tools.filter((tool) => tool !== 'pi' || scope === 'project' || scope === 'workspace')
+}
+
+export function toolOptionsForScope(scope: SetupScope): Array<{ value: ToolId; label: string; hint: string }> {
+  return filterToolsByScope(TOOL_OPTIONS.map((option) => option.value), scope)
+    .map((toolId) => TOOL_OPTIONS.find((option) => option.value === toolId))
+    .filter((option): option is { value: ToolId; label: string; hint: string } => option != null)
+}
+
+export function detectInstalledCliToolsFromCatalog(targetDir: string): string[] {
+  const catalog = loadMcpCatalog(targetDir)
+  if (!catalog?.cliTools) return []
+
+  return Object.keys(catalog.cliTools)
+    .filter((toolName) => checkToolInstalled(toolName))
+    .sort((a, b) => a.localeCompare(b))
+}
+
 export interface Phase1Result {
   setupScope: SetupScope
   tools: ToolId[]
+  skills: SkillId[]
+  agents: AgentId[]
+  mcpPreset: McpWizardPreset
   projectName: string
   workspaceName?: string
   planningRepoPath?: string
@@ -55,65 +147,29 @@ export interface Phase1Result {
   cliTools?: string[]
   /** MCP server names explicitly enabled by user (e.g., ['atlassian']) */
   enableServers?: string[]
+  organization?: string
+  team?: string
 }
 
 function getCliToolOptions(_targetDir: string): CliToolOption[] {
-  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
-  const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
-  if (!fileExists(catalogPath)) return []
+  const catalog = loadMcpCatalog(_targetDir)
+  if (!catalog) return []
 
-  try {
-    const catalog = JSON.parse(readFile(catalogPath)) as McpCatalog
-    const options: CliToolOption[] = []
-
-    // Only include CLI tools (not MCP servers requiring install)
-    for (const [name, tool] of Object.entries(catalog.cliTools ?? {})) {
-      const label = name.toUpperCase()
+  return Object.entries(catalog.cliTools ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, tool]) => {
       const isInstalled = checkToolInstalled(name)
-      const hint = isInstalled
-        ? `✓ Already installed`
-        : tool.installHint
-          ? `Not installed (${tool.installHint})`
-          : 'CLI tool requiring local install'
-      options.push({ value: name, label, hint, isInstalled })
-    }
-
-    return options
-  } catch {
-    return []
-  }
-}
-
-interface McpIntegrationConfig {
-  description?: string
-  enabled?: boolean
-  requiresInstall?: boolean
-}
-
-function getIntegrationOptions(_targetDir: string): Array<{ value: string; label: string; hint: string }> {
-  const libraryDir = resolveLibraryDir(path.dirname(fileURLToPath(import.meta.url)))
-  const catalogPath = path.join(libraryDir, 'mcp', 'catalog.json')
-  if (!fileExists(catalogPath)) return []
-
-  try {
-    const catalog = JSON.parse(readFile(catalogPath)) as {
-      servers: Record<string, McpIntegrationConfig>
-    }
-    const options: Array<{ value: string; label: string; hint: string }> = []
-
-    // Surface disabled, non-requiresInstall servers as optional integrations
-    // Excludes core servers (enabled by default) and install-gated servers (shown in CLI tools)
-    for (const [name, server] of Object.entries(catalog.servers)) {
-      if (server.enabled || server.requiresInstall) continue
-      const label = name.charAt(0).toUpperCase() + name.slice(1)
-      const hint = server.description ?? 'MCP integration'
-      options.push({ value: name, label, hint })
-    }
-
-    return options
-  } catch {
-    return []
-  }
+      return {
+        value: name,
+        label: name.toUpperCase(),
+        hint: isInstalled
+          ? '✓ Already installed'
+          : tool.installHint
+            ? `Not installed (${tool.installHint})`
+            : tool.description ?? 'CLI tool requiring local install',
+        isInstalled,
+      }
+    })
 }
 
 function listSubdirectories(parentDir: string): string[] {
@@ -201,10 +257,15 @@ export async function runPhase1(opts: {
       setupScope?: SetupScope
       setupType?: SetupType
       tools?: ToolId[]
+      skills?: SkillId[]
+      agents?: AgentId[]
+      mcpPreset?: McpWizardPreset
       projectName?: string
       workspaceName?: string
       planningRepoPath?: string
       enableServers?: string[]
+      organization?: string
+      team?: string
     }
   cliOverrides: {
     scope?: SetupScope
@@ -223,6 +284,9 @@ export async function runPhase1(opts: {
   if (!opts.interactive) {
     const setupScope = opts.cliOverrides.scope ?? opts.cliOverrides.type
     const tools = opts.cliOverrides.tools
+    const mcpPreset = normalizeMcpPreset(opts.prior.mcpPreset)
+    const skills = opts.prior.skills ?? [...ALL_SKILLS]
+    const agents = opts.prior.agents ?? [...ALL_AGENTS]
     const projectName =
       setupScope === 'workspace'
         ? path.basename(path.resolve(opts.cliOverrides.planningRepo ?? opts.targetDir))
@@ -235,14 +299,14 @@ export async function runPhase1(opts: {
       setupScope === 'workspace'
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
         : []
-    const cliTools = opts.cliOverrides.cliTools
-    const enableServers = opts.cliOverrides.enableServers ?? opts.prior.enableServers
+    const cliTools = opts.cliOverrides.cliTools ?? detectInstalledCliToolsFromCatalog(opts.targetDir)
+    const enableServers = defaultMcpSelection(opts.cliOverrides.enableServers ?? opts.prior.enableServers, mcpPreset, opts.targetDir)
 
     if (!setupScope) {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
     }
     if (!tools || tools.length === 0) {
-      throw new Error('--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)')
+      throw new Error('--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex, pi)')
     }
     if (!projectName) {
       throw new Error('Project name is required in non-interactive mode (use --name or provide via config)')
@@ -254,7 +318,10 @@ export async function runPhase1(opts: {
     return {
       setupScope,
       tools,
-      projectName,
+      skills,
+      agents,
+      mcpPreset,
+      projectName: setupScope === 'global' ? 'global' : projectName,
       ...(workspaceName ? { workspaceName } : {}),
       ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
       ...(setupScope === 'workspace' && parsedRepos.length > 0 ? { repos: parsedRepos } : {}),
@@ -280,10 +347,18 @@ export async function runPhase1(opts: {
   let planningRepoPath: string | undefined
   let repos: Array<{ name: string; path: string; type?: string; description?: string }> = []
   let cliTools: string[] = opts.cliOverrides.cliTools ?? []
+  let organization = opts.prior.organization ?? ''
+  let team = opts.prior.team ?? ''
 
   // Resolve default values from CLI overrides or prior selections
-  const priorScope = opts.cliOverrides.scope ?? opts.cliOverrides.type ?? opts.prior.setupScope ?? opts.prior.setupType
-  const priorTools = opts.cliOverrides.tools ?? opts.prior.tools
+  const priorScope = opts.cliOverrides.scope ?? opts.cliOverrides.type ?? opts.prior.setupScope ?? opts.prior.setupType ?? 'project'
+  const priorTools = filterToolsByScope(opts.cliOverrides.tools ?? opts.prior.tools ?? TOOL_OPTIONS.map((option) => option.value), priorScope)
+  const priorSkills = opts.prior.skills ?? [...ALL_SKILLS]
+  const priorAgents = opts.prior.agents ?? [...ALL_AGENTS]
+  const priorMcpPreset = normalizeMcpPreset(opts.prior.mcpPreset)
+  const priorEnableServers = opts.prior.enableServers && opts.prior.enableServers.length > 0
+    ? [...opts.prior.enableServers].sort((a, b) => a.localeCompare(b))
+    : undefined
   const priorProjectName = opts.cliOverrides.name ?? opts.prior.projectName
 
   // --- Prompt 1: Setup scope ---
@@ -298,43 +373,23 @@ export async function runPhase1(opts: {
     scopeOptions.push({ value: GO_BACK, label: '↩ Back', hint: 'Go back to previous step' })
   }
 
-  if (!priorScope) {
-    // No prior: show normal prompt
-    const setupScopeResult = await p.select({
-      message: 'Setup scope:',
-      options: scopeOptions,
-    })
+  const priorLabel = priorScope === 'global' ? 'Global' : priorScope === 'workspace' ? 'Workspace' : 'Project'
+  const setupScopeResult = await p.select({
+    message: `Setup scope: (previous: ${priorLabel})`,
+    options: scopeOptions,
+    initialValue: priorScope,
+  })
 
-    if (p.isCancel(setupScopeResult)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
-    }
-
-    if (isGoBack(setupScopeResult)) {
-      return GO_BACK
-    }
-
-    setupScope = setupScopeResult as SetupScope
-  } else {
-    // Has prior: show prompt with prior pre-selected, indicate previous choice in message
-    const priorLabel = priorScope === 'global' ? 'Global' : priorScope === 'workspace' ? 'Workspace' : 'Project'
-    const setupScopeResult = await p.select({
-      message: `Setup scope: (previous: ${priorLabel})`,
-      options: scopeOptions,
-      initialValue: priorScope,
-    })
-
-    if (p.isCancel(setupScopeResult)) {
-      p.cancel('Setup cancelled.')
-      process.exit(0)
-    }
-
-    if (isGoBack(setupScopeResult)) {
-      return GO_BACK
-    }
-
-    setupScope = setupScopeResult as SetupScope
+  if (p.isCancel(setupScopeResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
   }
+
+  if (isGoBack(setupScopeResult)) {
+    return GO_BACK
+  }
+
+  setupScope = setupScopeResult as SetupScope
 
   if (setupScope === 'project' || setupScope === 'workspace') {
     const globalAiExists = fileExists(path.join(homedir(), '.ai'))
@@ -345,22 +400,17 @@ export async function runPhase1(opts: {
 
   // --- Prompt 2: Tools selection ---
   // Always show the prompt, pre-fill with prior tools if available
-  const toolOptions = [
-    { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
-    { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
-    { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
-    { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
-    { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
-  ]
+  const toolOptions = toolOptionsForScope(setupScope)
 
-  const toolsMessage = priorTools && priorTools.length > 0
+  const scopedPriorTools = filterToolsByScope(priorTools, setupScope)
+  const toolsMessage = scopedPriorTools.length > 0
     ? `Which AI tools are you using? (previous: ${priorTools.join(', ')})`
     : 'Which AI tools are you using?'
 
   const toolsResult = await p.multiselect({
     message: toolsMessage,
     options: toolOptions,
-    initialValues: priorTools ?? [],
+    initialValues: scopedPriorTools,
     required: true,
   })
 
@@ -370,50 +420,62 @@ export async function runPhase1(opts: {
   }
   tools = toolsResult as ToolId[]
 
-  if (!opts.cliOverrides.cliTools) {
-    const cliToolOptions = getCliToolOptions(opts.targetDir)
-    if (cliToolOptions.length > 0) {
-      // Pre-select already installed tools
-      const initialCliTools = cliToolOptions
-        .filter((opt) => opt.isInstalled)
-        .map((opt) => opt.value)
+  const skillsResult = await p.multiselect({
+    message: `Which skills should be installed? (previous: ${priorSkills.join(', ')})`,
+    options: ALL_SKILLS.map((skill) => ({ value: skill, label: skill, hint: 'Skill' })),
+    initialValues: priorSkills,
+    required: true,
+  })
 
-      const cliToolsResult = await p.multiselect({
-        message: 'Which CLI tools do you have installed? (press space to select, enter to confirm or skip)',
-        options: cliToolOptions,
-        initialValues: initialCliTools,
-        required: false,
-      })
+  if (p.isCancel(skillsResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
+  }
+  const skills = skillsResult as SkillId[]
 
-      if (p.isCancel(cliToolsResult)) {
-        p.cancel('Setup cancelled.')
-        process.exit(0)
-      }
+  const agentsResult = await p.multiselect({
+    message: `Which agents should be installed? (previous: ${priorAgents.join(', ')})`,
+    options: ALL_AGENTS.map((agent) => ({ value: agent, label: agent, hint: 'Agent' })),
+    initialValues: priorAgents,
+    required: true,
+  })
 
-      cliTools = (cliToolsResult as string[]) || []
-    }
+  if (p.isCancel(agentsResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
+  }
+  const agents = agentsResult as AgentId[]
+
+  const mcpPresetResult = await p.select({
+    message: `Which MCP preset should be enabled? (previous: ${priorMcpPreset})`,
+    options: MCP_PRESET_OPTIONS,
+    initialValue: priorMcpPreset,
+  })
+
+  if (p.isCancel(mcpPresetResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
+  }
+  const mcpPreset = normalizeMcpPreset(mcpPresetResult as string)
+
+  const initialMcpServers = defaultMcpSelection(priorEnableServers, mcpPreset, opts.targetDir)
+  const serverOptions = [
+    ...defaultMcpServersForPreset('full', opts.targetDir).map((serverId) => ({ value: serverId, label: serverId, hint: 'MCP server' })),
+  ]
+
+  const mcpServersResult = await p.multiselect({
+    message: 'Which MCP servers would you like to enable?',
+    options: serverOptions,
+    initialValues: initialMcpServers,
+    required: false,
+  })
+
+  if (p.isCancel(mcpServersResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
   }
 
-  // Prompt: External integrations (MCP servers like Atlassian)
-  let enableServers: string[] = opts.cliOverrides.enableServers ?? opts.prior.enableServers ?? []
-  if (!opts.cliOverrides.enableServers) {
-    const integrationOptions = getIntegrationOptions(opts.targetDir)
-    if (integrationOptions.length > 0) {
-      const integrationsResult = await p.multiselect({
-        message: 'Enable external integrations? (press space to select, enter to confirm or skip)',
-        options: integrationOptions,
-        initialValues: enableServers,
-        required: false,
-      })
-
-      if (p.isCancel(integrationsResult)) {
-        p.cancel('Setup cancelled.')
-        process.exit(0)
-      }
-
-      enableServers = (integrationsResult as string[]) || []
-    }
-  }
+  const enableServers = ((mcpServersResult as string[]) || []).sort((a, b) => a.localeCompare(b))
 
   if (setupScope === 'workspace') {
     const defaultPlanningRepoPath = opts.cliOverrides.planningRepo || opts.prior.planningRepoPath || opts.targetDir
@@ -645,7 +707,7 @@ export async function runPhase1(opts: {
       }
     }
   } else {
-    // Prompt 3: Project name — always show, pre-fill with prior if available
+    // Prompt 7: Project name — always show, pre-fill with prior if available
     const defaultName = setupScope === 'global' ? 'global' : path.basename(opts.targetDir)
     const nameDefault = priorProjectName ?? defaultName
     const projectNameMessage = priorProjectName
@@ -662,17 +724,67 @@ export async function runPhase1(opts: {
       p.cancel('Setup cancelled.')
       process.exit(0)
     }
-    projectName = projectNameResult
+    projectName = setupScope === 'global' ? 'global' : projectNameResult
   }
+
+  if (!opts.cliOverrides.cliTools) {
+    const cliToolOptions = getCliToolOptions(opts.targetDir)
+    if (cliToolOptions.length > 0) {
+      const initialCliTools = detectInstalledCliToolsFromCatalog(opts.targetDir)
+
+      const cliToolsResult = await p.multiselect({
+        message: 'Which CLI tools do you have installed? (press space to select, enter to confirm or skip)',
+        options: cliToolOptions,
+        initialValues: initialCliTools,
+        required: false,
+      })
+
+      if (p.isCancel(cliToolsResult)) {
+        p.cancel('Setup cancelled.')
+        process.exit(0)
+      }
+
+      cliTools = (cliToolsResult as string[]) || []
+    }
+  }
+
+  const orgResult = await p.text({
+    message: `Organization? (optional${organization ? `, previous: ${organization}` : ''})`,
+    placeholder: organization || 'Acme',
+    defaultValue: organization,
+  })
+
+  if (p.isCancel(orgResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
+  }
+  organization = orgResult
+
+  const teamResult = await p.text({
+    message: `Team? (optional${team ? `, previous: ${team}` : ''})`,
+    placeholder: team || 'Platform',
+    defaultValue: team,
+  })
+
+  if (p.isCancel(teamResult)) {
+    p.cancel('Setup cancelled.')
+    process.exit(0)
+  }
+  team = teamResult
 
   return {
     setupScope,
     tools: tools as ToolId[],
+    skills,
+    agents,
+    mcpPreset,
     projectName,
     ...(workspaceName ? { workspaceName } : {}),
     ...(planningRepoPath ? { planningRepoPath } : {}),
     ...(repos.length > 0 ? { repos } : {}),
     ...(cliTools.length > 0 ? { cliTools } : {}),
     ...(enableServers.length > 0 ? { enableServers } : {}),
+    ...(organization ? { organization } : {}),
+    ...(team ? { team } : {}),
   }
 }

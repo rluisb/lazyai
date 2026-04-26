@@ -11,6 +11,7 @@ function formatTools(tools: ToolId[]): string {
     gemini: 'Gemini CLI',
     copilot: 'GitHub Copilot',
     codex: 'Codex',
+    pi: 'Pi',
   }
   return tools.map((t) => toolNames[t] || t).join(', ')
 }

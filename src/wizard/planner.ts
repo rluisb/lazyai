@@ -54,6 +54,10 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
     // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
     skillDir: '.agents/skills',
   },
+  pi: {
+    skillDir: '.pi/skills',
+    promptDir: '.pi/prompts',
+  },
 }
 
 function makePlannedFile(

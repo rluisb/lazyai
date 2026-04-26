@@ -6,4 +6,5 @@ export const ROOT_FILE_BY_TOOL: Record<ToolId, string> = {
   gemini: 'GEMINI.md',
   copilot: '.github/copilot-instructions.md',
   codex: 'AGENTS.md',
+  pi: 'AGENTS.md',
 }

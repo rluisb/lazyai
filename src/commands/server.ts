@@ -57,6 +57,7 @@ const PER_TOOL_MCP_CONFIG: Record<ToolId, string | null> = {
   copilot: '.vscode/mcp.json',
   gemini: '.gemini/settings.json',
   codex: null,
+  pi: '.pi/settings.json',
 }
 
 export function registerServer(program: Command): void {
@@ -659,5 +660,7 @@ function getOrchestratorAgentPathForTool(tool: ToolId, targetDir: string): strin
       return join(targetDir, '.agents', 'skills', 'orchestrator', 'SKILL.md')
     case 'copilot':
       return join(targetDir, '.github', 'prompts', 'orchestrator.prompt.md')
+    case 'pi':
+      return null
   }
 }

@@ -424,4 +424,194 @@ Checks pull requests.
       '--tool, --all, and --global are only supported with --list or --dry-run',
     )
   })
+
+  it('rejects --adopt without --scan', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-adopt-no-scan-')
+    process.chdir(repoDir)
+
+    await expect(runSetup(['--adopt'])).rejects.toThrow('--adopt and --import require --scan')
+  })
+
+  it('adopts adoptable targets and rescans them as managed', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-adopt-')
+    const resolvedRepoDir = realPath(repoDir)
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+    fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true })
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '1.0.0' }), 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan', '--adopt'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      currentState: { targets: Array<{ id: string; detections: Array<{ scope: string; state: string }> }> }
+      operation: { mode: string; registryPath: string; importRoot: string; adopted?: Array<{ targetId: string; rootPath: string }> }
+    }
+
+    expect(result.operation.mode).toBe('adopt')
+    expect(result.operation.registryPath).toBe(path.join(homeDir, '.ai-setup', 'config', 'setup-scan-registry.json'))
+    expect(result.operation.importRoot).toBe(path.join(homeDir, '.ai-setup', 'imports'))
+    expect(result.operation.adopted).toContainEqual({
+      targetId: 'claude-code',
+      scope: 'project',
+      origin: 'project',
+      rootPath: path.join(resolvedRepoDir, '.claude'),
+    })
+    expect(result.currentState.targets.find(({ id }) => id === 'claude-code')?.detections.find(({ scope }) => scope === 'project')?.state).toBe('managed')
+
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(homeDir, '.ai-setup', 'config', 'setup-scan-registry.json'), 'utf-8'),
+    ) as { resources: Array<{ targetId: string; state: string; rootPath: string }> }
+    expect(registry.resources).toContainEqual(expect.objectContaining({
+      targetId: 'claude-code',
+      state: 'managed',
+      rootPath: path.join(resolvedRepoDir, '.claude'),
+    }))
+  })
+
+  it('adopt skips missing targets with not-adoptable', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-adopt-skip-')
+    const resolvedRepoDir = realPath(repoDir)
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan', '--adopt'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      operation: { skipped?: Array<{ targetId: string; scope: string; rootPath: string; state: string; reason: string }> }
+    }
+
+    expect(result.operation.skipped).toContainEqual({
+      targetId: 'claude-code',
+      scope: 'project',
+      origin: 'project',
+      rootPath: path.join(resolvedRepoDir, '.claude'),
+      state: 'missing',
+      reason: 'not-adoptable',
+    })
+  })
+
+  it('imports observed files into the ai-setup import store and records the import', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-import-')
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+    fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true })
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '2.0.0' }), 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan', '--import'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      operation: {
+        mode: string
+        registryPath: string
+        importRoot: string
+        imported?: Array<{ targetId: string; sourcePath: string; destinationPath: string }>
+      }
+    }
+
+    expect(result.operation.mode).toBe('import')
+    const imported = result.operation.imported?.find(({ targetId, sourcePath }) => targetId === 'claude-code' && sourcePath.endsWith('settings.json'))
+    expect(imported).toBeDefined()
+    expect(fs.readFileSync(imported?.destinationPath ?? '', 'utf-8')).toBe(fs.readFileSync(path.join(repoDir, '.claude', 'settings.json'), 'utf-8'))
+
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(homeDir, '.ai-setup', 'config', 'setup-scan-registry.json'), 'utf-8'),
+    ) as { imports: Array<{ targetId: string; importedPaths: string[]; destinationRoot: string }> }
+    expect(registry.imports).toContainEqual(expect.objectContaining({
+      targetId: 'claude-code',
+      importedPaths: ['settings.json'],
+      destinationRoot: path.dirname(imported?.destinationPath ?? ''),
+    }))
+  })
+
+  it('import skips missing and conflict detections as not-importable', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-import-skip-')
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+    fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true })
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '1.0.0' }), 'utf-8')
+
+    await runSetup(['--scan', '--adopt'])
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '9.9.9' }), 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan', '--import'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      operation: { skipped?: Array<{ targetId: string; scope: string; state: string; reason: string }> }
+    }
+
+    expect(result.operation.skipped).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        targetId: 'claude-code',
+        scope: 'project',
+        state: 'conflict',
+        reason: 'not-importable',
+      }),
+      expect.objectContaining({
+        targetId: 'opencode',
+        scope: 'project',
+        state: 'missing',
+        reason: 'not-importable',
+      }),
+    ]))
+  })
+
+  it('supports combined adopt and import mode output', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-adopt-import-')
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.chdir(repoDir)
+    process.env.HOME = homeDir
+    fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true })
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '3.0.0' }), 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan', '--adopt', '--import'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      operation: {
+        mode: string
+        adopted?: Array<{ targetId: string }>
+        imported?: Array<{ targetId: string }>
+      }
+    }
+
+    expect(result.operation.mode).toBe('adopt+import')
+    expect(result.operation.adopted?.some(({ targetId }) => targetId === 'claude-code')).toBe(true)
+    expect(result.operation.imported?.some(({ targetId }) => targetId === 'claude-code')).toBe(true)
+  })
+
+  it('reports managed registry conflicts when an adopted file changes', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-conflict-')
+    process.chdir(repoDir)
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
+    process.env.HOME = homeDir
+    fs.mkdirSync(path.join(repoDir, '.claude'), { recursive: true })
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '1.0.0' }), 'utf-8')
+
+    await runSetup(['--scan', '--adopt'])
+    fs.writeFileSync(path.join(repoDir, '.claude', 'settings.json'), JSON.stringify({ version: '1.0.1' }), 'utf-8')
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    await runSetup(['--scan'])
+
+    const result = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+      currentState: {
+        targets: Array<{ id: string; detections: Array<{ scope: string; state: string; reasons?: string[] }> }>
+      }
+    }
+
+    expect(result.currentState.targets.find(({ id }) => id === 'claude-code')?.detections.find(({ scope }) => scope === 'project')).toEqual(
+      expect.objectContaining({
+        state: 'conflict',
+        reasons: ['changed-path:settings.json'],
+      }),
+    )
+  })
 })

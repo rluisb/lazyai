@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -102,6 +103,15 @@ interface TargetDetection {
   state: ResourceState
   version: string
   observedFiles: string[]
+  reasons?: string[]
+  mcpEntries?: MCPEntry[]
+}
+
+interface MCPEntry {
+  name: string
+  configPath: string
+  state: ResourceState
+  reasons?: string[]
 }
 
 interface DesiredTarget {
@@ -141,6 +151,8 @@ interface SetupOptions {
   scan?: boolean
   list?: boolean
   dryRun?: boolean
+  adopt?: boolean
+  import?: boolean
   tool?: string[]
   all?: boolean
   global?: boolean
@@ -149,6 +161,83 @@ interface SetupOptions {
 interface SetupSelection {
   explicit: boolean
   requested: Set<SetupToolId>
+}
+
+interface SetupOperationResult {
+  mode: 'adopt' | 'import' | 'adopt+import'
+  registryPath: string
+  importRoot: string
+  backups?: string[]
+  adopted?: OperationTarget[]
+  imported?: ImportedResource[]
+  skipped?: SkippedOperation[]
+}
+
+interface OperationTarget {
+  targetId: string
+  scope: string
+  origin: string
+  rootPath: string
+}
+
+interface ImportedResource {
+  targetId: string
+  scope: string
+  origin: string
+  sourcePath: string
+  destinationPath: string
+}
+
+interface SkippedOperation {
+  targetId: string
+  scope: string
+  origin: string
+  rootPath: string
+  state: string
+  reason: string
+}
+
+interface ScanRegistry {
+  version: number
+  resources?: ManagedResource[]
+  imports?: ImportRecord[]
+}
+
+interface ManagedResource {
+  targetId: string
+  scope: string
+  origin: string
+  rootPath: string
+  state: 'managed' | 'user-owned'
+  observedPaths?: RecordedPath[]
+  mcpEntries?: RecordedMcpEntry[]
+  updatedAt: string
+}
+
+interface ImportRecord {
+  targetId: string
+  scope: string
+  origin: string
+  rootPath: string
+  importedPaths?: string[]
+  destinationRoot: string
+  updatedAt: string
+}
+
+interface RecordedPath {
+  relativePath: string
+  fingerprint: string
+}
+
+interface RecordedMcpEntry {
+  name: string
+  configPath: string
+  fingerprint: string
+}
+
+interface ObservedMcpEntry {
+  entry: MCPEntry
+  fingerprint: string
 }
 
 const SETUP_TOOLS: RegistryTool[] = [
@@ -334,9 +423,13 @@ const SETUP_TOOLS: RegistryTool[] = [
 ]
 
 const RESOURCE_STATE_ADOPTABLE: ResourceState = 'adoptable'
+const RESOURCE_STATE_CONFLICT: ResourceState = 'conflict'
+const RESOURCE_STATE_MANAGED: ResourceState = 'managed'
 const RESOURCE_STATE_MISSING: ResourceState = 'missing'
+const RESOURCE_STATE_USER_OWNED: ResourceState = 'user-owned'
 const REUSABLE_AGENT_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/
 const TOML_VERSION_PATTERN = /^version\s*=\s*"([^"]+)"/m
+const SCAN_REGISTRY_VERSION = 1
 
 function collectTool(value: string, previous: string[]): string[] {
   previous.push(value)
@@ -461,6 +554,7 @@ function fileExists(targetPath: string): boolean {
 }
 
 function buildScanInventory(targetDir: string, homeDir: string): SetupInventoryResult {
+  const registry = loadRegistry(aiSetupHome(homeDir))
   const desiredSharedPaths = buildSharedPaths(targetDir, homeDir)
   const currentSharedPaths: ObservedPath[] = desiredSharedPaths.map(({ id, path }) => ({
     id,
@@ -472,7 +566,7 @@ function buildScanInventory(targetDir: string, homeDir: string): SetupInventoryR
     id: tool.id,
     name: tool.name,
     detections: tool.roots
-      .map((root) => buildTargetDetection(root, targetDir, homeDir))
+      .map((root) => buildTargetDetection(root, targetDir, homeDir, tool.id, registry))
       .sort((left, right) => {
         if (left.origin !== right.origin) {
           return left.origin.localeCompare(right.origin)
@@ -511,12 +605,12 @@ function buildScanInventory(targetDir: string, homeDir: string): SetupInventoryR
   }
 }
 
-function buildTargetDetection(root: RegistryRoot, targetDir: string, homeDir: string): TargetDetection {
+function buildTargetDetection(root: RegistryRoot, targetDir: string, homeDir: string, toolId: SetupToolId, registry: ScanRegistry): TargetDetection {
   const rootPath = resolveTokenizedPath(root.rootPath, targetDir, homeDir)
   const observedFiles = collectObservedFiles(rootPath, [...root.expectedFiles, ...root.optionalPaths])
   const detected = observedFiles.length > 0 || (root.countRootOnly === true && directoryExists(rootPath))
 
-  return {
+  const detection: TargetDetection = {
     scope: root.scope,
     origin: root.origin,
     rootPath,
@@ -525,6 +619,133 @@ function buildTargetDetection(root: RegistryRoot, targetDir: string, homeDir: st
     version: detectVersion(rootPath, root.expectedFiles),
     observedFiles,
   }
+
+  applyDetectionState(detection, toolId, registry)
+  return detection
+}
+
+function applyDetectionState(detection: TargetDetection, toolId: SetupToolId, registry: ScanRegistry): void {
+  if (detection.status === 'missing') {
+    detection.state = RESOURCE_STATE_MISSING
+    return
+  }
+
+  try {
+    const observedPaths = snapshotObservedPaths(detection.rootPath, detection.observedFiles)
+    const observedMcpEntries = snapshotMcpEntries(detection.rootPath, detection.observedFiles)
+    if (observedMcpEntries.length > 0) {
+      detection.mcpEntries = observedMcpEntries.map(({ entry }) => ({ ...entry }))
+    }
+
+    const record = findResourceRecord(registry, toolId, detection.scope, detection.origin, detection.rootPath)
+    if (!record) {
+      detection.state = RESOURCE_STATE_ADOPTABLE
+      detection.mcpEntries?.forEach((entry) => {
+        entry.state = RESOURCE_STATE_ADOPTABLE
+      })
+      return
+    }
+
+    if (record.state === RESOURCE_STATE_USER_OWNED) {
+      detection.state = RESOURCE_STATE_USER_OWNED
+      detection.mcpEntries?.forEach((entry) => {
+        entry.state = RESOURCE_STATE_USER_OWNED
+      })
+      return
+    }
+
+    if (record.state !== RESOURCE_STATE_MANAGED) {
+      detection.state = RESOURCE_STATE_CONFLICT
+      detection.reasons = ['unsupported-registry-state']
+      detection.mcpEntries?.forEach((entry) => {
+        entry.state = RESOURCE_STATE_CONFLICT
+      })
+      return
+    }
+
+    const reasons = compareObservedPaths(record.observedPaths ?? [], observedPaths)
+    const mcpReasons = applyMcpEntryStates(detection.mcpEntries, record.mcpEntries ?? [], observedMcpEntries)
+    const allReasons = [...reasons, ...mcpReasons]
+
+    if (allReasons.length === 0) {
+      detection.state = RESOURCE_STATE_MANAGED
+      return
+    }
+
+    detection.state = RESOURCE_STATE_CONFLICT
+    detection.reasons = allReasons
+  } catch (error) {
+    detection.state = RESOURCE_STATE_CONFLICT
+    detection.reasons = [`snapshot-failed:${error instanceof Error ? error.message : String(error)}`]
+  }
+}
+
+function compareObservedPaths(recorded: RecordedPath[], observed: RecordedPath[]): string[] {
+  const recordedByPath = new Map(recorded.map((entry) => [entry.relativePath, entry.fingerprint]))
+  const observedByPath = new Map(observed.map((entry) => [entry.relativePath, entry.fingerprint]))
+  const reasons: string[] = []
+
+  for (const [relativePath, fingerprint] of recordedByPath) {
+    const observedFingerprint = observedByPath.get(relativePath)
+    if (!observedFingerprint) {
+      reasons.push(`missing-path:${relativePath}`)
+      continue
+    }
+    if (observedFingerprint !== fingerprint) {
+      reasons.push(`changed-path:${relativePath}`)
+    }
+  }
+
+  for (const relativePath of observedByPath.keys()) {
+    if (!recordedByPath.has(relativePath)) {
+      reasons.push(`unexpected-path:${relativePath}`)
+    }
+  }
+
+  return reasons.sort()
+}
+
+function applyMcpEntryStates(entries: MCPEntry[] | undefined, recorded: RecordedMcpEntry[], observed: ObservedMcpEntry[]): string[] {
+  if (!entries || entries.length === 0) {
+    return []
+  }
+
+  const recordedByKey = new Map(recorded.map((entry) => [mcpEntryKey(entry.configPath, entry.name), entry]))
+  const observedByKey = new Map(observed.map((entry) => [mcpEntryKey(entry.entry.configPath, entry.entry.name), entry]))
+  const reasons: string[] = []
+
+  for (const entry of entries) {
+    const key = mcpEntryKey(entry.configPath, entry.name)
+    const recordedEntry = recordedByKey.get(key)
+    if (!recordedEntry) {
+      entry.state = RESOURCE_STATE_CONFLICT
+      entry.reasons = ['unexpected-mcp-entry']
+      reasons.push(`unexpected-mcp-entry:${entry.configPath}:${entry.name}`)
+      continue
+    }
+
+    const observedEntry = observedByKey.get(key)
+    if (!observedEntry || observedEntry.fingerprint !== recordedEntry.fingerprint) {
+      entry.state = RESOURCE_STATE_CONFLICT
+      entry.reasons = ['mcp-entry-changed']
+      reasons.push(`mcp-entry-changed:${entry.configPath}:${entry.name}`)
+      continue
+    }
+
+    entry.state = RESOURCE_STATE_MANAGED
+  }
+
+  for (const recordedEntry of recorded) {
+    if (!observedByKey.has(mcpEntryKey(recordedEntry.configPath, recordedEntry.name))) {
+      reasons.push(`missing-mcp-entry:${recordedEntry.configPath}:${recordedEntry.name}`)
+    }
+  }
+
+  return reasons.sort()
+}
+
+function mcpEntryKey(configPath: string, name: string): string {
+  return `${configPath}::${name}`
 }
 
 function detectVersion(rootPath: string, candidates: string[]): string {
@@ -578,6 +799,381 @@ function versionFromRecord(value: unknown): string {
   }
 
   return 'unknown'
+}
+
+function scanRegistryPath(aiSetupHomePath: string): string {
+  return path.join(aiSetupHomePath, 'config', 'setup-scan-registry.json')
+}
+
+function aiSetupHome(homeDir: string): string {
+  return path.join(homeDir, '.ai-setup')
+}
+
+function importsRoot(aiSetupHomePath: string): string {
+  return path.join(aiSetupHomePath, 'imports')
+}
+
+function loadRegistry(aiSetupHomePath: string): ScanRegistry {
+  const registryPath = scanRegistryPath(aiSetupHomePath)
+  if (!fileExists(registryPath)) {
+    return { version: SCAN_REGISTRY_VERSION }
+  }
+
+  const parsed = JSON.parse(fs.readFileSync(registryPath, 'utf-8')) as ScanRegistry
+  return {
+    version: parsed.version || SCAN_REGISTRY_VERSION,
+    resources: [...(parsed.resources ?? [])],
+    imports: [...(parsed.imports ?? [])],
+  }
+}
+
+function findResourceRecord(registry: ScanRegistry, toolId: string, scope: string, origin: string, rootPath: string): ManagedResource | undefined {
+  return registry.resources?.find((entry) => (
+    entry.targetId === toolId
+    && entry.scope === scope
+    && entry.origin === origin
+    && entry.rootPath === rootPath
+  ))
+}
+
+function upsertResourceRecord(registry: ScanRegistry, record: ManagedResource): void {
+  registry.resources ??= []
+  const index = registry.resources.findIndex((entry) => (
+    entry.targetId === record.targetId
+    && entry.scope === record.scope
+    && entry.origin === record.origin
+    && entry.rootPath === record.rootPath
+  ))
+  if (index >= 0) {
+    registry.resources[index] = record
+    return
+  }
+  registry.resources.push(record)
+}
+
+function upsertImportRecord(registry: ScanRegistry, record: ImportRecord): void {
+  registry.imports ??= []
+  const index = registry.imports.findIndex((entry) => (
+    entry.targetId === record.targetId
+    && entry.scope === record.scope
+    && entry.origin === record.origin
+    && entry.rootPath === record.rootPath
+  ))
+  if (index >= 0) {
+    registry.imports[index] = record
+    return
+  }
+  registry.imports.push(record)
+}
+
+function operationMode(adopt: boolean, shouldImport: boolean): SetupOperationResult['mode'] {
+  if (adopt && shouldImport) {
+    return 'adopt+import'
+  }
+  if (adopt) {
+    return 'adopt'
+  }
+  return 'import'
+}
+
+function canImportState(state: ResourceState): boolean {
+  return state === RESOURCE_STATE_ADOPTABLE || state === RESOURCE_STATE_MANAGED || state === RESOURCE_STATE_USER_OWNED
+}
+
+function snapshotObservedPaths(rootPath: string, observedFiles: string[]): RecordedPath[] {
+  return observedFiles
+    .map((relativePath) => ({
+      relativePath: relativePath.replaceAll(path.sep, '/'),
+      fingerprint: pathFingerprint(path.join(rootPath, relativePath)),
+    }))
+    .sort((left, right) => left.relativePath.localeCompare(right.relativePath))
+}
+
+function snapshotMcpEntries(rootPath: string, observedFiles: string[]): ObservedMcpEntry[] {
+  const entries: ObservedMcpEntry[] = []
+
+  for (const relativePath of observedFiles) {
+    const fullPath = path.join(rootPath, relativePath)
+    if (directoryExists(fullPath) || !isMcpConfigCandidate(relativePath)) {
+      continue
+    }
+    const parsed = readJsonLikeMap(fullPath)
+    const mcpMap = extractMcpEntriesMap(parsed, path.basename(relativePath))
+    if (!mcpMap) {
+      continue
+    }
+
+    for (const name of Object.keys(mcpMap).sort()) {
+      entries.push({
+        entry: { name, configPath: relativePath.replaceAll(path.sep, '/'), state: RESOURCE_STATE_ADOPTABLE },
+        fingerprint: jsonFingerprint(mcpMap[name]),
+      })
+    }
+  }
+
+  return entries.sort((left, right) => {
+    if (left.entry.configPath !== right.entry.configPath) {
+      return left.entry.configPath.localeCompare(right.entry.configPath)
+    }
+    return left.entry.name.localeCompare(right.entry.name)
+  })
+}
+
+function readJsonLikeMap(filePath: string): Record<string, unknown> {
+  const raw = fs.readFileSync(filePath, 'utf-8')
+  if (filePath.endsWith('.jsonc')) {
+    return JSON.parse(stripJsonComments(raw)) as Record<string, unknown>
+  }
+  return JSON.parse(raw) as Record<string, unknown>
+}
+
+function extractMcpEntriesMap(parsed: Record<string, unknown>, baseName: string): Record<string, unknown> | undefined {
+  for (const key of ['mcpServers', 'mcp', 'mcp_servers']) {
+    const value = parsed[key]
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>
+    }
+  }
+  if (baseName === 'mcp.json') {
+    const servers = parsed.servers
+    if (servers && typeof servers === 'object' && !Array.isArray(servers)) {
+      return servers as Record<string, unknown>
+    }
+  }
+  return undefined
+}
+
+function isMcpConfigCandidate(relativePath: string): boolean {
+  return ['settings.json', 'settings.local.json', 'mcp-config.json', 'mcp.json', 'opencode.json', 'opencode.jsonc'].includes(path.basename(relativePath))
+}
+
+function jsonFingerprint(value: unknown): string {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex')
+}
+
+function pathFingerprint(targetPath: string): string {
+  const stats = fs.statSync(targetPath)
+  if (stats.isFile()) {
+    return createHash('sha256').update(fs.readFileSync(targetPath)).digest('hex')
+  }
+
+  const entries: string[] = []
+  walkDirectory(targetPath, targetPath, entries)
+  return createHash('sha256').update(entries.sort().join('\n')).digest('hex')
+}
+
+function walkDirectory(rootPath: string, currentPath: string, entries: string[]): void {
+  for (const entry of fs.readdirSync(currentPath, { withFileTypes: true })) {
+    const absolutePath = path.join(currentPath, entry.name)
+    const relativePath = path.relative(rootPath, absolutePath).replaceAll(path.sep, '/')
+    if (entry.isDirectory()) {
+      entries.push(`dir:${relativePath}`)
+      walkDirectory(rootPath, absolutePath, entries)
+      continue
+    }
+    entries.push(`file:${relativePath}:${createHash('sha256').update(fs.readFileSync(absolutePath)).digest('hex')}`)
+  }
+}
+
+function importDirectoryName(scope: string, origin: string, rootPath: string): string {
+  return `${scope}-${origin}-${createHash('sha256').update(rootPath).digest('hex').slice(0, 12)}`
+}
+
+function ensureDir(targetPath: string): void {
+  fs.mkdirSync(targetPath, { recursive: true })
+}
+
+function copyPath(sourcePath: string, destinationPath: string): void {
+  ensureDir(path.dirname(destinationPath))
+  fs.cpSync(sourcePath, destinationPath, { recursive: true, force: true })
+}
+
+function pathsMatch(sourcePath: string, destinationPath: string): boolean {
+  if (!pathExists(destinationPath)) {
+    return false
+  }
+  return pathFingerprint(sourcePath) === pathFingerprint(destinationPath)
+}
+
+function createTimestampedBackup(targetPath: string): string {
+  const backupPath = `${targetPath}.bak-${new Date().toISOString().replaceAll(':', '-')}`
+  fs.renameSync(targetPath, backupPath)
+  return backupPath
+}
+
+function importPath(sourcePath: string, destinationPath: string, operation: SetupOperationResult, backupSet: Set<string>): void {
+  if (!pathExists(sourcePath)) {
+    return
+  }
+  if (pathsMatch(sourcePath, destinationPath)) {
+    return
+  }
+  if (pathExists(destinationPath)) {
+    if (!backupSet.has(destinationPath)) {
+      const backupPath = createTimestampedBackup(destinationPath)
+      backupSet.add(destinationPath)
+      operation.backups = [...(operation.backups ?? []), backupPath]
+    } else {
+      fs.rmSync(destinationPath, { recursive: true, force: true })
+    }
+  }
+  copyPath(sourcePath, destinationPath)
+}
+
+function sortRegistry(registry: ScanRegistry): void {
+  registry.resources?.sort((left, right) => `${left.targetId}:${left.scope}:${left.origin}:${left.rootPath}`.localeCompare(`${right.targetId}:${right.scope}:${right.origin}:${right.rootPath}`))
+  registry.imports?.sort((left, right) => `${left.targetId}:${left.scope}:${left.origin}:${left.rootPath}`.localeCompare(`${right.targetId}:${right.scope}:${right.origin}:${right.rootPath}`))
+}
+
+function sortOperation(operation: SetupOperationResult): void {
+  if (operation.backups) {
+    operation.backups.sort()
+  }
+  if (operation.adopted) {
+    operation.adopted.sort((left, right) => `${left.targetId}:${left.scope}:${left.origin}:${left.rootPath}`.localeCompare(`${right.targetId}:${right.scope}:${right.origin}:${right.rootPath}`))
+  }
+  if (operation.imported) {
+    operation.imported.sort((left, right) => `${left.targetId}:${left.scope}:${left.origin}:${left.sourcePath}:${left.destinationPath}`.localeCompare(`${right.targetId}:${right.scope}:${right.origin}:${right.sourcePath}:${right.destinationPath}`))
+  }
+  if (operation.skipped) {
+    operation.skipped.sort((left, right) => `${left.targetId}:${left.scope}:${left.origin}:${left.rootPath}:${left.reason}`.localeCompare(`${right.targetId}:${right.scope}:${right.origin}:${right.rootPath}:${right.reason}`))
+  }
+}
+
+function writeRegistryIfChanged(registryPath: string, registry: ScanRegistry, operation: SetupOperationResult, backupSet: Set<string>): void {
+  registry.version = SCAN_REGISTRY_VERSION
+  sortRegistry(registry)
+  const serialized = `${JSON.stringify(registry, null, 2)}\n`
+  if (fileExists(registryPath) && fs.readFileSync(registryPath, 'utf-8') === serialized) {
+    sortOperation(operation)
+    return
+  }
+  ensureDir(path.dirname(registryPath))
+  if (fileExists(registryPath) && !backupSet.has(registryPath)) {
+    const backupPath = createTimestampedBackup(registryPath)
+    backupSet.add(registryPath)
+    operation.backups = [...(operation.backups ?? []), backupPath]
+  }
+  fs.writeFileSync(registryPath, serialized, 'utf-8')
+  sortOperation(operation)
+}
+
+function runScanOperation(targetDir: string, homeDir: string, adopt: boolean, shouldImport: boolean): SetupInventoryResult & { operation?: SetupOperationResult } {
+  const inventory = buildScanInventory(targetDir, homeDir)
+  if (!adopt && !shouldImport) {
+    return inventory
+  }
+
+  const aiSetupHomePath = aiSetupHome(homeDir)
+  const registryPath = scanRegistryPath(aiSetupHomePath)
+  const importRoot = importsRoot(aiSetupHomePath)
+  const registry = loadRegistry(aiSetupHomePath)
+  const operation: SetupOperationResult = {
+    mode: operationMode(adopt, shouldImport),
+    registryPath,
+    importRoot,
+  }
+  const backupSet = new Set<string>()
+  const now = new Date().toISOString()
+
+  if (adopt) {
+    for (const target of inventory.currentState.targets) {
+      for (const detection of target.detections) {
+        if (detection.state !== RESOURCE_STATE_ADOPTABLE) {
+          operation.skipped = [...(operation.skipped ?? []), {
+            targetId: target.id,
+            scope: detection.scope,
+            origin: detection.origin,
+            rootPath: detection.rootPath,
+            state: detection.state,
+            reason: 'not-adoptable',
+          }]
+          continue
+        }
+        upsertResourceRecord(registry, {
+          targetId: target.id,
+          scope: detection.scope,
+          origin: detection.origin,
+          rootPath: detection.rootPath,
+          state: 'managed',
+          observedPaths: snapshotObservedPaths(detection.rootPath, detection.observedFiles),
+          mcpEntries: snapshotMcpEntries(detection.rootPath, detection.observedFiles).map(({ entry, fingerprint }) => ({
+            name: entry.name,
+            configPath: entry.configPath,
+            fingerprint,
+          })),
+          updatedAt: now,
+        })
+        operation.adopted = [...(operation.adopted ?? []), {
+          targetId: target.id,
+          scope: detection.scope,
+          origin: detection.origin,
+          rootPath: detection.rootPath,
+        }]
+      }
+    }
+  }
+
+  if (shouldImport) {
+    ensureDir(importRoot)
+    for (const target of inventory.currentState.targets) {
+      for (const detection of target.detections) {
+        if (!canImportState(detection.state)) {
+          operation.skipped = [...(operation.skipped ?? []), {
+            targetId: target.id,
+            scope: detection.scope,
+            origin: detection.origin,
+            rootPath: detection.rootPath,
+            state: detection.state,
+            reason: 'not-importable',
+          }]
+          continue
+        }
+
+        const destinationRoot = path.join(importRoot, target.id, importDirectoryName(detection.scope, detection.origin, detection.rootPath))
+        const importedPaths: string[] = []
+
+        for (const relativePath of detection.observedFiles) {
+          const sourcePath = path.join(detection.rootPath, relativePath)
+          const destinationPath = path.join(destinationRoot, relativePath)
+          importPath(sourcePath, destinationPath, operation, backupSet)
+          if (!fileExists(sourcePath) && !directoryExists(sourcePath)) {
+            continue
+          }
+          operation.imported = [...(operation.imported ?? []), {
+            targetId: target.id,
+            scope: detection.scope,
+            origin: detection.origin,
+            sourcePath,
+            destinationPath,
+          }]
+          importedPaths.push(relativePath.replaceAll(path.sep, '/'))
+        }
+
+        upsertImportRecord(registry, {
+          targetId: target.id,
+          scope: detection.scope,
+          origin: detection.origin,
+          rootPath: detection.rootPath,
+          importedPaths,
+          destinationRoot,
+          updatedAt: now,
+        })
+      }
+    }
+  }
+
+  writeRegistryIfChanged(registryPath, registry, operation, backupSet)
+  return {
+    ...buildScanInventory(targetDir, homeDir),
+    operation: {
+      ...operation,
+      ...(operation.backups && operation.backups.length > 0 ? { backups: operation.backups } : {}),
+      ...(operation.adopted && operation.adopted.length > 0 ? { adopted: operation.adopted } : {}),
+      ...(operation.imported && operation.imported.length > 0 ? { imported: operation.imported } : {}),
+      ...(operation.skipped && operation.skipped.length > 0 ? { skipped: operation.skipped } : {}),
+    },
+  }
 }
 
 function observeAgents(targetDir: string): ObservedAgent[] {
@@ -930,17 +1526,26 @@ export function registerSetup(program: Command): void {
     .option('--scan', 'Scan known tool targets and print inventory JSON')
     .option('--list', 'List supported setup targets and reusable setup resources')
     .option('--dry-run', 'Show the setup plan without writing files')
+    .option('--adopt', 'Mark adoptable external configs as ai-setup managed')
+    .option('--import', 'Import external configs into ~/.ai-setup reference storage')
     .option('--tool <tool>', 'Limit setup planning to specific tools (repeatable)', collectTool, [])
     .option('--all', 'Select all supported setup targets for the requested scope')
     .option('--global', 'Use global scope/home layout where supported')
     .action(async (opts: SetupOptions) => {
       const actions = [opts.scan === true, opts.list === true, opts.dryRun === true].filter(Boolean).length
       if (actions === 0) {
+        if (opts.adopt === true || opts.import === true) {
+          throw new Error('--adopt and --import require --scan')
+        }
         throw new Error('no setup action selected (try: ai-setup setup --scan, --list, or --dry-run)')
       }
 
       if (actions > 1) {
         throw new Error('select exactly one of --scan, --list, or --dry-run')
+      }
+
+      if ((opts.adopt === true || opts.import === true) && opts.scan !== true) {
+        throw new Error('--adopt and --import require --scan')
       }
 
       if (opts.scan === true && ((opts.tool?.length ?? 0) > 0 || opts.all === true || opts.global === true)) {
@@ -957,7 +1562,7 @@ export function registerSetup(program: Command): void {
       const homeDir = os.homedir()
 
       if (opts.scan === true) {
-        console.log(JSON.stringify(buildScanInventory(targetDir, homeDir), null, 2))
+        console.log(JSON.stringify(runScanOperation(targetDir, homeDir, opts.adopt === true, opts.import === true), null, 2))
         return
       }
 

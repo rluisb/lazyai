@@ -333,6 +333,7 @@ describe('cli init integration', () => {
     const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-home-'))
     const originalHome = process.env.HOME
     process.env.HOME = tempHome
+    fs.mkdirSync(path.join(tempHome, '.copilot'), { recursive: true })
     process.chdir(tempDir)
 
     try {

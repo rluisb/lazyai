@@ -168,6 +168,7 @@ describe('wizard integration (non-interactive)', () => {
 
   it('global scope scaffolds into ~/.ai and logs unsupported tools', async () => {
     const homeDir = mkdtempSync(path.join(tmpdir(), 'ai-setup-home-'))
+    mkdirSync(path.join(homeDir, '.copilot'), { recursive: true })
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
 
     await runWizard({

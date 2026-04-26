@@ -26,7 +26,12 @@ func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
 	if !types.IsValidSetupScope(scope) || !types.IsValidToolId(tool) {
 		return false
 	}
-	return true
+	switch tool {
+	case types.ToolIdPi:
+		return scope == types.SetupScopeProject || scope == types.SetupScopeWorkspace
+	default:
+		return true
+	}
 }
 
 // ResolveToolRoot returns the primary directory the adapter should write into
@@ -109,6 +114,8 @@ func projectSubdir(tool types.ToolId) string {
 		return ".github"
 	case types.ToolIdCodex:
 		return ".codex"
+	case types.ToolIdPi:
+		return ".pi"
 	}
 	return ""
 }

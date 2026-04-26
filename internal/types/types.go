@@ -31,6 +31,7 @@ const (
 	ToolIdGemini     ToolId = "gemini"
 	ToolIdCopilot    ToolId = "copilot"
 	ToolIdCodex      ToolId = "codex"
+	ToolIdPi         ToolId = "pi"
 )
 
 // AgentId identifies a specialized agent role.
@@ -692,7 +693,7 @@ func IsValidSetupScope(s SetupScope) bool {
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
 	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex:
+	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex, ToolIdPi:
 		return true
 	default:
 		return false

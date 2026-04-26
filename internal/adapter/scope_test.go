@@ -29,6 +29,9 @@ func TestIsScopeSupported(t *testing.T) {
 		{types.ToolIdCopilot, types.SetupScopeProject, true},
 		{types.ToolIdCopilot, types.SetupScopeGlobal, true}, // now supported with probe gating
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, true},
+		{types.ToolIdPi, types.SetupScopeProject, true},
+		{types.ToolIdPi, types.SetupScopeWorkspace, true},
+		{types.ToolIdPi, types.SetupScopeGlobal, false},
 	}
 	for _, tc := range tests {
 		got := IsScopeSupported(tc.tool, tc.scope)
@@ -72,6 +75,10 @@ func TestResolveToolRoot_AllPairs(t *testing.T) {
 		{types.ToolIdCopilot, types.SetupScopeProject, want{filepath.Join(target, ".github"), false}},
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, want{filepath.Join(target, ".github"), false}},
 		{types.ToolIdCopilot, types.SetupScopeGlobal, want{filepath.Join(home, ".copilot"), false}}, // now supported
+		// pi
+		{types.ToolIdPi, types.SetupScopeProject, want{filepath.Join(target, ".pi"), false}},
+		{types.ToolIdPi, types.SetupScopeWorkspace, want{filepath.Join(target, ".pi"), false}},
+		{types.ToolIdPi, types.SetupScopeGlobal, want{"", true}},
 
 	}
 

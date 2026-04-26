@@ -232,6 +232,36 @@ func BackupFile(filePath string, targetDir string) (string, error) {
 	return backupPath, nil
 }
 
+// CreateTimestampedBackup creates a timestamped sibling backup ending in .bak.
+// It supports both files and directories and is intended for overwrite flows.
+func CreateTimestampedBackup(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", aierror.FileNotFound(path)
+		}
+		return "", aierror.FilePermission(path, "backup")
+	}
+
+	timestamp := time.Now().UTC().Format("20060102T150405Z")
+	backupPath := fmt.Sprintf("%s.%s.bak", path, timestamp)
+	for attempt := 1; FileExists(backupPath); attempt++ {
+		backupPath = fmt.Sprintf("%s.%s.%d.bak", path, timestamp, attempt)
+	}
+
+	if info.IsDir() {
+		if err := CopyDir(path, backupPath); err != nil {
+			return "", err
+		}
+		return backupPath, nil
+	}
+
+	if err := CopyFile(path, backupPath); err != nil {
+		return "", err
+	}
+	return backupPath, nil
+}
+
 // startsDotDot reports whether a path starts with "..".
 func startsDotDot(p string) bool {
 	return len(p) >= 2 && p[0] == '.' && p[1] == '.'

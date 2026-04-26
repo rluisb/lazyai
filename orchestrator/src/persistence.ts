@@ -323,6 +323,6 @@ export function saveErrorJournalEntry(entry: ErrorJournalEntry): void {
 export function loadErrorJournalEntries(projectRoot: string): ErrorJournalEntry[] {
   const db = getDb()
   void projectRoot
-  const rows = selectAllJournal(db).all()
+  const rows: Array<{ entry_json: string }> = selectAllJournal(db).all()
   return rows.map((r) => JSON.parse(r.entry_json) as ErrorJournalEntry)
 }

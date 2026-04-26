@@ -29,7 +29,7 @@ func writeCanonicalMcp(t *testing.T, targetDir string) {
 func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 	type expect struct {
 		scope          types.SetupScope
-		skipped        bool   // if true, expect 0 records and no writes
+		skipped        bool // if true, expect 0 records and no writes
 		writePathUnder func(target, home string) string
 	}
 	cases := []struct {
@@ -92,6 +92,9 @@ func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 				t.Run(string(exp.scope), func(t *testing.T) {
 					target := t.TempDir()
 					home := t.TempDir()
+					if tc.tool == types.ToolIdCopilot && exp.scope == types.SetupScopeGlobal {
+						t.Setenv("PATH", t.TempDir())
+					}
 					writeCanonicalMcp(t, target)
 
 					records, err := CompileMCPForTool(tc.tool, CompileContext{

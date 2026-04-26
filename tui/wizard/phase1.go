@@ -15,10 +15,10 @@ import (
 const phase1BackValue = "__phase1_back__"
 
 type phase1StepInfo struct {
-	Current  int
-	Total    int
+	Current   int
+	Total     int
 	StepTitle string
-	Previous string
+	Previous  string
 }
 
 func (s phase1StepInfo) Title() string {
@@ -33,6 +33,9 @@ func (s phase1StepInfo) Title() string {
 type Phase1Result struct {
 	Scope         types.SetupScope
 	Tools         []types.ToolId
+	Skills        []types.SkillId
+	Agents        []types.AgentId
+	McpPreset     McpPreset
 	ProjectName   string
 	CliTools      []string
 	EnableServers []string
@@ -80,6 +83,9 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	if defaults != nil {
 		state.Scope = defaults.Scope
 		state.Tools = cloneToolIDs(defaults.Tools)
+		state.Skills = cloneSkillIDs(defaults.Skills)
+		state.Agents = cloneAgentIDs(defaults.Agents)
+		state.McpPreset = defaults.McpPreset
 		state.ProjectName = defaults.ProjectName
 		state.CliTools = cloneStrings(defaults.CliTools)
 		state.Servers = cloneStrings(defaults.EnableServers)
@@ -92,9 +98,12 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 	if state.ProjectName == "" {
 		state.ProjectName = defaultPhase1ProjectName()
 	}
+	if state.McpPreset == "" {
+		state.McpPreset = McpPresetRecommended
+	}
 
 	currentStep := 1
-	for currentStep >= 1 && currentStep <= 6 {
+	for currentStep >= 1 && currentStep <= 9 {
 		scopeForStep := state.Scope
 		if scopeForStep == "" {
 			scopeForStep = defaultPhase1Scope()
@@ -123,7 +132,55 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 			state.Tools = tools
 			currentStep++
 		case 3:
-			name, action, err := askProjectName(state.ProjectName, defaults, state.Scope, phase1StepInfoFor(3, scopeForStep, defaults))
+			skills, action, err := askSkills(state.Skills, phase1StepInfoFor(3, scopeForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase1Step(currentStep, state.Scope)
+				continue
+			}
+			state.Skills = skills
+			currentStep++
+		case 4:
+			agents, action, err := askAgents(state.Agents, phase1StepInfoFor(4, scopeForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase1Step(currentStep, state.Scope)
+				continue
+			}
+			state.Agents = agents
+			currentStep++
+		case 5:
+			mcpPreset, action, err := askMcpPreset(state.McpPreset, phase1StepInfoFor(5, scopeForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase1Step(currentStep, state.Scope)
+				continue
+			}
+			state.McpPreset = mcpPreset
+			if !state.mcpSelectionCustomized {
+				state.Servers = defaultMcpServersForPreset(mcpPreset)
+			}
+			currentStep++
+		case 6:
+			servers, action, err := askMcpServers(defaultMcpSelection(state.Servers, state.McpPreset), phase1StepInfoFor(6, scopeForStep, defaults))
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				currentStep = previousPhase1Step(currentStep, state.Scope)
+				continue
+			}
+			state.Servers = servers
+			state.mcpSelectionCustomized = true
+			currentStep++
+		case 7:
+			name, action, err := askProjectName(state.ProjectName, defaults, state.Scope, phase1StepInfoFor(7, scopeForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -133,8 +190,8 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 			}
 			state.ProjectName = name
 			currentStep++
-		case 4:
-			cliTools, action, err := askCliTools(state.CliTools, phase1StepInfoFor(4, scopeForStep, defaults))
+		case 8:
+			cliTools, action, err := askCliTools(state.CliTools, phase1StepInfoFor(8, scopeForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -144,19 +201,8 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 			}
 			state.CliTools = cliTools
 			currentStep++
-		case 5:
-			servers, action, err := askMcpServers(state.Servers, phase1StepInfoFor(5, scopeForStep, defaults))
-			if err != nil {
-				return nil, action, err
-			}
-			if action == PhaseBack {
-				currentStep = previousPhase1Step(currentStep, state.Scope)
-				continue
-			}
-			state.Servers = servers
-			currentStep++
-		case 6:
-			org, team, action, err := askProjectIdentity(state.Organization, state.Team, phase1StepInfoFor(6, scopeForStep, defaults))
+		case 9:
+			org, team, action, err := askProjectIdentity(state.Organization, state.Team, phase1StepInfoFor(9, scopeForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -170,20 +216,24 @@ func runPhase1Interactive(defaults *Phase1Result) (*Phase1Result, PhaseAction, e
 		}
 	}
 
-	return buildPhase1Result(state.Scope, state.Tools, state.ProjectName, state.CliTools, state.Servers, state.Organization, state.Team), PhaseContinue, nil
+	return buildPhase1Result(state.Scope, state.Tools, state.Skills, state.Agents, state.McpPreset, state.ProjectName, state.CliTools, state.Servers, state.Organization, state.Team), PhaseContinue, nil
 }
 
 type phase1InteractiveState struct {
-	Scope        types.SetupScope
-	Tools        []types.ToolId
-	ProjectName  string
-	CliTools     []string
-	Servers      []string
-	Organization string
-	Team         string
+	Scope                  types.SetupScope
+	Tools                  []types.ToolId
+	Skills                 []types.SkillId
+	Agents                 []types.AgentId
+	McpPreset              McpPreset
+	ProjectName            string
+	CliTools               []string
+	Servers                []string
+	Organization           string
+	Team                   string
+	mcpSelectionCustomized bool
 }
 
-func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, name string, cliTools, servers []string, org, team string) *Phase1Result {
+func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, skills []types.SkillId, agents []types.AgentId, mcpPreset McpPreset, name string, cliTools, servers []string, org, team string) *Phase1Result {
 	projectName := name
 	if scope == types.SetupScopeGlobal {
 		projectName = "global"
@@ -192,6 +242,9 @@ func buildPhase1Result(scope types.SetupScope, tools []types.ToolId, name string
 	return &Phase1Result{
 		Scope:         scope,
 		Tools:         cloneToolIDs(tools),
+		Skills:        cloneSkillIDs(skills),
+		Agents:        cloneAgentIDs(agents),
+		McpPreset:     normalizeMcpPreset(mcpPreset),
 		ProjectName:   projectName,
 		CliTools:      cloneStrings(cliTools),
 		EnableServers: cloneStrings(servers),
@@ -331,6 +384,71 @@ func askCliTools(current []string, info phase1StepInfo) ([]string, PhaseAction, 
 	return selected, PhaseContinue, nil
 }
 
+func askSkills(current []types.SkillId, info phase1StepInfo) ([]types.SkillId, PhaseAction, error) {
+	selected := skillIDsToStrings(current)
+	if len(selected) == 0 {
+		selected = skillIDsToStrings(types.ALL_SKILLS)
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title(info.Title()).
+		Options(appendPhase1BackOption(skillOptions())...).
+		Value(&selected)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
+	}
+	if containsString(selected, phase1BackValue) {
+		return nil, PhaseBack, nil
+	}
+
+	return stringsToSkillIDs(selected), PhaseContinue, nil
+}
+
+func askAgents(current []types.AgentId, info phase1StepInfo) ([]types.AgentId, PhaseAction, error) {
+	selected := agentIDsToStrings(current)
+	if len(selected) == 0 {
+		selected = agentIDsToStrings(types.ALL_AGENTS)
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title(info.Title()).
+		Options(appendPhase1BackOption(agentOptions())...).
+		Value(&selected)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
+	}
+	if containsString(selected, phase1BackValue) {
+		return nil, PhaseBack, nil
+	}
+
+	return stringsToAgentIDs(selected), PhaseContinue, nil
+}
+
+func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseAction, error) {
+	presetValue := string(normalizeMcpPreset(current))
+	field := huh.NewSelect[string]().
+		Title(info.Title()).
+		Description("Choose a starting MCP set, then refine individual servers next.").
+		Options(
+			huh.NewOption("Minimal — core local setup tools", string(McpPresetMinimal)),
+			huh.NewOption("Recommended — balanced default", string(McpPresetRecommended)),
+			huh.NewOption("Full — all catalog servers", string(McpPresetFull)),
+			huh.NewOption("↩ Back", phase1BackValue),
+		).
+		Value(&presetValue)
+
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
+	}
+	if presetValue == phase1BackValue {
+		return "", PhaseBack, nil
+	}
+
+	return normalizeMcpPreset(McpPreset(presetValue)), PhaseContinue, nil
+}
+
 func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction, error) {
 	field := NewMcpServersSelect(current)
 	field.Title(info.Title())
@@ -439,7 +557,7 @@ func defaultPhase1ProjectName() string {
 func phase1StepInfoFor(step int, scope types.SetupScope, defaults *Phase1Result) phase1StepInfo {
 	total := phase1Total(scope)
 	current := step
-	if scope == types.SetupScopeGlobal && step >= 4 {
+	if scope == types.SetupScopeGlobal && step >= 8 {
 		current--
 	}
 
@@ -456,15 +574,33 @@ func phase1StepInfoFor(step int, scope types.SetupScope, defaults *Phase1Result)
 			info.Previous = strings.Join(toolIDsToStrings(defaults.Tools), ", ")
 		}
 	case 3:
+		info.StepTitle = "Skills"
+		if defaults != nil && len(defaults.Skills) > 0 {
+			info.Previous = strings.Join(skillIDsToStrings(defaults.Skills), ", ")
+		}
+	case 4:
+		info.StepTitle = "Agents"
+		if defaults != nil && len(defaults.Agents) > 0 {
+			info.Previous = strings.Join(agentIDsToStrings(defaults.Agents), ", ")
+		}
+	case 5:
+		info.StepTitle = "MCP Preset"
+		if defaults != nil && defaults.McpPreset != "" {
+			info.Previous = string(normalizeMcpPreset(defaults.McpPreset))
+		}
+	case 6:
+		info.StepTitle = "MCP Servers"
+		if defaults != nil && len(defaults.EnableServers) > 0 {
+			info.Previous = strings.Join(defaults.EnableServers, ", ")
+		}
+	case 7:
 		info.StepTitle = "Project Name"
 		if defaults != nil && defaults.ProjectName != "" {
 			info.Previous = defaults.ProjectName
 		}
-	case 4:
+	case 8:
 		info.StepTitle = "CLI Tools"
-	case 5:
-		info.StepTitle = "MCP Servers"
-	case 6:
+	case 9:
 		info.StepTitle = "Project Identity (optional)"
 		if defaults != nil && (defaults.Organization != "" || defaults.Team != "") {
 			info.Previous = fmt.Sprintf("org=%q team=%q", defaults.Organization, defaults.Team)
@@ -475,14 +611,14 @@ func phase1StepInfoFor(step int, scope types.SetupScope, defaults *Phase1Result)
 
 func phase1Total(scope types.SetupScope) int {
 	if scope == types.SetupScopeGlobal {
-		return 5
+		return 8
 	}
-	return 6
+	return 9
 }
 
 func previousPhase1Step(current int, scope types.SetupScope) int {
 	previous := current - 1
-	if scope == types.SetupScopeGlobal && previous == 3 {
+	if scope == types.SetupScopeGlobal && previous == 7 {
 		previous--
 	}
 	if previous < 1 {
@@ -517,11 +653,57 @@ func stringsToToolIDs(values []string) []types.ToolId {
 	return tools
 }
 
+func skillIDsToStrings(skills []types.SkillId) []string {
+	values := make([]string, len(skills))
+	for i, skill := range skills {
+		values[i] = string(skill)
+	}
+	return values
+}
+
+func stringsToSkillIDs(values []string) []types.SkillId {
+	skills := make([]types.SkillId, len(values))
+	for i, value := range values {
+		skills[i] = types.SkillId(value)
+	}
+	return skills
+}
+
+func agentIDsToStrings(agents []types.AgentId) []string {
+	values := make([]string, len(agents))
+	for i, agent := range agents {
+		values[i] = string(agent)
+	}
+	return values
+}
+
+func stringsToAgentIDs(values []string) []types.AgentId {
+	agents := make([]types.AgentId, len(values))
+	for i, value := range values {
+		agents[i] = types.AgentId(value)
+	}
+	return agents
+}
+
 func cloneToolIDs(values []types.ToolId) []types.ToolId {
 	if len(values) == 0 {
 		return nil
 	}
 	return append([]types.ToolId(nil), values...)
+}
+
+func cloneSkillIDs(values []types.SkillId) []types.SkillId {
+	if len(values) == 0 {
+		return nil
+	}
+	return append([]types.SkillId(nil), values...)
+}
+
+func cloneAgentIDs(values []types.AgentId) []types.AgentId {
+	if len(values) == 0 {
+		return nil
+	}
+	return append([]types.AgentId(nil), values...)
 }
 
 func cloneStrings(values []string) []string {

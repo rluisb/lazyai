@@ -79,7 +79,9 @@ export class EventBus {
     const sinceClause = sinceEventId !== undefined ? 'AND id > ?' : ''
     const params: unknown[] = sinceEventId !== undefined ? [runId, sinceEventId] : [runId]
 
-    const rows = db.prepare<unknown[], {
+    const rows: Array<{
+      id: number; event_type: string; run_id: string; run_kind: string; payload_json: string; emitted_at: string
+    }> = db.prepare<unknown[], {
       id: number; event_type: string; run_id: string; run_kind: string; payload_json: string; emitted_at: string
     }>(
       `SELECT id, event_type, run_id, run_kind, payload_json, emitted_at

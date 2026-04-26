@@ -50,6 +50,7 @@ func TestIsGlobalSupportedTool(t *testing.T) {
 		{types.ToolIdGemini, true},
 		{types.ToolIdCodex, true},
 		{types.ToolIdCopilot, true}, // now supported with probe gating
+		{types.ToolIdPi, false},
 	}
 	for _, c := range cases {
 		got := IsGlobalSupportedTool(c.tool)

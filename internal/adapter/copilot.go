@@ -19,7 +19,7 @@ import (
 type CopilotAdapter struct{}
 
 func (a *CopilotAdapter) ID() types.ToolId  { return types.ToolIdCopilot }
-func (a *CopilotAdapter) Name() string      { return "GitHub Copilot" }
+func (a *CopilotAdapter) Name() string      { return "GitHub Copilot CLI" }
 func (a *CopilotAdapter) ConfigDir() string { return ".github" }
 
 func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {

@@ -3,6 +3,7 @@ package files
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 )
 
@@ -169,5 +170,56 @@ func TestCopyFile_PreservesContent(t *testing.T) {
 	}
 	if string(got) != string(content) {
 		t.Errorf("dst content = %q, want %q", got, content)
+	}
+}
+
+func TestCreateTimestampedBackup_CopiesFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	src := filepath.Join(dir, "config.json")
+	content := []byte(`{"managed":true}`)
+	if err := os.WriteFile(src, content, 0o644); err != nil {
+		t.Fatalf("seed src: %v", err)
+	}
+
+	backupPath, err := CreateTimestampedBackup(src)
+	if err != nil {
+		t.Fatalf("CreateTimestampedBackup: %v", err)
+	}
+	if matched := regexp.MustCompile(`config\.json\.\d{8}T\d{6}Z(\.\d+)?\.bak$`).MatchString(backupPath); !matched {
+		t.Fatalf("backup path = %q, want timestamped .bak suffix", backupPath)
+	}
+
+	got, err := os.ReadFile(backupPath)
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if string(got) != string(content) {
+		t.Fatalf("backup content = %q, want %q", got, content)
+	}
+}
+
+func TestCreateTimestampedBackup_CopiesDirectory(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "settings")
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+		t.Fatalf("mkdir srcDir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "settings.json"), []byte(`{"ok":true}`), 0o644); err != nil {
+		t.Fatalf("seed directory: %v", err)
+	}
+
+	backupPath, err := CreateTimestampedBackup(srcDir)
+	if err != nil {
+		t.Fatalf("CreateTimestampedBackup: %v", err)
+	}
+	if !DirExists(backupPath) {
+		t.Fatalf("expected backup directory %q", backupPath)
+	}
+	if !FileExists(filepath.Join(backupPath, "settings.json")) {
+		t.Fatalf("expected copied file inside %q", backupPath)
 	}
 }

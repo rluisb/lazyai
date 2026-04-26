@@ -1,5 +1,7 @@
 ---
 name: orchestrate
+description: Orchestrate multi-agent workflows and execution chains.
+argument-hint: "[workflow-name]"
 trigger: /orchestrate
 ---
 

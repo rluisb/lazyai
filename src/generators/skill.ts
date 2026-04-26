@@ -1,5 +1,13 @@
 import type { GeneratedFile, Generator, GeneratorConfig, PromptQuestion } from './types.js'
 
+function toYamlFrontmatter(fields: Record<string, string>): string {
+  return `---
+${Object.entries(fields)
+  .map(([k, v]) => `${k}: ${v}`)
+  .join('\n')}
+---`
+}
+
 function toSlug(value: string): string {
   return value
     .trim()
@@ -53,15 +61,21 @@ export class SkillGenerator implements Generator {
     const slug = toSlug(config.name)
     const title = toTitleCase(slug || config.name)
     const command = String(config.answers?.command ?? (slug || 'command'))
-    const goal = config.description ?? `Execute ${title.toLowerCase()} effectively.`
+    const description = config.description ?? `Execute ${title.toLowerCase()} effectively.`
     const steps = normalizeSteps(String(config.answers?.steps ?? ''))
+    const argumentHint = `[${slug || 'args'}]`
 
-    const content = `# ${title} Skill
+    const frontmatter = toYamlFrontmatter({
+      name: slug || 'new-skill',
+      description,
+      'argument-hint': argumentHint,
+      trigger: `/${command}`,
+      phase: 'implement',
+    })
 
-**Command:** /${command} [args]
-**Goal:** ${goal}
+    const content = `${frontmatter}
 
----
+# ${title} Skill
 
 ## Workflow
 

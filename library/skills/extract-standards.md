@@ -1,5 +1,6 @@
 ---
 name: extract-standards
+description: Extract coding standards and conventions from a codebase.
 trigger: /extract-standards
 phase: post-task
 preset: standard

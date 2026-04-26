@@ -1,5 +1,7 @@
 ---
 name: iterate
+description: Iterate on implementation based on feedback or new requirements.
+argument-hint: "[feedback]"
 trigger: /iterate
 phase: implement
 ---

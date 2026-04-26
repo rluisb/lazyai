@@ -170,3 +170,65 @@ function rewriteToolsLine(frontmatterBody: string, joined: string): string {
   removed.push(...lines.slice(i))
   return removed.join('\n')
 }
+
+// ── Skill frontmatter (Compozy-inspired unified format) ──
+
+export interface SkillFrontmatter {
+  name: string
+  description?: string
+  'argument-hint'?: string
+  trigger?: string
+  phase?: string
+  preset?: string
+  [key: string]: unknown
+}
+
+export interface ParsedSkill {
+  frontmatter: SkillFrontmatter
+  body: string
+}
+
+/**
+ * Parse YAML frontmatter from a SKILL.md or AGENT.md file.
+ * Returns the parsed frontmatter and the body content after the frontmatter block.
+ * If no frontmatter is found, returns empty frontmatter and the full content as body.
+ */
+export function parseFrontmatter(content: string): ParsedSkill {
+  const split = splitYamlFrontmatter(content)
+  if (!split) {
+    return { frontmatter: { name: '' }, body: content.trimStart() }
+  }
+  const frontmatter = parseYaml(split.frontmatterBody) as SkillFrontmatter
+  return { frontmatter, body: split.body.trimStart() }
+}
+
+/**
+ * Parse a skill file and return its frontmatter + body.
+ * Alias for parseFrontmatter.
+ */
+export function parseSkillFrontmatter(content: string): ParsedSkill {
+  return parseFrontmatter(content)
+}
+
+/**
+ * Minimal YAML parser for frontmatter blocks.
+ * Handles: key: value, 'key': 'value', "key": "value"
+ * Does NOT handle nested objects, arrays, or multi-line values.
+ */
+function parseYaml(yaml: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  const lines = yaml.split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const colonIndex = trimmed.indexOf(':')
+    if (colonIndex === -1) continue
+    const key = trimmed.slice(0, colonIndex).trim()
+    let value: string = trimmed.slice(colonIndex + 1).trim()
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    result[key] = value
+  }
+  return result
+}

@@ -1,5 +1,7 @@
 ---
 name: research
+description: Research codebase patterns, dependencies, and conventions.
+argument-hint: "[topic-or-question]"
 trigger: /research
 phase: research
 ---

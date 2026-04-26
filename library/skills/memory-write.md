@@ -1,5 +1,6 @@
 ---
 name: memory-write
+description: Write persistent context and decisions for future sessions.
 trigger: /memory-write
 phase: post-task
 ---

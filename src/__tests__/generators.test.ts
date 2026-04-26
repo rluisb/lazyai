@@ -97,7 +97,7 @@ describe('generators', () => {
     expect(content).toContain('## Identity')
   })
 
-  it('skill generator emits command and goal sections', async () => {
+  it('skill generator emits YAML frontmatter and workflow', async () => {
     const targetDir = makeTempDir('ai-setup-skill-generator-')
     const files = await new SkillGenerator().generate({
       name: 'implement',
@@ -106,8 +106,10 @@ describe('generators', () => {
     })
 
     const content = files[0]?.content ?? ''
-    expect(content).toContain('**Command:** /implement [args]')
-    expect(content).toContain('**Goal:**')
+    expect(content).toContain('name: implement')
+    expect(content).toContain('description:')
+    expect(content).toContain('trigger: /implement')
+    expect(content).toContain('argument-hint: [implement]')
     expect(content).toContain('## Workflow')
   })
 

@@ -1,5 +1,7 @@
 ---
 name: implement
+description: Implement requested changes safely with test-first workflow.
+argument-hint: "[task-or-scope]"
 trigger: /implement
 phase: implement
 ---

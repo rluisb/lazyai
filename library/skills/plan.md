@@ -1,5 +1,7 @@
 ---
 name: plan
+description: Plan implementation approach before writing code.
+argument-hint: "[feature-or-task]"
 trigger: /plan
 phase: plan
 ---

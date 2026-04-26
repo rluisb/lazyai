@@ -143,9 +143,10 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'opencode',
       fileRecords,
+      setupScope: 'project',
     })
 
-    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
     expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
     expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
     expect(opencodeConfig.mcp.stdioEnabled.environment.API_KEY).toBe('{env:API_KEY}')
@@ -163,8 +164,9 @@ describe('MCP scaffold and compile', () => {
       perFileOverrides: new Map(),
     })
 
+    ensureDir(path.join(targetDir, '.opencode'))
     writeFile(
-      path.join(targetDir, 'opencode.jsonc'),
+      path.join(targetDir, '.opencode', 'opencode.jsonc'),
       `${JSON.stringify(
         {
           plugin: ['foo-plugin'],
@@ -186,13 +188,17 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'opencode',
       fileRecords,
+      setupScope: 'project',
     })
 
-    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, 'opencode.jsonc')))
+    const opencodeConfig = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
     expect(opencodeConfig.plugin).toEqual(['foo-plugin'])
     expect(opencodeConfig.permission).toEqual({ default: 'allow' })
     expect(opencodeConfig.$schema).toBe('https://opencode.ai/config.json')
-    expect(opencodeConfig.mcp.legacy).toBeUndefined()
+    expect(opencodeConfig.mcp.legacy).toEqual({
+      type: 'local',
+      command: ['legacy-cmd'],
+    })
     expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
   })
 
@@ -210,6 +216,8 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'copilot',
       fileRecords,
+      setupScope: 'project',
+      homeDir: targetDir,
     })
 
     const copilot = JSON.parse(readFile(path.join(targetDir, '.vscode', 'mcp.json')))
@@ -218,6 +226,14 @@ describe('MCP scaffold and compile', () => {
     expect(copilot.servers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
     // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
     expect(copilot.servers.remoteEnabled.headers.REMOTE_ENABLED_API_KEY).toBe('${REMOTE_ENABLED_API_KEY}')
+    expect(copilot.inputs).toEqual([
+      {
+        type: 'promptString',
+        id: 'API_KEY',
+        description: 'API_KEY',
+        password: true,
+      },
+    ])
     expect(copilot.servers.remoteDisabled).toBeUndefined()
     expect(copilot.servers.stdioDisabled).toBeUndefined()
   })
@@ -238,6 +254,7 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'gemini',
       fileRecords,
+      setupScope: 'project',
     })
 
     const gemini = JSON.parse(readFile(path.join(targetDir, '.gemini', 'settings.json')))
@@ -263,6 +280,7 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'claude-code',
       fileRecords,
+      setupScope: 'project',
     })
 
     const mcpJson = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
@@ -325,6 +343,7 @@ describe('MCP scaffold and compile', () => {
       toolTargetDir: targetDir,
       toolId: 'claude-code',
       fileRecords,
+      setupScope: 'project',
     })
 
     const compiled = JSON.parse(readFile(path.join(targetDir, '.mcp.json')))
@@ -344,6 +363,228 @@ describe('MCP scaffold and compile', () => {
 
     const catalog = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
     expect(catalog.servers.nonexistent).toBeUndefined()
+  })
+
+  it('compileMcp writes codex MCP config.toml', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'codex',
+      fileRecords,
+      setupScope: 'project',
+    })
+
+    const configToml = readFile(path.join(targetDir, '.codex', 'config.toml'))
+    expect(configToml).toContain('[mcp_servers.remoteEnabled]')
+    expect(configToml).toContain('[mcp_servers.stdioEnabled]')
+    expect(configToml).toContain('command = "npx"')
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
+    expect(configToml).toContain('API_KEY = "${API_KEY}"')
+  })
+
+  it('compileMcp writes claude local secrets to .claude/settings.local.json', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'project',
+      localSecrets: true,
+    })
+
+    expect(fileExists(path.join(targetDir, '.mcp.json'))).toBe(false)
+    const settingsLocal = JSON.parse(readFile(path.join(targetDir, '.claude', 'settings.local.json')))
+    expect(settingsLocal.mcpServers.stdioEnabled.command).toBe('npx')
+    expect(settingsLocal.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
+  })
+
+  it('compileMcp writes copilot global mcp-config.json when global config exists', async () => {
+    const homeDir = path.join(targetDir, 'home')
+    ensureDir(path.join(homeDir, '.copilot'))
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: path.join(homeDir, '.copilot'),
+      toolId: 'copilot',
+      fileRecords,
+      setupScope: 'global',
+      homeDir,
+    })
+
+    expect(fileExists(path.join(targetDir, '.vscode', 'mcp.json'))).toBe(false)
+    const cliConfig = JSON.parse(readFile(path.join(homeDir, '.copilot', 'mcp-config.json')))
+    expect(cliConfig.mcpServers.stdioEnabled.type).toBe('stdio')
+    expect(cliConfig.inputs).toBeUndefined()
+  })
+
+  it('compileMcp skips claude global .mcp.json when local secrets are not enabled', async () => {
+    const homeDir = path.join(targetDir, 'home')
+    ensureDir(path.join(homeDir, '.claude'))
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: path.join(homeDir, '.claude'),
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'global',
+      homeDir,
+    })
+
+    expect(fileExists(path.join(homeDir, '.claude', '.mcp.json'))).toBe(false)
+  })
+
+  it('scaffoldMcp rewrites orchestrator to local node entry when package is present', async () => {
+    const repoRoot = makeTempDir('ai-setup-orchestrator-repo-')
+    const repoLibraryDir = path.join(repoRoot, 'library')
+    const orchestratorDir = path.join(repoRoot, 'orchestrator')
+    ensureDir(path.join(repoLibraryDir, 'mcp'))
+    ensureDir(path.join(orchestratorDir, 'dist'))
+    writeFile(path.join(orchestratorDir, 'package.json'), '{}')
+    writeFile(path.join(orchestratorDir, 'dist', 'index.js'), 'console.log("ok")')
+    writeFile(
+      path.join(repoLibraryDir, 'mcp', 'catalog.json'),
+      JSON.stringify({
+        servers: {
+          orchestrator: {
+            command: 'npx',
+            args: ['-y', '@ai-setup/orchestrator'],
+            enabled: false,
+            requiresInstall: false,
+          },
+        },
+      }),
+    )
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir: repoLibraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+      enableServers: ['orchestrator'],
+    })
+
+    const canonical = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
+    expect(canonical.servers.orchestrator.command).toBe(process.execPath)
+    expect(canonical.servers.orchestrator.args).toEqual([path.join(orchestratorDir, 'dist', 'index.js')])
+    expect(canonical.servers.orchestrator.requiresInstall).toBe(false)
+  })
+
+  it('scaffoldMcp builds orchestrator dist when entry is missing', async () => {
+    const repoRoot = makeTempDir('ai-setup-orchestrator-build-')
+    const repoLibraryDir = path.join(repoRoot, 'library')
+    const orchestratorDir = path.join(repoRoot, 'orchestrator')
+    ensureDir(path.join(repoLibraryDir, 'mcp'))
+    ensureDir(orchestratorDir)
+    writeFile(
+      path.join(orchestratorDir, 'package.json'),
+      JSON.stringify({
+        name: 'orchestrator-test',
+        version: '1.0.0',
+        scripts: {
+          build:
+            'node -e "require(\'node:fs\').mkdirSync(\'dist\',{recursive:true});require(\'node:fs\').writeFileSync(\'dist/index.js\',\'console.log("built")\')"',
+        },
+      }),
+    )
+    writeFile(
+      path.join(repoLibraryDir, 'mcp', 'catalog.json'),
+      JSON.stringify({
+        servers: {
+          orchestrator: {
+            command: 'npx',
+            args: ['-y', '@ai-setup/orchestrator'],
+            enabled: false,
+          },
+        },
+      }),
+    )
+
+    await scaffoldMcp({
+      targetDir,
+      libraryDir: repoLibraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+      enableServers: ['orchestrator'],
+    })
+
+    expect(fileExists(path.join(orchestratorDir, 'dist', 'index.js'))).toBe(true)
+  })
+
+  it('scaffoldMcp runs orchestrator smoke test when enabled by env', async () => {
+    const original = process.env.AI_SETUP_ORCHESTRATOR_SMOKE
+    process.env.AI_SETUP_ORCHESTRATOR_SMOKE = '1'
+
+    try {
+      const repoRoot = makeTempDir('ai-setup-orchestrator-smoke-')
+      const repoLibraryDir = path.join(repoRoot, 'library')
+      const orchestratorDir = path.join(repoRoot, 'orchestrator')
+      ensureDir(path.join(repoLibraryDir, 'mcp'))
+      ensureDir(path.join(orchestratorDir, 'dist'))
+      writeFile(path.join(orchestratorDir, 'package.json'), '{}')
+      writeFile(
+        path.join(orchestratorDir, 'dist', 'index.js'),
+        'if (process.argv[2] !== "catalog") process.exit(1)',
+      )
+      writeFile(
+        path.join(repoLibraryDir, 'mcp', 'catalog.json'),
+        JSON.stringify({
+          servers: {
+            orchestrator: {
+              command: 'npx',
+              args: ['-y', '@ai-setup/orchestrator'],
+              enabled: false,
+            },
+          },
+        }),
+      )
+
+      await scaffoldMcp({
+        targetDir,
+        libraryDir: repoLibraryDir,
+        fileRecords,
+        strategy: 'skip',
+        perFileOverrides: new Map(),
+        enableServers: ['orchestrator'],
+      })
+
+      expect(fileExists(path.join(targetDir, '.ai', 'mcp.json'))).toBe(true)
+    } finally {
+      process.env.AI_SETUP_ORCHESTRATOR_SMOKE = original
+    }
   })
 
   describe('env-example generation', () => {

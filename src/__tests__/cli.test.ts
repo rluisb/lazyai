@@ -151,7 +151,7 @@ describe('cli init integration', () => {
     ])
 
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'opencode.json'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, '.opencode', 'opencode.jsonc'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/agents'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/skills'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.opencode/commands'))).toBe(true)
@@ -270,7 +270,7 @@ describe('cli init integration', () => {
       ])
 
       const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
-      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/agents/builder.md')
 
       fs.rmSync(opencodeAgent)
       fs.rmSync(claudeAgent, { recursive: true, force: true })
@@ -345,16 +345,19 @@ describe('cli init integration', () => {
       ])
 
       const opencodeAgent = path.join(tempHome, '.config/opencode/agents/builder.md')
-      const claudeAgent = path.join(tempHome, '.claude/builder.md')
+      const claudeAgent = path.join(tempHome, '.claude/agents/builder.md')
+      const copilotPrompt = path.join(tempHome, '.copilot', 'prompts', 'implement.prompt.md')
       fs.rmSync(opencodeAgent)
       fs.rmSync(claudeAgent, { recursive: true, force: true })
+      fs.rmSync(copilotPrompt, { recursive: true, force: true })
 
       const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
       await runCompile(['--scope', 'global', '--tools', 'opencode,copilot'])
 
       expect(fs.existsSync(opencodeAgent)).toBe(true)
       expect(fs.existsSync(claudeAgent)).toBe(false)
-      expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
+      expect(fs.existsSync(copilotPrompt)).toBe(true)
+      expect(infoSpy).not.toHaveBeenCalled()
       infoSpy.mockRestore()
     } finally {
       if (originalHome === undefined) {

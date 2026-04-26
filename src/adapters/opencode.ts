@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
@@ -18,6 +19,8 @@ export class OpenCodeAdapter implements ToolAdapter {
   async install(ctx: AdapterContext): Promise<void> {
     const isGlobal = ctx.setupScope === 'global'
     const ocDir = isGlobal ? ctx.targetDir : path.join(ctx.targetDir, '.opencode')
+    const legacyConfigPath = path.join(ocDir, 'opencode.json')
+    const configPath = path.join(ocDir, 'opencode.jsonc')
     const skillsDir = 'skills'
     const commandsDir = 'commands'
 
@@ -28,26 +31,33 @@ export class OpenCodeAdapter implements ToolAdapter {
 
     console.log('🤖  Installing OpenCode tools...')
 
-    if (!isGlobal) {
-      const configPath = path.join(ctx.targetDir, 'opencode.json')
-      const jsoncConfigPath = path.join(ctx.targetDir, 'opencode.jsonc')
-      if (!files.fileExists(configPath) && !files.fileExists(jsoncConfigPath)) {
-        const defaultConfig = {
-          $schema: 'https://opencode.ai/config.json',
-          instructions: ['AGENTS.md'],
-          permission: {
-            edit: 'ask',
-            bash: 'ask',
-          },
-        }
-        files.writeFile(configPath, JSON.stringify(defaultConfig, null, 2))
-        ctx.fileRecords.push({
-          path: 'opencode.json',
-          hash: files.fileHash(configPath),
-          source: 'generated',
-          owner: 'library',
-        })
+    if (files.fileExists(legacyConfigPath)) {
+      const backupPath = `${legacyConfigPath}.bak`
+      if (!files.fileExists(backupPath)) {
+        files.copyFile(legacyConfigPath, backupPath)
       }
+      if (!files.fileExists(configPath)) {
+        files.copyFile(legacyConfigPath, configPath)
+      }
+      fs.rmSync(legacyConfigPath, { force: true })
+    }
+
+    if (!files.fileExists(configPath)) {
+      const defaultConfig = {
+        $schema: 'https://opencode.ai/config.json',
+        instructions: ['AGENTS.md'],
+        permission: {
+          edit: 'ask',
+          bash: 'ask',
+        },
+      }
+      files.writeFile(configPath, JSON.stringify(defaultConfig, null, 2))
+      ctx.fileRecords.push({
+        path: path.relative(ctx.targetDir, configPath),
+        hash: files.fileHash(configPath),
+        source: 'generated',
+        owner: 'library',
+      })
     }
 
     await copyLibraryDirectory({

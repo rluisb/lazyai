@@ -55,6 +55,7 @@ interface ToolContextFilesOptions {
   skillsDestDir?: string
   templatesDestDir?: string
   warnOnSkip?: boolean
+  skipRootIfExists?: boolean
 }
 
 interface RootTemplateOptions {
@@ -230,12 +231,15 @@ export async function installToolContextFiles(opts: ToolContextFilesOptions): Pr
     })
   }
 
-  await copyWithRecord({
-    src: path.join(toolAgentsDir, 'root-dir.md'),
-    dest: path.join(opts.toolDir, opts.contextFileName),
-    ctx: opts.ctx,
-    ...withWarn,
-  })
+  const rootDest = path.join(opts.toolDir, opts.contextFileName)
+  if (!(opts.skipRootIfExists === true && files.fileExists(rootDest))) {
+    await copyWithRecord({
+      src: path.join(toolAgentsDir, 'root-dir.md'),
+      dest: rootDest,
+      ctx: opts.ctx,
+      ...withWarn,
+    })
+  }
 }
 
 export async function installRootTemplateIfMissing(opts: RootTemplateOptions): Promise<void> {

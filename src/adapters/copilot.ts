@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import { homedir } from 'node:os'
 import path from 'node:path'
 import type { PromptId, SkillId } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
@@ -12,7 +14,15 @@ export class CopilotAdapter implements ToolAdapter {
   }
 
   async install(ctx: AdapterContext): Promise<void> {
-    const githubDir = path.join(ctx.targetDir, '.github')
+    const isGlobal = ctx.setupScope === 'global'
+    const homeDir = ctx.homeDir ?? homedir()
+    const githubDir = isGlobal ? path.join(homeDir, '.copilot') : path.join(ctx.targetDir, '.github')
+
+    if (isGlobal && !copilotProbePasses(homeDir)) {
+      console.log('🤖  Skipping GitHub Copilot global install (CLI/home config not detected)...')
+      return
+    }
+
     files.ensureDir(githubDir)
 
     const instructionsDir = path.join(githubDir, 'instructions')
@@ -62,19 +72,21 @@ export class CopilotAdapter implements ToolAdapter {
       })
     }
 
-    await installRootTemplateIfMissing({
-      ctx,
-      recordPath: 'AGENTS.md',
-      destPath: path.join(ctx.targetDir, 'AGENTS.md'),
-      templateSource: 'root/AGENTS.template.md',
-    })
+    if (!isGlobal) {
+      await installRootTemplateIfMissing({
+        ctx,
+        recordPath: 'AGENTS.md',
+        destPath: path.join(ctx.targetDir, 'AGENTS.md'),
+        templateSource: 'root/AGENTS.template.md',
+      })
 
-    await installRootTemplateIfMissing({
-      ctx,
-      recordPath: '.github/copilot-instructions.md',
-      destPath: path.join(githubDir, 'copilot-instructions.md'),
-      templateSource: 'root/copilot-instructions.template.md',
-    })
+      await installRootTemplateIfMissing({
+        ctx,
+        recordPath: '.github/copilot-instructions.md',
+        destPath: path.join(githubDir, 'copilot-instructions.md'),
+        templateSource: 'root/copilot-instructions.template.md',
+      })
+    }
   }
 
   async remove(ctx: AdapterContext): Promise<void> {
@@ -124,5 +136,18 @@ export class CopilotAdapter implements ToolAdapter {
       source: path.relative(ctx.libraryDir, src),
       owner: 'library',
     })
+  }
+}
+
+function copilotProbePasses(homeDir: string): boolean {
+  if (files.fileExists(path.join(homeDir, '.copilot'))) {
+    return true
+  }
+
+  try {
+    execFileSync('copilot', ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
   }
 }

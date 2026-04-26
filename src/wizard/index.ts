@@ -673,6 +673,8 @@ export async function runWizard(opts: {
             toolTargetDir: effectiveTargetDir,
             toolId: tool,
             fileRecords,
+            setupScope,
+            homeDir: userHomeDir,
           })
         }
         tracker.trackSuccess('compile:mcp')
@@ -710,6 +712,7 @@ export async function runWizard(opts: {
           await adapter.install({
             targetDir: globalToolTargetDir,
             setupScope,
+            homeDir: userHomeDir,
             libraryDir,
             fileRecords: [],
             force: opts.force,
@@ -721,6 +724,8 @@ export async function runWizard(opts: {
             toolTargetDir: globalToolTargetDir,
             toolId: tool,
             fileRecords: [],
+            setupScope,
+            homeDir: userHomeDir,
           })
         }
       }

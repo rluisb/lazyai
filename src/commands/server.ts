@@ -348,6 +348,7 @@ async function rerunPipeline(
       toolTargetDir: targetDir,
       toolId,
       fileRecords,
+      setupScope: 'project',
     })
   }
 }

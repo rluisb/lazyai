@@ -24,9 +24,7 @@ export class ClaudeCodeAdapter implements ToolAdapter {
     files.ensureDir(claudeDir)
     files.ensureDir(rulesDir)
     files.ensureDir(path.join(claudeDir, 'skills'))
-    if (!isGlobal) {
-      files.ensureDir(path.join(claudeDir, 'agents'))
-    }
+    files.ensureDir(path.join(claudeDir, 'agents'))
 
     if (!files.fileExists(settingsPath)) {
       const defaultSettings = {
@@ -73,11 +71,11 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       ctx,
       sourceSubdir: 'agents',
       selectionKey: 'agents',
-      toDestPath: (file) => isGlobal ? path.join(claudeDir, file) : path.join(claudeDir, 'agents', file),
+      toDestPath: (file) => path.join(claudeDir, 'agents', file),
       includeFile: (file) => path.parse(file).name !== 'orchestrator',
     })
 
-    if (!isGlobal && isOrchestratorEnabled(ctx)) {
+    if (isOrchestratorEnabled(ctx)) {
       const orchestratorSource = path.join(ctx.libraryDir, 'agents', 'orchestrator.md')
       await copyWithRecord({
         src: orchestratorSource,
@@ -101,16 +99,19 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       ctx,
       toolDir: claudeDir,
       contextFileName: 'CLAUDE.md',
-      agentsDestDir: isGlobal ? '.' : 'agents',
+      agentsDestDir: 'agents',
       skillsDestDir: 'skills',
+      skipRootIfExists: isGlobal,
     })
 
-    await installRootTemplateIfMissing({
-      ctx,
-      recordPath: 'CLAUDE.md',
-      destPath: path.join(isGlobal ? claudeDir : ctx.targetDir, 'CLAUDE.md'),
-      templateSource: 'root/CLAUDE.template.md',
-    })
+    if (!isGlobal) {
+      await installRootTemplateIfMissing({
+        ctx,
+        recordPath: 'CLAUDE.md',
+        destPath: path.join(ctx.targetDir, 'CLAUDE.md'),
+        templateSource: 'root/CLAUDE.template.md',
+      })
+    }
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

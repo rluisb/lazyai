@@ -127,6 +127,9 @@ func TestTypeConstants(t *testing.T) {
 	if ToolIdClaudeCode != "claude-code" {
 		t.Errorf("ToolIdClaudeCode = %q, want claude-code", ToolIdClaudeCode)
 	}
+	if ToolIdPi != "pi" {
+		t.Errorf("ToolIdPi = %q, want pi", ToolIdPi)
+	}
 }
 
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
@@ -171,7 +174,7 @@ func TestIsValidSetupScope(t *testing.T) {
 func TestIsValidToolId(t *testing.T) {
 	t.Parallel()
 
-	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex} {
+	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex, ToolIdPi} {
 		if !IsValidToolId(id) {
 			t.Errorf("IsValidToolId(%q) = false, want true", id)
 		}

@@ -167,11 +167,45 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 	}
 }
 
+func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
+	targetDir := t.TempDir()
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	orchestratorEntry := `{
+  "servers": {
+    "orchestrator": {
+      "command": "/tmp/fake-node",
+      "args": ["/tmp/orchestrator/dist/index.js"]
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(orchestratorEntry), 0o644); err != nil {
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	if _, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{TargetDir: targetDir, SetupScope: types.SetupScopeProject}); err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "opencode.jsonc"))
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+	contents := string(data)
+	if !strings.Contains(contents, `"orchestrator"`) {
+		t.Fatalf("compiled config missing orchestrator entry:\n%s", contents)
+	}
+	if !strings.Contains(contents, `/tmp/fake-node`) || !strings.Contains(contents, `/tmp/orchestrator/dist/index.js`) {
+		t.Fatalf("compiled config missing orchestrator command/args:\n%s", contents)
+	}
+}
+
 // TestCompileMCPForTool_CopilotGlobalSkips verifies that Copilot × global scope
 // is a clean no-op (no error, no records).
 func TestCompileMCPForTool_CopilotGlobalSkips(t *testing.T) {
 	targetDir := t.TempDir()
 	homeDir := t.TempDir()
+	t.Setenv("PATH", t.TempDir())
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)

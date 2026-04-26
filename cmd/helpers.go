@@ -82,7 +82,9 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	templates := preset.TemplatesForPreset(presetLevel)
 	rules := preset.RulesForPreset(presetLevel)
 
-	// All agents for standard/full presets.
+	// Resolve agents/skills/prompts from explicit wizard selections when present;
+	// otherwise fall back to preset-driven defaults for compatibility with
+	// non-interactive flows that do not yet expose these selectors.
 	var agents []types.AgentId
 	var skills []types.SkillId
 	var prompts []types.PromptId
@@ -119,6 +121,15 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		}
 		if result.Phase2.OpenCodeModes != nil {
 			opencodeModes = result.Phase2.OpenCodeModes
+		}
+	}
+
+	if result.Phase1 != nil {
+		if result.Phase1.Agents != nil {
+			agents = append([]types.AgentId(nil), result.Phase1.Agents...)
+		}
+		if result.Phase1.Skills != nil {
+			skills = append([]types.SkillId(nil), result.Phase1.Skills...)
 		}
 	}
 
@@ -195,6 +206,7 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Config.SetupScope = ctx.SetupScope
 	storeData.Config.Tools = ctx.Tools
 	storeData.Config.CLITools = ctx.CLITools
+	storeData.Config.EnableServers = ctx.EnableServers
 	storeData.Config.ProjectName = ctx.ProjectName
 	storeData.Config.TargetDir = ctx.TargetDir
 	storeData.Config.PlanningDir = ctx.PlanningDir

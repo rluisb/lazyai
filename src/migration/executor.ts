@@ -129,7 +129,10 @@ export async function executeMigrationPlan(
     const backupActions = plan.actions.filter(a => a.type === 'backup');
     for (const action of backupActions) {
       try {
-        await executeBackupAction(action, context, backupPath!);
+        if (backupPath === undefined) {
+          throw new Error('Backup path unavailable for backup action');
+        }
+        await executeBackupAction(action, context, backupPath);
         executedActions.push(action);
         stats.filesBackedUp++;
       } catch (error) {

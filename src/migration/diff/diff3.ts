@@ -98,6 +98,13 @@ interface Edit {
   newIndex?: number;
 }
 
+function getRequired<T>(value: T | undefined, message: string): T {
+  if (value === undefined) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 function computeEdits(oldLines: string[], newLines: string[]): { edits: Edit[] } {
   const _edits: Edit[] = [];
   
@@ -110,12 +117,15 @@ function computeEdits(oldLines: string[], newLines: string[]): { edits: Edit[] }
   
   for (let i = 1; i <= oldLen; i++) {
     for (let j = 1; j <= newLen; j++) {
-      const currentRow = table[i]!;
-      const previousRow = table[i - 1]!;
+      const currentRow = getRequired(table[i], `Missing LCS row ${i}`);
+      const previousRow = getRequired(table[i - 1], `Missing LCS row ${i - 1}`);
       if (oldLines[i - 1] === newLines[j - 1]) {
-        currentRow[j] = previousRow[j - 1]! + 1;
+        currentRow[j] = getRequired(previousRow[j - 1], `Missing LCS cell [${i - 1}, ${j - 1}]`) + 1;
       } else {
-        currentRow[j] = Math.max(previousRow[j]!, currentRow[j - 1]!);
+        currentRow[j] = Math.max(
+          getRequired(previousRow[j], `Missing LCS cell [${i - 1}, ${j}]`),
+          getRequired(currentRow[j - 1], `Missing LCS cell [${i}, ${j - 1}]`),
+        );
       }
     }
   }

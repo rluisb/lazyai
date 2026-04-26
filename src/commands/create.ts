@@ -79,7 +79,7 @@ async function askText(message: string, placeholder?: string): Promise<string> {
   return ensurePromptText(result)
 }
 
-async function buildWorkflowStepsInteractively(targetDir: string): Promise<string[]> {
+async function buildWorkflowStepsInteractively(): Promise<string[]> {
   const discovered = { agents: [], skills: [], prompts: [], templates: [] }
   const typeToItems: Array<{ type: 'agent' | 'skill' | 'prompt' | 'template'; items: string[] }> = [
     { type: 'agent', items: discovered.agents },
@@ -194,7 +194,7 @@ async function runCreate(type: ArtifactType, positionalName: string | undefined,
   const answers = extractAnswersFromOptions(type, opts)
 
   if (type === 'workflow' && interactive && !answers.steps) {
-    answers.steps = await buildWorkflowStepsInteractively(targetDir)
+    answers.steps = await buildWorkflowStepsInteractively()
   }
 
   if (interactive) {

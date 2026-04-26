@@ -14,6 +14,9 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:         types.SetupScopeProject,
 		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Skills:        []types.SkillId{types.SkillIdImplement},
+		Agents:        []types.AgentId{types.AgentIdBuilder},
+		McpPreset:     McpPresetRecommended,
 		ProjectName:   "demo-app",
 		CliTools:      []string{"gh"},
 		EnableServers: []string{"filesystem"},
@@ -35,10 +38,10 @@ func TestBuildPhase1Result(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		scope     types.SetupScope
-		project   string
-		wantName  string
+		name     string
+		scope    types.SetupScope
+		project  string
+		wantName string
 	}{
 		{name: "project", scope: types.SetupScopeProject, project: "demo-app", wantName: "demo-app"},
 		{name: "workspace", scope: types.SetupScopeWorkspace, project: "workspace-root", wantName: "workspace-root"},
@@ -50,10 +53,12 @@ func TestBuildPhase1Result(t *testing.T) {
 			t.Parallel()
 
 			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCodex}
+			skills := []types.SkillId{types.SkillIdImplement, types.SkillIdPlan}
+			agents := []types.AgentId{types.AgentIdBuilder, types.AgentIdReviewer}
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
 
-			result := buildPhase1Result(tt.scope, tools, tt.project, cliTools, servers, "", "")
+			result := buildPhase1Result(tt.scope, tools, skills, agents, McpPresetFull, tt.project, cliTools, servers, "", "")
 
 			if result.Scope != tt.scope {
 				t.Fatalf("Scope = %q, want %q", result.Scope, tt.scope)
@@ -64,6 +69,15 @@ func TestBuildPhase1Result(t *testing.T) {
 			if !reflect.DeepEqual(result.Tools, tools) {
 				t.Fatalf("Tools = %#v, want %#v", result.Tools, tools)
 			}
+			if !reflect.DeepEqual(result.Skills, skills) {
+				t.Fatalf("Skills = %#v, want %#v", result.Skills, skills)
+			}
+			if !reflect.DeepEqual(result.Agents, agents) {
+				t.Fatalf("Agents = %#v, want %#v", result.Agents, agents)
+			}
+			if result.McpPreset != McpPresetFull {
+				t.Fatalf("McpPreset = %q, want %q", result.McpPreset, McpPresetFull)
+			}
 			if !reflect.DeepEqual(result.CliTools, cliTools) {
 				t.Fatalf("CliTools = %#v, want %#v", result.CliTools, cliTools)
 			}
@@ -72,10 +86,18 @@ func TestBuildPhase1Result(t *testing.T) {
 			}
 
 			tools[0] = types.ToolIdGemini
+			skills[0] = types.SkillIdResearch
+			agents[0] = types.AgentIdScout
 			cliTools[0] = "rtk"
 			servers[0] = "memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
 				t.Fatalf("result.Tools was not copied")
+			}
+			if result.Skills[0] != types.SkillIdImplement {
+				t.Fatalf("result.Skills was not copied")
+			}
+			if result.Agents[0] != types.AgentIdBuilder {
+				t.Fatalf("result.Agents was not copied")
 			}
 			if result.CliTools[0] != "gh" {
 				t.Fatalf("result.CliTools was not copied")
@@ -134,11 +156,11 @@ func TestPreviousPhase1Step(t *testing.T) {
 	if got := previousPhase1Step(2, types.SetupScopeProject); got != 1 {
 		t.Fatalf("previousPhase1Step(project tools) = %d, want 1", got)
 	}
-	if got := previousPhase1Step(4, types.SetupScopeGlobal); got != 2 {
-		t.Fatalf("previousPhase1Step(global cli tools) = %d, want 2", got)
+	if got := previousPhase1Step(8, types.SetupScopeGlobal); got != 6 {
+		t.Fatalf("previousPhase1Step(global cli tools) = %d, want 6", got)
 	}
-	if got := previousPhase1Step(5, types.SetupScopeGlobal); got != 4 {
-		t.Fatalf("previousPhase1Step(global servers) = %d, want 4", got)
+	if got := previousPhase1Step(6, types.SetupScopeGlobal); got != 5 {
+		t.Fatalf("previousPhase1Step(global servers) = %d, want 5", got)
 	}
 }
 
@@ -148,25 +170,43 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:       types.SetupScopeProject,
 		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Skills:      []types.SkillId{types.SkillIdImplement, types.SkillIdPlan},
+		Agents:      []types.AgentId{types.AgentIdBuilder},
+		McpPreset:   McpPresetRecommended,
 		ProjectName: "demo-app",
 	}
 
 	info := phase1StepInfoFor(2, types.SetupScopeProject, defaults)
-	if got, want := info.Title(), "Setup Context — 2/6: AI Tools (previous: opencode, gemini)"; got != want {
+	if got, want := info.Title(), "Setup Context — 2/9: AI Tools (previous: opencode, gemini)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
-	globalInfo := phase1StepInfoFor(4, types.SetupScopeGlobal, defaults)
-	if got, want := globalInfo.Title(), "Setup Context — 3/5: CLI Tools"; got != want {
+	skillInfo := phase1StepInfoFor(3, types.SetupScopeProject, defaults)
+	if got, want := skillInfo.Title(), "Setup Context — 3/9: Skills (previous: implement, plan)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
-	// Step 6 is the new Project Identity step.
-	identity := phase1StepInfoFor(6, types.SetupScopeProject, &Phase1Result{
+	agentInfo := phase1StepInfoFor(4, types.SetupScopeProject, defaults)
+	if got, want := agentInfo.Title(), "Setup Context — 4/9: Agents (previous: builder)"; got != want {
+		t.Fatalf("Title() = %q, want %q", got, want)
+	}
+
+	presetInfo := phase1StepInfoFor(5, types.SetupScopeProject, defaults)
+	if got, want := presetInfo.Title(), "Setup Context — 5/9: MCP Preset (previous: recommended)"; got != want {
+		t.Fatalf("Title() = %q, want %q", got, want)
+	}
+
+	globalInfo := phase1StepInfoFor(8, types.SetupScopeGlobal, defaults)
+	if got, want := globalInfo.Title(), "Setup Context — 7/8: CLI Tools"; got != want {
+		t.Fatalf("Title() = %q, want %q", got, want)
+	}
+
+	// Step 9 is the Project Identity step.
+	identity := phase1StepInfoFor(9, types.SetupScopeProject, &Phase1Result{
 		Organization: "Acme",
 		Team:         "Platform",
 	})
-	if got, want := identity.Title(), "Setup Context — 6/6: Project Identity (optional) (previous: org=\"Acme\" team=\"Platform\")"; got != want {
+	if got, want := identity.Title(), "Setup Context — 9/9: Project Identity (optional) (previous: org=\"Acme\" team=\"Platform\")"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 }

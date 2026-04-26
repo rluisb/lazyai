@@ -25,8 +25,8 @@ const LIST_CATEGORIES: OrchestrationListCategory[] = ['workflows', 'chains', 'te
 
 function toCreateType(value: string): ArtifactType {
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'workflow' || normalized === 'domain' || normalized === 'mode') {
-    return normalized
+  if (CREATE_TYPES.includes(normalized as ArtifactType)) {
+    return normalized as ArtifactType
   }
   throw Errors.invalidInput(`unsupported orchestration create type: ${value}`)
 }

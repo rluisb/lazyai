@@ -3,16 +3,26 @@ package wizard
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
 
 	"charm.land/huh/v2"
+
+	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
 var cliToolLookPath = exec.LookPath
+
+type McpPreset string
+
+const (
+	McpPresetMinimal     McpPreset = "minimal"
+	McpPresetRecommended McpPreset = "recommended"
+	McpPresetFull        McpPreset = "full"
+)
 
 type McpCatalog struct {
 	Servers  map[string]McpServer `json:"servers"`
@@ -21,6 +31,7 @@ type McpCatalog struct {
 
 type McpServer struct {
 	Description     string `json:"description"`
+	Enabled         bool   `json:"enabled"`
 	RequiresInstall bool   `json:"requiresInstall"`
 	InstallHint     string `json:"installHint"`
 }
@@ -80,8 +91,53 @@ func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {
 	selected := defaults
 	return huh.NewMultiSelect[string]().
 		Title("Which MCP servers would you like to enable?").
+		Description("Start from the preset selection, then toggle individual setup resources.").
 		Options(mcpServerOptionsFromCatalog(catalog)...).
 		Value(&selected)
+}
+
+func normalizeMcpPreset(preset McpPreset) McpPreset {
+	switch preset {
+	case McpPresetMinimal, McpPresetFull:
+		return preset
+	case McpPresetRecommended, "":
+		return McpPresetRecommended
+	default:
+		return McpPresetRecommended
+	}
+}
+
+func defaultMcpSelection(current []string, preset McpPreset) []string {
+	if len(current) > 0 {
+		return cloneStrings(current)
+	}
+	return defaultMcpServersForPreset(preset)
+}
+
+func defaultMcpServersForPreset(preset McpPreset) []string {
+	catalog, err := loadMcpCatalog()
+	if err != nil || catalog == nil {
+		return nil
+	}
+
+	ids := sortedCatalogServerIDs(catalog)
+	switch normalizeMcpPreset(preset) {
+	case McpPresetMinimal:
+		return filterCatalogServerIDs(ids, map[string]struct{}{
+			"filesystem": {},
+			"ripgrep":    {},
+		})
+	case McpPresetFull:
+		return ids
+	default:
+		selected := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if server, ok := catalog.Servers[id]; ok && server.Enabled {
+				selected = append(selected, id)
+			}
+		}
+		return selected
+	}
 }
 
 func detectInstalledCliToolsFromCatalog() []string {
@@ -127,15 +183,46 @@ func cliToolOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
 }
 
 func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
+	ids := sortedCatalogServerIDs(catalog)
+
+	options := make([]huh.Option[string], 0, len(ids))
+	for _, id := range ids {
+		options = append(options, huh.NewOption(id, id))
+	}
+	return options
+}
+
+func sortedCatalogServerIDs(catalog *McpCatalog) []string {
 	ids := make([]string, 0, len(catalog.Servers))
 	for id := range catalog.Servers {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
+	return ids
+}
 
-	options := make([]huh.Option[string], 0, len(ids))
+func filterCatalogServerIDs(ids []string, allowed map[string]struct{}) []string {
+	filtered := make([]string, 0, len(ids))
 	for _, id := range ids {
-		options = append(options, huh.NewOption(id, id))
+		if _, ok := allowed[id]; ok {
+			filtered = append(filtered, id)
+		}
+	}
+	return filtered
+}
+
+func skillOptions() []huh.Option[string] {
+	options := make([]huh.Option[string], 0, len(types.ALL_SKILLS))
+	for _, skill := range types.ALL_SKILLS {
+		options = append(options, huh.NewOption(string(skill), string(skill)))
+	}
+	return options
+}
+
+func agentOptions() []huh.Option[string] {
+	options := make([]huh.Option[string], 0, len(types.ALL_AGENTS))
+	for _, agent := range types.ALL_AGENTS {
+		options = append(options, huh.NewOption(string(agent), string(agent)))
 	}
 	return options
 }

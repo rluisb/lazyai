@@ -24,6 +24,7 @@ func NewRegistry() *Registry {
 	r.register(&GeminiAdapter{})
 	r.register(&CopilotAdapter{})
 	r.register(&CodexAdapter{})
+	r.register(&PiAdapter{})
 
 	return r
 }

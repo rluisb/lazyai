@@ -86,7 +86,11 @@ describe('runHealthChecks', () => {
 
   it('fails if canonical entry is present but not enabled', async () => {
     const catalog = buildCatalog()
-    catalog.servers.orchestrator!.enabled = false
+    const orchestrator = catalog.servers.orchestrator
+    if (!orchestrator) {
+      throw new Error('Expected orchestrator test server to exist')
+    }
+    orchestrator.enabled = false
     seedCanonicalMcp(targetDir, catalog)
     const report = await runHealthChecks(targetDir, 'orchestrator', buildCatalog(), [], 1000)
     expect(report.overall).toBe('unhealthy')

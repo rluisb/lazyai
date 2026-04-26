@@ -63,6 +63,8 @@ func TestAdapter_ScopeParity(t *testing.T) {
 
 		{"copilot_project", &CopilotAdapter{}, types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".github") }},
 		{"copilot_workspace", &CopilotAdapter{}, types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".github") }},
+		{"pi_project", &PiAdapter{}, types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".pi") }},
+		{"pi_workspace", &PiAdapter{}, types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".pi") }},
 		// copilot_global is exercised separately below.
 	}
 
@@ -109,6 +111,7 @@ func TestAdapter_ScopeParity(t *testing.T) {
 // (no error, no records, no writes) when scope=global and probes fail.
 func TestCopilotAdapter_GlobalScope_Skips(t *testing.T) {
 	ctx, target, home := newScopeTestContext(t, types.SetupScopeGlobal)
+	t.Setenv("PATH", t.TempDir())
 	adapter := &CopilotAdapter{}
 	records, err := adapter.Install(ctx)
 	if err != nil {

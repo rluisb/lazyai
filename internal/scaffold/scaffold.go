@@ -31,7 +31,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 2: MCP configuration.
-	if err := ScaffoldMcp(ctx.TargetDir, libFS, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldMcp(ctx.TargetDir, ctx.LibraryDir, libFS, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("mcp: %w", err))
 	}
 

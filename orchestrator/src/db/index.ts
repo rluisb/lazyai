@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 
-export type Db = Database.Database
+export type Db = InstanceType<typeof Database>
 
 export interface OpenDatabaseOptions {
   readonly?: boolean

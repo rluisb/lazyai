@@ -29,6 +29,13 @@ func TestReadManifest_ReadsBackCorrectly(t *testing.T) {
 	original := types.DefaultStoreData()
 	original.Config.ProjectName = "round-trip-test"
 	original.Meta.CLIVersion = "2.0.0"
+	original.Config.EnableServers = []string{"filesystem", "orchestrator"}
+	original.Files = []types.TrackedFile{{
+		Path:   ".ai/mcp.json",
+		Hash:   "abc123",
+		Source: "mcp/catalog.json",
+		Owner:  types.FileOwnerLibrary,
+	}}
 
 	if err := WriteManifest(dir, &original); err != nil {
 		t.Fatalf("WriteManifest: %v", err)
@@ -44,6 +51,12 @@ func TestReadManifest_ReadsBackCorrectly(t *testing.T) {
 	}
 	if got.Meta.CLIVersion != "2.0.0" {
 		t.Errorf("CLIVersion = %q, want 2.0.0", got.Meta.CLIVersion)
+	}
+	if len(got.Config.EnableServers) != 2 || got.Config.EnableServers[1] != "orchestrator" {
+		t.Errorf("EnableServers = %#v, want filesystem+orchestrator", got.Config.EnableServers)
+	}
+	if len(got.Files) != 1 || got.Files[0].Owner != types.FileOwnerLibrary {
+		t.Errorf("Files = %#v, want one library-owned tracked file", got.Files)
 	}
 }
 

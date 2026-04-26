@@ -88,8 +88,7 @@ export class FragmentResolver {
     const parts = condition.split('.')
     let value: unknown = context
     
-    for (let index = 0; index < parts.length; index += 1) {
-      const part = parts[index]!
+    for (const [index, part] of parts.entries()) {
 
       if (value && typeof value === 'object' && part in value) {
         value = (value as Record<string, unknown>)[part]
@@ -149,7 +148,10 @@ export class FragmentResolver {
 
   private loadFragment(fragmentPath: string): string {
     if (this.fragmentCache.has(fragmentPath)) {
-      return this.fragmentCache.get(fragmentPath)!
+      const cachedFragment = this.fragmentCache.get(fragmentPath)
+      if (cachedFragment !== undefined) {
+        return cachedFragment
+      }
     }
 
     const fullPath = path.join(this.libraryDir, fragmentPath)

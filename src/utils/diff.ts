@@ -31,6 +31,13 @@ export interface DiffResult {
   stats: DiffStats
 }
 
+function getRequired<T>(value: T | undefined, message: string): T {
+  if (value === undefined) {
+    throw new Error(message)
+  }
+  return value
+}
+
 /**
  * Compute line-level diff using LCS (Longest Common Subsequence) algorithm
  */
@@ -45,17 +52,20 @@ export function computeLineDiff(existing: string, incoming: string): DiffResult 
   const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0))
 
   for (let i = 1; i <= n; i++) {
-    const currentRow = dp[i]!
-    const previousRow = dp[i - 1]!
+    const currentRow = getRequired(dp[i], `Missing diff row ${i}`)
+    const previousRow = getRequired(dp[i - 1], `Missing diff row ${i - 1}`)
 
     for (let j = 1; j <= m; j++) {
-      const existingLine = existingLines[i - 1]!
-      const incomingLine = incomingLines[j - 1]!
+      const existingLine = getRequired(existingLines[i - 1], `Missing existing line ${i - 1}`)
+      const incomingLine = getRequired(incomingLines[j - 1], `Missing incoming line ${j - 1}`)
 
       if (existingLine === incomingLine) {
-        currentRow[j] = previousRow[j - 1]! + 1
+        currentRow[j] = getRequired(previousRow[j - 1], `Missing diff cell [${i - 1}, ${j - 1}]`) + 1
       } else {
-        currentRow[j] = Math.max(previousRow[j]!, currentRow[j - 1]!)
+        currentRow[j] = Math.max(
+          getRequired(previousRow[j], `Missing diff cell [${i - 1}, ${j}]`),
+          getRequired(currentRow[j - 1], `Missing diff cell [${i}, ${j - 1}]`),
+        )
       }
     }
   }
@@ -68,8 +78,8 @@ export function computeLineDiff(existing: string, incoming: string): DiffResult 
   let newLine = m
 
   while (i > 0 && j > 0) {
-    const existingLine = existingLines[i - 1]!
-    const incomingLine = incomingLines[j - 1]!
+    const existingLine = getRequired(existingLines[i - 1], `Missing existing line ${i - 1}`)
+    const incomingLine = getRequired(incomingLines[j - 1], `Missing incoming line ${j - 1}`)
 
     if (existingLine === incomingLine) {
       reversed.push({ type: 'context', content: existingLine, oldLineNum: oldLine, newLineNum: newLine })
@@ -80,10 +90,13 @@ export function computeLineDiff(existing: string, incoming: string): DiffResult 
       continue
     }
 
-    const previousRow = dp[i - 1]!
-    const currentRow = dp[i]!
+    const previousRow = getRequired(dp[i - 1], `Missing diff row ${i - 1}`)
+    const currentRow = getRequired(dp[i], `Missing diff row ${i}`)
 
-    if (previousRow[j]! >= currentRow[j - 1]!) {
+    if (
+      getRequired(previousRow[j], `Missing diff cell [${i - 1}, ${j}]`) >=
+      getRequired(currentRow[j - 1], `Missing diff cell [${i}, ${j - 1}]`)
+    ) {
       reversed.push({ type: 'remove', content: existingLine, oldLineNum: oldLine })
       i -= 1
       oldLine -= 1
@@ -95,13 +108,13 @@ export function computeLineDiff(existing: string, incoming: string): DiffResult 
   }
 
   while (i > 0) {
-    reversed.push({ type: 'remove', content: existingLines[i - 1]!, oldLineNum: oldLine })
+    reversed.push({ type: 'remove', content: getRequired(existingLines[i - 1], `Missing existing line ${i - 1}`), oldLineNum: oldLine })
     i -= 1
     oldLine -= 1
   }
 
   while (j > 0) {
-    reversed.push({ type: 'add', content: incomingLines[j - 1]!, newLineNum: newLine })
+    reversed.push({ type: 'add', content: getRequired(incomingLines[j - 1], `Missing incoming line ${j - 1}`), newLineNum: newLine })
     j -= 1
     newLine -= 1
   }
@@ -131,11 +144,16 @@ export function computeWordDiff(oldLine: string, newLine: string): { old: string
   const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0))
 
   for (let i = 1; i <= n; i++) {
+    const currentRow = getRequired(dp[i], `Missing word diff row ${i}`)
+    const previousRow = getRequired(dp[i - 1], `Missing word diff row ${i - 1}`)
     for (let j = 1; j <= m; j++) {
       if (oldWords[i - 1] === newWords[j - 1]) {
-        dp[i]![j] = dp[i - 1]![j - 1]! + 1
+        currentRow[j] = getRequired(previousRow[j - 1], `Missing word diff cell [${i - 1}, ${j - 1}]`) + 1
       } else {
-        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!)
+        currentRow[j] = Math.max(
+          getRequired(previousRow[j], `Missing word diff cell [${i - 1}, ${j}]`),
+          getRequired(currentRow[j - 1], `Missing word diff cell [${i}, ${j - 1}]`),
+        )
       }
     }
   }
@@ -152,7 +170,16 @@ export function computeWordDiff(oldLine: string, newLine: string): { old: string
       commonNew.add(j - 1)
       i--
       j--
-    } else if (dp[i - 1]![j]! >= dp[i]![j - 1]!) {
+    } else if (
+      getRequired(
+        getRequired(dp[i - 1], `Missing word diff row ${i - 1}`)[j],
+        `Missing word diff cell [${i - 1}, ${j}]`,
+      ) >=
+      getRequired(
+        getRequired(dp[i], `Missing word diff row ${i}`)[j - 1],
+        `Missing word diff cell [${i}, ${j - 1}]`,
+      )
+    ) {
       i--
     } else {
       j--
@@ -196,7 +223,7 @@ function findHunks(lines: DiffLine[], contextLines: number): Array<{ start: numb
 
   const changeIndices: number[] = []
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i]!.type !== 'context') {
+    if (getRequired(lines[i], `Missing diff line ${i}`).type !== 'context') {
       changeIndices.push(i)
     }
   }
@@ -204,14 +231,15 @@ function findHunks(lines: DiffLine[], contextLines: number): Array<{ start: numb
   if (changeIndices.length === 0) {
     return []
   }
-
+  
   // Merge overlapping hunks
   const hunks: Array<{ start: number; end: number }> = []
-  let currentStart = Math.max(0, changeIndices[0]! - contextLines)
-  let currentEnd = Math.min(lines.length, changeIndices[0]! + contextLines + 1)
+  const firstChangeIndex = getRequired(changeIndices[0], 'Missing first change index')
+  let currentStart = Math.max(0, firstChangeIndex - contextLines)
+  let currentEnd = Math.min(lines.length, firstChangeIndex + contextLines + 1)
 
   for (let i = 1; i < changeIndices.length; i++) {
-    const changeIdx = changeIndices[i]!
+    const changeIdx = getRequired(changeIndices[i], `Missing change index ${i}`)
     const newStart = Math.max(0, changeIdx - contextLines)
     const newEnd = Math.min(lines.length, changeIdx + contextLines + 1)
 
@@ -293,8 +321,8 @@ export function renderDiffPreview(
   }
 
   // Calculate line number width
-  const maxOldLine = Math.max(...lines.filter((l) => l.oldLineNum).map((l) => l.oldLineNum!), 1)
-  const maxNewLine = Math.max(...lines.filter((l) => l.newLineNum).map((l) => l.newLineNum!), 1)
+  const maxOldLine = Math.max(...lines.flatMap((line) => (line.oldLineNum === undefined ? [] : [line.oldLineNum])), 1)
+  const maxNewLine = Math.max(...lines.flatMap((line) => (line.newLineNum === undefined ? [] : [line.newLineNum])), 1)
   const lineNumWidth = Math.max(String(maxOldLine).length, String(maxNewLine).length)
 
   // Group consecutive add/remove pairs for word diff
@@ -305,11 +333,12 @@ export function renderDiffPreview(
     let i = 0
 
     while (i < hunkLines.length) {
-      const line = hunkLines[i]!
+      const line = getRequired(hunkLines[i], `Missing hunk line ${i}`)
+      const nextLine = i + 1 < hunkLines.length ? hunkLines[i + 1] : undefined
 
       // Look for remove followed by add (word diff candidate)
-      if (wordDiff && line.type === 'remove' && i + 1 < hunkLines.length && hunkLines[i + 1]!.type === 'add') {
-        result.push({ type: 'pair', remove: line, add: hunkLines[i + 1]! })
+      if (wordDiff && line.type === 'remove' && nextLine?.type === 'add') {
+        result.push({ type: 'pair', remove: line, add: nextLine })
         i += 2
       } else {
         result.push({ type: 'single', line })
@@ -322,7 +351,7 @@ export function renderDiffPreview(
 
   // Render hunks
   for (let hunkIdx = 0; hunkIdx < hunks.length; hunkIdx++) {
-    const hunk = hunks[hunkIdx]!
+    const hunk = getRequired(hunks[hunkIdx], `Missing hunk ${hunkIdx}`)
 
     // Hunk separator
     if (hunkIdx > 0) {

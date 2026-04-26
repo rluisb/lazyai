@@ -4,9 +4,9 @@ import {
   copyLibraryDirectory,
   copyWithRecord,
   getOrchestratorAgentContent,
-  isOrchestratorEnabled,
   installRootTemplateIfMissing,
   installToolContextFiles,
+  isOrchestratorEnabled,
 } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 

@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { extractTools, normalizeToolsFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
+import { extractTools, normalizeToolsFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
 import type { AdapterContext } from './types.js'
 
 const FALLBACK_ORCHESTRATOR_TOOLS = [

@@ -239,10 +239,10 @@ export function registerList(program: Command): void {
             { label: 'Enabled', value: `${enabledCount} by default` },
           ])
           for (const server of servers) {
-            const status = formatServerStatus(server)
             const tools = formatToolsList(server.tools)
             p.log.message(`  ${server.enabled ? '✓' : '○'} ${server.name}`)
             p.log.message(`    ${server.description}`)
+            p.log.message(`    Status: ${formatServerStatus(server)}`)
             p.log.message(`    Tools: ${tools}`)
             if (server.requiresInstall && server.installHint) {
               p.log.message(`    Install: ${server.installHint}`)

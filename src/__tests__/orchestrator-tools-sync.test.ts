@@ -38,9 +38,10 @@ function readRegisteredTools(): string[] {
   const source = fs.readFileSync(serverPath, 'utf8')
   const registerRegex = /server\.registerTool\(\s*['"]([a-z_]+)['"]/g
   const names: string[] = []
-  let match: RegExpExecArray | null
-  while ((match = registerRegex.exec(source)) !== null) {
+  let match = registerRegex.exec(source)
+  while (match !== null) {
     if (match[1]) names.push(match[1])
+    match = registerRegex.exec(source)
   }
   return names
 }

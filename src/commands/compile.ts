@@ -185,6 +185,7 @@ export function registerCompile(program: Command): void {
         await adapter.install({
           targetDir: adapterTargetDir,
           setupScope: effectiveScope,
+          homeDir: userHomeDir,
           libraryDir,
           fileRecords: [],
           force: opts.force,
@@ -198,6 +199,8 @@ export function registerCompile(program: Command): void {
           toolTargetDir: adapterTargetDir ?? storeDir,
           toolId: tool,
           fileRecords: [],
+          setupScope: effectiveScope,
+          homeDir: userHomeDir,
         })
       }
 

@@ -10,16 +10,19 @@ export function resolveGlobalToolTargetDir(tool: ToolId, homeDir: string): strin
     return path.join(homeDir, '.claude')
   }
 
+  if (tool === 'copilot') {
+    return path.join(homeDir, '.copilot')
+  }
+
   return null
 }
 
 export function isGlobalSupportedTool(tool: ToolId): boolean {
-  return tool === 'opencode' || tool === 'claude-code'
+  return tool === 'opencode' || tool === 'claude-code' || tool === 'copilot'
 }
 
 export function logUnsupportedGlobalTool(tool: ToolId): void {
   const messages: Partial<Record<ToolId, string>> = {
-    copilot: "Copilot doesn't support file-based global config. Use project scope instead.",
     gemini: "Gemini doesn't support file-based global config. Use project scope instead.",
   }
 

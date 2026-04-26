@@ -133,7 +133,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.opencode/agents/reviewer.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/skills/implement/SKILL.md'))).toBe(true)
     expect(readFile(path.join(targetDir, '.opencode/skills/implement/SKILL.md'))).toContain('name: implement')
-    expect(fileExists(path.join(targetDir, 'opencode.json'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.opencode', 'opencode.jsonc'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/commands'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.opencode/templates'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.opencode/agents/AGENTS.md'))).toBe(true)
@@ -141,7 +141,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.opencode/AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.ai-setup-backup/.opencode/agents/builder.md'))).toBe(true)
 
-    const config = JSON.parse(readFile(path.join(targetDir, 'opencode.json')))
+    const config = JSON.parse(readFile(path.join(targetDir, '.opencode', 'opencode.jsonc')))
     expect(config.$schema).toBe('https://opencode.ai/config.json')
     expect(config.instructions).toContain('AGENTS.md')
 
@@ -150,11 +150,11 @@ describe('tool adapters', () => {
       '.opencode/agents/AGENTS.md',
       '.opencode/agents/builder.md',
       '.opencode/agents/reviewer.md',
+      '.opencode/opencode.jsonc',
       '.opencode/skills/AGENTS.md',
       '.opencode/skills/implement/SKILL.md',
-      'opencode.json',
     ])
-    expect(fileRecords.some((f) => f.path === 'opencode.json')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.opencode/opencode.jsonc')).toBe(true)
   })
 
   it('OpenCode adapter uses skills directory for global scope', async () => {
@@ -175,6 +175,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'skills', 'implement', 'SKILL.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skills', 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'opencode.jsonc'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'command'))).toBe(false)
     expect(fileExists(path.join(globalTargetDir, 'commands'))).toBe(true)
   })
@@ -349,6 +350,55 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(globalTargetDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(false)
     expect(fileExists(path.join(globalTargetDir, '.agents'))).toBe(false)
+  })
+
+  it('Claude Code adapter keeps global agents under .claude/agents', async () => {
+    const adapter = new ClaudeCodeAdapter()
+    const globalTargetDir = path.join(targetDir, '.claude')
+
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+
+    await adapter.install({
+      targetDir: globalTargetDir,
+      setupScope: 'global',
+      libraryDir,
+      fileRecords,
+      force: true,
+      enableServers: ['orchestrator'],
+    })
+
+    expect(fileExists(path.join(globalTargetDir, 'agents', 'builder.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'agents', 'orchestrator.md'))).toBe(true)
+    expect(fileExists(path.join(globalTargetDir, 'builder.md'))).toBe(false)
+    expect(fileExists(path.join(globalTargetDir, 'CLAUDE.md'))).toBe(true)
+  })
+
+  it('Copilot adapter uses .copilot for global scope', async () => {
+    const adapter = new CopilotAdapter()
+    const homeDir = targetDir
+    ensureDir(path.join(homeDir, '.copilot'))
+    ensureDir(path.join(libraryDir, 'skills'))
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+
+    await adapter.install({
+      targetDir: path.join(homeDir, '.copilot'),
+      setupScope: 'global',
+      homeDir,
+      libraryDir,
+      fileRecords,
+      force: true,
+      selections: {
+        prompts: ['plan'],
+        skills: ['implement'],
+      },
+    })
+
+    expect(fileExists(path.join(homeDir, '.copilot', 'instructions'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.copilot', 'prompts', 'plan.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.copilot', 'prompts', 'implement.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.copilot', 'copilot-instructions.md'))).toBe(false)
+    expect(fileExists(path.join(homeDir, 'AGENTS.md'))).toBe(false)
   })
 
   it('adds orchestration guidance files for supported adapters when orchestrator is enabled', async () => {

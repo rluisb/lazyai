@@ -27,10 +27,12 @@ import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import { appendOperation, writeStore } from '../store/index.js'
 import type { FeatureFlags, GitConventions, StoreData } from '../store/schema.js'
 import type {
+  AgentId,
   FileRecord,
   PresetLevel,
   SetupScope,
   SetupType,
+  SkillId,
   ToolId,
   WizardConfig,
   WizardSelections,
@@ -50,7 +52,7 @@ import {
 import { extractSelections, readManifest } from '../utils/manifest.js'
 import { formatOrchestratorHintBody } from '../utils/orchestrator-hints.js'
 import { GO_BACK, showPhaseComplete, showPhaseProgress } from '../utils/ui.js'
-import { runPhase1 } from './phase1-context.js'
+import { defaultMcpServersForPreset, type McpWizardPreset, runPhase1 } from './phase1-context.js'
 import { runPhase2Features } from './phase2-features.js'
 import { runPhase3 } from './phase3-conflicts.js'
 import { runPhase4 } from './phase4-confirm.js'
@@ -106,12 +108,17 @@ function resolveTargetDirForScope(scope: SetupScope, targetDir: string, homeDir:
 interface WizardState {
   setupScope: SetupScope
   tools: ToolId[]
+  skills: SkillId[]
+  agents: AgentId[]
+  mcpPreset: McpWizardPreset
   projectName: string
   workspaceName?: string
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   cliTools?: string[]
   enableServers?: string[]
+  organization?: string
+  team?: string
   planningDir: string
   features: FeatureFlags
   gitConventions: GitConventions
@@ -128,11 +135,16 @@ async function runPhase12Loop(opts: {
     setupScope?: SetupScope
     setupType?: SetupType
     tools?: ToolId[]
+    skills?: SkillId[]
+    agents?: AgentId[]
+    mcpPreset?: McpWizardPreset
     projectName?: string
     workspaceName?: string
     planningRepoPath?: string
     planningDir?: string
     enableServers?: string[]
+    organization?: string
+    team?: string
     features?: Partial<FeatureFlags>
     gitConventions?: Partial<GitConventions>
   }
@@ -157,12 +169,17 @@ async function runPhase12Loop(opts: {
   // Accumulated answers — start from prior manifest or defaults
   let accSetupScope: SetupScope = opts.prior.setupScope ?? opts.prior.setupType ?? 'project'
   let accTools: ToolId[] = opts.prior.tools ?? []
+  let accSkills: SkillId[] = opts.prior.skills ?? ALL_SKILLS
+  let accAgents: AgentId[] = opts.prior.agents ?? ALL_AGENTS
+  let accMcpPreset: McpWizardPreset = opts.prior.mcpPreset ?? 'recommended'
   let accProjectName: string = opts.prior.projectName ?? ''
   let accWorkspaceName: string | undefined = opts.prior.workspaceName
   let accPlanningRepoPath: string | undefined = opts.prior.planningRepoPath
   let accRepos: Array<{ name: string; path: string; type?: string; description?: string }> | undefined
   let accCliTools: string[] | undefined
-  let accEnableServers: string[] | undefined = opts.prior.enableServers
+  let accEnableServers: string[] | undefined = opts.prior.enableServers ?? defaultMcpServersForPreset(accMcpPreset, opts.targetDir)
+  let accOrganization: string | undefined = opts.prior.organization
+  let accTeam: string | undefined = opts.prior.team
   let accPlanningDir: string = opts.prior.planningDir ?? '.planning'
   let accFeatures: FeatureFlags = opts.prior.features as FeatureFlags | undefined ?? {
       contextEngineering: true,
@@ -198,10 +215,15 @@ async function runPhase12Loop(opts: {
         ...opts.prior,
         setupScope: accSetupScope,
         tools: accTools,
+        skills: accSkills,
+        agents: accAgents,
+        mcpPreset: accMcpPreset,
         projectName: accProjectName,
         ...(accWorkspaceName != null ? { workspaceName: accWorkspaceName } : {}),
         ...(accPlanningRepoPath != null ? { planningRepoPath: accPlanningRepoPath } : {}),
         ...(accEnableServers != null ? { enableServers: accEnableServers } : {}),
+        ...(accOrganization != null ? { organization: accOrganization } : {}),
+        ...(accTeam != null ? { team: accTeam } : {}),
       }
 
       const phase1Result = await runPhase1({
@@ -220,12 +242,17 @@ async function runPhase12Loop(opts: {
       // Accumulate Phase 1 answers
       accSetupScope = phase1Result.setupScope
       accTools = phase1Result.tools
+      accSkills = phase1Result.skills
+      accAgents = phase1Result.agents
+      accMcpPreset = phase1Result.mcpPreset
       accProjectName = phase1Result.projectName
       accWorkspaceName = phase1Result.workspaceName
       accPlanningRepoPath = phase1Result.planningRepoPath
       accRepos = phase1Result.repos
       accCliTools = phase1Result.cliTools
       accEnableServers = phase1Result.enableServers
+      accOrganization = phase1Result.organization
+      accTeam = phase1Result.team
 
       currentPhase = 2
     }
@@ -277,12 +304,17 @@ async function runPhase12Loop(opts: {
   return {
     setupScope: accSetupScope,
     tools: accTools,
+    skills: accSkills,
+    agents: accAgents,
+    mcpPreset: accMcpPreset,
     projectName: accProjectName,
     ...(accWorkspaceName != null ? { workspaceName: accWorkspaceName } : {}),
     ...(accPlanningRepoPath != null ? { planningRepoPath: accPlanningRepoPath } : {}),
     ...(accRepos != null ? { repos: accRepos } : {}),
     ...(accCliTools != null ? { cliTools: accCliTools } : {}),
     ...(accEnableServers != null ? { enableServers: accEnableServers } : {}),
+    ...(accOrganization != null ? { organization: accOrganization } : {}),
+    ...(accTeam != null ? { team: accTeam } : {}),
     planningDir: accPlanningDir,
     features: accFeatures,
     gitConventions: accGitConventions,
@@ -332,11 +364,17 @@ export async function runWizard(opts: {
       setupScope?: SetupScope
       setupType?: SetupType
       tools?: ToolId[]
+      skills?: SkillId[]
+      agents?: AgentId[]
+      mcpPreset?: McpWizardPreset
       projectName?: string
       workspaceName?: string
       planningRepoPath?: string
       planningDir?: string
+      cliTools?: string[]
       enableServers?: string[]
+      organization?: string
+      team?: string
       features?: Partial<FeatureFlags>
       gitConventions?: Partial<GitConventions>
     } = manifest
@@ -346,6 +384,9 @@ export async function runWizard(opts: {
           ...(manifest.setupType ? { setupType: manifest.setupType } : {}),
           tools: manifest.tools,
           projectName: manifest.projectName,
+          ...(manifest.workspaceName != null ? { workspaceName: manifest.workspaceName } : {}),
+          ...(manifest.planningRepoPath != null ? { planningRepoPath: manifest.planningRepoPath } : {}),
+          ...(manifest.cliTools != null ? { cliTools: manifest.cliTools } : {}),
           ...(manifest.enableServers != null ? { enableServers: manifest.enableServers } : {}),
           ...(manifest.planningDir != null ? { planningDir: manifest.planningDir } : {}),
           ...(manifest.features != null ? { features: manifest.features } : {}),
@@ -371,6 +412,8 @@ export async function runWizard(opts: {
       const {
         setupScope,
         tools,
+        skills,
+        agents,
         projectName,
         workspaceName,
         planningRepoPath,
@@ -434,6 +477,8 @@ export async function runWizard(opts: {
 
       const selections = {
         ...buildDefaultSelections(effectiveTargetDir),
+        agents,
+        skills,
         templates: templateIds,
         rules: ruleIds,
       }
@@ -673,6 +718,8 @@ export async function runWizard(opts: {
             toolTargetDir: effectiveTargetDir,
             toolId: tool,
             fileRecords,
+            setupScope,
+            homeDir: userHomeDir,
           })
         }
         tracker.trackSuccess('compile:mcp')
@@ -710,6 +757,7 @@ export async function runWizard(opts: {
           await adapter.install({
             targetDir: globalToolTargetDir,
             setupScope,
+            homeDir: userHomeDir,
             libraryDir,
             fileRecords: [],
             force: opts.force,
@@ -721,6 +769,8 @@ export async function runWizard(opts: {
             toolTargetDir: globalToolTargetDir,
             toolId: tool,
             fileRecords: [],
+            setupScope,
+            homeDir: userHomeDir,
           })
         }
       }

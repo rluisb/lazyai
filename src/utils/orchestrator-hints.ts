@@ -32,6 +32,11 @@ export function orchestratorHintPaths(tool: ToolId): OrchestratorHintPaths {
         agentPath: '.github/prompts/orchestrator.prompt.md',
         skillPath: '.github/prompts/orchestrate.prompt.md',
       }
+    case 'pi':
+      return {
+        agentPath: 'AGENTS.md',
+        skillPath: '.pi/skills/orchestrate/SKILL.md',
+      }
   }
 }
 

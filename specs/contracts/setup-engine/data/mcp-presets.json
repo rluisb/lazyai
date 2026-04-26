@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "canonicalSource": "go",
+  "sourceFiles": [
+    "library/mcp/catalog.json",
+    "tui/wizard/phase1_cli_mcp.go"
+  ],
+  "normalization": {
+    "emptyPreset": "recommended",
+    "unknownPreset": "recommended",
+    "serverOrdering": "lexicographic-by-server-id"
+  },
+  "defaultPreset": "recommended",
+  "presets": {
+    "minimal": {
+      "label": "Minimal — core local setup tools",
+      "selectedServers": ["filesystem", "ripgrep"]
+    },
+    "recommended": {
+      "label": "Recommended — balanced default",
+      "selectedServers": ["filesystem", "memoria", "memory", "ripgrep"],
+      "selectionRule": "catalog servers where enabled is true"
+    },
+    "full": {
+      "label": "Full — all catalog servers",
+      "selectedServers": [
+        "atlassian",
+        "brave-search",
+        "codegraph",
+        "context7",
+        "fetch",
+        "filesystem",
+        "memoria",
+        "memory",
+        "orchestrator",
+        "playwright",
+        "qmd",
+        "ripgrep"
+      ],
+      "selectionRule": "all catalog server IDs"
+    }
+  },
+  "catalogServers": {
+    "atlassian": {"enabled": false, "requiresInstall": false},
+    "brave-search": {"enabled": false, "requiresInstall": false},
+    "codegraph": {"enabled": false, "requiresInstall": true},
+    "context7": {"enabled": false, "requiresInstall": false},
+    "fetch": {"enabled": false, "requiresInstall": false},
+    "filesystem": {"enabled": true, "requiresInstall": false},
+    "memoria": {"enabled": true, "requiresInstall": false},
+    "memory": {"enabled": true, "requiresInstall": false},
+    "orchestrator": {"enabled": false, "requiresInstall": false},
+    "playwright": {"enabled": false, "requiresInstall": false},
+    "qmd": {"enabled": false, "requiresInstall": true},
+    "ripgrep": {"enabled": true, "requiresInstall": false}
+  },
+  "cliTools": {
+    "gh": {"enabled": true},
+    "rtk": {"enabled": false}
+  }
+}

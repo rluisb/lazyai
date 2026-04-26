@@ -18,6 +18,9 @@ const MANIFEST_FILE = '.ai-setup.json'
  * Extended manifest type with new fields
  */
 export interface ManifestWithFeatures extends AiSetupConfig {
+  cliTools?: string[]
+  workspaceName?: string
+  planningRepoPath?: string
   planningDir?: string
   features?: FeatureFlags
   gitConventions?: GitConventions
@@ -39,8 +42,11 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
       setupScope: data.config.setupScope,
       ...(data.config.setupType ? { setupType: data.config.setupType } : {}),
       tools: data.config.tools,
+      ...(data.config.cliTools != null ? { cliTools: data.config.cliTools } : {}),
       ...(data.config.enableServers != null ? { enableServers: data.config.enableServers } : {}),
       projectName: data.config.projectName,
+      ...(data.config.workspaceName != null ? { workspaceName: data.config.workspaceName } : {}),
+      ...(data.config.planningRepoPath != null ? { planningRepoPath: data.config.planningRepoPath } : {}),
       installedAt: data.meta.installedAt,
       files: data.files.map((file) => ({
         path: file.path,

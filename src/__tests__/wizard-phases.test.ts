@@ -3,6 +3,10 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('node:child_process', () => ({
+  execSync: vi.fn(),
+}))
+
 // Mock @clack/prompts before importing phases
 vi.mock('@clack/prompts', () => ({
   select: vi.fn(),
@@ -17,9 +21,17 @@ vi.mock('@clack/prompts', () => ({
   isCancel: vi.fn(() => false),
 }))
 
+import { execSync } from 'node:child_process'
 import * as p from '@clack/prompts'
+import { ALL_AGENTS, ALL_SKILLS } from '../types.js'
 import { GO_BACK } from '../utils/ui.js'
-import { runPhase1 } from '../wizard/phase1-context.js'
+import {
+  defaultMcpServersForPreset,
+  detectInstalledCliToolsFromCatalog,
+  filterToolsByScope,
+  runPhase1,
+  toolOptionsForScope,
+} from '../wizard/phase1-context.js'
 import { runPhase3 } from '../wizard/phase3-conflicts.js'
 
 /**
@@ -39,6 +51,9 @@ describe('wizard phases 1 and 3', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(p.isCancel).mockReturnValue(false)
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error('not found')
+    })
   })
 
   it('Phase 1: non-interactive with all CLI overrides returns correct values', async () => {
@@ -52,25 +67,69 @@ describe('wizard phases 1 and 3', () => {
     expect(result).toEqual({
       setupScope: 'project',
       tools: ['opencode', 'claude-code'],
+      skills: ALL_SKILLS,
+      agents: ALL_AGENTS,
+      mcpPreset: 'recommended',
+      enableServers: ['filesystem', 'memoria', 'memory', 'ripgrep'],
       projectName: 'my-project',
     })
   })
 
-  it('Phase 1: interactive can opt into orchestrator as an integration', async () => {
+  it('Phase 1: interactive follows parity step ordering and defaults', async () => {
     vi.mocked(p.select).mockResolvedValueOnce('project')
+      .mockResolvedValueOnce('recommended')
     vi.mocked(p.multiselect)
       .mockResolvedValueOnce(['opencode'])
-      .mockResolvedValueOnce(['orchestrator'])
-    vi.mocked(p.text).mockResolvedValueOnce('my-project')
+      .mockResolvedValueOnce(ALL_SKILLS)
+      .mockResolvedValueOnce(ALL_AGENTS)
+      .mockResolvedValueOnce(['filesystem', 'memoria', 'memory', 'ripgrep'])
+      .mockResolvedValueOnce(['gh'])
+    vi.mocked(p.text)
+      .mockResolvedValueOnce('my-project')
+      .mockResolvedValueOnce('Acme')
+      .mockResolvedValueOnce('Platform')
 
     const result = unwrapPhase1(await runPhase1({
       interactive: true,
       prior: {},
-      cliOverrides: { cliTools: [] },
+      cliOverrides: {},
       targetDir: process.cwd(),
     }))
 
-    expect(result.enableServers).toEqual(['orchestrator'])
+    expect(result).toMatchObject({
+      setupScope: 'project',
+      tools: ['opencode'],
+      skills: ALL_SKILLS,
+      agents: ALL_AGENTS,
+      mcpPreset: 'recommended',
+      enableServers: ['filesystem', 'memoria', 'memory', 'ripgrep'],
+      projectName: 'my-project',
+      cliTools: ['gh'],
+      organization: 'Acme',
+      team: 'Platform',
+    })
+
+    const selectMessages = vi.mocked(p.select).mock.calls.map(([arg]) => arg.message)
+    expect(selectMessages).toEqual([
+      'Setup scope: (previous: Project)',
+      'Which MCP preset should be enabled? (previous: recommended)',
+    ])
+
+    const multiselectMessages = vi.mocked(p.multiselect).mock.calls.map(([arg]) => arg.message)
+    expect(multiselectMessages).toEqual([
+      'Which AI tools are you using? (previous: opencode, claude-code, gemini, copilot, codex, pi)',
+      `Which skills should be installed? (previous: ${ALL_SKILLS.join(', ')})`,
+      `Which agents should be installed? (previous: ${ALL_AGENTS.join(', ')})`,
+      'Which MCP servers would you like to enable?',
+      'Which CLI tools do you have installed? (press space to select, enter to confirm or skip)',
+    ])
+
+    const textMessages = vi.mocked(p.text).mock.calls.map(([arg]) => arg.message)
+    expect(textMessages).toEqual([
+      'Project name?',
+      'Organization? (optional)',
+      'Team? (optional)',
+    ])
   })
 
   it('Phase 1: non-interactive with scope=global returns setupScope=global', async () => {
@@ -88,11 +147,52 @@ describe('wizard phases 1 and 3', () => {
     const result = await runPhase1({
       interactive: false,
       prior: {},
-      cliOverrides: { scope: 'global', tools: ['opencode'] },
+      cliOverrides: { scope: 'global', tools: ['opencode'], name: 'ignored-name' },
       targetDir: '/tmp',
     })
 
     expect(unwrapPhase1(result).projectName).toBe('global')
+  })
+
+  it('Phase 1: mcp preset expansion matches parity contract', () => {
+    expect(defaultMcpServersForPreset('minimal', process.cwd())).toEqual(['filesystem', 'ripgrep'])
+    expect(defaultMcpServersForPreset('recommended', process.cwd())).toEqual(['filesystem', 'memoria', 'memory', 'ripgrep'])
+    expect(defaultMcpServersForPreset('full', process.cwd())).toEqual([
+      'atlassian',
+      'brave-search',
+      'codegraph',
+      'context7',
+      'fetch',
+      'filesystem',
+      'memoria',
+      'memory',
+      'orchestrator',
+      'playwright',
+      'qmd',
+      'ripgrep',
+    ])
+  })
+
+  it('Phase 1: scope tool filtering excludes global pi and keeps global copilot', () => {
+    expect(toolOptionsForScope('global').map(({ value }) => value)).toEqual([
+      'opencode',
+      'claude-code',
+      'gemini',
+      'copilot',
+      'codex',
+    ])
+    expect(toolOptionsForScope('project').map(({ value }) => value)).toContain('pi')
+    expect(toolOptionsForScope('workspace').map(({ value }) => value)).toContain('pi')
+    expect(filterToolsByScope(['opencode', 'copilot', 'pi'], 'global')).toEqual(['opencode', 'copilot'])
+  })
+
+  it('Phase 1: installed CLI defaults come from catalog tools', () => {
+    vi.mocked(execSync).mockImplementation((command) => {
+      if (command === 'which gh') return Buffer.from('/usr/bin/gh') as never
+      throw new Error('not found')
+    })
+
+    expect(detectInstalledCliToolsFromCatalog(process.cwd())).toEqual(['gh'])
   })
 
   it('Phase 1: non-interactive with scope=workspace returns setupScope=workspace', async () => {

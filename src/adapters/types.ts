@@ -3,9 +3,11 @@ import type { AgentId, ConflictStrategy, FileRecord, PromptId, SetupScope, Skill
 export interface AdapterContext {
   targetDir: string
   setupScope?: SetupScope
+  homeDir?: string
   libraryDir: string
   fileRecords: FileRecord[]
   enableServers?: string[]
+  localSecrets?: boolean
   force?: boolean | undefined
   dryRun?: boolean
   strategy?: ConflictStrategy

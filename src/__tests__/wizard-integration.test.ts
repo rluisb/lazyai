@@ -58,7 +58,7 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, '.ai', 'constitution'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'mcp.json'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'opencode.jsonc'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.opencode', 'opencode.jsonc'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.vscode', 'mcp.json'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.gemini', 'settings.json'))).toBe(true)
 
@@ -168,6 +168,7 @@ describe('wizard integration (non-interactive)', () => {
 
   it('global scope scaffolds into ~/.ai and logs unsupported tools', async () => {
     const homeDir = mkdtempSync(path.join(tmpdir(), 'ai-setup-home-'))
+    mkdirSync(path.join(homeDir, '.copilot'), { recursive: true })
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
 
     await runWizard({
@@ -188,15 +189,15 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'skills', 'implement', 'SKILL.md'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'commands'))).toBe(true)
     expect(existsSync(path.join(homeDir, '.config', 'opencode', 'templates'))).toBe(false)
-    expect(existsSync(path.join(homeDir, '.claude', 'builder.md'))).toBe(true)
+    expect(existsSync(path.join(homeDir, '.claude', 'agents', 'builder.md'))).toBe(true)
+    expect(existsSync(path.join(homeDir, '.copilot', 'prompts', 'implement.prompt.md'))).toBe(true)
 
     const manifest = JSON.parse(readFileSync(path.join(canonicalDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.config.setupScope).toBe('global')
     expect(manifest.config.targetDir).toBe(canonicalDir)
-    expect(manifest.config.tools).toEqual(['opencode', 'claude-code'])
+    expect(manifest.config.tools).toEqual(['opencode', 'claude-code', 'copilot'])
     expect(manifest.config.projectName).toBe('global')
 
-    expect(infoSpy).toHaveBeenCalledWith("Copilot doesn't support file-based global config. Use project scope instead.")
     expect(infoSpy).toHaveBeenCalledWith("Gemini doesn't support file-based global config. Use project scope instead.")
 
     rmSync(homeDir, { recursive: true, force: true })

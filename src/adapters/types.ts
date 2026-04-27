@@ -12,6 +12,7 @@ export interface AdapterContext {
   dryRun?: boolean
   strategy?: ConflictStrategy
   perFileOverrides?: Map<string, ConflictStrategy>
+  installMode?: 'copy' | 'symlink'
   selections?: {
     agents?: AgentId[]
     skills?: SkillId[]

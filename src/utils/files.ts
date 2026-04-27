@@ -134,3 +134,20 @@ export function backupFile(filePath: string, targetDir: string): string {
 
   return backupPath
 }
+
+/**
+ * Create a symlink at dest pointing to src.
+ * If a file/directory/link already exists at dest, it is removed first.
+ */
+export function symlinkFile(src: string, dest: string): void {
+  ensureDir(path.dirname(dest))
+  try {
+    const stat = fs.lstatSync(dest)
+    if (stat.isSymbolicLink() || stat.isFile() || stat.isDirectory()) {
+      fs.unlinkSync(dest)
+    }
+  } catch {
+    // dest does not exist — proceed
+  }
+  fs.symlinkSync(path.resolve(src), dest)
+}

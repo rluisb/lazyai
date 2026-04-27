@@ -118,6 +118,8 @@ export const trackedFileSchema = z.object({
   status: z.enum(['installed', 'modified', 'missing', 'conflict']).optional(),
   installedAt: z.string().optional(),
   lastCheckedAt: z.string().optional(),
+  kind: z.enum(['file', 'symlink']).optional(),
+  linkTarget: z.string().optional(),
 })
 
 export const syncSchema = z.object({

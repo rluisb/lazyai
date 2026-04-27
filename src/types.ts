@@ -33,6 +33,8 @@ export interface FileRecord {
   hash: string
   source: string
   owner?: 'library' | 'user' | 'migrated'
+  kind?: 'file' | 'symlink'
+  linkTarget?: string
 }
 
 export interface RepoPermissions {

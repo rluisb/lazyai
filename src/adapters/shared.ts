@@ -115,6 +115,20 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
 
   files.ensureDir(path.dirname(opts.dest))
 
+  // Symlink mode: create symlink to library source instead of copying
+  if (opts.ctx.installMode === 'symlink' && !opts.transform) {
+    files.symlinkFile(opts.src, opts.dest)
+    opts.ctx.fileRecords.push({
+      path: relPath,
+      hash: files.fileHash(opts.dest),
+      source: path.relative(opts.ctx.libraryDir, opts.src),
+      owner: 'library',
+      kind: 'symlink',
+      linkTarget: path.resolve(opts.src),
+    })
+    return
+  }
+
   if (opts.transform) {
     const transformed = opts.transform(files.readFile(opts.src))
     files.writeFile(opts.dest, transformed)

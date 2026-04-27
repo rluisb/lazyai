@@ -75,9 +75,9 @@ describe('generators', () => {
     for (const testCase of cases) {
       // Extract expected name from path: library/agents/<name>/AGENT.md → <name>
       const pathParts = testCase.expected.split('/')
-      const name = pathParts.length >= 3 && pathParts[0] === 'library' && pathParts[1] === 'agents'
-        ? pathParts[2]
-        : pathParts.pop()?.replace(/\.(md|ts)$/, '') ?? 'name'
+      const name: string = pathParts.length >= 3 && pathParts[0] === 'library' && pathParts[1] === 'agents'
+        ? pathParts[2]!
+        : (pathParts.pop()?.replace(/\.(md|ts)$/, '') ?? 'name')
       const files = await testCase.generator.generate({
         name,
         targetDir,

@@ -18,8 +18,17 @@ import { registerServer } from './commands/server.js'
 import { registerSetup } from './commands/setup.js'
 import { registerStatus } from './commands/status.js'
 import { registerUpdate } from './commands/update.js'
+import type { TomlConfig } from './utils/toml.js'
+import { loadConfig } from './utils/toml.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+let cachedTomlConfig: TomlConfig | null = null
+
+/** Get the TOML config loaded at startup. */
+export function getTomlConfig(): TomlConfig {
+  return cachedTomlConfig ?? {}
+}
 
 function getVersion(): string {
   try {
@@ -42,6 +51,10 @@ export function createProgram(): Command {
     .hook('preAction', (thisCommand) => {
       if (thisCommand.opts().verbose) {
         process.env.AI_SETUP_DEBUG = '1'
+      }
+      // Load TOML config once at startup
+      if (!cachedTomlConfig) {
+        cachedTomlConfig = loadConfig(process.cwd())
       }
     })
 

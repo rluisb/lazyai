@@ -8,6 +8,7 @@ import { registerCompletions } from './commands/completions.js'
 import { registerCreate } from './commands/create.js'
 import { registerDoctor } from './commands/doctor.js'
 import { registerEject } from './commands/eject.js'
+import { registerExtensions } from './commands/extensions.js'
 import { createImportCommand } from './commands/import.js'
 import { registerInfo } from './commands/info.js'
 import { registerInit } from './commands/init.js'
@@ -72,6 +73,7 @@ export function createProgram(): Command {
   registerOrchestration(program)
   registerServer(program)
   registerCompletions(program)
+  registerExtensions(program)
 
   // Add migration commands
   program.addCommand(createImportCommand())

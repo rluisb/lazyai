@@ -3,6 +3,7 @@ import type { Command } from 'commander'
 import pc from 'picocolors'
 import { detectAdapters, importSetup } from '../migration/index.js'
 import type { PresetLevel, SetupScope, SetupType, ToolId } from '../types.js'
+import { loadConfig } from '../utils/toml.js'
 import { runWizard } from '../wizard/index.js'
 import { formatAdapterList, MIGRATION_MARKER_HINT } from './migration-shared.js'
 
@@ -109,9 +110,15 @@ export function registerInit(program: Command): void {
     )
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
+      const targetDir = process.cwd()
+      const tomlConfig = loadConfig(targetDir)
+
+      // TOML fallback: CLI flags override TOML, TOML fills gaps
       const tools = opts.tools
         ? (opts.tools.split(',').map((t) => t.trim()).filter(Boolean) as ToolId[])
-        : undefined
+        : tomlConfig.default_tools?.length
+          ? (tomlConfig.default_tools as ToolId[])
+          : undefined
       const repos = opts.repos
         ? opts.repos.split(',').map((repoPath) => repoPath.trim()).filter(Boolean)
         : undefined
@@ -143,12 +150,14 @@ export function registerInit(program: Command): void {
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
+      else if (tomlConfig.default_scope) cliOverrides.scope = tomlConfig.default_scope
       if (opts.type) cliOverrides.type = opts.type
       if (opts.planningRepo) cliOverrides.planningRepo = opts.planningRepo
       if (repos) cliOverrides.repos = repos
       if (tools) cliOverrides.tools = tools
       if (cliTools) cliOverrides.cliTools = cliTools
       if (opts.name) cliOverrides.name = opts.name
+      else if (tomlConfig.project_name) cliOverrides.name = tomlConfig.project_name
       if (opts.planningDir) cliOverrides.planningDir = opts.planningDir
       if (opts.preset) cliOverrides.preset = opts.preset as PresetLevel
       if (features) cliOverrides.features = features

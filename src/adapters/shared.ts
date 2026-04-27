@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { discoverExtensions } from '../extensions/discovery.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
 import { extractTools, normalizeToolsFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
@@ -213,6 +214,49 @@ export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): P
     }
 
     await copyWithRecord(copyOpts)
+  }
+
+  // Third pass: extension content (same directory structure as library)
+  const extensions = discoverExtensions(opts.ctx.targetDir)
+  for (const ext of extensions) {
+    const extSourceDir = path.join(ext.path, opts.sourceSubdir)
+    if (!files.isDirectory(extSourceDir)) continue
+
+    for (const entry of files.listDir(extSourceDir)) {
+      const entryPath = path.join(extSourceDir, entry)
+
+      if (files.isDirectory(entryPath)) {
+        const agentMd = path.join(entryPath, 'AGENT.md')
+        if (!files.fileExists(agentMd)) continue
+        const fileId = entry
+        if (processedNames.has(fileId)) continue
+        if (selected && !selected.has(fileId)) continue
+
+        processedNames.add(fileId)
+        const copyOpts: CopyWithRecordOptions = {
+          src: agentMd,
+          dest: opts.toDestPath(`${entry}.md`),
+          ctx: opts.ctx,
+          ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        }
+        if (opts.warnOnSkip !== undefined) copyOpts.warnOnSkip = opts.warnOnSkip
+        await copyWithRecord(copyOpts)
+      } else if (entry.endsWith('.md')) {
+        const fileId = path.parse(entry).name
+        if (processedNames.has(fileId)) continue
+        if (selected && !selected.has(fileId)) continue
+
+        processedNames.add(fileId)
+        const copyOpts: CopyWithRecordOptions = {
+          src: entryPath,
+          dest: opts.toDestPath(entry),
+          ctx: opts.ctx,
+          ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        }
+        if (opts.warnOnSkip !== undefined) copyOpts.warnOnSkip = opts.warnOnSkip
+        await copyWithRecord(copyOpts)
+      }
+    }
   }
 }
 

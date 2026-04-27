@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import type { ConflictStrategy, FileRecord } from '../types.js'
 import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
+import { findMonorepoLibraryDir } from './test-helpers.js'
 
 const DEFAULT_FEATURE_FRAGMENT_MARKERS = [
   '<context-discipline>',
@@ -19,7 +20,7 @@ function makeTempDir(prefix: string): string {
 }
 
 function resolveLibraryDir(): string {
-  return path.resolve(process.cwd(), 'library')
+  return findMonorepoLibraryDir()
 }
 
 describe('scaffoldCompiledRoot', () => {

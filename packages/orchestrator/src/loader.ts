@@ -50,14 +50,32 @@ interface ParsedFrontmatter {
   body: string
 }
 
+/**
+ * Walk up from startDir until we find a directory named "library"
+ * that contains "mcp/catalog.json" (the ai-setup library sentinel).
+ * Returns the absolute path to the library directory.
+ */
+function findLibraryDir(startDir: string): string {
+  let dir = startDir
+  for (let i = 0; i < 20; i++) {
+    const candidate = path.join(dir, 'library')
+    if (fs.existsSync(path.join(candidate, 'mcp', 'catalog.json'))) {
+      return candidate
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  throw new Error(`Could not find library directory from: ${startDir}`)
+}
+
 export function getDefaultLibraryRoots(): { orchestrationRoot: string; agentsRoot: string } {
   const currentDir = path.dirname(fileURLToPath(import.meta.url))
-  const packageRoot = path.resolve(currentDir, '..')
-  const repoRoot = path.resolve(packageRoot, '..')
+  const libraryDir = findLibraryDir(currentDir)
 
   return {
-    orchestrationRoot: path.join(repoRoot, 'library', 'orchestration'),
-    agentsRoot: path.join(repoRoot, 'library', 'agents'),
+    orchestrationRoot: path.join(libraryDir, 'orchestration'),
+    agentsRoot: path.join(libraryDir, 'agents'),
   }
 }
 

@@ -9,8 +9,9 @@ import { scaffoldRootFiles } from '../scaffold/root-files.js'
 import { scaffoldSpecs } from '../scaffold/specs.js'
 import { scaffoldTemplatesRules } from '../scaffold/templates-rules.js'
 import type { ConflictStrategy, FileRecord } from '../types.js'
+import { findMonorepoLibraryDir } from './test-helpers.js'
 
-const libraryDir = path.resolve(process.cwd(), 'library')
+const libraryDir = findMonorepoLibraryDir()
 
 describe('scaffoldSpecs', () => {
   let tempDir: string

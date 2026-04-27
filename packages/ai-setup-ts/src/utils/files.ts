@@ -5,25 +5,31 @@ import { Errors } from '../errors/index.js'
 
 
 /**
- * Walk up from startDir until we find a directory containing package.json.
- * Works both when running from compiled dist/ and from TypeScript source src/.
- */
-export function findPackageRoot(startDir: string): string {
-  let dir = startDir
-  while (true) {
-    if (fs.existsSync(path.join(dir, 'package.json'))) return dir
-    const parent = path.dirname(dir)
-    if (parent === dir) throw Errors.dirNotFound(`Could not find package root from: ${startDir}`)
-    dir = parent
-  }
-}
-
-/**
- * Resolve the bundled library directory regardless of whether we are running
- * from compiled output (dist/) or TypeScript source (src/).
+ * Resolve the bundled library directory by walking up from fromDir until we
+ * find a directory named "library" that contains "mcp/catalog.json".
+ *
+ * This sentinel-based approach works in both:
+ * - Monorepo layout (library is a symlink at repo root → packages/ai-setup-go/library)
+ * - Flat layout (library/ is a real directory)
+ *
+ * It matches Go's walkUpFromLibrary in internal/library/embed.go.
+ *
+ * Works from compiled output (dist/) and TypeScript source (src/).
  */
 export function resolveLibraryDir(fromDir: string): string {
-  return path.join(findPackageRoot(fromDir), 'library')
+  let dir = fromDir
+  for (let i = 0; i < 20; i++) {
+    const candidate = path.join(dir, 'library')
+    if (fs.existsSync(path.join(candidate, 'mcp', 'catalog.json'))) {
+      return candidate
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  throw Errors.dirNotFound(
+    `Could not find library directory (looked for library/mcp/catalog.json sentinel) from: ${fromDir}`,
+  )
 }
 
 export function ensureDir(dirPath: string): void {

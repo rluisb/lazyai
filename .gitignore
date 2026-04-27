@@ -47,6 +47,7 @@ specs/**/AGENTS.md
 .codegraph/
 .logs/
 .mcp.json
+graphify-out/cache/
 
 # Logs
 *.log

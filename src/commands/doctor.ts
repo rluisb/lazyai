@@ -7,6 +7,7 @@ import { migrationCheck } from '../migration/index.js'
 import type { DriftCheckResult } from '../migration/types.js'
 import { readStore, writeStore } from '../store/index.js'
 import { fileExists, fileHash } from '../utils/files.js'
+import { compareLibrarySkills } from '../utils/library-compare.js'
 import { showSummaryBox } from '../utils/ui.js'
 
 function formatHealthBar(healthy: number, total: number): string {
@@ -28,11 +29,14 @@ export function registerDoctor(program: Command): void {
     .command('doctor')
     .description('Verify setup integrity against .ai-setup.json')
     .option('--migration-check', 'Check for drift between current setup and clean ai-setup state')
+    .option('--skills-check', 'Check installed skills against current library versions')
     .option('--verbose', 'Show detailed output')
     .option('--json', 'Output as JSON')
-    .action(async (opts: { migrationCheck?: boolean; verbose?: boolean; json?: boolean }) => {
+    .action(async (opts: { migrationCheck?: boolean; skillsCheck?: boolean; verbose?: boolean; json?: boolean }) => {
       if (opts.migrationCheck) {
         await runMigrationCheck(opts.verbose)
+      } else if (opts.skillsCheck) {
+        await runSkillsCheck(opts)
       } else {
         await runIntegrityCheck(opts)
       }
@@ -253,5 +257,127 @@ async function runMigrationCheck(verbose?: boolean): Promise<void> {
     }
     spinner.stop('Check failed')
     throw Errors.unknown(String(error))
+  }
+}
+
+async function runSkillsCheck(opts: { verbose?: boolean; json?: boolean }): Promise<void> {
+  const targetDir = process.cwd()
+  const verbose = opts.verbose ?? false
+
+  if (!opts.json) {
+    p.intro(pc.bold('ai-setup skills check'))
+  }
+
+  const results = await compareLibrarySkills(targetDir)
+
+  if (results.length === 0) {
+    p.log.info('No library skills found.')
+    p.outro(pc.dim('Run ai-setup init first to install skills.'))
+    return
+  }
+
+  const current = results.filter((r) => r.status === 'current')
+  const drifted = results.filter((r) => r.status === 'drifted')
+  const modified = results.filter((r) => r.status === 'modified')
+  const missing = results.filter((r) => r.status === 'missing')
+  const issues = drifted.length + modified.length + missing.length
+  const isHealthy = issues === 0
+
+  // JSON output
+  if (opts.json) {
+    console.log(JSON.stringify({
+      healthy: isHealthy,
+      total: results.length,
+      current: current.length,
+      drifted: drifted.length,
+      modified: modified.length,
+      missing: missing.length,
+      skills: results.map((r) => ({
+        name: r.name,
+        description: r.description,
+        status: r.status,
+        locations: r.installedLocations,
+      })),
+    }, null, 2))
+    if (!isHealthy) {
+      throw Errors.unknown(`Skills check found ${issues} issue(s)`)
+    }
+    return
+  }
+
+  // Summary
+  const statusEmoji = isHealthy ? '✅' : '⚠️'
+  const statusText = isHealthy ? pc.green('All skills current') : pc.yellow(`${issues} issue(s) found`)
+
+  showSummaryBox(`${statusEmoji} Skills Check`, [
+    { label: 'Status', value: statusText },
+    { label: 'Total skills', value: `${results.length}` },
+    { label: 'Current', value: pc.green(`${current.length}`) },
+    { label: 'Drifted', value: drifted.length > 0 ? pc.yellow(`${drifted.length}`) : pc.dim('0') },
+    { label: 'Modified', value: modified.length > 0 ? pc.yellow(`${modified.length}`) : pc.dim('0') },
+    { label: 'Missing', value: missing.length > 0 ? pc.red(`${missing.length}`) : pc.dim('0') },
+  ])
+
+  // Show drifted skills
+  if (drifted.length > 0) {
+    console.log('')
+    p.log.warn(pc.yellow(`Drifted skills (${drifted.length}): library updated, installed is stale`))
+    for (const skill of drifted.slice(0, verbose ? undefined : 5)) {
+      p.log.message(`  ${pc.yellow('↻')} ${skill.name}`)
+      if (opts.verbose && skill.installedLocations.length > 0) {
+        for (const loc of skill.installedLocations) {
+          p.log.message(pc.dim(`    ${loc.path}`))
+        }
+      }
+    }
+    if (!opts.verbose && drifted.length > 5) {
+      p.log.message(pc.dim(`  ... and ${drifted.length - 5} more (use --verbose for details)`))
+    }
+  }
+
+  // Show modified skills
+  if (modified.length > 0) {
+    console.log('')
+    p.log.warn(pc.yellow(`Modified skills (${modified.length}): user-changed content`))
+    for (const skill of modified.slice(0, verbose ? undefined : 5)) {
+      p.log.message(`  ${pc.yellow('~')} ${skill.name}`)
+      if (opts.verbose && skill.installedLocations.length > 0) {
+        for (const loc of skill.installedLocations) {
+          p.log.message(pc.dim(`    ${loc.path}`))
+        }
+      }
+    }
+    if (!opts.verbose && modified.length > 5) {
+      p.log.message(pc.dim(`  ... and ${modified.length - 5} more (use --verbose for details)`))
+    }
+  }
+
+  // Show missing skills
+  if (missing.length > 0) {
+    console.log('')
+    p.log.warn(pc.red(`Missing skills (${missing.length}): not installed`))
+    for (const skill of missing.slice(0, verbose ? undefined : 5)) {
+      p.log.message(`  ${pc.red('✗')} ${skill.name}`)
+    }
+    if (!opts.verbose && missing.length > 5) {
+      p.log.message(pc.dim(`  ... and ${missing.length - 5} more (use --verbose for details)`))
+    }
+  }
+
+  // Recommendations
+  if (!isHealthy) {
+    console.log('')
+    showSummaryBox('💡 Recommendations', [
+      { label: '1', value: `Run ${pc.cyan('ai-setup update --force')} to refresh drifted/modified skills` },
+      { label: '2', value: `Run ${pc.cyan('ai-setup compile')} to reinstall missing skills` },
+      { label: '3', value: `Run ${pc.cyan('ai-setup update --check')} to preview changes first` },
+    ])
+  }
+
+  if (isHealthy) {
+    p.outro(pc.green('✓ All skills up-to-date'))
+  } else {
+    p.outro(pc.yellow('⚠ Skills have issues'))
+    throw Errors.unknown(`Skills check found ${issues} issue(s)`)
   }
 }

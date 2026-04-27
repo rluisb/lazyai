@@ -2,6 +2,7 @@ import path, { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as p from '@clack/prompts'
 import type { Command } from 'commander'
+import pc from 'picocolors'
 import { Errors } from '../errors/index.js'
 import { OperationTracker } from '../errors/operation.js'
 import { appendOperation, createStore, writeStore } from '../store/index.js'
@@ -11,6 +12,8 @@ import { ALL_SKILLS } from '../types.js'
 import { resolveConflict } from '../utils/conflicts.js'
 import { backupFile, fileExists, fileHash, listDir, readFile, resolveLibraryDir, writeFile } from '../utils/files.js'
 import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
+import { compareLibrarySkills } from '../utils/library-compare.js'
+import { showSummaryBox } from '../utils/ui.js'
 
 interface ExpectedFile {
   path: string
@@ -204,7 +207,12 @@ export function registerUpdate(program: Command): void {
     .command('update')
     .description('Update ai-setup library files (preserves or prompts on conflicts)')
     .option('--force', 'Overwrite all existing managed files (creates backups)')
-    .action(async (opts: UpdateOptions) => {
+    .option('--check', 'Preview which skills are outdated without applying changes')
+    .action(async (opts: UpdateOptions & { check?: boolean }) => {
+      if (opts.check) {
+        await runUpdateCheck()
+        return
+      }
       const targetDir = process.cwd()
       const tracker = new OperationTracker('update')
       const configPath = join(targetDir, '.ai-setup.json')
@@ -310,4 +318,50 @@ export function registerUpdate(program: Command): void {
 
       p.outro('✅ Update completed')
     })
+}
+
+async function runUpdateCheck(): Promise<void> {
+  const targetDir = process.cwd()
+  p.intro(pc.bold('ai-setup update --check'))
+
+  const results = await compareLibrarySkills(targetDir)
+
+  if (results.length === 0) {
+    p.log.info('No library skills found. Nothing to check.')
+    p.outro(pc.dim('Run ai-setup init first to install skills.'))
+    return
+  }
+
+  const drifted = results.filter((r) => r.status === 'drifted')
+  const modified = results.filter((r) => r.status === 'modified')
+  const missing = results.filter((r) => r.status === 'missing')
+  const upgradable = [...drifted, ...modified, ...missing]
+
+  if (upgradable.length === 0) {
+    p.log.success('All skills are up-to-date. No updates needed.')
+    p.outro(pc.green('✓ Nothing to update'))
+    return
+  }
+
+  showSummaryBox('📋 Skills to update', [
+    { label: 'Drifted (library newer)', value: pc.yellow(`${drifted.length}`) },
+    { label: 'Modified (user changed)', value: pc.yellow(`${modified.length}`) },
+    { label: 'Missing (not installed)', value: pc.red(`${missing.length}`) },
+    { label: 'Total to update', value: pc.bold(`${upgradable.length}`) },
+  ])
+
+  console.log('')
+  p.log.info('Skills that would be updated:')
+  for (const skill of upgradable) {
+    const icon = skill.status === 'drifted' ? '↻' : skill.status === 'modified' ? '~' : '✗'
+    p.log.message(`  ${pc.yellow(icon)} ${skill.name} (${skill.status})`)
+  }
+
+  console.log('')
+  showSummaryBox('💡 To apply', [
+    { label: '1', value: `Run ${pc.cyan('ai-setup update --force')} to refresh all` },
+    { label: '2', value: `Run ${pc.cyan('ai-setup compile')} to regenerate from library` },
+  ])
+
+  p.outro(pc.yellow(`⚠ ${upgradable.length} skill(s) would be updated`))
 }

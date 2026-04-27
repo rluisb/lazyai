@@ -134,6 +134,7 @@ export interface MigrationPlan {
   adapters: string[];
   actions: MigrationAction[];
   conflicts: MergeConflict[];
+  adapterConflicts: AdapterConflict[];
   estimatedFiles: number;
   estimatedConflicts: number;
   canProceed: boolean;
@@ -146,6 +147,13 @@ export interface MigrationAction {
   description: string;
   reason: string;
   conflict?: MergeConflict;
+  adapterId?: string;
+}
+
+export interface AdapterConflict {
+  targetPath: string;
+  adapters: string[];
+  actions: Pick<MigrationAction, 'type' | 'description' | 'reason' | 'adapterId'>[];
 }
 
 export interface MigrationResult {

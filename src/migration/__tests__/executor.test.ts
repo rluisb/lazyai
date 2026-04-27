@@ -86,6 +86,7 @@ function createPlan(targetPath: string): MigrationPlan {
         theirsContent: 'incoming guidance',
       },
     ],
+    adapterConflicts: [],
     estimatedFiles: 0,
     estimatedConflicts: 1,
     canProceed: true,

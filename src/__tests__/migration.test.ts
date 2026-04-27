@@ -170,6 +170,7 @@ describe('Migration Engine', () => {
             theirsContent: 'theirs',
           },
         ],
+        adapterConflicts: [],
         estimatedFiles: 2,
         estimatedConflicts: 1,
         canProceed: false,
@@ -180,6 +181,36 @@ describe('Migration Engine', () => {
       expect(formatted).toContain('Summary:');
       expect(formatted).toContain('Unresolved conflicts: 1');
       expect(formatted).toContain('Status: blocked until conflicts are resolved');
+    });
+
+    it('shows multi-adapter conflict warnings in formatted output', () => {
+      const formatted = formatPlan({
+        sourcePath: '/source',
+        targetPath: '/target',
+        adapters: ['opencode', 'claude-code'],
+        actions: [
+          { type: 'create', targetPath: 'AGENTS.md', description: 'Create AGENTS.md', reason: 'new file', adapterId: 'opencode' },
+        ],
+        conflicts: [],
+        adapterConflicts: [
+          {
+            targetPath: 'AGENTS.md',
+            adapters: ['opencode', 'claude-code'],
+            actions: [
+              { type: 'create', description: 'Create AGENTS.md', reason: 'New file from merged setup', adapterId: 'opencode' },
+              { type: 'modify', description: 'Update AGENTS.md', reason: 'Merged with existing setup', adapterId: 'claude-code' },
+            ],
+          },
+        ],
+        estimatedFiles: 1,
+        estimatedConflicts: 0,
+        canProceed: true,
+      });
+
+      expect(formatted).toContain('⚠️  1 multi-adapter conflict');
+      expect(formatted).toContain('AGENTS.md');
+      expect(formatted).toContain('OpenCode wants to create');
+      expect(formatted).toContain('Claude Code wants to modify');
     });
   });
 
@@ -351,6 +382,155 @@ describe('generateMigrationPlan', () => {
     expect(plan.conflicts).toHaveLength(1);
     expect(plan.estimatedConflicts).toBe(1);
     expect(plan.canProceed).toBe(false);
+  });
+
+  it('should detect multi-adapter conflicts for shared targetPath', async () => {
+    const context: MigrationContext = {
+      sourcePath: tempDir,
+      targetPath: tempDir,
+      options: { mergeStrategy: 'smart' },
+    };
+
+    const mockOpenCodeParser = {
+      id: 'opencode',
+      parse: async () => ({
+        agents: [],
+        rules: [],
+        commands: [],
+        templates: [],
+        customSections: [],
+        files: [],
+        metadata: {},
+      }),
+      canMerge: () => true,
+      merge: async () => ({
+        success: true,
+        merged: true,
+        conflicts: [],
+        backupPaths: [],
+        newFiles: [],
+        modifiedFiles: ['AGENTS.md'],
+        warnings: [],
+      }),
+    } as unknown as BaseParser;
+
+    const mockClaudeParser = {
+      id: 'claude-code',
+      parse: async () => ({
+        agents: [],
+        rules: [],
+        commands: [],
+        templates: [],
+        customSections: [],
+        files: [],
+        metadata: {},
+      }),
+      canMerge: () => true,
+      merge: async () => ({
+        success: true,
+        merged: true,
+        conflicts: [],
+        backupPaths: [],
+        newFiles: [],
+        modifiedFiles: ['AGENTS.md', 'CLAUDE.md'],
+        warnings: [],
+      }),
+    } as unknown as BaseParser;
+
+    const detections: DetectionResult[] = [
+      {
+        detected: true,
+        confidence: 0.9,
+        adapterId: 'opencode',
+        adapterName: 'OpenCode',
+        files: [],
+      },
+      {
+        detected: true,
+        confidence: 0.85,
+        adapterId: 'claude-code',
+        adapterName: 'Claude Code',
+        files: [],
+      },
+    ];
+
+    const plan = await generateMigrationPlan(
+      context,
+      detections,
+      [mockOpenCodeParser, mockClaudeParser],
+    );
+
+    // Both adapters detected
+    expect(plan.adapters).toContain('opencode');
+    expect(plan.adapters).toContain('claude-code');
+
+    // AGENTS.md should appear only once (deduped, first wins)
+    const agentsActions = plan.actions.filter(a => a.targetPath === 'AGENTS.md');
+    expect(agentsActions).toHaveLength(1);
+    expect(agentsActions[0]?.adapterId).toBe('opencode');
+
+    // CLAUDE.md should appear (unique to Claude)
+    const claudeActions = plan.actions.filter(a => a.targetPath === 'CLAUDE.md');
+    expect(claudeActions).toHaveLength(1);
+
+    // Should have adapter conflicts for AGENTS.md
+    expect(plan.adapterConflicts).toHaveLength(1);
+    const agConflict = plan.adapterConflicts[0];
+    expect(agConflict?.targetPath).toBe('AGENTS.md');
+    expect(agConflict?.adapters).toContain('opencode');
+    expect(agConflict?.adapters).toContain('claude-code');
+    expect(agConflict?.actions).toHaveLength(2);
+  });
+
+  it('should not flag conflict when same adapter emits duplicate targetPath', async () => {
+    const context: MigrationContext = {
+      sourcePath: tempDir,
+      targetPath: tempDir,
+      options: { mergeStrategy: 'smart' },
+    };
+
+    // Parser that emits same file in both newFiles and modifiedFiles
+    const mockParser = {
+      id: 'opencode',
+      parse: async () => ({
+        agents: [],
+        rules: [],
+        commands: [],
+        templates: [],
+        customSections: [],
+        files: [],
+        metadata: {},
+      }),
+      canMerge: () => true,
+      merge: async () => ({
+        success: true,
+        merged: true,
+        conflicts: [],
+        backupPaths: [],
+        newFiles: ['AGENTS.md'],
+        modifiedFiles: ['AGENTS.md'], // duplicate targetPath, same adapter
+        warnings: [],
+      }),
+    } as unknown as BaseParser;
+
+    const detections: DetectionResult[] = [
+      {
+        detected: true,
+        confidence: 1,
+        adapterId: 'opencode',
+        adapterName: 'OpenCode',
+        files: [],
+      },
+    ];
+
+    const plan = await generateMigrationPlan(context, detections, [mockParser]);
+
+    // Should not flag as multi-adapter conflict (same adapter)
+    expect(plan.adapterConflicts).toHaveLength(0);
+
+    // Should still deduplicate to one action
+    const agentsActions = plan.actions.filter(a => a.targetPath === 'AGENTS.md');
+    expect(agentsActions).toHaveLength(1);
   });
 
   it('should allow proceed with replace strategy even with conflicts', async () => {

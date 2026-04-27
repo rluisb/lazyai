@@ -43,7 +43,76 @@ export const DETECTION_PATTERNS: Record<string, string[]> = {
     '.github/prompts/*.md',
     '.github/instructions/*.md',
   ],
+  codex: [
+    '.codex/**/*',
+    '.codex/config.toml',
+    '.agents/skills/*.md',
+  ],
+  pi: [
+    '.pi/**/*',
+    '.pi/settings.json',
+    '.pi/skills/*.md',
+    '.pi/prompts/*.md',
+  ],
 };
+
+/** Detection patterns for tools that are observed but not managed by ai-setup. */
+export const OBSERVED_PATTERNS: Record<string, string[]> = {
+  cursor: [
+    '.cursor/**/*',
+    '.cursor/rules/*.md',
+    '.cursor/commands/*.md',
+    '.cursorrules',
+  ],
+  aider: [
+    '.aider.conf.yml',
+    '.aider/**/*',
+    'CONVENTIONS.md',
+  ],
+  continue: [
+    '.continue/**/*',
+    '.continue/config.json',
+    '.continue/rules/*.md',
+  ],
+  windsurf: [
+    '.windsurf/**/*',
+    '.windsurf/rules/*.md',
+  ],
+  zed: [
+    '.zed/**/*',
+    '.zed/settings.json',
+    '.zed/commands/*.md',
+  ],
+  'roo-code': [
+    '.roo/**/*',
+    '.roo/rules/*.md',
+    '.roomodes',
+  ],
+}
+
+/** Names for display. */
+export const DETECTION_NAMES: Record<string, string> = {
+  opencode: 'OpenCode',
+  'claude-code': 'Claude Code',
+  gemini: 'Gemini CLI',
+  copilot: 'GitHub Copilot',
+  codex: 'Codex (OpenAI)',
+  pi: 'Pi',
+  cursor: 'Cursor',
+  aider: 'Aider',
+  continue: 'Continue',
+  windsurf: 'Windsurf',
+  zed: 'Zed',
+  'roo-code': 'Roo Code',
+}
+
+/** Tools that ai-setup can install and manage. */
+export const SUPPORTED_TOOLS = new Set(['opencode', 'claude-code', 'gemini', 'copilot', 'codex', 'pi'])
+
+/** All detectable tools (supported + observed). */
+export function allDetectableTools(): string[] {
+  return [...Object.keys(DETECTION_PATTERNS), ...Object.keys(OBSERVED_PATTERNS)]
+}
 
 /**
  * File type patterns for categorization
@@ -72,11 +141,19 @@ export async function detectExistingSetup(
     return [];
   }
 
-  // Check each adapter pattern
+  // Check each supported adapter pattern
   for (const [adapterId, patterns] of Object.entries(DETECTION_PATTERNS)) {
-    const result = await detectAdapter(sourcePath, adapterId, patterns);
+    const result = await detectAdapter(sourcePath, adapterId, patterns)
     if (result.detected) {
-      results.push(result);
+      results.push(result)
+    }
+  }
+
+  // Also scan observed-only tools
+  for (const [adapterId, patterns] of Object.entries(OBSERVED_PATTERNS)) {
+    const result = await detectAdapter(sourcePath, adapterId, patterns)
+    if (result.detected) {
+      results.push({ ...result, metadata: { ...result.metadata, observed: true } })
     }
   }
 
@@ -96,12 +173,7 @@ async function detectAdapter(
   let totalFiles = 0;
   let matchedFiles = 0;
 
-  const adapterNames: Record<string, string> = {
-    opencode: 'OpenCode',
-    'claude-code': 'Claude Code',
-    gemini: 'Gemini CLI',
-    copilot: 'GitHub Copilot',
-  };
+  const adapterName = DETECTION_NAMES[adapterId] || adapterId
 
   for (const pattern of patterns) {
     try {
@@ -142,7 +214,7 @@ async function detectAdapter(
     detected: detectedFiles.length > 0,
     confidence,
     adapterId,
-    adapterName: adapterNames[adapterId] || adapterId,
+    adapterName: adapterName || adapterId,
     files: detectedFiles.sort((a, b) => b.priority - a.priority),
     metadata: {
       totalFiles,
@@ -243,11 +315,11 @@ export async function hasAdapter(
   sourcePath: string,
   adapterId: string
 ): Promise<boolean> {
-  const patterns = DETECTION_PATTERNS[adapterId];
-  if (!patterns) return false;
+  const patterns = DETECTION_PATTERNS[adapterId] ?? OBSERVED_PATTERNS[adapterId]
+  if (!patterns) return false
 
-  const result = await detectAdapter(sourcePath, adapterId, patterns);
-  return result.detected && result.confidence > 0.3;
+  const result = await detectAdapter(sourcePath, adapterId, patterns)
+  return result.detected && result.confidence > 0.3
 }
 
 /**
@@ -256,13 +328,13 @@ export async function hasAdapter(
 export async function getDetectedAdapters(
   sourcePath: string
 ): Promise<string[]> {
-  const results: string[] = [];
+  const results: string[] = []
 
-  for (const adapterId of Object.keys(DETECTION_PATTERNS)) {
+  for (const adapterId of allDetectableTools()) {
     if (await hasAdapter(sourcePath, adapterId)) {
-      results.push(adapterId);
+      results.push(adapterId)
     }
   }
 
-  return results;
+  return results
 }

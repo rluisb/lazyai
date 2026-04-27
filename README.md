@@ -828,6 +828,48 @@ AGENTS.md
 
 ---
 
+## TOML Configuration
+
+Optional `.ai-setup.toml` (project) and `~/.config/ai-setup/config.toml` (global) files provide defaults for CLI commands. CLI flags always override TOML values.
+
+**Precedence**: `CLI flags > project TOML > global TOML > built-in defaults`
+
+### Example `~/.config/ai-setup/config.toml`
+
+```toml
+# Global defaults for all projects
+default_scope = "project"
+default_tools = ["opencode", "claude-code"]
+install_mode = "symlink"
+
+[wizard]
+preset = "recommended"
+show_preview = true
+```
+
+### Example `.ai-setup.toml` (project)
+
+```toml
+# Project-specific overrides
+default_tools = ["opencode"]
+install_mode = "copy"
+project_name = "my-api"
+```
+
+### Supported keys
+
+| Key | Values | Description |
+|---|---|---|
+| `default_scope` | `project`, `workspace`, `global` | Default setup scope |
+| `default_tools` | `["opencode", "claude-code", ...]` | Default AI tools |
+| `install_mode` | `copy`, `symlink` | How files are installed (default: `copy`) |
+| `project_name` | string | Default project name |
+| `enabled_servers` | `["filesystem", "ripgrep", ...]` | Default MCP servers |
+| `wizard.preset` | `minimal`, `recommended`, `full` | Wizard preset |
+| `wizard.show_preview` | `true`, `false` | Show confirmation preview |
+
+---
+
 ## Commands Reference
 
 > Global flag available to all commands:
@@ -896,6 +938,9 @@ ai-setup init --migrate --from ../legacy-project
 
 # start small and selectively re-enable features
 ai-setup init --scope project --tools opencode --disable-features all --features rpiWorkflow,qualityGates --no-interactive
+
+# use symlinks instead of copies (library stays in sync)
+ai-setup init --scope project --tools opencode --install-mode symlink --no-interactive
 ```
 
 ![Compile and Add demo](demo/05-compile-add.gif)
@@ -1280,6 +1325,57 @@ ai-setup completions zsh
 ai-setup completions fish > ~/.config/fish/completions/ai-setup.fish
 ```
 
+### `extensions` / `ext`
+
+**Syntax**
+
+```bash
+ai-setup extensions [--json]
+ai-setup ext [--json]
+```
+
+**What it does**
+
+Lists discovered ai-setup extensions from TOML config and `.ai/extensions/`. Shows agent, skill, prompt, and rule counts per extension.
+
+| Flag | Type | Default | Description |
+|---|---|---:|---|
+| `--json` | `boolean` | `false` | Output as JSON |
+
+**Examples**
+
+```bash
+ai-setup extensions
+ai-setup extensions --json
+ai-setup ext
+```
+
+### `doctor --skills-check`
+
+**What it does**
+
+Compares installed skills against the current library source. Reports which skills are `current`, `drifted` (library updated, installed stale), `modified` (user changed), or `missing`.
+
+**Examples**
+
+```bash
+ai-setup doctor --skills-check
+ai-setup doctor --skills-check --verbose
+ai-setup doctor --skills-check --json
+```
+
+### `update --check`
+
+**What it does**
+
+Previews which skills would be updated by `update --force` without applying changes. Shows drifted, modified, and missing skills.
+
+**Examples**
+
+```bash
+ai-setup update --check
+```
+
 ---
 
 ## Library Content
@@ -1384,6 +1480,45 @@ Project-local definitions with the same name take precedence over library defaul
 | `brave-search` | disabled | No | Web search; needs `BRAVE_API_KEY` |
 | `fetch` | disabled | No | General HTTP fetch MCP |
 | `orchestrator` | disabled | No | Optional orchestration runtime via `npx -y @ai-setup/orchestrator` |
+
+
+## Extensions
+
+Extensions allow you to add custom agents, skills, prompts, rules, and templates beyond the built-in library. They're discovered from two sources:
+
+### Local extensions (`.ai/extensions/`)
+
+Place extension directories under `.ai/extensions/<name>/` with a structure mirroring the library:
+
+```
+.ai/extensions/team-toolkit/
+├── agents/
+│   └── security-reviewer/
+│       ├── AGENT.md
+│       └── mcp.json
+├── skills/
+│   └── deploy-check.md
+├── prompts/
+│   └── security-audit.md
+└── rules/
+    └── team-conventions.md
+```
+
+### TOML-configured extensions
+
+Register extensions in `.ai-setup.toml`:
+
+```toml
+[extensions.team-toolkit]
+path = "../shared-ai-config/toolkit"
+
+[extensions.org-policies]
+path = "~/org-ai-standards"
+```
+
+Extension content is merged with the built-in library during `compile`. Built-in content takes precedence when names collide.
+
+**List extensions**: `ai-setup extensions` or `ai-setup ext --json`
 
 ---
 
@@ -1569,6 +1704,10 @@ ai-setup migrate ../legacy-project --no-canonical
 
 `ai-setup update` rebuilds the expected managed file set from the current library and selected tools, then resolves each target file individually.
 
+**Preview changes first**: `ai-setup update --check` shows which skills are drifted, modified, or missing without applying changes.
+
+**Skill drift detection**: `ai-setup doctor --skills-check` compares installed skills against the current library source and reports `current`, `drifted`, `modified`, or `missing` status.
+
 ### Conflict behavior
 
 | Situation | Behavior |
@@ -1590,6 +1729,16 @@ Backups are written under:
 with relative paths preserved.
 
 `compile --force` and `update --force` are the main ways to intentionally replace generated output after review.
+
+### Symlink installation mode
+
+By default, `ai-setup` copies files from the library into tool directories. With `--install-mode=symlink` (or `install_mode = "symlink"` in TOML config), files are symlinked instead. This keeps all tools in sync when the library is updated.
+
+```bash
+ai-setup init --install-mode symlink --no-interactive
+```
+
+Symlinked files are tracked in `.ai-setup.json` with `kind: "symlink"` and `linkTarget` pointing to the library source.
 
 ---
 

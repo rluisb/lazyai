@@ -20,11 +20,9 @@ func TestUpdateNonInteractiveRestoresTrackedSetupState(t *testing.T) {
 	}
 
 	cmd := newUpdateCommand(false, true, false)
-	if _, _ = captureOutput(t, func() {
-		if err := runUpdate(cmd, nil); err != nil {
-			t.Fatalf("runUpdate: %v", err)
-		}
-	}); false {
+	// Run without captureOutput to avoid pipe deadlock with child processes
+	if err := runUpdate(cmd, nil); err != nil {
+		t.Fatalf("runUpdate: %v", err)
 	}
 
 	if !fileExists(targetPath) {

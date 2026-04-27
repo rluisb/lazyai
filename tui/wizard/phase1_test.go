@@ -239,20 +239,21 @@ func TestToolOptionsForScope_FiltersCopilotGlobal(t *testing.T) {
 	t.Parallel()
 
 	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	// Copilot now appears at scope=global (with probe gating at adapter level)
-	// Count: all 5 tools at all scopes
+	// Count: 5 tools at global (Pi excluded — project/workspace only)
 	if len(globalOpts) != 5 {
 		t.Errorf("global options count = %d, want 5", len(globalOpts))
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	if len(projectOpts) != 5 {
-		t.Errorf("project options count = %d, want 5", len(projectOpts))
+	// Count: 6 tools at project (includes Pi)
+	if len(projectOpts) != 6 {
+		t.Errorf("project options count = %d, want 6", len(projectOpts))
 	}
 
 	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	if len(workspaceOpts) != 5 {
-		t.Errorf("workspace options count = %d, want 5", len(workspaceOpts))
+	// Count: 6 tools at workspace (includes Pi)
+	if len(workspaceOpts) != 6 {
+		t.Errorf("workspace options count = %d, want 6", len(workspaceOpts))
 	}
 }
 

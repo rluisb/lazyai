@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -87,7 +88,21 @@ func captureOutput(t *testing.T, fn func()) (string, string) {
 	_ = stderrWriter.Close()
 	os.Stdout = originalStdout
 	os.Stderr = originalStderr
-	return <-stdoutDone, <-stderrDone
+
+	// Read with timeout to avoid deadlock when background goroutines
+	// (e.g. SQLite connection opener) hold references to stdout.
+	var stdout, stderr string
+	select {
+	case stdout = <-stdoutDone:
+	case <-time.After(2 * time.Second):
+		stdout = "(timed out)"
+	}
+	select {
+	case stderr = <-stderrDone:
+	case <-time.After(2 * time.Second):
+		stderr = "(timed out)"
+	}
+	return stdout, stderr
 }
 
 func newUpdateCommand(force, nonInteractive, dryRun bool) *cobra.Command {

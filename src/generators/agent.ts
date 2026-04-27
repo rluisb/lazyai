@@ -134,8 +134,21 @@ For complex tasks, capture concise traces:
 
     return [
       {
-        path: `library/agents/${slug || 'new-agent'}.md`,
+        path: `library/agents/${slug || 'new-agent'}/AGENT.md`,
         content,
+      },
+      {
+        path: `library/agents/${slug || 'new-agent'}/mcp.json`,
+        content: JSON.stringify(
+          {
+            mcpServers: {
+              filesystem: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/path/to/project'] },
+              // Add more MCP servers specific to this agent
+            },
+          },
+          null,
+          2,
+        ),
       },
     ]
   }

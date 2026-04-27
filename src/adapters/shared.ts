@@ -134,13 +134,55 @@ export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): P
   const selected = getSelectionSet(opts.ctx, opts.selectionKey)
   const sourceDir = path.join(opts.ctx.libraryDir, opts.sourceSubdir)
 
-  for (const file of files.listDir(sourceDir)) {
+  const entries = files.listDir(sourceDir)
+  const processedNames = new Set<string>()
+
+  // First pass: directory-based agents (library/agents/<name>/AGENT.md)
+  for (const entry of entries) {
+    const entryPath = path.join(sourceDir, entry)
+    if (!files.isDirectory(entryPath)) continue
+
+    const agentMd = path.join(entryPath, 'AGENT.md')
+    if (!files.fileExists(agentMd)) continue
+
+    const fileId = entry
+    if (selected && !selected.has(fileId)) continue
+
+    processedNames.add(fileId)
+    const copyOpts: CopyWithRecordOptions = {
+      src: agentMd,
+      dest: opts.toDestPath(`${entry}.md`),
+      ctx: opts.ctx,
+      ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+    }
+    if (opts.warnOnSkip !== undefined) copyOpts.warnOnSkip = opts.warnOnSkip
+    if (opts.transform !== undefined) copyOpts.transform = opts.transform
+    await copyWithRecord(copyOpts)
+
+    // Copy agent-local mcp.json if it exists
+    const agentMcpJson = path.join(entryPath, 'mcp.json')
+    if (files.fileExists(agentMcpJson)) {
+      // Agent-local MCP is informational — install alongside agent config
+      const mcpDest = path.join(path.dirname(opts.toDestPath(`${entry}.md`)), `${entry}.mcp.json`)
+      const mcpCopyOpts: CopyWithRecordOptions = {
+        src: agentMcpJson,
+        dest: mcpDest,
+        ctx: opts.ctx,
+        warnOnSkip: false,
+      }
+      await copyWithRecord(mcpCopyOpts)
+    }
+  }
+
+  // Second pass: flat files (legacy format: library/agents/<name>.md)
+  for (const file of entries) {
     if (opts.includeFile && !opts.includeFile(file)) continue
 
     const srcPath = path.join(sourceDir, file)
     if (files.isDirectory(srcPath)) continue
 
     const fileId = path.parse(file).name
+    if (processedNames.has(fileId)) continue
     if (selected && !selected.has(fileId)) continue
 
     const copyOpts: CopyWithRecordOptions = {

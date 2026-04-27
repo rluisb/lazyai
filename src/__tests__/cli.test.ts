@@ -560,7 +560,7 @@ describe('basic command smoke tests', () => {
 
     await runCreate(['agent', 'my-agent', '--model', 'gpt-4o', '--mode', 'interactive', '--tools', 'fs', '--no-interactive'])
 
-    expect(fs.existsSync(path.join(tempDir, 'library/agents/my-agent.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'library/agents/my-agent/AGENT.md'))).toBe(true)
   })
 
   it('create skill writes skill file to library/skills', async () => {

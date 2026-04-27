@@ -62,7 +62,7 @@ describe('generators', () => {
     seedLibrary(targetDir)
 
     const cases = [
-      { generator: new AgentGenerator(), expected: 'library/agents/my-agent.md' },
+      { generator: new AgentGenerator(), expected: 'library/agents/my-agent/AGENT.md' },
       { generator: new SkillGenerator(), expected: 'library/skills/my-skill.md' },
       { generator: new CommandGenerator(), expected: 'src/commands/my-command.ts' },
       { generator: new PromptGenerator(), expected: 'library/prompts/my-prompt.md' },
@@ -73,8 +73,13 @@ describe('generators', () => {
     ]
 
     for (const testCase of cases) {
+      // Extract expected name from path: library/agents/<name>/AGENT.md → <name>
+      const pathParts = testCase.expected.split('/')
+      const name = pathParts.length >= 3 && pathParts[0] === 'library' && pathParts[1] === 'agents'
+        ? pathParts[2]
+        : pathParts.pop()?.replace(/\.(md|ts)$/, '') ?? 'name'
       const files = await testCase.generator.generate({
-        name: testCase.expected.split('/').pop()?.replace(/\.(md|ts)$/, '') ?? 'name',
+        name,
         targetDir,
       })
       expect(files[0]?.path).toBe(testCase.expected)

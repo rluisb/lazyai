@@ -1,0 +1,7 @@
+<system-context>
+  <project-name>{{PROJECT_NAME}}</project-name>
+  <planning-dir>{{PLANNING_DIR}}</planning-dir>
+  <primary-language>{{PRIMARY_LANGUAGE}}</primary-language>
+  <framework>{{FRAMEWORK}}</framework>
+  <workspace-type>{{WORKSPACE_TYPE}}</workspace-type>
+</system-context>

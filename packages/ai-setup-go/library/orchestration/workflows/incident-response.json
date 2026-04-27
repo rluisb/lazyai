@@ -1,0 +1,45 @@
+{
+  "kind": "workflow",
+  "name": "incident-response",
+  "description": "Incident workflow that assesses severity before routing into the bugfix chain",
+  "version": "1.0.0",
+  "entry": "assess_incident",
+  "phases": [
+    {
+      "id": "assess_incident",
+      "kind": "team",
+      "ref": "assessment-team",
+      "on": {
+        "success": "confirm_severity",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "confirm_severity",
+      "kind": "gate",
+      "gate": "severity_confirmation",
+      "prompt": "Confirm the incident severity and whether the mitigation path should continue now.",
+      "on": {
+        "approved": "mitigate_and_fix",
+        "rejected": "handoff"
+      }
+    },
+    {
+      "id": "mitigate_and_fix",
+      "kind": "chain",
+      "ref": "bugfix",
+      "on": {
+        "success": "complete",
+        "failure": "handoff"
+      }
+    },
+    {
+      "id": "handoff",
+      "kind": "terminal"
+    },
+    {
+      "id": "complete",
+      "kind": "terminal"
+    }
+  ]
+}

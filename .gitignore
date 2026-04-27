@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Temporary library copy for npm publish (created by prepublishOnly, cleaned by postpublish)
+packages/ai-setup-ts/library/
+
 # Build output
 dist/
 ai-setup

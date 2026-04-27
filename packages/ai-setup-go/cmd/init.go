@@ -1,0 +1,356 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"charm.land/lipgloss/v2"
+	"github.com/spf13/cobra"
+
+	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
+	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
+	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
+	"github.com/ricardoborges-teachable/ai-setup/internal/types"
+	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
+)
+
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Initialize AI development environment",
+	Long:  "Initialize AI development environment with selected tools, agents, and skills.",
+	RunE:  runInit,
+}
+
+func init() {
+	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
+	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, gemini, copilot, codex)")
+	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
+	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
+	initCmd.Flags().StringSlice("disable-features", []string{}, "Features to disable")
+	initCmd.Flags().String("name", "", "Project name")
+	initCmd.Flags().String("branch-pattern", "", "Git branch naming pattern")
+	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
+	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini, Claude Code, Codex)")
+	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
+	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in CLAUDE.md)")
+	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in CLAUDE.md)")
+	initCmd.Flags().Bool("force", false, "Overwrite existing files")
+	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
+	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
+	initCmd.Flags().Bool("enable-obsidian", false, "Enable Obsidian integration")
+	initCmd.Flags().String("obsidian-vault-path", "", "Obsidian vault path")
+	initCmd.Flags().Bool("enable-qmd", false, "Enable qmd markdown retrieval")
+	initCmd.Flags().String("qmd-index-path", "", "Project-local qmd index path")
+	initCmd.Flags().Bool("enable-codegraph", false, "Enable codegraph analysis")
+	initCmd.Flags().String("codegraph-data-path", "", "Project-local codegraph data path")
+	rootCmd.AddCommand(initCmd)
+}
+
+func runInit(cmd *cobra.Command, args []string) error {
+	// Parse flags.
+	scopeStr, _ := cmd.Flags().GetString("scope")
+	toolsStr, _ := cmd.Flags().GetStringSlice("tools")
+	presetStr, _ := cmd.Flags().GetString("preset")
+	featuresStr, _ := cmd.Flags().GetStringSlice("features")
+	nameStr, _ := cmd.Flags().GetString("name")
+	branchPattern, _ := cmd.Flags().GetString("branch-pattern")
+	commitPattern, _ := cmd.Flags().GetString("commit-pattern")
+	memoryPath, _ := cmd.Flags().GetString("memory-path")
+	enableObsidian, _ := cmd.Flags().GetBool("enable-obsidian")
+	obsidianVaultPath, _ := cmd.Flags().GetString("obsidian-vault-path")
+	enableQmd, _ := cmd.Flags().GetBool("enable-qmd")
+	qmdIndexPath, _ := cmd.Flags().GetString("qmd-index-path")
+	enableCodegraph, _ := cmd.Flags().GetBool("enable-codegraph")
+	codegraphDataPath, _ := cmd.Flags().GetString("codegraph-data-path")
+	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	force, _ := cmd.Flags().GetBool("force")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
+	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
+	orgName, _ := cmd.Flags().GetString("org")
+	teamName, _ := cmd.Flags().GetString("team")
+
+	// Build CLI tools from flags.
+	var tools []types.ToolId
+	for _, t := range toolsStr {
+		tools = append(tools, types.ToolId(t))
+	}
+
+	var preset types.PresetLevel
+	if presetStr != "" {
+		preset = types.PresetLevel(presetStr)
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	targetDir, _ := os.Getwd()
+
+	config := &wizard.WizardConfig{
+		Interactive:          !nonInteractive,
+		Force:                force,
+		DryRun:               dryRun,
+		CLIDriveCLI:          driveCLI,
+		CLILocalSecrets:      localSecrets,
+		CLIOrg:               orgName,
+		CLITeam:              teamName,
+		HomeDir:              homeDir,
+		TargetDir:            targetDir,
+		CLIScope:             types.SetupScope(scopeStr),
+		CLITools:             tools,
+		CLIName:              nameStr,
+		CLIPreset:            preset,
+		CLIFeatures:          featuresStr,
+		CLIBranch:            branchPattern,
+		CLICommit:            commitPattern,
+		CLIMemoryPath:        memoryPath,
+		CLIEnableObsidian:    enableObsidian,
+		CLIObsidianVaultPath: obsidianVaultPath,
+		CLIEnableQmd:         enableQmd,
+		CLIQmdIndexPath:      qmdIndexPath,
+		CLIEnableCodegraph:   enableCodegraph,
+		CLICodegraphDataPath: codegraphDataPath,
+	}
+
+	if nonInteractive {
+		return runInitNonInteractive(config)
+	}
+
+	return runInitInteractive(config)
+}
+
+func runInitInteractive(config *wizard.WizardConfig) error {
+	result, err := wizard.RunWizard(config)
+	if err != nil {
+		if err == wizard.ErrUserCancelled {
+			fmt.Println("\nSetup cancelled.")
+			return nil
+		}
+		return fmt.Errorf("wizard failed: %w", err)
+	}
+
+	if result == nil || result.Phase4 == nil || !result.Phase4.Confirmed {
+		fmt.Println("\nSetup cancelled.")
+		return nil
+	}
+
+	// Build scaffold context from wizard results.
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		return fmt.Errorf("building scaffold context: %w", err)
+	}
+
+	// Run the scaffold pipeline.
+	scaffoldResult, err := scaffold.ScaffoldAll(ctx)
+	if err != nil {
+		return fmt.Errorf("scaffold failed: %w", err)
+	}
+
+	// Persist results to the SQLite store.
+	database, err := openStore(config.TargetDir)
+	if err != nil {
+		return fmt.Errorf("opening store: %w", err)
+	}
+	defer database.Close()
+
+	presetLevel := result.Phase2.Preset
+	if presetLevel == "" {
+		presetLevel = preset.DefaultPresetForScope(result.Phase1.Scope)
+	}
+
+	if err := writeStoreFromScaffoldResult(database, ctx, presetLevel, scaffoldResult); err != nil {
+		return fmt.Errorf("writing store data: %w", err)
+	}
+
+	// Print summary.
+	fmt.Println()
+	printScaffoldSummary(scaffoldResult, ctx)
+	fmt.Println()
+	return nil
+}
+
+func runInitNonInteractive(config *wizard.WizardConfig) error {
+	// Non-interactive mode: use CLI flags directly.
+	// Validate required flags.
+	if config.CLIScope == "" {
+		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
+	}
+	if len(config.CLITools) == 0 {
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
+	}
+
+	// Drop tools that don't support the chosen scope (e.g. copilot × global).
+	// Warn per drop; abort only if nothing is left.
+	kept := make([]types.ToolId, 0, len(config.CLITools))
+	for _, t := range config.CLITools {
+		if adapter.IsScopeSupported(t, config.CLIScope) {
+			kept = append(kept, t)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "WARN: skipping tool %q for scope %q — not supported\n", t, config.CLIScope)
+	}
+	if len(kept) == 0 {
+		return fmt.Errorf("no tools remain after filtering for scope %q", config.CLIScope)
+	}
+	config.CLITools = kept
+	if config.CLIName == "" {
+		// Default project name to directory name.
+		dir, _ := os.Getwd()
+		if dir != "" {
+			config.CLIName = filepath.Base(dir)
+		} else {
+			config.CLIName = "my-project"
+		}
+	}
+
+	// Determine preset.
+	presetLevel := config.CLIPreset
+	if presetLevel == "" {
+		presetLevel = types.PresetLevelStandard
+	}
+
+	// Create Phase1 result from CLI flags.
+	phase1 := &wizard.Phase1Result{
+		Scope:        config.CLIScope,
+		Tools:        config.CLITools,
+		ProjectName:  config.CLIName,
+		Organization: config.CLIOrg,
+		Team:         config.CLITeam,
+	}
+
+	// Create Phase2 result from preset + features.
+	features := types.DefaultFeatureFlags()
+	resolved := preset.ResolvePreset(presetLevel)
+	if resolved != nil {
+		features = *resolved
+	}
+	// Apply CLI feature overrides.
+	for _, f := range config.CLIFeatures {
+		switch f {
+		case "contextEngineering":
+			features.ContextEngineering = true
+		case "rpiWorkflow":
+			features.RPIWorkflow = true
+		case "chainOfThought":
+			features.ChainOfThought = true
+		case "treeOfThoughts":
+			features.TreeOfThoughts = true
+		case "adrEnforcement":
+			features.ADREnforcement = true
+		case "qualityGates":
+			features.QualityGates = true
+		case "agentHarness":
+			features.AgentHarness = true
+		case "bugResolution":
+			features.BugResolution = true
+		case "pivotHandling":
+			features.PivotHandling = true
+		}
+	}
+	gitConvs := types.DefaultGitConventions()
+	if config.CLIBranch != "" {
+		gitConvs.BranchPattern = config.CLIBranch
+	}
+	if config.CLICommit != "" {
+		gitConvs.CommitPattern = config.CLICommit
+	}
+
+	phase2 := &wizard.Phase2Result{
+		Preset:   presetLevel,
+		Features: &features,
+		GitConv:  &gitConvs,
+	}
+
+	// Build WizardResult with pre-computed phases.
+	wizardDefaults := &wizard.WizardResult{
+		Phase1: phase1,
+		Phase2: phase2,
+		Phase5: &wizard.Phase5Result{
+			MemoryPath:        config.CLIMemoryPath,
+			EnableObsidian:    config.CLIEnableObsidian,
+			ObsidianVaultPath: config.CLIObsidianVaultPath,
+			EnableQmd:         config.CLIEnableQmd,
+			QmdIndexPath:      config.CLIQmdIndexPath,
+			EnableCodegraph:   config.CLIEnableCodegraph,
+			CodegraphDataPath: config.CLICodegraphDataPath,
+		},
+	}
+
+	// Run the wizard in non-interactive mode — it will use the defaults we provided.
+	result, err := wizard.RunWizardWithDefaults(config, wizardDefaults)
+	if err != nil {
+		return fmt.Errorf("non-interactive setup failed: %w", err)
+	}
+
+	if result == nil || result.Phase4 == nil || !result.Phase4.Confirmed {
+		// In non-interactive mode, confirmation is automatic.
+		// This shouldn't happen, but handle it gracefully.
+		return nil
+	}
+
+	// Build scaffold context from wizard results.
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		return fmt.Errorf("building scaffold context: %w", err)
+	}
+
+	// Run the scaffold pipeline.
+	scaffoldResult, err := scaffold.ScaffoldAll(ctx)
+	if err != nil {
+		return fmt.Errorf("scaffold failed: %w", err)
+	}
+
+	// Persist results to the SQLite store.
+	database, err := openStore(config.TargetDir)
+	if err != nil {
+		return fmt.Errorf("opening store: %w", err)
+	}
+	defer database.Close()
+
+	if err := writeStoreFromScaffoldResult(database, ctx, presetLevel, scaffoldResult); err != nil {
+		return fmt.Errorf("writing store data: %w", err)
+	}
+
+	// Print summary.
+	fmt.Println()
+	printScaffoldSummary(scaffoldResult, ctx)
+	fmt.Println()
+	return nil
+}
+
+// printScaffoldSummary prints a human-readable summary of the scaffold results.
+func printScaffoldSummary(result *scaffold.ScaffoldResult, ctx *scaffold.ScaffoldContext) {
+	style := headerStyle()
+	greenStyle := successStyle()
+
+	fmt.Println(style.Render("✅ Setup complete!"))
+	fmt.Println()
+	fmt.Printf("  %s Scope: %s\n", greenStyle.Render("•"), ctx.SetupScope)
+	fmt.Printf("  %s Tools: %v\n", greenStyle.Render("•"), ctx.Tools)
+	fmt.Printf("  %s Project: %s\n", greenStyle.Render("•"), ctx.ProjectName)
+	fmt.Printf("  %s Files installed: %d\n", greenStyle.Render("•"), len(result.Files))
+
+	if len(result.Errors) > 0 {
+		warnStyle := warningStyle()
+		fmt.Println()
+		fmt.Println(warnStyle.Render(fmt.Sprintf("⚠ %d warnings:", len(result.Errors))))
+		for _, e := range result.Errors {
+			fmt.Printf("  • %v\n", e)
+		}
+	}
+}
+
+// headerStyle returns a bold styled header with the primary color.
+func headerStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+}
+
+// successStyle returns a green colored style for success indicators.
+func successStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+}
+
+// warningStyle returns an orange colored style for warnings.
+func warningStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
+}

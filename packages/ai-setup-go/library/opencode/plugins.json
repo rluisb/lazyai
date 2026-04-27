@@ -1,0 +1,14 @@
+[
+  {
+    "module": "@opencode/desktop-commander",
+    "description": "Terminal & desktop file management commands"
+  },
+  {
+    "module": "@opencode/context-files",
+    "description": "Manage and pin context files for sessions"
+  },
+  {
+    "module": "@opencode/git-tools",
+    "description": "Git integration helpers (log, diff, blame)"
+  }
+]

@@ -1,55 +1,79 @@
-.PHONY: build test lint vet clean install release cross-build checksums
+.PHONY: build test lint vet clean install release cross-build checksums go-build go-test go-vet go-tidy ts-install ts-build ts-test ts-typecheck orch-build orch-test go-all ts-all all
 
-BINARY_NAME=ai-setup
-VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-MODULE=github.com/ricardoborges-teachable/ai-setup
-LDFLAGS=-ldflags "-s -w -X $(MODULE)/cmd.Version=$(VERSION)"
-GO=go
+# ── Go (packages/ai-setup-go) ──────────────────────────────────────────────
 
-build:
-	$(GO) build $(LDFLAGS) -o $(BINARY_NAME) .
+GO_DIR = packages/ai-setup-go
+BINARY_NAME = ai-setup
+GO = go
 
-test:
-	$(GO) test ./... -v -count=1
+go-build:
+	cd $(GO_DIR) && $(GO) build -o $(BINARY_NAME) .
 
-test-short:
-	$(GO) test ./... -short -count=1
+go-test:
+	cd $(GO_DIR) && $(GO) test ./... -v -count=1
 
-test-coverage:
-	$(GO) test ./... -coverprofile=coverage.out -count=1
-	$(GO) tool cover -html=coverage.out -o coverage.html
+go-test-short:
+	cd $(GO_DIR) && $(GO) test ./... -short -count=1
 
-vet:
-	$(GO) vet ./...
+go-test-coverage:
+	cd $(GO_DIR) && $(GO) test ./... -coverprofile=coverage.out -count=1
+	cd $(GO_DIR) && $(GO) tool cover -html=coverage.out -o coverage.html
 
-lint: vet
-	@echo "Linting Go files..."
+go-vet:
+	cd $(GO_DIR) && $(GO) vet ./...
 
-fmt:
-	gofmt -w .
-	goimports -w .
+go-tidy:
+	cd $(GO_DIR) && $(GO) mod tidy
 
-tidy:
-	$(GO) mod tidy
+go-fmt:
+	cd $(GO_DIR) && gofmt -w . && goimports -w .
+
+go-clean:
+	rm -f $(GO_DIR)/$(BINARY_NAME) $(GO_DIR)/coverage.out $(GO_DIR)/coverage.html
+
+go-cross-build:
+	cd $(GO_DIR) && \
+		GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-arm64 . && \
+		GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-amd64 . && \
+		GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 . && \
+		GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 . && \
+		GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
+
+go-checksums: go-cross-build
+	cd $(GO_DIR)/dist && shasum -a 256 * > checksums.txt
+
+go-all: go-vet go-test go-build
+
+# ── TypeScript (pnpm workspaces) ────────────────────────────────────────────
+
+ts-install:
+	pnpm install
+
+ts-build:
+	pnpm run build
+
+ts-test:
+	pnpm run test
+
+ts-typecheck:
+	pnpm run typecheck
+
+# ── Orchestrator ────────────────────────────────────────────────────────────
+
+orch-build:
+	pnpm --filter @ai-setup/orchestrator run build
+
+orch-test:
+	pnpm --filter @ai-setup/orchestrator run test
+
+# ── Convenience ─────────────────────────────────────────────────────────────
+
+build: ts-build go-build
+test: ts-test go-test
+lint: go-vet ts-typecheck
 
 clean:
-	rm -f $(BINARY_NAME) coverage.out coverage.html
-	rm -rf dist/
+	rm -rf packages/ai-setup-go/dist packages/ai-setup-ts/dist packages/orchestrator/dist
+	rm -f packages/ai-setup-go/$(BINARY_NAME) packages/ai-setup-go/coverage.out packages/ai-setup-go/coverage.html
 
-install: build
-	cp $(BINARY_NAME) /usr/local/bin/
-
-cross-build:
-	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-arm64 .
-	GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-amd64 .
-	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 .
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 .
-	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
-
-checksums: cross-build
-	cd dist && shasum -a 256 * > checksums.txt
-
-dev:
-	$(GO) build -o $(BINARY_NAME) . && ./$(BINARY_NAME) $(ARGS)
-
-all: vet test build
+all: lint test build

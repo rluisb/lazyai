@@ -1,0 +1,45 @@
+<quality-gates>
+  <description>Required quality checks before code completion</description>
+  
+  <gates>
+    <gate name="lint" required="true">
+      <description>Code style and static analysis</description>
+      <commands>
+        <default>npm run lint</default>
+        <ruby>bundle exec rubocop</ruby>
+        <go>go vet ./...</go>
+      </commands>
+    </gate>
+    
+    <gate name="typecheck" required="true">
+      <description>Type safety validation</description>
+      <commands>
+        <typescript>npm run typecheck</typescript>
+        <ruby>bundle exec srb tc</ruby>
+        <go>go build ./...</go>
+      </commands>
+    </gate>
+    
+    <gate name="test" required="true">
+      <description>Automated test suite</description>
+      <commands>
+        <default>npm test</default>
+        <ruby>bundle exec rspec</ruby>
+        <go>go test ./...</go>
+      </commands>
+    </gate>
+    
+    <gate name="build" required="false">
+      <description>Production build verification</description>
+      <commands>
+        <default>npm run build</default>
+      </commands>
+    </gate>
+  </gates>
+  
+  <coverage>
+    <minimum-client>85</minimum-client>
+    <minimum-server>90</minimum-server>
+    <require-new-tests>For new features and bug fixes</require-new-tests>
+  </coverage>
+</quality-gates>

@@ -1,7 +1,0 @@
-#!/bin/sh
-
-# Pre-commit hook
-
-# Run quality gates
-npm run lint
-npm run test

@@ -46,6 +46,7 @@ export function registerExtensions(program: Command): void {
         if (ext.content.skills.length) items.push(`${ext.content.skills.length} skills`)
         if (ext.content.prompts.length) items.push(`${ext.content.prompts.length} prompts`)
         if (ext.content.rules.length) items.push(`${ext.content.rules.length} rules`)
+        if (ext.content.mcpServers.length) items.push(`${ext.content.mcpServers.length} MCP servers`)
 
         showSummaryBox(`📦 ${ext.name}`, [
           { label: 'Kind', value: ext.kind === 'toml' ? 'TOML config' : 'Local directory' },

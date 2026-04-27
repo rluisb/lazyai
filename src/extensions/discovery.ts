@@ -15,6 +15,7 @@ export interface ExtensionContent {
   prompts: string[]
   rules: string[]
   templates: string[]
+  mcpServers: Array<{ name: string; path: string }>
 }
 
 const CONTENT_DIRS = ['agents', 'skills', 'prompts', 'rules', 'templates'] as const
@@ -64,7 +65,7 @@ export function discoverExtensions(targetDir: string): ExtensionDescriptor[] {
 }
 
 function scanExtensionContent(extPath: string): ExtensionContent {
-  const content: ExtensionContent = { agents: [], skills: [], prompts: [], rules: [], templates: [] }
+  const content: ExtensionContent = { agents: [], skills: [], prompts: [], rules: [], templates: [], mcpServers: [] }
 
   for (const dir of CONTENT_DIRS) {
     const dirPath = join(extPath, dir)
@@ -87,11 +88,28 @@ function scanExtensionContent(extPath: string): ExtensionContent {
     }
   }
 
+  // Scan for MCP server configs
+  const mcpJsonPath = join(extPath, 'mcp.json')
+  if (existsSync(mcpJsonPath)) {
+    content.mcpServers.push({ name: 'extension-root', path: mcpJsonPath })
+  }
+
+  // Scan agent-local MCP configs
+  const agentsDir = join(extPath, 'agents')
+  if (existsSync(agentsDir)) {
+    for (const entry of readdirSync(agentsDir)) {
+      const agentMcpPath = join(agentsDir, entry, 'mcp.json')
+      if (statSync(join(agentsDir, entry)).isDirectory() && existsSync(agentMcpPath)) {
+        content.mcpServers.push({ name: entry, path: agentMcpPath })
+      }
+    }
+  }
+
   return content
 }
 
 function hasAnyContent(content: ExtensionContent): boolean {
-  return Object.values(content).some((arr) => arr.length > 0)
+  return Object.values(content).some((arr) => Array.isArray(arr) && arr.length > 0)
 }
 
 /**
@@ -99,7 +117,7 @@ function hasAnyContent(content: ExtensionContent): boolean {
  */
 export function getExtendedAvailable(
   targetDir: string,
-  category: keyof ExtensionContent,
+  category: Exclude<keyof ExtensionContent, 'mcpServers'>,
 ): string[] {
   const builtIn = getBuiltInContent(category, targetDir)
   const extensions = discoverExtensions(targetDir)
@@ -114,7 +132,7 @@ export function getExtendedAvailable(
   return [...names].sort()
 }
 
-function getBuiltInContent(category: keyof ExtensionContent, targetDir: string): string[] {
+function getBuiltInContent(category: Exclude<keyof ExtensionContent, 'mcpServers'>, targetDir: string): string[] {
   const catDir = join(targetDir, 'library', category)
   if (!existsSync(catDir)) return []
 

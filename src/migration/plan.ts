@@ -131,18 +131,8 @@ export async function generateMigrationPlan(
   const { dedupedActions, adapterConflicts } = deduplicateActions(allActions);
 
   // Calculate canProceed
-  const unresolvedConflicts = conflicts.filter(c => !c.resolved);
-  const canProceed = unresolvedConflicts.length === 0 || context.options.mergeStrategy !== 'smart';
-
-  // Deduplicate actions by targetPath (keep first occurrence)
-  const seenTargets = new Set<string>();
-  const dedupedActions = actions.filter(action => {
-    // Only deduplicate actions with a targetPath (create, modify, skip)
-    if (!action.targetPath) return true;
-    if (seenTargets.has(action.targetPath)) return false;
-    seenTargets.add(action.targetPath);
-    return true;
-  });
+  const unresolvedConflicts = conflicts.filter(c => !c.resolved)
+  const canProceed = unresolvedConflicts.length === 0 || context.options.mergeStrategy !== 'smart'
 
   return {
     sourcePath: context.sourcePath,

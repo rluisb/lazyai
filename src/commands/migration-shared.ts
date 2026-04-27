@@ -1,8 +1,9 @@
 import path from 'node:path'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { detectAdapters, formatPlan, importSetup } from '../migration/index.js'
+import { detectAdapters, detectExistingSetup, formatPlan, importSetup } from '../migration/index.js'
 import type { MergeStrategy, MigrationResult } from '../migration/types.js'
+import { DETECTION_NAMES } from '../migration/detector.js'
 
 export interface MigrationCommandOptions {
   path?: string
@@ -54,10 +55,28 @@ export async function runMigrationCommand(
 
   const adapters = await detectAdapters(resolvedSource)
 
+  // Also detect observed-only tools for informational message
+  const context = { sourcePath: resolvedSource, targetPath: process.cwd(), options: { preview: false, mergeStrategy: 'smart' as const, verbose: false, skipBackup: false, interactive: false } }
+  const allDetections = await detectExistingSetup(context)
+  const observedTools = allDetections
+    .filter(d => d.metadata?.observed && d.confidence > 0.3)
+    .map(d => DETECTION_NAMES[d.adapterId] || d.adapterId)
+
+  if (adapters.length === 0 && observedTools.length > 0) {
+    spinner.stop(pc.yellow('No supported AI setup detected'))
+    console.log(pc.gray(`👁️  Detected (not managed): ${observedTools.join(', ')}`))
+    printNoSetupHelp(commandName, resolvedSource)
+    process.exit(1)
+  }
+
   if (adapters.length === 0) {
     spinner.stop(pc.yellow('No supported AI setup detected'))
     printNoSetupHelp(commandName, resolvedSource)
     process.exit(1)
+  }
+
+  if (observedTools.length > 0) {
+    console.log(pc.gray(`👁️  Detected (not managed): ${observedTools.join(', ')}`))
   }
 
   spinner.stop(pc.green(`Detected ${adapters.length} setup(s): ${formatAdapterList(adapters)}`))

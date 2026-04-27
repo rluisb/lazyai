@@ -55,6 +55,7 @@ interface InitOptions {
   branchPattern?: string
   commitPattern?: string
   enableServers?: string
+  installMode?: string
 }
 
 export function registerInit(program: Command): void {
@@ -108,6 +109,7 @@ export function registerInit(program: Command): void {
       '--enable-servers <servers>',
       'Comma-separated MCP servers to enable (e.g., atlassian,playwright,orchestrator)'
     )
+    .option('--install-mode <mode>', 'Install mode: copy | symlink (default: copy)')
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
       const targetDir = process.cwd()
@@ -147,6 +149,7 @@ export function registerInit(program: Command): void {
         branchPattern?: string
         commitPattern?: string
         enableServers?: string[]
+        installMode?: 'copy' | 'symlink'
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
@@ -158,6 +161,8 @@ export function registerInit(program: Command): void {
       if (cliTools) cliOverrides.cliTools = cliTools
       if (opts.name) cliOverrides.name = opts.name
       else if (tomlConfig.project_name) cliOverrides.name = tomlConfig.project_name
+      if (opts.installMode) cliOverrides.installMode = opts.installMode as 'copy' | 'symlink'
+      else if (tomlConfig.install_mode) cliOverrides.installMode = tomlConfig.install_mode
       if (opts.planningDir) cliOverrides.planningDir = opts.planningDir
       if (opts.preset) cliOverrides.preset = opts.preset as PresetLevel
       if (features) cliOverrides.features = features

@@ -38,7 +38,7 @@ describe('db migration runner', () => {
 
   it('enables WAL mode and foreign keys on disk-backed databases', () => {
     const db = openDatabase(':memory:')
-    const fkRow = db.pragma('foreign_keys')
+    const fkRow = db.pragma('foreign_keys') as { foreign_keys: number }[]
     expect(fkRow[0]?.foreign_keys).toBe(1)
     db.close()
   })

@@ -555,13 +555,64 @@ async function createAiSetupManifest(
 }
 
 export async function rollbackMigration(
-  _context: MigrationContext,
-  _backupPath: string
-): Promise<void> {
-  // Restore files from backup
-  // This is a safety feature for failed migrations
-  console.warn('Rolling back migration...');
-  
-  // Implementation would restore backed up files
-  // For now, we just log the intent
+  context: MigrationContext,
+  backupPath: string
+): Promise<string[]> {
+  const rolledBackFiles: string[] = [];
+
+  // Verify backup directory exists
+  try {
+    await fs.access(backupPath);
+  } catch {
+    console.warn(`Backup directory not found, nothing to rollback: ${backupPath}`);
+    return rolledBackFiles;
+  }
+
+  // Walk backup directory recursively to find all files
+  const entries = await walkDirectory(backupPath);
+
+  for (const entry of entries) {
+    const relativePath = path.relative(backupPath, entry);
+
+    // Strip .ai-setup-backup/ prefix from stored path
+    const targetRelative = stripBackupPrefix(relativePath);
+    const targetFullPath = path.join(context.targetPath, targetRelative);
+
+    try {
+      // Ensure target parent directory exists
+      await fs.mkdir(path.dirname(targetFullPath), { recursive: true });
+      // Restore file from backup (overwrite existing)
+      await fs.copyFile(entry, targetFullPath);
+      rolledBackFiles.push(targetRelative);
+    } catch (error) {
+      console.warn(`Failed to restore ${targetRelative}: ${error}`);
+    }
+  }
+
+  return rolledBackFiles;
+}
+
+async function walkDirectory(dir: string): Promise<string[]> {
+  const results: string[] = [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const subResults = await walkDirectory(fullPath);
+      results.push(...subResults);
+    } else if (entry.isFile()) {
+      results.push(fullPath);
+    }
+  }
+
+  return results;
+}
+
+function stripBackupPrefix(relativePath: string): string {
+  const prefix = '.ai-setup-backup/';
+  if (relativePath.startsWith(prefix)) {
+    return relativePath.slice(prefix.length);
+  }
+  return relativePath;
 }

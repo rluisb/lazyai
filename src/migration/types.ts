@@ -153,6 +153,7 @@ export interface MigrationResult {
   plan: MigrationPlan | null;
   executedActions: MigrationAction[];
   backupPath?: string;
+  rolledBackFiles?: string[];
   errors: string[];
   warnings: string[];
   stats: MigrationStats;

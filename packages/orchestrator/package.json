@@ -1,0 +1,32 @@
+{
+  "name": "@ai-setup/orchestrator",
+  "version": "0.1.0",
+  "description": "Pure TypeScript MCP orchestration core for ai-setup",
+  "type": "module",
+  "bin": {
+    "ai-setup-orchestrator": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.1",
+    "better-sqlite3": "^12.9.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  }
+}

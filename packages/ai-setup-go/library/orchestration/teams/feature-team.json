@@ -1,0 +1,32 @@
+{
+  "kind": "team",
+  "name": "feature-team",
+  "description": "Parallel feature framing from research, planning, and quality perspectives",
+  "version": "1.0.0",
+  "budget_multiplier": 3,
+  "user_confirmation_required": true,
+  "parallel": [
+    {
+      "role": "context-researcher",
+      "agent": "scout",
+      "skills": ["research"],
+      "focus": "Affected areas, dependencies, and hidden integration risk."
+    },
+    {
+      "role": "delivery-planner",
+      "agent": "planner",
+      "skills": ["plan"],
+      "focus": "Possible implementation slices, sequencing, and trade-offs."
+    },
+    {
+      "role": "quality-challenger",
+      "agent": "reviewer",
+      "skills": ["extract-standards"],
+      "focus": "Gaps in requirements, validation, and rollout safety."
+    }
+  ],
+  "synthesize": {
+    "agent": "orchestrator",
+    "description": "Turn the parallel findings into a single recommended delivery approach."
+  }
+}

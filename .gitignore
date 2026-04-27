@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Temporary library copy for npm publish (created by prepublishOnly, cleaned by postpublish)
+packages/ai-setup-ts/library/
+
 # Build output
 dist/
 ai-setup
@@ -44,6 +47,7 @@ specs/**/AGENTS.md
 .codegraph/
 .logs/
 .mcp.json
+graphify-out/cache/
 
 # Logs
 *.log

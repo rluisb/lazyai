@@ -94,6 +94,31 @@ export async function runPhase4(opts: {
     p.note(lines.join('\n'), 'File Breakdown')
   }
 
+  // Per-tool summary when multiple tools
+  if (opts.config && opts.config.tools.length > 0) {
+    const toolLines: string[] = []
+    const toolRoots: Record<string, string> = {
+      opencode: '.opencode/',
+      'claude-code': '.claude/',
+      gemini: '.gemini/',
+      copilot: '.github/',
+      codex: '.codex/',
+      pi: '.pi/',
+    }
+    for (const tool of opts.config.tools) {
+      const toolPlan = opts.plan.filter((f) => f.destPath.includes(toolRoots[tool] ?? tool))
+      const toolName = formatTools([tool])
+      if (toolPlan.length > 0) {
+        const tNew = toolPlan.filter((f) => f.isNew).length
+        const tUpd = toolPlan.filter((f) => !f.isNew).length
+        toolLines.push(`  ${toolName}: ${tNew} new, ${tUpd} existing → ${toolRoots[tool] ?? tool}`)
+      }
+    }
+    if (toolLines.length > 0) {
+      p.note(toolLines.join('\n'), 'Per-Tool Install Roots')
+    }
+  }
+
   // Confirm — use select instead of confirm to support Back navigation
   const confirmedResult = await p.select({
     message: 'Proceed with installation?',

@@ -53,10 +53,281 @@ func init() {
 	orchestrationStatusCmd.Flags().String("dir", "", "Target directory (default: current directory)")
 	orchestrationStatusCmd.Flags().Bool("json", false, "Output as JSON")
 
+	// Catalog commands
+	catalogCmd.Flags().String("db", "", "Orchestrator DB path (default: ~/.local/share/ai-setup-orchestrator/orchestrator.db)")
+	catalogCmd.Flags().Bool("json", false, "Output as JSON")
+
+	catalogVersionsCmd.Flags().String("db", "", "Orchestrator DB path")
+	catalogVersionsCmd.Flags().Bool("json", false, "Output as JSON")
+	catalogVersionsCmd.Flags().String("kind", "", "Catalog kind (chain, team, workflow, skill, mode, agent, command)")
+
+	catalogCreateCmd.Flags().String("db", "", "Orchestrator DB path")
+	catalogCreateCmd.Flags().String("kind", "", "Catalog kind")
+	catalogCreateCmd.Flags().String("file", "", "Path to definition JSON file (required)")
+
+	catalogSetActiveCmd.Flags().String("db", "", "Orchestrator DB path")
+	catalogSetActiveCmd.Flags().String("kind", "", "Catalog kind")
+
+	catalogDiffCmd.Flags().String("db", "", "Orchestrator DB path")
+	catalogDiffCmd.Flags().String("kind", "", "Catalog kind")
+
+	catalogCmd.AddCommand(catalogVersionsCmd)
+	catalogCmd.AddCommand(catalogCreateCmd)
+	catalogCmd.AddCommand(catalogSetActiveCmd)
+	catalogCmd.AddCommand(catalogDiffCmd)
+
 	orchestrationCmd.AddCommand(orchestrationListCmd)
 	orchestrationCmd.AddCommand(orchestrationCreateCmd)
 	orchestrationCmd.AddCommand(orchestrationStatusCmd)
+	orchestrationCmd.AddCommand(catalogCmd)
 	rootCmd.AddCommand(orchestrationCmd)
+}
+
+// ---------------------------------------------------------------------------
+// Catalog subcommands
+// ---------------------------------------------------------------------------
+
+var catalogCmd = &cobra.Command{
+	Use:   "catalog",
+	Short: "Manage catalog versioning (definitions, versions, active pointers)",
+	Long: `Manage the internal versioned catalog.
+
+Subcommands:
+  catalog                        List all catalog definitions with their active version
+  catalog versions <name>        List all versions of a definition
+  catalog create <name>          Create a new version from a file
+  catalog set-active <name> <v>  Set the active version for a definition
+  catalog diff <name> <v1> <v2>  Compare two versions of a definition`,
+	Args: cobra.NoArgs,
+	RunE: runCatalogList,
+}
+
+var catalogVersionsCmd = &cobra.Command{
+	Use:   "versions <name>",
+	Short: "List all versions of a catalog definition",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runCatalogVersions,
+}
+
+var catalogCreateCmd = &cobra.Command{
+	Use:   "create <name>",
+	Short: "Create a new version of a catalog definition from a file",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runCatalogCreate,
+}
+
+var catalogSetActiveCmd = &cobra.Command{
+	Use:   "set-active <name> <version>",
+	Short: "Set the active version for a catalog definition",
+	Args:  cobra.ExactArgs(2),
+	RunE:  runCatalogSetActive,
+}
+
+var catalogDiffCmd = &cobra.Command{
+	Use:   "diff <name> <v1> <v2>",
+	Short: "Show diff between two versions of a catalog definition",
+	Args:  cobra.ExactArgs(3),
+	RunE:  runCatalogDiff,
+}
+
+// openCatalogDB resolves and opens the orchestrator catalog DB.
+func openCatalogDB(cmd *cobra.Command) (*internalorchestrator.CatalogDB, error) {
+	dbPath, _ := cmd.Flags().GetString("db")
+	if dbPath == "" {
+		var err error
+		dbPath, err = internalorchestrator.DefaultCatalogDBPath()
+		if err != nil {
+			return nil, fmt.Errorf("resolve default db path: %w", err)
+		}
+	}
+	return internalorchestrator.OpenCatalogDB(dbPath)
+}
+
+// resolveKind determines the catalog kind from --kind flag or by inferring from name.
+func resolveKind(cmd *cobra.Command, name string) string {
+	if kind, _ := cmd.Flags().GetString("kind"); kind != "" {
+		return kind
+	}
+	// Try to infer kind from plural name forms.
+	switch name {
+	case "chains", "chain":
+		return "chain"
+	case "teams", "team":
+		return "team"
+	case "workflows", "workflow":
+		return "workflow"
+	case "domains", "domain", "skills":
+		return "skill"
+	case "modes", "mode":
+		return "mode"
+	case "agents", "agent":
+		return "agent"
+	case "commands", "command":
+		return "command"
+	}
+	return ""
+}
+
+func runCatalogList(cmd *cobra.Command, args []string) error {
+	cdb, err := openCatalogDB(cmd)
+	if err != nil {
+		return err
+	}
+	defer cdb.Close()
+
+	outputJSON, _ := cmd.Flags().GetBool("json")
+	defs, err := cdb.ListDefinitions("")
+	if err != nil {
+		return fmt.Errorf("list definitions: %w", err)
+	}
+
+	if outputJSON {
+		return writeJSON(defs)
+	}
+
+	fmt.Print(internalorchestrator.FormatCatalogList(defs))
+	return nil
+}
+
+func runCatalogVersions(cmd *cobra.Command, args []string) error {
+	cdb, err := openCatalogDB(cmd)
+	if err != nil {
+		return err
+	}
+	defer cdb.Close()
+
+	name := args[0]
+	kind := resolveKind(cmd, name)
+	if kind == "" {
+		return fmt.Errorf("could not determine catalog kind for %q; use --kind flag", name)
+	}
+
+	outputJSON, _ := cmd.Flags().GetBool("json")
+	versions, err := cdb.ListVersions(kind, name)
+	if err != nil {
+		return fmt.Errorf("list versions: %w", err)
+	}
+
+	if outputJSON {
+		return writeJSON(versions)
+	}
+
+	fmt.Printf("Versions of %s/%s:\n", kind, name)
+	fmt.Print(internalorchestrator.FormatVersionList(versions))
+	return nil
+}
+
+func runCatalogCreate(cmd *cobra.Command, args []string) error {
+	cdb, err := openCatalogDB(cmd)
+	if err != nil {
+		return err
+	}
+	defer cdb.Close()
+
+	name := args[0]
+	kind := resolveKind(cmd, name)
+	if kind == "" {
+		return fmt.Errorf("could not determine catalog kind for %q; use --kind flag", name)
+	}
+
+	filePath, _ := cmd.Flags().GetString("file")
+	if filePath == "" {
+		return fmt.Errorf("--file is required")
+	}
+
+	result, err := cdb.CreateVersion(kind, name, filePath, "", true)
+	if err != nil {
+		return fmt.Errorf("create version: %w", err)
+	}
+
+	if result.AlreadyExists {
+		fmt.Printf("Version v%d already exists (unchanged, checksum %s)\n", result.Version, result.Checksum)
+	} else {
+		fmt.Printf("Created v%d of %s/%s (checksum %s)\n", result.Version, kind, name, result.Checksum)
+	}
+	return nil
+}
+
+func runCatalogSetActive(cmd *cobra.Command, args []string) error {
+	cdb, err := openCatalogDB(cmd)
+	if err != nil {
+		return err
+	}
+	defer cdb.Close()
+
+	name := args[0]
+	kind := resolveKind(cmd, name)
+	if kind == "" {
+		return fmt.Errorf("could not determine catalog kind for %q; use --kind flag", name)
+	}
+
+	versionStr := args[1]
+	version := 0
+	if _, err := fmt.Sscanf(versionStr, "v%d", &version); err != nil {
+		// Try plain integer
+		if _, err := fmt.Sscanf(versionStr, "%d", &version); err != nil {
+			return fmt.Errorf("invalid version: %q (expected vN or N)", versionStr)
+		}
+	}
+
+	if err := cdb.SetActive(kind, name, version); err != nil {
+		return fmt.Errorf("set active: %w", err)
+	}
+
+	fmt.Printf("Set %s/%s active version to v%d\n", kind, name, version)
+	return nil
+}
+
+func runCatalogDiff(cmd *cobra.Command, args []string) error {
+	cdb, err := openCatalogDB(cmd)
+	if err != nil {
+		return err
+	}
+	defer cdb.Close()
+
+	name := args[0]
+	kind := resolveKind(cmd, name)
+	if kind == "" {
+		return fmt.Errorf("could not determine catalog kind for %q; use --kind flag", name)
+	}
+
+	var fromV, toV int
+	if _, err := fmt.Sscanf(args[1], "v%d", &fromV); err != nil {
+		if _, err := fmt.Sscanf(args[1], "%d", &fromV); err != nil {
+			return fmt.Errorf("invalid from-version: %q", args[1])
+		}
+	}
+	if _, err := fmt.Sscanf(args[2], "v%d", &toV); err != nil {
+		if _, err := fmt.Sscanf(args[2], "%d", &toV); err != nil {
+			return fmt.Errorf("invalid to-version: %q", args[2])
+		}
+	}
+
+	diff, err := cdb.DiffVersions(kind, name, fromV, toV)
+	if err != nil {
+		return fmt.Errorf("diff versions: %w", err)
+	}
+
+	outputJSON, _ := cmd.Flags().GetBool("json")
+	if outputJSON {
+		return writeJSON(diff)
+	}
+
+	if diff.From == nil {
+		fmt.Printf("(v%d not found)\n", fromV)
+	} else {
+		fmt.Printf("--- v%d  %s  (%d bytes)\n", diff.From.Version, internalorchestrator.FormatCatalogDate(diff.From.CreatedAt), len(diff.From.Body))
+	}
+	if diff.To == nil {
+		fmt.Printf("(v%d not found)\n", toV)
+	} else {
+		fmt.Printf("+++ v%d  %s  (%d bytes)\n", diff.To.Version, internalorchestrator.FormatCatalogDate(diff.To.CreatedAt), len(diff.To.Body))
+	}
+
+	if diff.From != nil && diff.To != nil && diff.From.Checksum == diff.To.Checksum {
+		fmt.Println("(no changes)")
+	}
+	return nil
 }
 
 var orchestrationCategories = []internalorchestrator.ListCategory{

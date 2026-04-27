@@ -33,11 +33,13 @@ function resolveOrchestratorPackageDir(libraryDir: string): string | null {
   return fileExists(path.join(packageDir, 'package.json')) ? packageDir : null
 }
 
-function runOrchestratorBuildStep(packageDir: string, ...args: string[]): void {
+function runOrchestratorBuildStep(packageDir: string, ...args: string[]): boolean {
   try {
     execFileSync('npm', ['--prefix', packageDir, ...args], { stdio: 'ignore', timeout: 120_000 })
+    return true
   } catch (error) {
-    throw new Error(`prepare orchestrator MCP: npm ${args.join(' ')} failed: ${(error as Error).message}`)
+    console.warn(`⚠️  Orchestrator build step "npm ${args.join(' ')}" failed: ${(error as Error).message}`)
+    return false
   }
 }
 
@@ -57,12 +59,16 @@ function prepareManagedOrchestratorServer(libraryDir: string, server: McpServer)
   const entryPath = path.join(packageDir, 'dist', 'index.js')
 
   if (!fileExists(entryPath)) {
-    runOrchestratorBuildStep(packageDir, 'install')
-    runOrchestratorBuildStep(packageDir, 'run', 'build')
+    console.log('Building orchestrator package...')
+    const installOk = runOrchestratorBuildStep(packageDir, 'install')
+    if (installOk) {
+      runOrchestratorBuildStep(packageDir, 'run', 'build')
+    }
   }
 
   if (!fileExists(entryPath)) {
-    throw new Error(`prepare orchestrator MCP: expected build output ${entryPath}`)
+    console.warn(`⚠️  Orchestrator build did not produce ${entryPath} — using catalog default command`)
+    return server
   }
 
   if (/^(1|true)$/i.test(process.env.AI_SETUP_ORCHESTRATOR_SMOKE ?? '')) {

@@ -240,12 +240,14 @@ func parseOrchestrationCreateType(value string) (types.ArtifactType, error) {
 	switch value {
 	case string(types.ArtifactTypeWorkflow):
 		return types.ArtifactTypeWorkflow, nil
+	case string(types.ArtifactTypeChain):
+		return types.ArtifactTypeChain, nil
+	case string(types.ArtifactTypeTeam):
+		return types.ArtifactTypeTeam, nil
 	case string(types.ArtifactTypeDomain):
 		return types.ArtifactTypeDomain, nil
 	case string(types.ArtifactTypeMode):
 		return types.ArtifactTypeMode, nil
-	case "chain", "team":
-		return "", fmt.Errorf("orchestration create %s is not implemented", value)
 	default:
 		return "", fmt.Errorf("unsupported orchestration create type: %s", value)
 	}

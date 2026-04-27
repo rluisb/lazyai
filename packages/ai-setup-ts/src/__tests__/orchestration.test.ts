@@ -4,8 +4,9 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { scaffoldOrchestration } from '../scaffold/orchestration.js'
 import type { FileRecord } from '../types.js'
+import { findMonorepoLibraryDir } from './test-helpers.js'
 
-const libraryDir = path.resolve(process.cwd(), 'library')
+const libraryDir = findMonorepoLibraryDir()
 
 describe('scaffoldOrchestration', () => {
   let tempDir: string

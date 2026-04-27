@@ -164,6 +164,8 @@ const (
 	ArtifactTypePrompt              ArtifactType = "prompt"
 	ArtifactTypeTemplate            ArtifactType = "template"
 	ArtifactTypeWorkflow            ArtifactType = "workflow"
+	ArtifactTypeChain               ArtifactType = "chain"
+	ArtifactTypeTeam                ArtifactType = "team"
 	ArtifactTypeDomain              ArtifactType = "domain"
 	ArtifactTypeMode                ArtifactType = "mode"
 	ArtifactTypeMemoryNote          ArtifactType = "memory_note"

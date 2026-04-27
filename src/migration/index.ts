@@ -10,7 +10,7 @@ export * from './parsers/base-parser.js';
 export * from './registry/discovery.js';
 export * from './types.js';
 
-import { detectExistingSetup, hasAdapter } from './detector.js';
+import { detectExistingSetup, hasAdapter, SUPPORTED_TOOLS } from './detector.js';
 import { checkDrift } from './doctor.js';
 import { executeMigrationPlan, executeMigrationToCanonical } from './executor.js';
 import { generateMigrationPlan } from './plan.js';
@@ -184,9 +184,7 @@ export async function detectAdapters(path?: string): Promise<string[]> {
   const sourcePath = path || process.cwd();
   const adapters: string[] = [];
 
-  const adapterIds = ['opencode', 'claude-code', 'gemini', 'copilot'];
-  
-  for (const adapterId of adapterIds) {
+  for (const adapterId of SUPPORTED_TOOLS) {
     if (await hasAdapter(sourcePath, adapterId)) {
       adapters.push(adapterId);
     }

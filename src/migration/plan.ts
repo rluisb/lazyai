@@ -110,13 +110,23 @@ export async function generateMigrationPlan(
   const unresolvedConflicts = conflicts.filter(c => !c.resolved);
   const canProceed = unresolvedConflicts.length === 0 || context.options.mergeStrategy !== 'smart';
 
+  // Deduplicate actions by targetPath (keep first occurrence)
+  const seenTargets = new Set<string>();
+  const dedupedActions = actions.filter(action => {
+    // Only deduplicate actions with a targetPath (create, modify, skip)
+    if (!action.targetPath) return true;
+    if (seenTargets.has(action.targetPath)) return false;
+    seenTargets.add(action.targetPath);
+    return true;
+  });
+
   return {
     sourcePath: context.sourcePath,
     targetPath: context.targetPath,
     adapters,
-    actions,
+    actions: dedupedActions,
     conflicts,
-    estimatedFiles: actions.filter(a => a.type !== 'skip').length,
+    estimatedFiles: dedupedActions.filter(a => a.type !== 'skip').length,
     estimatedConflicts: unresolvedConflicts.length,
     canProceed,
   };

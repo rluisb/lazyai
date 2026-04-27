@@ -163,6 +163,7 @@ async function runPhase12Loop(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
+    installMode?: 'copy' | 'symlink'
   }
   targetDir: string
 }): Promise<WizardState> {
@@ -343,9 +344,10 @@ export async function runWizard(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
-  }
-  targetDir: string
-}): Promise<void> {
+      installMode?: 'copy' | 'symlink'
+    }
+    targetDir: string
+  }): Promise<void> {
   const tracker = new OperationTracker('init')
 
   try {
@@ -762,6 +764,7 @@ export async function runWizard(opts: {
             fileRecords: [],
             force: opts.force,
             strategy,
+            ...(opts.cliOverrides.installMode ? { installMode: opts.cliOverrides.installMode } : {}),
           })
 
           await compileMcp({

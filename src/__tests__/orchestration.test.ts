@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -48,5 +48,28 @@ describe('scaffoldOrchestration', () => {
 
     const entries = readdirSync(path.join(tempDir, '.ai', 'orchestration')).sort()
     expect(entries).toEqual(['chains', 'skills', 'teams', 'workflows'])
+  })
+
+  it('adds orchestration content from discovered extensions', async () => {
+    const extensionDir = path.join(tempDir, '.ai', 'extensions', 'team-pack')
+    mkdirSync(path.join(extensionDir, 'skills'), { recursive: true })
+    mkdirSync(path.join(extensionDir, 'orchestration', 'chains'), { recursive: true })
+    mkdirSync(path.join(extensionDir, 'orchestration', 'workflows'), { recursive: true })
+    writeFileSync(path.join(extensionDir, 'skills', 'custom-skill.md'), '# Custom Skill')
+    writeFileSync(path.join(extensionDir, 'orchestration', 'chains', 'release.json'), '{"name":"release"}')
+    writeFileSync(path.join(extensionDir, 'orchestration', 'workflows', 'deploy.json'), '{"name":"deploy"}')
+
+    await scaffoldOrchestration({
+      targetDir: tempDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration', 'chains', 'feature.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration', 'chains', 'release.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.ai', 'orchestration', 'workflows', 'deploy.json'))).toBe(true)
+    expect(fileRecords.some((record) => record.path === '.ai/orchestration/chains/release.json')).toBe(true)
   })
 })

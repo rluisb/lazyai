@@ -16,6 +16,10 @@ type AdapterContext struct {
 	TargetDir string
 	// SetupScope is the installation scope (global, workspace, project).
 	SetupScope types.SetupScope
+	// WorkspaceRoot, when set and scope is workspace, overrides TargetDir
+	// for tool config paths. AI tool configs go to workspace root, specs
+	// go to TargetDir (the planning repo). Empty for project/global scopes.
+	WorkspaceRoot string
 	// HomeDir is the user's home directory, used for global scope path resolution.
 	HomeDir string
 	// LibraryDir is the path to the library containing source templates.
@@ -92,9 +96,10 @@ type CompileContext struct {
 // ResolveToolRoot / ResolveCodexRoots from a CompileContext.
 func (c CompileContext) toAdapterContext() *AdapterContext {
 	return &AdapterContext{
-		TargetDir:  c.TargetDir,
-		HomeDir:    c.HomeDir,
-		SetupScope: c.SetupScope,
+		TargetDir:     c.TargetDir,
+		HomeDir:       c.HomeDir,
+		SetupScope:    c.SetupScope,
+		WorkspaceRoot: c.WorkspaceRoot,
 	}
 }
 

@@ -35,10 +35,10 @@ func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
 }
 
 // ResolveToolRoot returns the primary directory the adapter should write into
-// for the given (tool, scope) pair. It reads ctx.TargetDir for project and
-// workspace scopes (treated identically — workspace is "project-shaped layout
-// rooted at the user-selected workspace directory") and ctx.HomeDir for global
-// scope. If ctx.HomeDir is empty, falls back to os.UserHomeDir().
+// for the given (tool, scope) pair. For project scope, uses ctx.TargetDir.
+// For workspace scope with WorkspaceRoot set, uses WorkspaceRoot; otherwise
+// falls back to TargetDir (backward compat). For global scope, uses HomeDir.
+// Callers should use this instead of hard-coding paths.
 //
 // Codex has two logical roots (config vs. skills); callers that need both
 // should use ResolveCodexRoots instead.
@@ -51,8 +51,14 @@ func ResolveToolRoot(tool types.ToolId, scope types.SetupScope, ctx *AdapterCont
 	}
 
 	switch scope {
-	case types.SetupScopeProject, types.SetupScopeWorkspace:
+	case types.SetupScopeProject:
 		return filepath.Join(ctx.TargetDir, projectSubdir(tool)), nil
+	case types.SetupScopeWorkspace:
+		root := ctx.TargetDir
+		if ctx.WorkspaceRoot != "" {
+			root = ctx.WorkspaceRoot
+		}
+		return filepath.Join(root, projectSubdir(tool)), nil
 	case types.SetupScopeGlobal:
 		home, err := resolveHomeDir(ctx)
 		if err != nil {

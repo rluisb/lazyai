@@ -143,6 +143,9 @@ func TestRunHeadlessValidation_Codex_Installed(t *testing.T) {
 // --- Test: RunHeadlessValidation uses correct target directory ---
 
 func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping headless validation test in short mode (requires claude/codex CLI)")
+	}
 	// Create a temp dir with a marker file to verify cmd.Dir is set correctly.
 	targetDir := t.TempDir()
 	markerPath := filepath.Join(targetDir, ".marker")

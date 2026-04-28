@@ -420,12 +420,13 @@ export async function runPhase1(opts: {
   }
   tools = toolsResult as ToolId[]
 
-  const skillsResult = await p.multiselect({
+  const skillsResult = (await p.multiselect({
     message: `Which skills should be installed? (previous: ${priorSkills.join(', ')})`,
-    options: ALL_SKILLS.map((skill) => ({ value: skill, label: skill, hint: 'Skill' })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- @clack infers narrow types from options
+    options: ALL_SKILLS.map((skill) => ({ value: skill as string, label: skill, hint: 'Skill' })) as any,
     initialValues: priorSkills,
     required: true,
-  })
+  })) as SkillId[]
 
   if (p.isCancel(skillsResult)) {
     p.cancel('Setup cancelled.')

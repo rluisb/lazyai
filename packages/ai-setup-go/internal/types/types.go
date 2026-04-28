@@ -40,6 +40,7 @@ type AgentId string
 const (
 	AgentIdBuilder      AgentId = "builder"
 	AgentIdDocumenter   AgentId = "documenter"
+	AgentIdImplementor  AgentId = "implementor"
 	AgentIdOrchestrator AgentId = "orchestrator"
 	AgentIdPlanner      AgentId = "planner"
 	AgentIdRedTeam      AgentId = "red-team"
@@ -52,15 +53,33 @@ type SkillId string
 
 const (
 	SkillIdAntiSpeculation   SkillId = "anti-speculation"
+	SkillIdBugfix            SkillId = "bugfix"
 	SkillIdExtractStandards  SkillId = "extract-standards"
+	SkillIdHousekeeping      SkillId = "housekeeping"
+	SkillIdImpactCheck       SkillId = "impact-check"
 	SkillIdImplement         SkillId = "implement"
 	SkillIdIterate           SkillId = "iterate"
 	SkillIdMemoryWrite       SkillId = "memory-write"
 	SkillIdOrchestrate       SkillId = "orchestrate"
 	SkillIdParallelExecution SkillId = "parallel-execution"
 	SkillIdPlan              SkillId = "plan"
+	SkillIdProcessAudit      SkillId = "process-audit"
+	SkillIdProofOfConcept    SkillId = "proof-of-concept"
 	SkillIdResearch          SkillId = "research"
+	SkillIdReview            SkillId = "review"
+	SkillIdRpi               SkillId = "rpi"
+	SkillIdSelfImprove       SkillId = "self-improve"
+	SkillIdSpeckitAnalyze    SkillId = "speckit-analyze"
+	SkillIdSpeckitChecklist  SkillId = "speckit-checklist"
+	SkillIdSpeckitClarify    SkillId = "speckit-clarify"
+	SkillIdSpeckitConstitute SkillId = "speckit-constitution"
+	SkillIdSpeckitImplement  SkillId = "speckit-implement"
+	SkillIdSpeckitPlan       SkillId = "speckit-plan"
+	SkillIdSpeckitSpecify    SkillId = "speckit-specify"
+	SkillIdSpeckitTasks      SkillId = "speckit-tasks"
+	SkillIdSpike             SkillId = "spike"
 	SkillIdTddLoop           SkillId = "tdd-loop"
+	SkillIdUpdateMemory      SkillId = "update-memory"
 )
 
 // PromptId identifies a reusable prompt.
@@ -338,6 +357,7 @@ var (
 	ALL_AGENTS = []AgentId{
 		AgentIdBuilder,
 		AgentIdDocumenter,
+		AgentIdImplementor,
 		AgentIdOrchestrator,
 		AgentIdPlanner,
 		AgentIdRedTeam,
@@ -347,15 +367,33 @@ var (
 
 	ALL_SKILLS = []SkillId{
 		SkillIdAntiSpeculation,
+		SkillIdBugfix,
 		SkillIdExtractStandards,
+		SkillIdHousekeeping,
+		SkillIdImpactCheck,
 		SkillIdImplement,
 		SkillIdIterate,
 		SkillIdMemoryWrite,
 		SkillIdOrchestrate,
 		SkillIdParallelExecution,
 		SkillIdPlan,
+		SkillIdProcessAudit,
+		SkillIdProofOfConcept,
 		SkillIdResearch,
+		SkillIdReview,
+		SkillIdRpi,
+		SkillIdSelfImprove,
+		SkillIdSpeckitAnalyze,
+		SkillIdSpeckitChecklist,
+		SkillIdSpeckitClarify,
+		SkillIdSpeckitConstitute,
+		SkillIdSpeckitImplement,
+		SkillIdSpeckitPlan,
+		SkillIdSpeckitSpecify,
+		SkillIdSpeckitTasks,
+		SkillIdSpike,
 		SkillIdTddLoop,
+		SkillIdUpdateMemory,
 	}
 
 	ALL_PROMPTS = []PromptId{

@@ -71,16 +71,16 @@ export interface AiSetupConfig {
 
 export type ArtifactType = 'agent' | 'skill' | 'command' | 'prompt' | 'template' | 'workflow' | 'domain' | 'mode'
 
-export type AgentId = 'builder' | 'documenter' | 'orchestrator' | 'planner' | 'red-team' | 'reviewer' | 'scout'
-export type SkillId = 'anti-speculation' | 'extract-standards' | 'implement' | 'iterate' | 'memory-write' | 'orchestrate' | 'parallel-execution' | 'plan' | 'research' | 'tdd-loop'
+export type AgentId = 'builder' | 'documenter' | 'implementor' | 'orchestrator' | 'planner' | 'red-team' | 'reviewer' | 'scout'
+export type SkillId = 'anti-speculation' | 'bugfix' | 'extract-standards' | 'housekeeping' | 'impact-check' | 'implement' | 'iterate' | 'memory-write' | 'orchestrate' | 'parallel-execution' | 'plan' | 'process-audit' | 'proof-of-concept' | 'research' | 'review' | 'rpi' | 'self-improve' | 'speckit-analyze' | 'speckit-checklist' | 'speckit-clarify' | 'speckit-constitution' | 'speckit-implement' | 'speckit-plan' | 'speckit-specify' | 'speckit-tasks' | 'spike' | 'tdd-loop' | 'update-memory'
 export type PromptId = 'compact' | 'implement' | 'local-example' | 'plan' | 'research'
 export type TemplateId = 'adr' | 'bugfix-rca-template' | 'checklist-template' | 'code-review-template' | 'plan-template' | 'postmortem-template' | 'spec-template' | 'standard' | 'task' | 'tech-debt-template'
 export type RuleId = 'access' | 'agent-security' | 'code-style' | 'cost' | 'review' | 'security' | 'testing' | 'tool-use' | 'workflow'
 export type ToolAgentId = 'agents-dir' | 'root-dir' | 'skills-dir' | 'templates-dir'
 export type InfraId = 'pre-commit' | 'compliance' | 'KNOWLEDGE_MAP' | 'codeowners'
 
-export const ALL_AGENTS: AgentId[] = ['builder', 'documenter', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout']
-export const ALL_SKILLS: SkillId[] = ['anti-speculation', 'extract-standards', 'implement', 'iterate', 'memory-write', 'orchestrate', 'parallel-execution', 'plan', 'research', 'tdd-loop']
+export const ALL_AGENTS: AgentId[] = ['builder', 'documenter', 'implementor', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout']
+export const ALL_SKILLS: SkillId[] = ['anti-speculation', 'bugfix', 'extract-standards', 'housekeeping', 'impact-check', 'implement', 'iterate', 'memory-write', 'orchestrate', 'parallel-execution', 'plan', 'process-audit', 'proof-of-concept', 'research', 'review', 'rpi', 'self-improve', 'speckit-analyze', 'speckit-checklist', 'speckit-clarify', 'speckit-constitution', 'speckit-implement', 'speckit-plan', 'speckit-specify', 'speckit-tasks', 'spike', 'tdd-loop', 'update-memory']
 export const ALL_PROMPTS: PromptId[] = ['compact', 'implement', 'local-example', 'plan', 'research']
 export const ALL_TEMPLATES: TemplateId[] = ['adr', 'bugfix-rca-template', 'checklist-template', 'code-review-template', 'plan-template', 'postmortem-template', 'spec-template', 'standard', 'task', 'tech-debt-template']
 export const ALL_RULES: RuleId[] = ['access', 'agent-security', 'code-style', 'cost', 'review', 'security', 'testing', 'tool-use', 'workflow']

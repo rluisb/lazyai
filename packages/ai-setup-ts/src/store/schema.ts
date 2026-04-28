@@ -16,18 +16,36 @@ export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
 export const presetLevelSchema = z.enum(['minimal', 'standard', 'full', 'custom'])
 export const toolIdSchema = z.enum(['opencode', 'claude-code', 'gemini', 'copilot', 'codex', 'pi'])
-export const agentIdSchema = z.enum(['builder', 'documenter', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout'])
+export const agentIdSchema = z.enum(['builder', 'documenter', 'implementor', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout'])
 export const skillIdSchema = z.enum([
   'anti-speculation',
+  'bugfix',
   'extract-standards',
+  'housekeeping',
+  'impact-check',
   'implement',
   'iterate',
   'memory-write',
   'orchestrate',
   'parallel-execution',
   'plan',
+  'process-audit',
+  'proof-of-concept',
   'research',
+  'review',
+  'rpi',
+  'self-improve',
+  'speckit-analyze',
+  'speckit-checklist',
+  'speckit-clarify',
+  'speckit-constitution',
+  'speckit-implement',
+  'speckit-plan',
+  'speckit-specify',
+  'speckit-tasks',
+  'spike',
   'tdd-loop',
+  'update-memory',
 ])
 export const promptIdSchema = z.enum(['compact', 'implement', 'local-example', 'plan', 'research'])
 export const templateIdSchema = z.enum([

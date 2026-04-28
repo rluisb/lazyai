@@ -90,6 +90,23 @@
 
 ---
 
+## Simplicity Audit (Article VI — Anti-Overengineering)
+
+The reviewer MUST audit the diff against Article VI. This section is **not optional**; an empty audit is a failed review.
+
+- [ ] **YAGNI:** No speculative parameters, options, or hooks. Every code path is reachable from a real caller. Evidence: `[grep for caller / no usage]`.
+- [ ] **DRY-after-3:** No helper extracted at fewer than three concrete instances. If extraction occurred at 1 or 2 instances, request inlining.
+- [ ] **KISS:** Of the working approaches, the simpler one was chosen. If a complex approach was chosen, the PR description justifies it.
+- [ ] **Function size:** No new function exceeds 30 lines without an inline `// reason: …` comment justifying it.
+- [ ] **File size:** No file exceeds 300 lines after the change without an inline justification at the top.
+- [ ] **One responsibility per function / one concept per file.** Split mixed-responsibility additions.
+- [ ] **No abstractions with one caller.** Single-implementation interfaces, single-strategy strategies, single-handler factories — request inlining.
+- [ ] **Trust internal callers.** No `if loggedIn` checks in code paths only reachable by logged-in callers; no defensive null-checks for values guaranteed non-null upstream.
+
+**Article VI verdict:** PASS / FAIL — [if FAIL, list which row failed and the proposed remediation].
+
+---
+
 ## Verdict
 
 ```

@@ -31,6 +31,23 @@
 
 ---
 
+## Harness Contract — Expected vs Actual
+
+The bug exists where reality (Actual) deviates from the contract (Expected). State both before reasoning about the fix — this is the verifier surface for review.
+
+| Aspect | Expected (per spec / API / docs) | Actual (per reproduction) |
+|---|---|---|
+| Inputs | [...] | [...] |
+| Outputs | [...] | [...] |
+| Side effects | [...] | [...] |
+| Error behavior | [...] | [...] |
+
+**Contract source:** [link to spec.md / API doc / standard that defines Expected].
+
+> If the Expected column is empty or guessed, **stop**: write/locate the contract first. Without an Expected, the "fix" is just a preference change.
+
+---
+
 ## Root Cause
 
 <!-- One clear sentence: What is the actual cause?

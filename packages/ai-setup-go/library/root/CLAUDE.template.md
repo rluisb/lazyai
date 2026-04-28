@@ -311,3 +311,8 @@ Example references:
 | Bug revealed missing rule | @specs/rules/ + @specs/memory/ |
 | Refactor changed structure | Root CLAUDE.md + @specs/standards/ + @specs/KNOWLEDGE_MAP.md |
 
+## Base Protocols
+
+- **Harness Engineering Protocol:** @library/fragments/harness-protocol.md — Five rules governing all workflows: Feed Forward, The Contract, Feedback & Sensors, Memory & State, Anti-Slope.
+- **Workspace Protocol:** @library/fragments/workspace-protocol.md — Multi-repo awareness, ledger updates, standards propagation across workspaces.
+

@@ -494,6 +494,7 @@ type Config struct {
 	EnableServers    []string            `json:"enableServers,omitempty"`
 	ProjectName      string              `json:"projectName"`
 	WorkspaceName    string              `json:"workspaceName,omitempty"`
+	WorkspaceRoot    string              `json:"workspaceRoot,omitempty"`
 	TargetDir        string              `json:"targetDir"`
 	PlanningDir      string              `json:"planningDir,omitempty"`
 	PlanningRepoPath string              `json:"planningRepoPath,omitempty"`

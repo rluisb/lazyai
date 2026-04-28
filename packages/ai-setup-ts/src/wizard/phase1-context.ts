@@ -142,6 +142,7 @@ export interface Phase1Result {
   mcpPreset: McpWizardPreset
   projectName: string
   workspaceName?: string
+  workspaceRoot?: string
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   cliTools?: string[]
@@ -262,6 +263,7 @@ export async function runPhase1(opts: {
       mcpPreset?: McpWizardPreset
       projectName?: string
       workspaceName?: string
+      workspaceRoot?: string
       planningRepoPath?: string
       enableServers?: string[]
       organization?: string
@@ -274,6 +276,7 @@ export async function runPhase1(opts: {
     cliTools?: string[]
     name?: string
     planningRepo?: string
+    workspaceRoot?: string
     repos?: string[]
     enableServers?: string[]
   }
@@ -295,6 +298,10 @@ export async function runPhase1(opts: {
     const planningRepoPath = opts.cliOverrides.planningRepo
       ? path.resolve(opts.cliOverrides.planningRepo)
       : undefined
+    const workspaceRoot =
+      setupScope === 'workspace'
+        ? path.resolve(opts.cliOverrides.workspaceRoot ?? path.dirname(planningRepoPath ?? opts.targetDir))
+        : undefined
     const parsedRepos =
       setupScope === 'workspace'
         ? parseWorkspaceRepos((opts.cliOverrides.repos ?? []).join(','), planningRepoPath ?? opts.targetDir)
@@ -323,6 +330,7 @@ export async function runPhase1(opts: {
       mcpPreset,
       projectName: setupScope === 'global' ? 'global' : projectName,
       ...(workspaceName ? { workspaceName } : {}),
+      ...(setupScope === 'workspace' && workspaceRoot ? { workspaceRoot } : {}),
       ...(setupScope === 'workspace' && planningRepoPath ? { planningRepoPath } : {}),
       ...(setupScope === 'workspace' && parsedRepos.length > 0 ? { repos: parsedRepos } : {}),
       ...(cliTools && cliTools.length > 0 ? { cliTools } : {}),
@@ -344,6 +352,7 @@ export async function runPhase1(opts: {
   let tools: ToolId[]
   let projectName: string
   let workspaceName: string | undefined
+  let workspaceRoot: string | undefined
   let planningRepoPath: string | undefined
   let repos: Array<{ name: string; path: string; type?: string; description?: string }> = []
   let cliTools: string[] = opts.cliOverrides.cliTools ?? []
@@ -498,6 +507,32 @@ export async function runPhase1(opts: {
       process.exit(0)
     }
     workspaceName = workspaceNameResult
+
+    // Workspace root: where AI tool configs live (defaults to parent of planning repo)
+    const priorWorkspaceRoot = opts.cliOverrides.workspaceRoot ?? opts.prior.workspaceRoot
+    const defaultWorkspaceRoot = priorWorkspaceRoot ?? path.resolve(opts.targetDir, '..')
+    if (priorWorkspaceRoot) {
+      p.note(`Using workspace root from previous run: ${priorWorkspaceRoot}`)
+      workspaceRoot = priorWorkspaceRoot
+    } else {
+      const workspaceRootResult = await p.text({
+        message: 'Workspace root directory? (AI tool configs .claude/ .opencode/ etc. live here)',
+        placeholder: defaultWorkspaceRoot,
+        defaultValue: defaultWorkspaceRoot,
+        validate: (value) => {
+          if (!value?.trim()) return 'Workspace root is required'
+          const resolved = path.resolve(value)
+          if (!fileExists(resolved)) return `Directory not found: ${resolved}`
+          return undefined
+        },
+      })
+
+      if (p.isCancel(workspaceRootResult)) {
+        p.cancel('Setup cancelled.')
+        process.exit(0)
+      }
+      workspaceRoot = path.resolve(workspaceRootResult)
+    }
 
     let planningRepoPathResolved: string
 
@@ -780,6 +815,7 @@ export async function runPhase1(opts: {
     mcpPreset,
     projectName,
     ...(workspaceName ? { workspaceName } : {}),
+    ...(workspaceRoot ? { workspaceRoot } : {}),
     ...(planningRepoPath ? { planningRepoPath } : {}),
     ...(repos.length > 0 ? { repos } : {}),
     ...(cliTools.length > 0 ? { cliTools } : {}),

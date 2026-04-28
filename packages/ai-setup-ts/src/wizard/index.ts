@@ -113,6 +113,7 @@ interface WizardState {
   mcpPreset: McpWizardPreset
   projectName: string
   workspaceName?: string
+  workspaceRoot?: string
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>
   cliTools?: string[]
@@ -140,6 +141,7 @@ async function runPhase12Loop(opts: {
     mcpPreset?: McpWizardPreset
     projectName?: string
     workspaceName?: string
+    workspaceRoot?: string
     planningRepoPath?: string
     planningDir?: string
     enableServers?: string[]
@@ -175,6 +177,7 @@ async function runPhase12Loop(opts: {
   let accMcpPreset: McpWizardPreset = opts.prior.mcpPreset ?? 'recommended'
   let accProjectName: string = opts.prior.projectName ?? ''
   let accWorkspaceName: string | undefined = opts.prior.workspaceName
+  let accWorkspaceRoot: string | undefined = opts.prior.workspaceRoot
   let accPlanningRepoPath: string | undefined = opts.prior.planningRepoPath
   let accRepos: Array<{ name: string; path: string; type?: string; description?: string }> | undefined
   let accCliTools: string[] | undefined
@@ -221,6 +224,7 @@ async function runPhase12Loop(opts: {
         mcpPreset: accMcpPreset,
         projectName: accProjectName,
         ...(accWorkspaceName != null ? { workspaceName: accWorkspaceName } : {}),
+        ...(accWorkspaceRoot != null ? { workspaceRoot: accWorkspaceRoot } : {}),
         ...(accPlanningRepoPath != null ? { planningRepoPath: accPlanningRepoPath } : {}),
         ...(accEnableServers != null ? { enableServers: accEnableServers } : {}),
         ...(accOrganization != null ? { organization: accOrganization } : {}),
@@ -248,6 +252,7 @@ async function runPhase12Loop(opts: {
       accMcpPreset = phase1Result.mcpPreset
       accProjectName = phase1Result.projectName
       accWorkspaceName = phase1Result.workspaceName
+      accWorkspaceRoot = phase1Result.workspaceRoot
       accPlanningRepoPath = phase1Result.planningRepoPath
       accRepos = phase1Result.repos
       accCliTools = phase1Result.cliTools
@@ -371,6 +376,7 @@ export async function runWizard(opts: {
       mcpPreset?: McpWizardPreset
       projectName?: string
       workspaceName?: string
+      workspaceRoot?: string
       planningRepoPath?: string
       planningDir?: string
       cliTools?: string[]
@@ -418,6 +424,7 @@ export async function runWizard(opts: {
         agents,
         projectName,
         workspaceName,
+        workspaceRoot,
         planningRepoPath,
         repos,
         cliTools,
@@ -539,6 +546,7 @@ export async function runWizard(opts: {
         tools: installableTools,
         projectName: effectiveProjectName,
         ...(workspaceName ? { workspaceName } : {}),
+        ...(workspaceRoot ? { workspaceRoot } : {}),
         targetDir: effectiveTargetDir,
         ...(planningRepoPath ? { planningRepoPath } : {}),
         ...(repos && repos.length > 0 ? { repos } : {}),
@@ -813,6 +821,7 @@ export async function runWizard(opts: {
           ...(enableServers && enableServers.length > 0 ? { enableServers } : {}),
           projectName: effectiveProjectName,
           ...(workspaceName ? { workspaceName } : {}),
+          ...(workspaceRoot ? { workspaceRoot } : {}),
           targetDir: effectiveTargetDir,
           ...(planningRepoPath ? { planningRepoPath } : {}),
           ...(repos && repos.length > 0 ? { repos } : {}),

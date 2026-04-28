@@ -98,9 +98,17 @@ const (
 type CommandId string
 
 const (
-	CommandIdRpi    CommandId = "rpi"
-	CommandIdReview CommandId = "review"
-	CommandIdPlan   CommandId = "plan"
+	CommandIdRpi               CommandId = "rpi"
+	CommandIdReview            CommandId = "review"
+	CommandIdPlan              CommandId = "plan"
+	CommandIdSpeckitAnalyze    CommandId = "speckit-analyze"
+	CommandIdSpeckitChecklist  CommandId = "speckit-checklist"
+	CommandIdSpeckitClarify    CommandId = "speckit-clarify"
+	CommandIdSpeckitConstitute CommandId = "speckit-constitution"
+	CommandIdSpeckitImplement  CommandId = "speckit-implement"
+	CommandIdSpeckitPlan       CommandId = "speckit-plan"
+	CommandIdSpeckitSpecify    CommandId = "speckit-specify"
+	CommandIdSpeckitTasks      CommandId = "speckit-tasks"
 )
 
 // ChatModeId identifies a GitHub Copilot chat mode (markdown file under
@@ -416,6 +424,14 @@ var (
 		CommandIdRpi,
 		CommandIdReview,
 		CommandIdPlan,
+		CommandIdSpeckitAnalyze,
+		CommandIdSpeckitChecklist,
+		CommandIdSpeckitClarify,
+		CommandIdSpeckitConstitute,
+		CommandIdSpeckitImplement,
+		CommandIdSpeckitPlan,
+		CommandIdSpeckitSpecify,
+		CommandIdSpeckitTasks,
 	}
 
 	ALL_CHATMODES = []ChatModeId{

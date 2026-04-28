@@ -76,6 +76,13 @@ func scaffoldPreCommit(targetDir string, libFS fs.FS, fileRecords *[]types.Track
 }
 
 func scaffoldCompliance(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	// In speckit mode (.specify/ exists), compliance data lives in
+	// .specify/ rather than specs/compliance.md. Skip to avoid
+	// duplicate and misplaced files.
+	if HasSpecKitStructure(targetDir) {
+		return nil
+	}
+
 	specsDir := filepath.Join(targetDir, "specs")
 	if err := files.EnsureDir(specsDir); err != nil {
 		return err

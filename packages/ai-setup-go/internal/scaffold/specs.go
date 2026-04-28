@@ -66,7 +66,9 @@ func DetectExistingSpecs(targetDir string) (hasSpecs bool, highest int) {
 // ScaffoldSpecs creates the speckit-compatible .specify/ and specs/ directory structure.
 //
 // Behavior:
-// - If .specify/ already exists: skip .specify/ scaffolding entirely (respect existing)
+// - If .specify/ already exists: skip directory scaffolding but still copy templates
+//   (constitution ran first and created .specify/, so the directory check alone would
+//   suppress the template copy on the initial run)
 // - If specs/###-slug/ directories exist: skip spec directory creation
 // - Greenfield: create specs/.gitkeep + full .specify/ with templates, memory, scripts
 func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, specsDirs []string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
@@ -82,40 +84,7 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 	if !hasSpecify {
 		specifyDir := filepath.Join(targetDir, ".specify")
 
-		// 1a. .specify/templates/
-		templatesDir := filepath.Join(specifyDir, "templates")
-		_ = files.EnsureDir(templatesDir)
-		// Spec 022 / E2.1: actually copy the speckit-aligned templates from
-		// the embedded library FS into .specify/templates/. The earlier
-		// placeholder loop (which did nothing) left .specify/templates/
-		// empty, breaking /speckit.specify and /speckit.plan as soon as
-		// they tried to read the template. We copy what's present and skip
-		// what isn't, so minimal-library tests still pass.
-		if libFS != nil {
-			for _, tpl := range specifyTemplates {
-				src := "templates/" + tpl
-				data, err := fs.ReadFile(libFS, src)
-				if err != nil {
-					continue // template not in this build's library — skip
-				}
-				dest := filepath.Join(templatesDir, tpl)
-				if err := files.WriteFile(dest, data, 0o644); err != nil {
-					return err
-				}
-				if fileRecords != nil {
-					hash, _ := files.FileHash(dest)
-					relPath, _ := filepath.Rel(targetDir, dest)
-					*fileRecords = append(*fileRecords, types.TrackedFile{
-						Path:   filepath.ToSlash(relPath),
-						Hash:   hash,
-						Source: "speckit:" + src,
-						Owner:  types.FileOwnerLibrary,
-					})
-				}
-			}
-		}
-
-		// 1b. .specify/memory/
+		// 1a. .specify/memory/
 		memoryDir := filepath.Join(specifyDir, "memory")
 		_ = files.EnsureDir(memoryDir)
 
@@ -124,8 +93,39 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 			_ = files.EnsureDir(filepath.Join(memoryDir, "repos"))
 		}
 
-		// 1c. .specify/scripts/bash/
+		// 1b. .specify/scripts/bash/
 		_ = files.EnsureDir(filepath.Join(specifyDir, "scripts", "bash"))
+	}
+
+	// 1c. .specify/templates/ — always copy templates when library FS is available.
+	// Must happen outside the hasSpecify guard because ScaffoldConstitution (step 1)
+	// creates .specify/ before ScaffoldSpecs runs, which would make hasSpecify true
+	// and suppress the template copy on first run.
+	if libFS != nil {
+		specifyDir := filepath.Join(targetDir, ".specify")
+		templatesDir := filepath.Join(specifyDir, "templates")
+		_ = files.EnsureDir(templatesDir)
+		for _, tpl := range specifyTemplates {
+			src := "templates/" + tpl
+			data, err := fs.ReadFile(libFS, src)
+			if err != nil {
+				continue // template not in this build's library — skip
+			}
+			dest := filepath.Join(templatesDir, tpl)
+			if err := files.WriteFile(dest, data, 0o644); err != nil {
+				return err
+			}
+			if fileRecords != nil {
+				hash, _ := files.FileHash(dest)
+				relPath, _ := filepath.Rel(targetDir, dest)
+				*fileRecords = append(*fileRecords, types.TrackedFile{
+					Path:   filepath.ToSlash(relPath),
+					Hash:   hash,
+					Source: "speckit:" + src,
+					Owner:  types.FileOwnerLibrary,
+				})
+			}
+		}
 	}
 
 	// 2. Create specs/ directory.

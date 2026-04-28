@@ -12,7 +12,18 @@ import (
 
 // ScaffoldTemplatesRules installs template and rule files into the specs directory.
 // Ported from src/scaffold/templates-rules.ts.
+// When .specify/ exists (speckit mode), templates go into .specify/templates/
+// instead (handled by ScaffoldSpecs) — suppress the specs/ copies to avoid
+// duplicate template locations.
 func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.TemplateId, rules []types.RuleId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	// In speckit mode (.specify/ exists), templates live in .specify/templates/.
+	// Skip writing to specs/templates/ to avoid duplicate locations.
+	if HasSpecKitStructure(targetDir) {
+		// Still copy rules — specs/rules/ is the canonical rules location.
+		// But skip templates since they're in .specify/templates/.
+		templates = nil
+	}
+
 	specsDir := filepath.Join(targetDir, "specs")
 
 	// Copy selected templates.

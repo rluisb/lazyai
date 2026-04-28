@@ -1,7 +1,7 @@
 import path from 'node:path'
 import type { ConflictStrategy, FileRecord, SetupScope } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
-import { copyFile, ensureDir, fileExists, fileHash } from '../utils/files.js'
+import { copyFile, ensureDir, fileExists, fileHash, isDirectory, writeFile } from '../utils/files.js'
 
 export interface ScaffoldSpecsOptions {
   targetDir: string
@@ -14,42 +14,134 @@ export interface ScaffoldSpecsOptions {
   perFileOverrides: Map<string, ConflictStrategy>
 }
 
+const SPECIFY_TEMPLATES = [
+  'spec-template.md',
+  'plan-template.md',
+  'tasks-template.md',
+  'checklist-template.md',
+  'task-harness-template.md',
+]
+
+const SPECIFY_MEMORY_FILES = ['constitution-template.md']
+
+const SPECIFY_SCRIPTS = ['create-new-feature.sh']
+
 /**
- * Creates specs directory structure and copies AGENTS.md files.
+ * Detects whether an existing spec-kit structure is present.
+ * Returns true if .specify/ directory exists.
+ */
+export function hasSpecKitStructure(targetDir: string): boolean {
+  return isDirectory(path.join(targetDir, '.specify'))
+}
+
+/**
+ * Detects numbered spec directories (###-slug pattern).
+ * Returns the highest existing number, or 0 if none.
+ */
+export function detectExistingSpecs(targetDir: string): { hasSpecs: boolean; highestNumber: number } {
+  const specsDir = path.join(targetDir, 'specs')
+  if (!isDirectory(specsDir)) return { hasSpecs: false, highestNumber: 0 }
+
+  let highest = 0
+  const entries = fileExists(specsDir) ? require('node:fs').readdirSync(specsDir, { withFileTypes: true }) : []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const match = entry.name.match(/^(\d{3})-/)
+    if (match?.[1]) {
+      const num = Number.parseInt(match[1], 10)
+      if (num > highest) highest = num
+    }
+  }
+
+  return { hasSpecs: highest > 0, highestNumber: highest }
+}
+
+/**
+ * Creates the speckit-compatible .specify/ and specs/ directory structure.
  *
  * Behavior:
- * - For each dir in `specsDirs`: create `specs/<dir>/`
- * - Special case: `memory` also creates `specs/memory/handoffs/`
- * - For each dir in `specsAgents` (must be subset of specsDirs):
- *   copy `library/specs-agents/<dir>.md` → `specs/<dir>/AGENTS.md`
- * - Record each copied AGENTS.md in `fileRecords`
- * - If `specsDirs` is empty, create no directories
+ * - If `.specify/` already exists: skip .specify/ scaffolding entirely (respect existing)
+ * - If `specs/###-slug/` directories exist: skip spec directory creation
+ * - Greenfield: create `specs/.gitkeep` + full `.specify/` with templates, memory, scripts
+ * - Workspace mode also creates `.specify/memory/repos/` for ledger files
+ * - Always copies template files from library to `.specify/templates/`
  */
 export async function scaffoldSpecs(opts: ScaffoldSpecsOptions): Promise<void> {
   const { targetDir, setupScope, libraryDir, specsDirs, specsAgents, fileRecords, strategy, perFileOverrides } = opts
 
-  // Create specs root
-  const specsDir = path.join(targetDir, 'specs')
+  const hasSpecify = hasSpecKitStructure(targetDir)
+  const existing = detectExistingSpecs(targetDir)
 
-  // 1. Create selected specs directories
+  // 1. Create .specify/ directory (speckit core)
+  if (!hasSpecify) {
+    const specifyDir = path.join(targetDir, '.specify')
+
+    // 1a. .specify/templates/ — copy template files from library
+    const templatesDir = path.join(specifyDir, 'templates')
+    ensureDir(templatesDir)
+    for (const tplFile of SPECIFY_TEMPLATES) {
+      const src = path.join(libraryDir, 'templates', tplFile)
+      const dest = path.join(templatesDir, tplFile)
+      await copyLibraryFile(src, dest, fileRecords, targetDir, strategy, perFileOverrides)
+    }
+
+    // 1b. .specify/memory/ — constitution template + workspace repos
+    const memoryDir = path.join(specifyDir, 'memory')
+    ensureDir(memoryDir)
+
+    // Copy constitution template
+    const constitutionSrc = path.join(libraryDir, 'constitution', 'constitution.template.md')
+    const constitutionDest = path.join(memoryDir, 'constitution.md')
+    await copyLibraryFile(constitutionSrc, constitutionDest, fileRecords, targetDir, strategy, perFileOverrides)
+
+    // Workspace: create repos/ ledger directory
+    if (setupScope === 'workspace') {
+      ensureDir(path.join(memoryDir, 'repos'))
+    }
+
+    // 1c. .specify/scripts/
+    if (SPECIFY_SCRIPTS.length > 0) {
+      const scriptsDir = path.join(specifyDir, 'scripts', 'bash')
+      ensureDir(scriptsDir)
+    }
+  }
+
+  // 2. Create specs/ directory
+  const specsDir = path.join(targetDir, 'specs')
+  ensureDir(specsDir)
+
+  // Greenfield: create .gitkeep to signal empty spec directory
+  if (!existing.hasSpecs && specsDirs.length === 0) {
+    const gitkeepPath = path.join(specsDir, '.gitkeep')
+    const action = applyStrategy(gitkeepPath, strategy, perFileOverrides, targetDir)
+    if (action !== 'skip') {
+      writeFile(gitkeepPath, '# Specs\n\nFeature specifications are created by the `/speckit.specify` command.\n')
+      fileRecords.push({
+        path: path.relative(targetDir, gitkeepPath).replaceAll('\\', '/'),
+        hash: fileHash(gitkeepPath),
+        source: 'speckit:specs-root',
+        owner: 'library',
+      })
+    }
+  }
+
+  // Legacy: create selected specs directories (only if existing spec-kit structure AND user selected them)
   if (specsDirs.length > 0) {
     for (const dir of specsDirs) {
       ensureDir(path.join(specsDir, dir))
 
-      // Special case: memory also needs handoffs subdirectory
       if (dir === 'memory') {
         if (setupScope === 'workspace') {
           ensureDir(path.join(specsDir, 'memory', 'decisions'))
           ensureDir(path.join(specsDir, 'memory', 'patterns'))
           ensureDir(path.join(specsDir, 'memory', 'projects'))
         }
-
         ensureDir(path.join(specsDir, 'memory', 'handoffs'))
       }
     }
   }
 
-  // 2. Copy AGENTS.md files for selected specs directories
+  // 3. Copy AGENTS.md files for selected specs directories (unchanged behavior)
   for (const dir of specsAgents) {
     const src = path.join(libraryDir, 'specs-agents', `${dir}.md`)
     const dest = path.join(specsDir, dir, 'AGENTS.md')
@@ -67,7 +159,7 @@ async function copyLibraryFile(
   records: FileRecord[],
   targetDir: string,
   strategy: ConflictStrategy,
-  perFileOverrides: Map<string, ConflictStrategy>
+  perFileOverrides: Map<string, ConflictStrategy>,
 ): Promise<void> {
   if (!fileExists(src)) return
 

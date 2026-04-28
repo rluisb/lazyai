@@ -163,8 +163,14 @@ func GenerateClaudeSettings(permissions RepoPermissions) map[string]any {
 // ScaffoldRepoLedgers creates activity ledger and state files for each workspace repo.
 // Ported from src/scaffold/repo-roots.ts scaffoldRepoLedgers.
 func ScaffoldRepoLedgers(planningRepoPath string, repos []types.RepoInfo, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+	// Detect memory path: .specify/memory/repos/ (speckit) or specs/memory/repos/ (legacy)
+	baseMemoryRepos := filepath.Join(planningRepoPath, "specs", "memory", "repos")
+	if specifyPath := filepath.Join(planningRepoPath, ".specify", "memory", "repos"); files.IsDirectory(specifyPath) {
+		baseMemoryRepos = specifyPath
+	}
+
 	for _, repo := range repos {
-		repoMemoryDir := filepath.Join(planningRepoPath, "specs", "memory", "repos", repo.Name)
+		repoMemoryDir := filepath.Join(baseMemoryRepos, repo.Name)
 		if err := files.EnsureDir(repoMemoryDir); err != nil {
 			return err
 		}

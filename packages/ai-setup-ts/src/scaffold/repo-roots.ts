@@ -190,8 +190,13 @@ export async function scaffoldRepoLedgers(opts: {
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
 }): Promise<void> {
+  // Detect memory path: .specify/memory/repos/ (speckit) or specs/memory/repos/ (legacy)
+  const specifyMemoryRepos = path.join(opts.planningRepoPath, '.specify', 'memory', 'repos')
+  const legacyMemoryRepos = path.join(opts.planningRepoPath, 'specs', 'memory', 'repos')
+  const baseMemoryRepos = isDirectory(specifyMemoryRepos) ? specifyMemoryRepos : legacyMemoryRepos
+
   for (const repo of opts.repos) {
-    const repoMemoryDir = path.join(opts.planningRepoPath, 'specs', 'memory', 'repos', repo.name)
+    const repoMemoryDir = path.join(baseMemoryRepos, repo.name)
     ensureDir(repoMemoryDir)
 
     const ledgerPath = path.join(repoMemoryDir, 'ledger.md')

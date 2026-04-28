@@ -25,6 +25,7 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
 	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, gemini, copilot, codex)")
+	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (orchestrator, filesystem, memory)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
 	initCmd.Flags().StringSlice("disable-features", []string{}, "Features to disable")
@@ -71,6 +72,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
+	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
 
 	// Build CLI tools from flags.
 	var tools []types.ToolId
@@ -94,6 +96,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLILocalSecrets:      localSecrets,
 		CLIOrg:               orgName,
 		CLITeam:              teamName,
+		CLIEnableServers:     enableServersStr,
 		HomeDir:              homeDir,
 		TargetDir:            targetDir,
 		CLIScope:             types.SetupScope(scopeStr),

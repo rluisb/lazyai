@@ -2,20 +2,30 @@ package scaffold
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
+// specifyTemplates names the speckit-aligned templates copied into
+// .specify/templates/ during scaffold. Spec 022 / E2.1 added the actual
+// copy implementation (it was previously a placeholder). When a template
+// is missing from the embedded library FS the file is silently skipped —
+// scaffold must work in test environments that ship a minimal library.
 var specifyTemplates = []string{
 	"spec-template.md",
 	"plan-template.md",
 	"tasks-template.md",
 	"checklist-template.md",
 	"task-harness-template.md",
+	"spike-template.md",
+	"poc-template.md",
+	"housekeeping-template.md",
+	"audit-template.md",
+	"ledger-template.md",
 }
 
 // HasSpecKitStructure returns true if a .specify/ directory already exists.
@@ -31,7 +41,7 @@ func DetectExistingSpecs(targetDir string) (hasSpecs bool, highest int) {
 		return false, 0
 	}
 
-	entries, err := fs.ReadDir(files.OSDirFS(specsDir), ".")
+	entries, err := fs.ReadDir(os.DirFS(specsDir), ".")
 	if err != nil {
 		return false, 0
 	}
@@ -66,7 +76,7 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 	_ = perFileOverrides
 
 	hasSpecify := HasSpecKitStructure(targetDir)
-	_, hasSpecs := DetectExistingSpecs(targetDir)
+	hasSpecs, _ := DetectExistingSpecs(targetDir)
 
 	// 1. Create .specify/ directory (speckit core) — only if not already present.
 	if !hasSpecify {
@@ -75,11 +85,34 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 		// 1a. .specify/templates/
 		templatesDir := filepath.Join(specifyDir, "templates")
 		_ = files.EnsureDir(templatesDir)
-		// Templates are copied by the TS runtime via the library; Go creates
-		// the directory structure. The actual file copy happens in the
-		// compile/adapter layer which reads library/templates/.
-		for _, tpl := range specifyTemplates {
-			_ = tpl // placeholder — actual copy handled by adapter layer
+		// Spec 022 / E2.1: actually copy the speckit-aligned templates from
+		// the embedded library FS into .specify/templates/. The earlier
+		// placeholder loop (which did nothing) left .specify/templates/
+		// empty, breaking /speckit.specify and /speckit.plan as soon as
+		// they tried to read the template. We copy what's present and skip
+		// what isn't, so minimal-library tests still pass.
+		if libFS != nil {
+			for _, tpl := range specifyTemplates {
+				src := "templates/" + tpl
+				data, err := fs.ReadFile(libFS, src)
+				if err != nil {
+					continue // template not in this build's library — skip
+				}
+				dest := filepath.Join(templatesDir, tpl)
+				if err := files.WriteFile(dest, data, 0o644); err != nil {
+					return err
+				}
+				if fileRecords != nil {
+					hash, _ := files.FileHash(dest)
+					relPath, _ := filepath.Rel(targetDir, dest)
+					*fileRecords = append(*fileRecords, types.TrackedFile{
+						Path:   filepath.ToSlash(relPath),
+						Hash:   hash,
+						Source: "speckit:" + src,
+						Owner:  types.FileOwnerLibrary,
+					})
+				}
+			}
 		}
 
 		// 1b. .specify/memory/
@@ -137,9 +170,8 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 	return nil
 }
 
-// OSDirFS adapter for reading directory entries from the OS filesystem.
-// This avoids importing os directly in scaffold helpers.
+// osDirFS wraps os.DirFS so scaffold helpers can swap in a fake FS in tests
+// without touching the real filesystem.
 var osDirFS = func(path string) fs.FS {
-	dirFS := files.OSDirFS(path)
-	return dirFS
+	return os.DirFS(path)
 }

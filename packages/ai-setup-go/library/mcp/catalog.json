@@ -37,7 +37,7 @@
       "command": "codegraph",
       "args": ["serve", "--mcp"],
       "tools": ["codegraph_context", "codegraph_search", "codegraph_files"],
-      "enabled": false,
+      "enabled": true,
       "requiresInstall": true,
       "installHint": "bun install -g codegraph"
     },
@@ -46,9 +46,27 @@
       "command": "qmd",
       "args": ["mcp"],
       "tools": ["query", "get"],
-      "enabled": false,
+      "enabled": true,
       "requiresInstall": true,
       "installHint": "brew install qmd"
+    },
+    "graphify": {
+      "description": "Knowledge graph builder and query engine for codebases",
+      "command": "graphify",
+      "args": ["query"],
+      "tools": ["query_graph", "get_node", "get_neighbors", "get_community", "god_nodes", "graph_stats", "shortest_path"],
+      "enabled": true,
+      "requiresInstall": true,
+      "installHint": "brew install graphify"
+    },
+    "obsidian": {
+      "description": "Obsidian vault read/write access for persistent knowledge",
+      "command": "ob",
+      "args": ["mcp"],
+      "tools": ["read_note", "write_note", "search_notes", "list_notes"],
+      "enabled": true,
+      "requiresInstall": true,
+      "installHint": "npm install -g obsidian-cli"
     },
     "playwright": {
       "description": "Browser automation and testing",

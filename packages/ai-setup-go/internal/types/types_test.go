@@ -135,11 +135,11 @@ func TestTypeConstants(t *testing.T) {
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	t.Parallel()
 
-	if len(ALL_AGENTS) != 7 {
-		t.Errorf("ALL_AGENTS has %d elements, want 7", len(ALL_AGENTS))
+	if len(ALL_AGENTS) < 8 {
+		t.Errorf("ALL_AGENTS has %d elements, want at least 8 (Spec 022 added implementor)", len(ALL_AGENTS))
 	}
-	if len(ALL_SKILLS) != 10 {
-		t.Errorf("ALL_SKILLS has %d elements, want 10", len(ALL_SKILLS))
+	if len(ALL_SKILLS) < 20 {
+		t.Errorf("ALL_SKILLS has %d elements, want at least 20 (Spec 022 added 18 new skills)", len(ALL_SKILLS))
 	}
 	if len(ALL_PROMPTS) != 5 {
 		t.Errorf("ALL_PROMPTS has %d elements, want 5", len(ALL_PROMPTS))

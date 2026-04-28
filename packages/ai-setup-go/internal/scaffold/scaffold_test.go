@@ -204,8 +204,8 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 		t.Fatal("expected at least one tracked file")
 	}
 
-	// Check that constitution files were created.
-	if !fileExistsInDir(targetDir, ".ai/constitution/constitution.md") {
+	// Check that constitution file was created (Spec 022: single merged file at .specify/memory/).
+	if !fileExistsInDir(targetDir, ".specify/memory/constitution.md") {
 		t.Error("constitution.md was not created")
 	}
 
@@ -291,7 +291,8 @@ func TestScaffoldAll_DryRun(t *testing.T) {
 	// In dry-run mode, most files should NOT be created on disk.
 	// Some files (like .ai/mcp.json) may still be created by the MCP compiler,
 	// but constitution files should not be created.
-	constitutionPath := filepath.Join(targetDir, ".ai", "constitution", "constitution.md")
+	// Constitution uses the Spec 022 path.
+	constitutionPath := filepath.Join(targetDir, ".specify", "memory", "constitution.md")
 	if _, err := os.Stat(constitutionPath); err == nil {
 		// In dry-run mode, some scaffold steps may still create files.
 		// This is acceptable — the key is that ScaffoldAll reports the files.

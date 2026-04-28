@@ -128,6 +128,21 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 		return err
 	}
 
+	// Also write .mcp.json at project root for tools that expect it there.
+	rootDest := filepath.Join(targetDir, ".mcp.json")
+	if rootAction, err := conflict.ApplyStrategy(rootDest, strategy, perFileOverrides, targetDir); err == nil && rootAction != "skip" {
+		if err := files.WriteFile(rootDest, content, 0o644); err == nil {
+			hash, _ := files.FileHash(rootDest)
+			rootRel, _ := filepath.Rel(targetDir, rootDest)
+			*fileRecords = append(*fileRecords, types.TrackedFile{
+				Path:   filepath.ToSlash(rootRel),
+				Hash:   hash,
+				Source: catalogRelPath,
+				Owner:  types.FileOwnerLibrary,
+			})
+		}
+	}
+
 	hash, _ := files.FileHash(dest)
 	*fileRecords = append(*fileRecords, types.TrackedFile{
 		Path:   relPath,

@@ -118,9 +118,17 @@ const (
 type OpenCodeCommandId string
 
 const (
-	OpenCodeCommandIdReview OpenCodeCommandId = "review"
-	OpenCodeCommandIdTest   OpenCodeCommandId = "test"
-	OpenCodeCommandIdCommit OpenCodeCommandId = "commit"
+	OpenCodeCommandIdReview            OpenCodeCommandId = "review"
+	OpenCodeCommandIdTest              OpenCodeCommandId = "test"
+	OpenCodeCommandIdCommit            OpenCodeCommandId = "commit"
+	OpenCodeCommandIdSpeckitAnalyze    OpenCodeCommandId = "speckit.analyze"
+	OpenCodeCommandIdSpeckitChecklist  OpenCodeCommandId = "speckit.checklist"
+	OpenCodeCommandIdSpeckitClarify    OpenCodeCommandId = "speckit.clarify"
+	OpenCodeCommandIdSpeckitConstitute OpenCodeCommandId = "speckit.constitution"
+	OpenCodeCommandIdSpeckitImplement  OpenCodeCommandId = "speckit.implement"
+	OpenCodeCommandIdSpeckitPlan       OpenCodeCommandId = "speckit.plan"
+	OpenCodeCommandIdSpeckitSpecify    OpenCodeCommandId = "speckit.specify"
+	OpenCodeCommandIdSpeckitTasks      OpenCodeCommandId = "speckit.tasks"
 )
 
 // OpenCodeModeId identifies an opencode chat mode (markdown file under
@@ -419,6 +427,14 @@ var (
 		OpenCodeCommandIdReview,
 		OpenCodeCommandIdTest,
 		OpenCodeCommandIdCommit,
+		OpenCodeCommandIdSpeckitAnalyze,
+		OpenCodeCommandIdSpeckitChecklist,
+		OpenCodeCommandIdSpeckitClarify,
+		OpenCodeCommandIdSpeckitConstitute,
+		OpenCodeCommandIdSpeckitImplement,
+		OpenCodeCommandIdSpeckitPlan,
+		OpenCodeCommandIdSpeckitSpecify,
+		OpenCodeCommandIdSpeckitTasks,
 	}
 
 	ALL_OPENCODE_MODES = []OpenCodeModeId{

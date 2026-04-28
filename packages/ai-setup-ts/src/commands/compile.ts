@@ -21,6 +21,7 @@ interface CompileOptions {
   force?: boolean
   dryRun?: boolean
   planningRepo?: string
+  workspaceRoot?: string
 }
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
@@ -73,6 +74,7 @@ export function registerCompile(program: Command): void {
     .option('--force', 'Overwrite existing files')
      .option('--dry-run', 'Preview changes without writing files')
     .option('--planning-repo <path>', 'Planning repo path (for workspace scope)')
+    .option('--workspace-root <path>', 'Workspace root directory for AI tool configs (workspace scope)')
     .action(async (opts: CompileOptions) => {
       const cwd = process.cwd()
       const userHomeDir = homedir()

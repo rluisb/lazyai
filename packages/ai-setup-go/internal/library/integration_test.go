@@ -163,8 +163,6 @@ func TestGetLibraryFS_CanReadConstitution(t *testing.T) {
 
 	expectedFiles := []string{
 		"constitution/constitution.template.md",
-		"constitution/constraints.template.md",
-		"constitution/quality-gates.template.md",
 	}
 
 	for _, f := range expectedFiles {

@@ -1,45 +1,92 @@
 <quality-gates>
-  <description>Required quality checks before code completion</description>
-  
-  <gates>
-    <gate name="lint" required="true">
-      <description>Code style and static analysis</description>
-      <commands>
-        <default>npm run lint</default>
-        <ruby>bundle exec rubocop</ruby>
-        <go>go vet ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="typecheck" required="true">
-      <description>Type safety validation</description>
-      <commands>
-        <typescript>npm run typecheck</typescript>
-        <ruby>bundle exec srb tc</ruby>
-        <go>go build ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="test" required="true">
-      <description>Automated test suite</description>
-      <commands>
-        <default>npm test</default>
-        <ruby>bundle exec rspec</ruby>
-        <go>go test ./...</go>
-      </commands>
-    </gate>
-    
-    <gate name="build" required="false">
-      <description>Production build verification</description>
-      <commands>
-        <default>npm run build</default>
-      </commands>
-    </gate>
-  </gates>
-  
+  <description>
+    The 5-gate ladder. Every change passes these gates in order.
+    A failure at any gate blocks promotion to the next.
+    Read the project constitution before evaluating a gate — its articles
+    (especially Article VI — Anti-Overengineering) define the pass/fail rubric.
+  </description>
+
+  <gate id="1" name="static-integrity">
+    <when>On every save and pre-commit. Cheapest signal first.</when>
+    <checks>
+      <check>Lint passes with zero new warnings.</check>
+      <check>Format matches the project formatter.</check>
+      <check>Type check passes for typed languages.</check>
+      <check>Dead code / unused imports flagged and removed.</check>
+      <check>Dependency hygiene: no version drift, no unused deps added.</check>
+    </checks>
+    <commands>
+      <default>npm run lint &amp;&amp; npm run typecheck</default>
+      <ruby>bundle exec rubocop &amp;&amp; bundle exec srb tc</ruby>
+      <go>go vet ./... &amp;&amp; go build ./...</go>
+      <typescript>npm run lint &amp;&amp; npm run typecheck</typescript>
+    </commands>
+    <pass>Zero errors, zero new warnings.</pass>
+    <fail>Any error or new warning blocks the gate.</fail>
+  </gate>
+
+  <gate id="2" name="contract-compliance">
+    <when>Before merge, against the spec/plan/task contract.</when>
+    <checks>
+      <check>Public API matches the documented contract in spec.md / plan.md.</check>
+      <check>YAGNI: no speculative parameters, options, or hooks not in the spec.</check>
+      <check>DRY: no extraction below the third instance of duplication.</check>
+      <check>KISS: of the working approaches, the simplest one was chosen.</check>
+      <check>Anti-Speculation: no fallbacks for impossible scenarios.</check>
+      <check>output_schema sections from skill frontmatter all present in artifacts.</check>
+      <check>No undeclared side effects (filesystem, network, env mutation).</check>
+    </checks>
+    <pass>Contract diff is empty. Reviewer cites Articles IV, V, VI as satisfied.</pass>
+    <fail>Missing or extra sections, contract drift, premature abstraction, or speculative code.</fail>
+  </gate>
+
+  <gate id="3" name="behavioral-validation">
+    <when>On PR, after gates 1-2 pass.</when>
+    <checks>
+      <check>Unit tests pass.</check>
+      <check>Integration tests pass.</check>
+      <check>Each acceptance criterion in spec.md has at least one passing test.</check>
+      <check>For bugfixes: a regression test exists that fails on the old code.</check>
+      <check>Test-first evidence: tests authored before or with production code (Article II).</check>
+      <check>Coverage thresholds met (project-defined).</check>
+    </checks>
+    <commands>
+      <default>npm test</default>
+      <ruby>bundle exec rspec</ruby>
+      <go>go test ./... -count=1</go>
+    </commands>
+    <pass>Full suite green. New behavior covered. Coverage thresholds met.</pass>
+    <fail>Any failing test, any uncovered new branch, missing regression test.</fail>
+  </gate>
+
+  <gate id="4" name="pattern-consistency">
+    <when>In code review.</when>
+    <checks>
+      <check>Code uses existing helpers, not parallel re-implementations.</check>
+      <check>Naming follows project conventions (CamelCase, file-name style, etc.).</check>
+      <check>Error handling matches the project pattern (typed errors, wrap chains, etc.).</check>
+      <check>Standards in specs/standards/ are respected; novel patterns require an ADR.</check>
+      <check>File and function size within Article VI limits (≤ 300 lines / ≤ 30 lines).</check>
+    </checks>
+    <pass>No out-of-pattern code without an ADR. No standards violations.</pass>
+    <fail>Novel pattern introduced without justification, or standards violation.</fail>
+  </gate>
+
+  <gate id="5" name="observability-readiness">
+    <when>Before deploy / release.</when>
+    <checks>
+      <check>Logging covers happy path and failure modes.</check>
+      <check>Metrics exposed for the change's success/failure rate where applicable.</check>
+      <check>Errors are reported with enough context to debug from production logs.</check>
+      <check>Rollback plan documented in PR description for risky changes.</check>
+    </checks>
+    <pass>Operator can detect and roll back the change without reading source.</pass>
+    <fail>Silent failure modes, no metrics, or no rollback path for risky changes.</fail>
+  </gate>
+
   <coverage>
     <minimum-client>85</minimum-client>
     <minimum-server>90</minimum-server>
-    <require-new-tests>For new features and bug fixes</require-new-tests>
+    <require-new-tests>For new features and bugfixes (Article II).</require-new-tests>
   </coverage>
 </quality-gates>

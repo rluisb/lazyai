@@ -66,8 +66,8 @@ func TestScaffoldMcp_PreparesManagedOrchestratorServerFromLocalBuild(t *testing.
 	if entry.RequiresInstall {
 		t.Fatal("requiresInstall should be false for managed orchestrator")
 	}
-	if len(records) != 1 || records[0].Owner != types.FileOwnerLibrary {
-		t.Fatalf("records = %#v, want one library-owned tracked file", records)
+	if len(records) != 2 || records[0].Owner != types.FileOwnerLibrary {
+		t.Fatalf("records = %#v, want two library-owned tracked files (one for .ai/mcp.json, one for .mcp.json)", records)
 	}
 }
 

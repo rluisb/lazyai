@@ -1,0 +1,7 @@
+name = "speckit-analyze"
+description = "Cross-artifact consistency and coverage analysis"
+prompt = """
+Load and follow the `speckit-analyze` skill.
+
+Validates that all artifacts are internally consistent. Checks that every user story has tasks, every requirement has tests, and no gaps exist between spec, plan, and tasks.
+"""

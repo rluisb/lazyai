@@ -97,16 +97,17 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		return outputMappings
 	}
 
-	excludeOrchestrator := func(file string) bool {
-		return fileID(file) != "orchestrator"
-	}
+	// Spec 022: orchestrator is now a first-class agent with the
+	// Orchestrator→Workers→Synthesizer topology. It should be installed
+	// alongside other agents.
+	allAgents := func(file string) bool { return true }
 
 	m := map[types.ToolId]map[AssetKind]OutputTarget{
 		types.ToolIdClaudeCode: {
 			AssetKindAgents: {
 				Tool: types.ToolIdClaudeCode, Kind: AssetKindAgents,
 				SourceSubdir: "agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: excludeOrchestrator,
+				Shape: ShapeFlat, IncludeFile: allAgents,
 				Notes: "Claude Code reads agents from .claude/agents/<name>.md",
 			},
 			AssetKindSkills: {
@@ -148,7 +149,7 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			AssetKindAgents: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindAgents,
 				SourceSubdir: "agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: excludeOrchestrator,
+				Shape: ShapeFlat, IncludeFile: allAgents,
 				Notes: "OpenCode reads agents from .opencode/agents/<name>.md after frontmatter rewrite",
 			},
 			AssetKindSkills: {

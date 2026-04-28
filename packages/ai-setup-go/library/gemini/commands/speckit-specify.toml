@@ -1,0 +1,7 @@
+name = "speckit-specify"
+description = "Define what you want to build — requirements and user stories"
+prompt = """
+Load and follow the `speckit-specify` skill.
+
+The skill creates a feature specification from the user's description. Focus on WHAT and WHY, not HOW. Produces `specs/###-slug/spec.md` with prioritized user stories (P1-P3), functional requirements (FR-*), and measurable success criteria (SC-*).
+"""

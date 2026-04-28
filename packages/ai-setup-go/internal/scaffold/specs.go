@@ -149,21 +149,23 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 		}
 	}
 
-	// 3. Legacy: create selected specs directories.
-	for _, dir := range specsDirs {
-		dirPath := filepath.Join(specsDir, dir)
-		if err := files.EnsureDir(dirPath); err != nil {
-			return err
-		}
-
-		// Special case: memory also needs handoffs subdirectory.
-		if dir == "memory" {
-			if setupScope == types.SetupScopeWorkspace {
-				_ = files.EnsureDir(filepath.Join(specsDir, "memory", "decisions"))
-				_ = files.EnsureDir(filepath.Join(specsDir, "memory", "patterns"))
-				_ = files.EnsureDir(filepath.Join(specsDir, "memory", "projects"))
+	// 3. Legacy: create selected specs directories only when .specify/ is NOT
+	// present (old-style scaffold). In speckit mode, specs grow via /speckit.specify.
+	if !hasSpecify {
+		for _, dir := range specsDirs {
+			dirPath := filepath.Join(specsDir, dir)
+			if err := files.EnsureDir(dirPath); err != nil {
+				return err
 			}
-			_ = files.EnsureDir(filepath.Join(specsDir, "memory", "handoffs"))
+
+			if dir == "memory" {
+				if setupScope == types.SetupScopeWorkspace {
+					_ = files.EnsureDir(filepath.Join(specsDir, "memory", "decisions"))
+					_ = files.EnsureDir(filepath.Join(specsDir, "memory", "patterns"))
+					_ = files.EnsureDir(filepath.Join(specsDir, "memory", "projects"))
+				}
+				_ = files.EnsureDir(filepath.Join(specsDir, "memory", "handoffs"))
+			}
 		}
 	}
 

@@ -1,0 +1,7 @@
+name = "speckit-implement"
+description = "Execute all tasks to build the feature according to the plan"
+prompt = """
+Load and follow the `speckit-implement` skill.
+
+Executes tasks in dependency order with TDD cycle (RED → GREEN → REFACTOR). Applies the 5-gate quality ladder per task. Dispatches work to the implementor agent.
+"""

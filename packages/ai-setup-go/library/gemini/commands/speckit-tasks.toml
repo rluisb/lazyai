@@ -1,0 +1,7 @@
+name = "speckit-tasks"
+description = "Generate actionable task breakdown from the implementation plan"
+prompt = """
+Load and follow the `speckit-tasks` skill.
+
+Generates an ordered task list organized by user story. Each task has [P] parallel markers and [US*] labels. Produces `tasks.md` with phases, dependencies, and task harness directories.
+"""

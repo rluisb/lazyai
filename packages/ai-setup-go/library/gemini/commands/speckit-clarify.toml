@@ -1,0 +1,7 @@
+name = "speckit-clarify"
+description = "Resolve underspecified areas before planning"
+prompt = """
+Load and follow the `speckit-clarify` skill.
+
+Sequential, coverage-based questioning that resolves [NEEDS CLARIFICATION] markers in the spec. Records answers in a Clarifications section within the spec.
+"""

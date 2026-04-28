@@ -75,6 +75,17 @@ type CompileContext struct {
 	// LocalSecrets, when true, routes Claude Code MCP to the gitignored
 	// `.claude/settings.local.json` instead of the committed `.mcp.json`.
 	LocalSecrets bool
+	// WorkspaceRoot is the canonical workspace root directory. At workspace
+	// scope this equals TargetDir (the planning repo); at project scope it
+	// is empty. Spec 022 / E2.3: propagation logic uses WorkspaceRoot +
+	// Repos to write per-repo tool configs without colliding with the
+	// planning-repo write.
+	WorkspaceRoot string
+	// Repos lists the per-repo subdirectories the workspace owns. Empty
+	// outside workspace scope. Each repo's Path is relative to
+	// WorkspaceRoot; PropagateMcpToRepos walks this list to write tool
+	// configs into each repo.
+	Repos []types.RepoInfo
 }
 
 // toAdapterContext builds a minimal AdapterContext suitable for calling

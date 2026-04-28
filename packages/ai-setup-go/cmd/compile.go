@@ -13,6 +13,7 @@ import (
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
 	"github.com/ricardoborges-teachable/ai-setup/internal/db"
+	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -27,6 +28,11 @@ func init() {
 	compileCmd.Flags().String("tool", "", "Compile only for a specific tool")
 	compileCmd.Flags().Bool("dry-run", false, "Preview changes without writing files")
 	compileCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP writes to gitignored .claude/settings.local.json")
+	// Spec 022 / E2.2: contract validation runs before MCP compile to catch
+	// broken producer/consumer chains in skill frontmatter. Default on with
+	// warn-only behavior; --strict-contracts upgrades warnings to failures.
+	compileCmd.Flags().Bool("validate-contracts", true, "Validate skill output/produces_for/consumes chain before compile")
+	compileCmd.Flags().Bool("strict-contracts", false, "Fail compile on contract warnings (default: warn-only)")
 	rootCmd.AddCommand(compileCmd)
 }
 
@@ -44,6 +50,27 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	toolFilter, _ := cmd.Flags().GetString("tool")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
+	validateContracts, _ := cmd.Flags().GetBool("validate-contracts")
+	strictContracts, _ := cmd.Flags().GetBool("strict-contracts")
+
+	// Spec 022 / E2.2: validate skill chain before compile. Issues at error
+	// severity always block; warnings block only when --strict-contracts is
+	// passed.
+	if validateContracts {
+		libFS := library.GetLibraryFS()
+		contracts, err := adapter.LoadSkillContracts(libFS)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: contract load failed: %v\n", err)
+		} else {
+			issues := adapter.ValidateContracts(contracts)
+			if len(issues) > 0 {
+				fmt.Fprintln(os.Stderr, adapter.FormatContractIssues(issues))
+			}
+			if adapter.HasContractErrors(issues) || (strictContracts && len(issues) > 0) {
+				return fmt.Errorf("contract validation failed; pass --validate-contracts=false to override")
+			}
+		}
+	}
 
 	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
 	if !fileExists(mcpConfigPath) {
@@ -171,7 +198,9 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Build CompileContext with scope info from the store.
+		// Build CompileContext with scope info from the store. At workspace
+		// scope, populate WorkspaceRoot+Repos so PropagateMcpToRepos has
+		// what it needs after the root compile completes (Spec 022 / E2.3).
 		homeDir, _ := os.UserHomeDir()
 		compileCtx := adapter.CompileContext{
 			TargetDir:    dir,
@@ -179,6 +208,10 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			SetupScope:   storeData.Config.SetupScope,
 			FileRecords:  newFileRecords,
 			LocalSecrets: localSecrets,
+		}
+		if storeData.Config.SetupScope == types.SetupScopeWorkspace {
+			compileCtx.WorkspaceRoot = dir
+			compileCtx.Repos = storeData.Config.Repos
 		}
 
 		// Actually compile
@@ -210,6 +243,30 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	if dryRun {
 		fmt.Printf("  %s Dry run complete. Would compile %d tool(s).\n", cyanStyle.Render("[dry-run]"), len(tools))
 	} else {
+		// Spec 022 / E2.3: at workspace scope, after the root compile,
+		// propagate per-repo configs into each registered repo. This is
+		// best-effort — a single repo failure logs but does not abort.
+		if storeData.Config.SetupScope == types.SetupScopeWorkspace && len(storeData.Config.Repos) > 0 {
+			homeDir, _ := os.UserHomeDir()
+			propagatedCtx := adapter.CompileContext{
+				HomeDir:       homeDir,
+				SetupScope:    types.SetupScopeWorkspace,
+				LocalSecrets:  localSecrets,
+				WorkspaceRoot: dir,
+				Repos:         storeData.Config.Repos,
+			}
+			propagated, err := adapter.PropagateMcpToRepos(reg, propagatedCtx)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "  Warning: workspace propagation: %v\n", err)
+			}
+			if len(propagated) > 0 {
+				newFileRecords = append(newFileRecords, propagated...)
+				summary := adapter.SummarizeWorkspaceCompile(newFileRecords, propagated, storeData.Config.Repos)
+				fmt.Printf("    %s Propagated MCP config to %d repo(s): %v\n",
+					greenStyle.Render("✓"), len(summary.Repos), summary.Repos)
+			}
+		}
+
 		// If we compiled any new records, update the store
 		if len(newFileRecords) > 0 {
 			// Merge new file records with existing ones

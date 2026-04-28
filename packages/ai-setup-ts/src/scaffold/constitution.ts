@@ -12,39 +12,28 @@ export interface ScaffoldConstitutionOptions {
   perFileOverrides: Map<string, ConflictStrategy>
 }
 
-const CONSTITUTION_FILES = [
-  'constitution',
-  'constraints',
-  'quality-gates',
-  'uncertainty',
-]
-
 export async function scaffoldConstitution(opts: ScaffoldConstitutionOptions): Promise<void> {
   const { targetDir, libraryDir, projectName, fileRecords, strategy, perFileOverrides } = opts
-  const constitutionDir = path.join(targetDir, '.ai', 'constitution')
-  ensureDir(constitutionDir)
+  const templatePath = path.join(libraryDir, 'constitution', 'constitution.template.md')
+  if (!fileExists(templatePath)) return
 
-  for (const file of CONSTITUTION_FILES) {
-    const templatePath = path.join(libraryDir, 'constitution', `${file}.template.md`)
-    if (!fileExists(templatePath)) continue
+  const dest = path.join(targetDir, '.specify', 'memory', 'constitution.md')
+  const relPath = path.relative(targetDir, dest)
+  ensureDir(path.dirname(dest))
 
-    const template = readFile(templatePath)
-    const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
-    const dest = path.join(constitutionDir, `${file}.md`)
-    const relPath = path.relative(targetDir, dest)
-    const action = applyStrategy(dest, strategy, perFileOverrides, targetDir)
-
-    if (action === 'skip') {
-      console.warn(`⚠️  Skipping existing file: ${relPath}`)
-      continue
-    }
-
-    writeFile(dest, content)
-    fileRecords.push({
-      path: relPath,
-      hash: fileHash(dest),
-      source: `constitution/${file}.template.md`,
-      owner: 'library',
-    })
+  const action = applyStrategy(dest, strategy, perFileOverrides, targetDir)
+  if (action === 'skip') {
+    console.warn(`⚠️  Skipping existing file: ${relPath}`)
+    return
   }
+
+  const template = readFile(templatePath)
+  const content = template.replace(/\[YOUR_PROJECT_NAME\]/g, projectName)
+  writeFile(dest, content)
+  fileRecords.push({
+    path: relPath,
+    hash: fileHash(dest),
+    source: 'constitution/constitution.template.md',
+    owner: 'library',
+  })
 }

@@ -85,14 +85,10 @@ export async function scaffoldSpecs(opts: ScaffoldSpecsOptions): Promise<void> {
       await copyLibraryFile(src, dest, fileRecords, targetDir, strategy, perFileOverrides)
     }
 
-    // 1b. .specify/memory/ — constitution template + workspace repos
+    // 1b. .specify/memory/ — constitution is written by scaffoldConstitution
+    //     (with placeholder substitution); just ensure the dir + workspace repos.
     const memoryDir = path.join(specifyDir, 'memory')
     ensureDir(memoryDir)
-
-    // Copy constitution template
-    const constitutionSrc = path.join(libraryDir, 'constitution', 'constitution.template.md')
-    const constitutionDest = path.join(memoryDir, 'constitution.md')
-    await copyLibraryFile(constitutionSrc, constitutionDest, fileRecords, targetDir, strategy, perFileOverrides)
 
     // Workspace: create repos/ ledger directory
     if (setupScope === 'workspace') {

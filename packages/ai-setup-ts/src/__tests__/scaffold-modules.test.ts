@@ -26,7 +26,7 @@ describe('scaffoldSpecs', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('creates only selected specs directories', async () => {
+  it('creates only selected specs directories alongside speckit scaffold', async () => {
     await scaffoldSpecs({
       targetDir: tempDir,
       libraryDir,
@@ -40,10 +40,12 @@ describe('scaffoldSpecs', () => {
     expect(existsSync(path.join(tempDir, 'specs', 'features'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'specs', 'bugfixes'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'specs', 'adrs'))).toBe(false)
-    expect(fileRecords).toHaveLength(0)
+    expect(existsSync(path.join(tempDir, '.specify', 'templates'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.specify', 'memory'))).toBe(true)
+    expect(fileRecords.length).toBeGreaterThan(0)
   })
 
-  it('creates no directories when specsDirs is empty', async () => {
+  it('creates speckit scaffold and specs/.gitkeep when specsDirs is empty', async () => {
     await scaffoldSpecs({
       targetDir: tempDir,
       libraryDir,
@@ -54,8 +56,10 @@ describe('scaffoldSpecs', () => {
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'specs'))).toBe(false)
-    expect(fileRecords).toHaveLength(0)
+    expect(existsSync(path.join(tempDir, '.specify'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.specify', 'templates'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', '.gitkeep'))).toBe(true)
+    expect(fileRecords.some((r) => r.path === 'specs/.gitkeep')).toBe(true)
   })
 
   it('copies AGENTS.md for selected specsAgents', async () => {
@@ -109,15 +113,15 @@ describe('scaffoldTemplatesRules', () => {
     await scaffoldTemplatesRules({
       targetDir: tempDir,
       libraryDir,
-      templates: ['task'],
+      templates: ['adr'],
       rules: ['security'],
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'task.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'prd.md'))).toBe(false)
+    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'adr.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'specs', 'templates', 'standard.md'))).toBe(false)
     expect(existsSync(path.join(tempDir, 'specs', 'rules', 'security.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'specs', 'rules', 'review.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
@@ -280,7 +284,7 @@ describe('scaffoldConstitution', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('creates .ai/constitution with all 4 files', async () => {
+  it('creates .specify/memory/constitution.md', async () => {
     await scaffoldConstitution({
       targetDir: tempDir,
       libraryDir,
@@ -290,10 +294,7 @@ describe('scaffoldConstitution', () => {
       perFileOverrides: new Map(),
     })
 
-    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'constraints.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'quality-gates.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.ai', 'constitution', 'uncertainty.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.specify', 'memory', 'constitution.md'))).toBe(true)
   })
 
   it('replaces [YOUR_PROJECT_NAME] placeholder', async () => {
@@ -306,13 +307,13 @@ describe('scaffoldConstitution', () => {
       perFileOverrides: new Map(),
     })
 
-    const constitution = readFileSync(path.join(tempDir, '.ai', 'constitution', 'constitution.md'), 'utf-8')
+    const constitution = readFileSync(path.join(tempDir, '.specify', 'memory', 'constitution.md'), 'utf-8')
     expect(constitution).toContain('# placeholder-check Constitution')
     expect(constitution).not.toContain('[YOUR_PROJECT_NAME]')
   })
 
-  it('skips existing files with skip strategy', async () => {
-    const existingPath = path.join(tempDir, '.ai', 'constitution', 'constitution.md')
+  it('skips existing user-customized constitution with skip strategy', async () => {
+    const existingPath = path.join(tempDir, '.specify', 'memory', 'constitution.md')
     mkdirSync(path.dirname(existingPath), { recursive: true })
     const existingContent = '# Existing Constitution\n'
     writeFileSync(existingPath, existingContent, 'utf-8')
@@ -330,7 +331,7 @@ describe('scaffoldConstitution', () => {
     expect(currentContent).toBe(existingContent)
   })
 
-  it('records scaffolded files in fileRecords', async () => {
+  it('records scaffolded constitution file in fileRecords', async () => {
     await scaffoldConstitution({
       targetDir: tempDir,
       libraryDir,
@@ -340,12 +341,7 @@ describe('scaffoldConstitution', () => {
       perFileOverrides: new Map(),
     })
 
-    expect(fileRecords).toHaveLength(4)
-    expect(fileRecords.map((r) => r.path).sort()).toEqual([
-      '.ai/constitution/constitution.md',
-      '.ai/constitution/constraints.md',
-      '.ai/constitution/quality-gates.md',
-      '.ai/constitution/uncertainty.md',
-    ])
+    expect(fileRecords).toHaveLength(1)
+    expect(fileRecords.map((r) => r.path)).toEqual(['.specify/memory/constitution.md'])
   })
 })

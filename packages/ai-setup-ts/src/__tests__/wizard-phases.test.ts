@@ -70,7 +70,7 @@ describe('wizard phases 1 and 3', () => {
       skills: ALL_SKILLS,
       agents: ALL_AGENTS,
       mcpPreset: 'recommended',
-      enableServers: ['filesystem', 'memoria', 'memory', 'ripgrep'],
+      enableServers: ['codegraph', 'filesystem', 'graphify', 'memoria', 'memory', 'obsidian', 'qmd', 'ripgrep'],
       projectName: 'my-project',
     })
   })
@@ -156,7 +156,16 @@ describe('wizard phases 1 and 3', () => {
 
   it('Phase 1: mcp preset expansion matches parity contract', () => {
     expect(defaultMcpServersForPreset('minimal', process.cwd())).toEqual(['filesystem', 'ripgrep'])
-    expect(defaultMcpServersForPreset('recommended', process.cwd())).toEqual(['filesystem', 'memoria', 'memory', 'ripgrep'])
+    expect(defaultMcpServersForPreset('recommended', process.cwd())).toEqual([
+      'codegraph',
+      'filesystem',
+      'graphify',
+      'memoria',
+      'memory',
+      'obsidian',
+      'qmd',
+      'ripgrep',
+    ])
     expect(defaultMcpServersForPreset('full', process.cwd())).toEqual([
       'atlassian',
       'brave-search',
@@ -164,8 +173,10 @@ describe('wizard phases 1 and 3', () => {
       'context7',
       'fetch',
       'filesystem',
+      'graphify',
       'memoria',
       'memory',
+      'obsidian',
       'orchestrator',
       'playwright',
       'qmd',

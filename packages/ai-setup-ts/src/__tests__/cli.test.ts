@@ -106,7 +106,7 @@ describe('cli init integration', () => {
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/agents/builder.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.claude/skills/research/SKILL.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.opencode/skills/research/SKILL.md')).toBe(true)
-    expect(config.files.some((f: { path: string }) => f.path === 'specs/templates/task.md')).toBe(true)
+    expect(config.files.some((f: { path: string }) => f.path === 'specs/templates/plan-template.md')).toBe(true)
     expect(config.files.some((f: { path: string }) => f.path === '.git/hooks/pre-commit')).toBe(true)
   })
 

@@ -50,10 +50,20 @@ describe('update and doctor commands', () => {
 
     expect(config.files.length).toBeGreaterThan(2)
 
-    const customized = config.files[0]
-    const reAddTarget = config.files[1]
+    // The `update` command only restores files it knows how to rebuild from the
+    // library (templates/, rules/, root files, agents, skills, prompts). Pick
+    // tracked files whose paths fall under that coverage so the restore path
+    // is exercised end-to-end.
+    const isManagedByUpdate = (relPath: string): boolean =>
+      relPath.startsWith('specs/templates/')
+      || relPath.startsWith('specs/rules/')
+      || relPath.startsWith('.opencode/agents/')
+      || relPath.startsWith('.claude/agents/')
+    const managedFiles = config.files.filter((f) => isManagedByUpdate(f.path))
+    const customized = managedFiles[0]
+    const reAddTarget = managedFiles[1]
     if (!customized || !reAddTarget) {
-      throw new Error('Expected scaffold to create tracked files')
+      throw new Error('Expected scaffold to create files managed by update')
     }
 
     const customizedPath = path.join(tempDir, customized.path)

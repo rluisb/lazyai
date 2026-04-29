@@ -15,7 +15,21 @@ import {
 } from './tool-handlers.js'
 import { CatalogToolHandlers } from './catalog-tools.js'
 import { getPersistenceDb } from './persistence.js'
-import type { AdvanceChainInput, HostCli, StartChainInput, StepOutputContract, StepUsage } from './types.js'
+import type {
+  AdvanceChainInput,
+  AdvanceWorkflowInput,
+  AssignTaskInput,
+  BudgetPolicy,
+  BuildTeamInput,
+  CompleteTaskInput,
+  HostCli,
+  RunKind,
+  StartChainInput,
+  StartWorkflowInput,
+  StepOutputContract,
+  StepUsage,
+  StructuredError,
+} from './types.js'
 import { getEventBus } from './events/bus.js'
 import { JobQueue } from './queue/queue.js'
 import { startQueueWorker } from './queue/worker.js'
@@ -25,7 +39,35 @@ const CATALOG_KIND_EXTENDED_SCHEMA = z.enum(['agent', 'skill', 'chain', 'team', 
 
 const CATALOG_KIND_SCHEMA = z.enum(['chain', 'team', 'workflow', 'domain', 'mode'])
 const HOST_CLI_SCHEMA = z.enum(['claude-code', 'codex', 'opencode', 'gemini', 'copilot'])
-const CHAIN_KIND_SCHEMA = z.literal('chain')
+const RUN_KIND_SCHEMA = z.enum(['chain', 'team', 'workflow'])
+const BUDGET_SCHEMA = z.record(z.unknown())
+const STEP_USAGE_SCHEMA = z.object({
+  inputTokens: z.number().nonnegative().optional(),
+  outputTokens: z.number().nonnegative().optional(),
+  totalTokens: z.number().nonnegative().optional(),
+  costUsd: z.number().nonnegative().optional(),
+  wallClockMs: z.number().nonnegative().optional(),
+})
+const ROOT_CONTEXT_SCHEMA = z.object({
+  prompt: z.string().optional(),
+  constraints: z.array(z.string()).optional(),
+  allowedTools: z.array(z.string()).optional(),
+  modelHint: z.string().optional(),
+  approvalPolicy: z.enum(['minimal', 'normal', 'strict']).optional(),
+})
+const START_CONTEXT_SCHEMA = z.object({
+  cliTool: HOST_CLI_SCHEMA.optional(),
+  rootContext: ROOT_CONTEXT_SCHEMA.optional(),
+  project: z.record(z.unknown()).optional(),
+})
+const TEAM_TASK_OUTCOME_SCHEMA = z.enum(['success', 'failure'])
+const WORKFLOW_RECOVERY_SCHEMA = z.object({
+  type: z.enum(['retry', 'escalate', 'handoff']),
+  targetPhaseId: z.string().min(1).optional(),
+  reason: z.string().optional(),
+  recipient: z.string().optional(),
+  summary: z.string().optional(),
+})
 
 export interface OrchestratorServerContext {
   server: McpServer
@@ -71,6 +113,18 @@ function normalizeComposeAgentInput(args: Record<string, unknown>): ComposeAgent
   return normalized
 }
 
+function normalizeStartContext(args: StructuredContent): NonNullable<StartChainInput['context']> {
+  const nextContext: NonNullable<StartChainInput['context']> = {}
+  if (typeof args.cliTool === 'string') nextContext.cliTool = args.cliTool as HostCli
+  if (isStructuredContent(args.rootContext)) {
+    nextContext.rootContext = definedEntries(args.rootContext) as NonNullable<NonNullable<StartChainInput['context']>['rootContext']>
+  }
+  if (isStructuredContent(args.project)) {
+    nextContext.project = definedEntries(args.project) as NonNullable<NonNullable<StartChainInput['context']>['project']>
+  }
+  return nextContext
+}
+
 function normalizeStartChainInput(args: Record<string, unknown>): StartChainInput {
   const normalized: StartChainInput = {
     chain: args.chain as string,
@@ -79,19 +133,8 @@ function normalizeStartChainInput(args: Record<string, unknown>): StartChainInpu
 
   if (typeof args.domainSkill === 'string') normalized.domainSkill = args.domainSkill
   if (typeof args.modeSkill === 'string') normalized.modeSkill = args.modeSkill
-  if (isStructuredContent(args.budget)) normalized.budget = args.budget as Partial<NonNullable<StartChainInput['budget']>>
-  if (isStructuredContent(args.context)) {
-    const context = args.context
-    const nextContext: NonNullable<StartChainInput['context']> = {}
-    if (typeof context.cliTool === 'string') nextContext.cliTool = context.cliTool as HostCli
-    if (isStructuredContent(context.rootContext)) {
-      nextContext.rootContext = definedEntries(context.rootContext) as NonNullable<NonNullable<StartChainInput['context']>['rootContext']>
-    }
-    if (isStructuredContent(context.project)) {
-      nextContext.project = definedEntries(context.project) as NonNullable<NonNullable<StartChainInput['context']>['project']>
-    }
-    normalized.context = nextContext
-  }
+  if (isStructuredContent(args.budget)) normalized.budget = args.budget as Partial<BudgetPolicy>
+  if (isStructuredContent(args.context)) normalized.context = normalizeStartContext(args.context)
 
   return normalized
 }
@@ -109,18 +152,87 @@ function normalizeAdvanceChainInput(args: Record<string, unknown>): AdvanceChain
   return normalized
 }
 
-function normalizeGetStatusInput(args: { runId: string; kind: 'chain' }): GetStatusInput {
-  return args
+function normalizeBuildTeamInput(args: Record<string, unknown>): BuildTeamInput {
+  const normalized: BuildTeamInput = {
+    team: args.team as string,
+    task: args.task as string,
+  }
+
+  if (isStructuredContent(args.budget)) normalized.budget = args.budget as Partial<BudgetPolicy>
+  return normalized
 }
 
-function normalizeGetBudgetInput(args: { runId: string; kind: 'chain' }): GetBudgetInput {
-  return args
+function normalizeAssignTaskInput(args: Record<string, unknown>): AssignTaskInput {
+  const normalized: AssignTaskInput = {
+    teamId: args.teamId as string,
+    taskId: args.taskId as string,
+    assignee: args.assignee as string,
+  }
+
+  if (typeof args.claim === 'boolean') normalized.claim = args.claim
+  return normalized
+}
+
+function normalizeCompleteTaskInput(args: Record<string, unknown>): CompleteTaskInput {
+  const normalized: CompleteTaskInput = {
+    teamId: args.teamId as string,
+    taskId: args.taskId as string,
+    outcome: args.outcome as 'success' | 'failure',
+  }
+
+  if (isStructuredContent(args.result)) normalized.result = args.result
+  if (isStructuredContent(args.usage)) normalized.usage = definedEntries(args.usage) as StepUsage
+  if (isStructuredContent(args.error)) normalized.error = args.error as unknown as StructuredError
+  return normalized
+}
+
+function normalizeStartWorkflowInput(args: Record<string, unknown>): StartWorkflowInput {
+  const normalized: StartWorkflowInput = {
+    workflow: args.workflow as string,
+    task: args.task as string,
+  }
+
+  if (typeof args.domainSkill === 'string') normalized.domainSkill = args.domainSkill
+  if (typeof args.modeSkill === 'string') normalized.modeSkill = args.modeSkill
+  if (isStructuredContent(args.budget)) normalized.budget = args.budget as Partial<BudgetPolicy>
+  if (isStructuredContent(args.context)) normalized.context = normalizeStartContext(args.context)
+  return normalized
+}
+
+function normalizeWorkflowRecovery(args: StructuredContent): NonNullable<AdvanceWorkflowInput['recovery']> {
+  const recovery: NonNullable<AdvanceWorkflowInput['recovery']> = {
+    type: args.type as NonNullable<AdvanceWorkflowInput['recovery']>['type'],
+  }
+
+  if (typeof args.targetPhaseId === 'string') recovery.targetPhaseId = args.targetPhaseId
+  if (typeof args.reason === 'string') recovery.reason = args.reason
+  if (typeof args.recipient === 'string') recovery.recipient = args.recipient
+  if (typeof args.summary === 'string') recovery.summary = args.summary
+  return recovery
+}
+
+function normalizeAdvanceWorkflowInput(args: Record<string, unknown>): AdvanceWorkflowInput {
+  const normalized: AdvanceWorkflowInput = {
+    workflowId: args.workflowId as string,
+  }
+
+  if (typeof args.outcome === 'string') normalized.outcome = args.outcome
+  if (isStructuredContent(args.recovery)) normalized.recovery = normalizeWorkflowRecovery(args.recovery)
+  return normalized
+}
+
+function normalizeGetStatusInput(args: Record<string, unknown>): GetStatusInput {
+  return { runId: args.runId as string, kind: args.kind as RunKind }
+}
+
+function normalizeGetBudgetInput(args: Record<string, unknown>): GetBudgetInput {
+  return { runId: args.runId as string, kind: args.kind as RunKind }
 }
 
 function normalizeRetryStepInput(args: Record<string, unknown>): RetryStepInput {
   const normalized: RetryStepInput = {
     runId: args.runId as string,
-    kind: args.kind as 'chain',
+    kind: args.kind as RunKind,
     stepId: args.stepId as string,
   }
 
@@ -131,11 +243,12 @@ function normalizeRetryStepInput(args: Record<string, unknown>): RetryStepInput 
 function normalizeEscalateStepInput(args: Record<string, unknown>): EscalateStepInput {
   const normalized: EscalateStepInput = {
     runId: args.runId as string,
-    kind: args.kind as 'chain',
+    kind: args.kind as RunKind,
     stepId: args.stepId as string,
     targetAgent: args.targetAgent as string,
   }
 
+  if (typeof args.targetPhaseId === 'string') normalized.targetPhaseId = args.targetPhaseId
   if (typeof args.domainSkill === 'string') normalized.domainSkill = args.domainSkill
   if (typeof args.modeSkill === 'string') normalized.modeSkill = args.modeSkill
   if (typeof args.reason === 'string') normalized.reason = args.reason
@@ -145,7 +258,7 @@ function normalizeEscalateStepInput(args: Record<string, unknown>): EscalateStep
 function normalizeHandoffInput(args: Record<string, unknown>): HandoffInput {
   const normalized: HandoffInput = {
     runId: args.runId as string,
-    kind: args.kind as 'chain',
+    kind: args.kind as RunKind,
   }
 
   if (typeof args.summary === 'string') normalized.summary = args.summary
@@ -186,15 +299,7 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         stepInstructions: z.string().optional(),
         cliTool: HOST_CLI_SCHEMA.optional(),
         outputContract: z.record(z.unknown()).optional(),
-        rootContext: z
-          .object({
-            prompt: z.string().optional(),
-            constraints: z.array(z.string()).optional(),
-            allowedTools: z.array(z.string()).optional(),
-            modelHint: z.string().optional(),
-            approvalPolicy: z.enum(['minimal', 'normal', 'strict']).optional(),
-          })
-          .optional(),
+        rootContext: ROOT_CONTEXT_SCHEMA.optional(),
         allowedTools: z.array(z.string()).optional(),
         model: z.string().optional(),
       },
@@ -211,22 +316,8 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         task: z.string().min(1),
         domainSkill: z.string().min(1).optional(),
         modeSkill: z.string().min(1).optional(),
-        budget: z.record(z.unknown()).optional(),
-        context: z
-          .object({
-            cliTool: HOST_CLI_SCHEMA.optional(),
-            rootContext: z
-              .object({
-                prompt: z.string().optional(),
-                constraints: z.array(z.string()).optional(),
-                allowedTools: z.array(z.string()).optional(),
-                modelHint: z.string().optional(),
-                approvalPolicy: z.enum(['minimal', 'normal', 'strict']).optional(),
-              })
-              .optional(),
-            project: z.record(z.unknown()).optional(),
-          })
-          .optional(),
+        budget: BUDGET_SCHEMA.optional(),
+        context: START_CONTEXT_SCHEMA.optional(),
       },
     },
     async (args: ToolArgs) => formatToolResult(handlers.startChain(normalizeStartChainInput(args))),
@@ -241,51 +332,115 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
         stepId: z.string().min(1),
         outcome: z.string().min(1),
         output: z.record(z.unknown()).optional(),
-        usage: z
-          .object({
-            inputTokens: z.number().nonnegative().optional(),
-            outputTokens: z.number().nonnegative().optional(),
-            totalTokens: z.number().nonnegative().optional(),
-            costUsd: z.number().nonnegative().optional(),
-            wallClockMs: z.number().nonnegative().optional(),
-          })
-          .optional(),
+        usage: STEP_USAGE_SCHEMA.optional(),
       },
     },
     async (args: ToolArgs) => formatToolResult(handlers.advanceChain(normalizeAdvanceChainInput(args))),
   )
 
   server.registerTool(
-    'get_status',
+    'build_team',
     {
-      description: 'Get the current runtime status for a Phase 2 chain.',
+      description: 'Compile and start a team run for parallel task execution.',
       inputSchema: {
-        runId: z.string().min(1),
-        kind: CHAIN_KIND_SCHEMA,
+        team: z.string().min(1),
+        task: z.string().min(1),
+        budget: BUDGET_SCHEMA.optional(),
       },
     },
-    async (args: { runId: string; kind: 'chain' }) => formatToolResult(handlers.getStatus(normalizeGetStatusInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.buildTeam(normalizeBuildTeamInput(args))),
+  )
+
+  server.registerTool(
+    'assign_team_task',
+    {
+      description: 'Assign or claim a ready team task for an assignee.',
+      inputSchema: {
+        teamId: z.string().min(1),
+        taskId: z.string().min(1),
+        assignee: z.string().min(1),
+        claim: z.boolean().optional(),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(handlers.assignTask(normalizeAssignTaskInput(args))),
+  )
+
+  server.registerTool(
+    'complete_team_task',
+    {
+      description: 'Complete a team task with success or failure output.',
+      inputSchema: {
+        teamId: z.string().min(1),
+        taskId: z.string().min(1),
+        outcome: TEAM_TASK_OUTCOME_SCHEMA,
+        result: z.record(z.unknown()).optional(),
+        usage: STEP_USAGE_SCHEMA.optional(),
+        error: z.record(z.unknown()).optional(),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(handlers.completeTask(normalizeCompleteTaskInput(args))),
+  )
+
+  server.registerTool(
+    'start_workflow',
+    {
+      description: 'Compile and start a workflow run.',
+      inputSchema: {
+        workflow: z.string().min(1),
+        task: z.string().min(1),
+        domainSkill: z.string().min(1).optional(),
+        modeSkill: z.string().min(1).optional(),
+        budget: BUDGET_SCHEMA.optional(),
+        context: START_CONTEXT_SCHEMA.optional(),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(handlers.startWorkflow(normalizeStartWorkflowInput(args))),
+  )
+
+  server.registerTool(
+    'advance_workflow',
+    {
+      description: 'Advance a running workflow after a phase outcome or recovery decision.',
+      inputSchema: {
+        workflowId: z.string().min(1),
+        outcome: z.string().min(1).optional(),
+        recovery: WORKFLOW_RECOVERY_SCHEMA.optional(),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(handlers.advanceWorkflow(normalizeAdvanceWorkflowInput(args))),
+  )
+
+  server.registerTool(
+    'get_status',
+    {
+      description: 'Get the current runtime status for a chain, team, or workflow run.',
+      inputSchema: {
+        runId: z.string().min(1),
+        kind: RUN_KIND_SCHEMA,
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(handlers.getStatus(normalizeGetStatusInput(args))),
   )
 
   server.registerTool(
     'get_budget',
     {
-      description: 'Get the tracked budget state for a Phase 2 chain.',
+      description: 'Get the tracked budget state for a chain, team, or workflow run.',
       inputSchema: {
         runId: z.string().min(1),
-        kind: CHAIN_KIND_SCHEMA,
+        kind: RUN_KIND_SCHEMA,
       },
     },
-    async (args: { runId: string; kind: 'chain' }) => formatToolResult(handlers.getBudget(normalizeGetBudgetInput(args))),
+    async (args: ToolArgs) => formatToolResult(handlers.getBudget(normalizeGetBudgetInput(args))),
   )
 
   server.registerTool(
     'retry_step',
     {
-      description: 'Retry a failed chain step if retries remain.',
+      description: 'Retry a failed chain step, team task, or workflow phase if supported.',
       inputSchema: {
         runId: z.string().min(1),
-        kind: CHAIN_KIND_SCHEMA,
+        kind: RUN_KIND_SCHEMA,
         stepId: z.string().min(1),
         reason: z.string().optional(),
       },
@@ -296,12 +451,13 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
   server.registerTool(
     'escalate_step',
     {
-      description: 'Reassign a chain step to a different agent.',
+      description: 'Escalate a chain step, team task, or workflow phase.',
       inputSchema: {
         runId: z.string().min(1),
-        kind: CHAIN_KIND_SCHEMA,
+        kind: RUN_KIND_SCHEMA,
         stepId: z.string().min(1),
         targetAgent: z.string().min(1),
+        targetPhaseId: z.string().min(1).optional(),
         domainSkill: z.string().optional(),
         modeSkill: z.string().optional(),
         reason: z.string().optional(),
@@ -313,10 +469,10 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
   server.registerTool(
     'handoff',
     {
-      description: 'Persist a resumable handoff document for a running chain.',
+      description: 'Persist a resumable handoff document for a running chain, team, or workflow.',
       inputSchema: {
         runId: z.string().min(1),
-        kind: CHAIN_KIND_SCHEMA,
+        kind: RUN_KIND_SCHEMA,
         summary: z.string().optional(),
         recipient: z.string().optional(),
         includeArtifacts: z.boolean().optional(),

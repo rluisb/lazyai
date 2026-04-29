@@ -39,6 +39,8 @@ import {
   assignTeamTask,
   completeTeamTask,
   createTeamState,
+  escalateTeamTask,
+  retryTeamTask,
 } from './team-machine.js'
 import {
   advanceWorkflowState,
@@ -63,6 +65,7 @@ import type {
   HandoffDocument,
   OrchestrationCatalog,
   RootContextLayer,
+  RunKind,
   StartChainInput,
   StartWorkflowInput,
   StructuredError,
@@ -117,16 +120,17 @@ export interface GetBudgetInput {
 
 export interface RetryStepInput {
   runId: string
-  kind: 'chain'
+  kind: RunKind
   stepId: string
   reason?: string
 }
 
 export interface EscalateStepInput {
   runId: string
-  kind: 'chain'
+  kind: RunKind
   stepId: string
   targetAgent: string
+  targetPhaseId?: string
   domainSkill?: string
   modeSkill?: string
   reason?: string
@@ -151,7 +155,7 @@ export interface InvokeAgentResult {
 
 export interface HandoffInput {
   runId: string
-  kind: 'chain'
+  kind: RunKind
   summary?: string
   recipient?: string
   includeArtifacts?: boolean
@@ -726,6 +730,53 @@ export class OrchestratorToolHandlers {
   }
 
   retryStep(input: RetryStepInput) {
+    if (input.kind === 'team') {
+      const state = loadTeamState(this.options.projectRoot, input.runId)
+      const retried = retryTeamTask({ state, taskId: input.stepId })
+      const budgetUpdate = updateBudget({
+        budget: retried.state.budget,
+        policy: retried.state.budgetPolicy,
+        retryIncrement: 1,
+        stepId: input.stepId,
+      })
+      retried.state.budget = budgetUpdate.budget
+      saveTeamState(this.options.projectRoot, retried.state)
+
+      getEventBus().emit(getPersistenceDb(), {
+        eventType: 'team.task.retrying',
+        runId: retried.state.teamId,
+        runKind: 'team',
+        payload: { taskId: input.stepId, state: retried.state.state, readyTaskIds: retried.state.readyTaskIds },
+      })
+
+      return {
+        runId: retried.state.teamId,
+        stepId: input.stepId,
+        state: retried.state.state,
+        readyTaskIds: retried.state.readyTaskIds,
+        attemptsRemaining: null,
+      }
+    }
+
+    if (input.kind === 'workflow') {
+      this.requireMatchingWorkflowPhase(input.runId, input.stepId)
+      const retried = this.advanceWorkflow({
+        workflowId: input.runId,
+        recovery: {
+          type: 'retry',
+          ...(input.reason ? { reason: input.reason } : {}),
+        },
+      })
+
+      return {
+        runId: retried.workflowId,
+        stepId: input.stepId,
+        state: retried.state,
+        currentPhase: retried.currentPhase,
+        budget: retried.budget,
+      }
+    }
+
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
     const retried = retryChainStep(state, plan, input.stepId)
@@ -754,6 +805,48 @@ export class OrchestratorToolHandlers {
   }
 
   escalateStep(input: EscalateStepInput) {
+    if (input.kind === 'team') {
+      const state = loadTeamState(this.options.projectRoot, input.runId)
+      const escalated = escalateTeamTask({ state, taskId: input.stepId, targetAgent: input.targetAgent })
+      saveTeamState(this.options.projectRoot, escalated.state)
+
+      getEventBus().emit(getPersistenceDb(), {
+        eventType: 'team.task.escalated',
+        runId: escalated.state.teamId,
+        runKind: 'team',
+        payload: { taskId: input.stepId, targetAgent: input.targetAgent, state: escalated.state.state },
+      })
+
+      return {
+        runId: escalated.state.teamId,
+        stepId: input.stepId,
+        state: escalated.state.state,
+        readyTaskIds: escalated.state.readyTaskIds,
+        newAssignment: escalated.task,
+      }
+    }
+
+    if (input.kind === 'workflow') {
+      this.requireMatchingWorkflowPhase(input.runId, input.stepId)
+      const targetPhaseId = input.targetPhaseId ?? input.targetAgent
+      const escalated = this.advanceWorkflow({
+        workflowId: input.runId,
+        recovery: {
+          type: 'escalate',
+          targetPhaseId,
+          ...(input.reason ? { reason: input.reason } : {}),
+        },
+      })
+
+      return {
+        runId: escalated.workflowId,
+        stepId: input.stepId,
+        state: escalated.state,
+        currentPhase: escalated.currentPhase,
+        budget: escalated.budget,
+      }
+    }
+
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
     const escalated = escalateChainStep(state, plan, input.stepId, input.targetAgent, input.domainSkill, input.modeSkill)
@@ -777,6 +870,61 @@ export class OrchestratorToolHandlers {
   }
 
   handoff(input: HandoffInput) {
+    if (input.kind === 'team') {
+      const state = loadTeamState(this.options.projectRoot, input.runId)
+      state.state = 'handoff'
+      state.updatedAt = new Date().toISOString()
+
+      const handoff: HandoffDocument = {
+        id: crypto.randomUUID(),
+        runId: state.teamId,
+        kind: 'team',
+        summary: input.summary ?? `Handoff for team ${state.teamId}`,
+        ...(input.recipient ? { recipient: input.recipient } : {}),
+        createdAt: new Date().toISOString(),
+        resumable: true,
+        status: state,
+      }
+
+      const filePath = saveHandoff(this.options.projectRoot, handoff)
+      saveTeamState(this.options.projectRoot, state)
+
+      return {
+        handoffId: handoff.id,
+        path: filePath,
+        summary: handoff.summary,
+        resumable: true,
+      }
+    }
+
+    if (input.kind === 'workflow') {
+      const state = loadWorkflowState(this.options.projectRoot, input.runId)
+      state.state = 'handoff'
+      if (input.summary) state.handoffSummary = input.summary
+      state.updatedAt = new Date().toISOString()
+
+      const handoff: HandoffDocument = {
+        id: crypto.randomUUID(),
+        runId: state.workflowId,
+        kind: 'workflow',
+        summary: input.summary ?? `Handoff for workflow ${state.workflowId}`,
+        ...(input.recipient ? { recipient: input.recipient } : {}),
+        createdAt: new Date().toISOString(),
+        resumable: true,
+        status: state,
+      }
+
+      const filePath = saveHandoff(this.options.projectRoot, handoff)
+      saveWorkflowState(this.options.projectRoot, state)
+
+      return {
+        handoffId: handoff.id,
+        path: filePath,
+        summary: handoff.summary,
+        resumable: true,
+      }
+    }
+
     const state = loadChainState(this.options.projectRoot, input.runId)
     const plan = loadExecutionPlan(this.options.projectRoot, state.executionPlanId)
 
@@ -1045,6 +1193,14 @@ export class OrchestratorToolHandlers {
     const workflow = this.getCatalog().workflows[name]
     if (!workflow) throw new Error(`Unknown workflow definition: ${name}`)
     return workflow
+  }
+
+  private requireMatchingWorkflowPhase(workflowId: string, stepId: string): WorkflowState {
+    const state = loadWorkflowState(this.options.projectRoot, workflowId)
+    if (state.currentPhaseId && state.currentPhaseId !== stepId) {
+      throw new Error(`Workflow current phase "${state.currentPhaseId}" does not match requested step "${stepId}".`)
+    }
+    return state
   }
 
   private toCurrentStepStatus(plan: ReturnType<typeof loadExecutionPlan>, state: ChainState): ChainStepStatus | null {

@@ -2,9 +2,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadChainState } from '../persistence.js'
+import { loadChainState, loadTeamState, loadWorkflowState } from '../persistence.js'
 import { OrchestratorToolHandlers } from '../tool-handlers.js'
-import type { ChainStepStatus } from '../types.js'
+import type { ChainStepStatus, RunKind, StructuredError, TeamTaskState } from '../types.js'
 
 const tempDirs: string[] = []
 
@@ -124,6 +124,26 @@ function isChainStepStatus(current: unknown): current is ChainStepStatus {
   return typeof current === 'object' && current !== null && 'stepId' in current
 }
 
+function structuredError(runId: string, runKind: RunKind, stepId: string): StructuredError {
+  return {
+    category: 'logical',
+    code: 'TEST_FAILURE',
+    message: 'Synthetic test failure',
+    stepId,
+    agent: 'builder',
+    skills: ['typescript'],
+    context: {
+      runId,
+      runKind,
+      task: 'Test task',
+      attempt: 1,
+      hostCli: 'opencode',
+    },
+    suggestedRecovery: { type: 'retry', maxAttempts: 1 },
+    timestamp: new Date().toISOString(),
+  }
+}
+
 describe('tool-handlers', () => {
   it('lists catalog items and composes prompts', () => {
     const handlers = setupFixture()
@@ -216,6 +236,135 @@ describe('tool-handlers', () => {
     const budget = handlers.getBudget({ runId: workflowAfterChain.workflowId, kind: 'workflow' })
     expect(budget.scope).toBe('workflow')
     expect(budget.tokens.consumed).toBeGreaterThanOrEqual(30)
+  })
+
+  it('queries team status and budget, retries failed team tasks, and escalates team assignments', () => {
+    const handlers = setupFixture()
+    const team = handlers.buildTeam({
+      team: 'review-team',
+      task: 'Review auth middleware',
+      budget: { retries: { limit: 3 } },
+    })
+    const taskId = 'review-team:correctness-reviewer'
+
+    const initialStatus = handlers.getStatus({ runId: team.teamId, kind: 'team' })
+    expect(initialStatus.kind).toBe('team')
+    expect(initialStatus.summary.readyTaskIds).toEqual([taskId])
+
+    handlers.assignTask({ teamId: team.teamId, taskId, assignee: 'reviewer-a', claim: true })
+    handlers.completeTask({
+      teamId: team.teamId,
+      taskId,
+      outcome: 'failure',
+      usage: { totalTokens: 15 },
+      error: structuredError(team.teamId, 'team', taskId),
+    })
+
+    const budgetAfterFailure = handlers.getBudget({ runId: team.teamId, kind: 'team' })
+    expect(budgetAfterFailure.tokens.consumed).toBe(15)
+
+    const retried = handlers.retryStep({ runId: team.teamId, kind: 'team', stepId: taskId, reason: 'try again' })
+    expect(retried.state).toBe('running')
+    expect(retried.readyTaskIds).toEqual([taskId])
+    expect(retried.attemptsRemaining).toBeNull()
+
+    const retriedState = loadTeamState(projectRootFromHandlers(handlers), team.teamId)
+    expect(retriedState.budget.retries.consumed).toBe(1)
+    expect(retriedState.tasks.find((task) => task.taskId === taskId)?.state).toBe('pending')
+    expect(retriedState.tasks.find((task) => task.taskId === taskId)?.error).toBeUndefined()
+
+    handlers.assignTask({ teamId: team.teamId, taskId, assignee: 'reviewer-b', claim: true })
+    handlers.completeTask({
+      teamId: team.teamId,
+      taskId,
+      outcome: 'failure',
+      error: structuredError(team.teamId, 'team', taskId),
+    })
+
+    const escalated = handlers.escalateStep({
+      runId: team.teamId,
+      kind: 'team',
+      stepId: taskId,
+      targetAgent: 'senior-builder',
+      reason: 'needs senior review',
+    })
+
+    const newAssignment = escalated.newAssignment as TeamTaskState
+    expect(escalated.state).toBe('running')
+    expect(escalated.readyTaskIds).toEqual([taskId])
+    expect(newAssignment.agent).toBe('senior-builder')
+    expect(newAssignment.assignee).toBeUndefined()
+    expect(newAssignment.error).toBeUndefined()
+  })
+
+  it('hands off team and workflow runs', () => {
+    const handlers = setupFixture()
+    const projectRoot = projectRootFromHandlers(handlers)
+
+    const team = handlers.buildTeam({ team: 'review-team', task: 'Review auth middleware' })
+    const teamHandoff = handlers.handoff({
+      runId: team.teamId,
+      kind: 'team',
+      summary: 'Team handoff summary',
+      recipient: 'next-agent',
+      includeArtifacts: true,
+    })
+
+    expect(teamHandoff.summary).toBe('Team handoff summary')
+    expect(loadTeamState(projectRoot, team.teamId).state).toBe('handoff')
+
+    const workflow = handlers.startWorkflow({ workflow: 'delivery', task: 'Deliver auth middleware' })
+    const workflowHandoff = handlers.handoff({
+      runId: workflow.workflowId,
+      kind: 'workflow',
+      summary: 'Workflow handoff summary',
+    })
+
+    const workflowState = loadWorkflowState(projectRoot, workflow.workflowId)
+    expect(workflowHandoff.summary).toBe('Workflow handoff summary')
+    expect(workflowState.state).toBe('handoff')
+    expect(workflowState.handoffSummary).toBe('Workflow handoff summary')
+  })
+
+  it('routes workflow retry and escalation through recovery decisions', () => {
+    const handlers = setupFixture()
+
+    const workflow = handlers.startWorkflow({ workflow: 'delivery', task: 'Deliver auth middleware' })
+    const initialChildRunId = workflow.currentPhase?.childRun?.runId
+    expect(workflow.currentPhase?.phaseId).toBe('implement')
+
+    const failed = handlers.advanceWorkflow({ workflowId: workflow.workflowId, outcome: 'failure' })
+    expect(failed.state).toBe('awaiting_recovery')
+
+    const retried = handlers.retryStep({
+      runId: workflow.workflowId,
+      kind: 'workflow',
+      stepId: 'implement',
+      reason: 'rerun implementation',
+    })
+
+    expect(retried.state).toBe('waiting_on_child')
+    expect(retried.currentPhase?.phaseId).toBe('implement')
+    expect(retried.currentPhase?.childRun?.runKind).toBe('chain')
+    expect(retried.currentPhase?.childRun?.runId).not.toBe(initialChildRunId)
+    expect(retried.budget?.scope).toBe('workflow')
+
+    const workflowForEscalation = handlers.startWorkflow({ workflow: 'delivery', task: 'Deliver auth middleware' })
+    handlers.advanceWorkflow({ workflowId: workflowForEscalation.workflowId, outcome: 'failure' })
+
+    const escalated = handlers.escalateStep({
+      runId: workflowForEscalation.workflowId,
+      kind: 'workflow',
+      stepId: 'implement',
+      targetAgent: 'review',
+      targetPhaseId: 'review',
+      reason: 'route to review phase',
+    })
+
+    expect(escalated.state).toBe('waiting_on_child')
+    expect(escalated.currentPhase?.phaseId).toBe('review')
+    expect(escalated.currentPhase?.childRun?.runKind).toBe('team')
+    expect(escalated.budget?.scope).toBe('workflow')
   })
 
   it('attaches bootstrap and housekeeping reports to chain state', () => {

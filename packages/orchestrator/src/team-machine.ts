@@ -43,6 +43,19 @@ export interface CompleteTeamTaskResult {
   evaluation: BudgetEvaluation
 }
 
+export interface RetryTeamTaskInput {
+  state: TeamState
+  taskId: string
+  now?: string
+}
+
+export interface EscalateTeamTaskInput {
+  state: TeamState
+  taskId: string
+  targetAgent: string
+  now?: string
+}
+
 export function createTeamState(input: CreateTeamStateInput): TeamState {
   const now = input.createdAt ?? new Date().toISOString()
   const memberTasks = input.definition.parallel.map<TeamTaskState>((member, index) => ({
@@ -166,6 +179,33 @@ export function completeTeamTask(input: CompleteTeamTaskInput): CompleteTeamTask
   }
 }
 
+export function retryTeamTask(input: RetryTeamTaskInput): { state: TeamState; task: TeamTaskState } {
+  const now = input.now ?? new Date().toISOString()
+  const state = structuredClone(input.state)
+  const task = requireTask(state, input.taskId)
+
+  if (task.state !== 'failed') {
+    throw new Error(`Task "${task.taskId}" cannot be retried from state "${task.state}".`)
+  }
+
+  resetTaskForReassignment(task)
+  refreshTeamRunState(state, now)
+
+  return { state, task }
+}
+
+export function escalateTeamTask(input: EscalateTeamTaskInput): { state: TeamState; task: TeamTaskState } {
+  const now = input.now ?? new Date().toISOString()
+  const state = structuredClone(input.state)
+  const task = requireTask(state, input.taskId)
+
+  task.agent = input.targetAgent
+  resetTaskForReassignment(task)
+  refreshTeamRunState(state, now)
+
+  return { state, task }
+}
+
 function updateSynthesisReadiness(state: TeamState, now: string): void {
   if (state.state === 'failed') {
     const synthesisTask = requireTask(state, state.synthesisTaskId)
@@ -182,6 +222,33 @@ function updateSynthesisReadiness(state: TeamState, now: string): void {
     state.state = 'synthesizing'
     state.updatedAt = now
   }
+}
+
+function refreshTeamRunState(state: TeamState, now: string): void {
+  const synthesisTask = requireTask(state, state.synthesisTaskId)
+  const memberTasks = state.tasks.filter((task) => task.kind === 'member')
+
+  if (memberTasks.every((task) => task.state === 'completed')) {
+    if (synthesisTask.state === 'blocked') synthesisTask.state = 'pending'
+    state.state = synthesisTask.state === 'completed' ? 'completed' : 'synthesizing'
+  } else {
+    if (synthesisTask.state !== 'completed') synthesisTask.state = 'blocked'
+    state.state = 'running'
+  }
+
+  state.readyTaskIds = computeReadyTaskIds(state.tasks)
+  state.updatedAt = now
+}
+
+function resetTaskForReassignment(task: TeamTaskState): void {
+  task.state = 'pending'
+  delete task.assignee
+  delete task.claimedBy
+  delete task.assignedAt
+  delete task.claimedAt
+  delete task.completedAt
+  delete task.result
+  delete task.error
 }
 
 function computeReadyTaskIds(tasks: TeamTaskState[]): string[] {

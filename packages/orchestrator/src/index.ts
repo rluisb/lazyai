@@ -7,6 +7,7 @@ import { runCatalog } from './cli/catalog.js'
 import { parseServeArgs, runServe, SERVE_HELP } from './cli/serve.js'
 import { parseConnectArgs, runConnect, CONNECT_HELP } from './cli/connect.js'
 import { runInvoke } from './cli/invoke.js'
+import { parseInitArgs, runInit, INIT_HELP } from './cli/init.js'
 import { getPersistenceDb } from './persistence.js'
 import { getLogDir, getPort } from './config/paths.js'
 import { createLogger, type Logger } from './logging/logger.js'
@@ -61,6 +62,13 @@ async function main(): Promise<void> {
 
   if (subcommand === 'invoke') {
     await runInvoke(getPersistenceDb(), rest)
+    return
+  }
+
+  if (subcommand === 'init') {
+    const parsed = parseInitArgs(rest)
+    if (parsed.help) { process.stdout.write(INIT_HELP); return }
+    await runInit(parsed)
     return
   }
 

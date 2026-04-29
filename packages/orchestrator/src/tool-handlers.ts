@@ -21,7 +21,6 @@ import {
   runPostTaskHousekeeping,
   runPreTaskHousekeeping,
 } from './housekeeping.js'
-import { loadCatalog } from './loader.js'
 import {
   loadChainState,
   loadExecutionPlan,
@@ -76,11 +75,11 @@ import type {
 import type { Logger } from './logging/logger.js'
 import { createNoopLogger } from './logging/logger.js'
 import { getPersistenceDb } from './persistence.js'
-import { resolveCatalog } from './catalog/resolver.js'
 import type { HostCli } from './types.js'
 import { getEventBus } from './events/bus.js'
 import { JobQueue } from './queue/queue.js'
 import { CatalogStore } from './catalog/store.js'
+import { loadRuntimeCatalog } from './catalog/runtime.js'
 
 export interface ToolHandlerOptions {
   projectRoot: string
@@ -1155,19 +1154,11 @@ export class OrchestratorToolHandlers {
   }
 
   private getCatalog(): OrchestrationCatalog {
-    const base = loadCatalog({
+    return loadRuntimeCatalog({
       projectRoot: this.options.projectRoot,
       ...(this.options.libraryOrchestrationRoot ? { libraryOrchestrationRoot: this.options.libraryOrchestrationRoot } : {}),
       ...(this.options.libraryAgentsRoot ? { libraryAgentsRoot: this.options.libraryAgentsRoot } : {}),
-    })
-    const hostCli = this.options.hostCli
-    const resolverHostCli = hostCli === 'opencode' || hostCli === 'claude-code' || hostCli === 'codex'
-      ? hostCli
-      : undefined
-    return resolveCatalog(base, {
-      db: getPersistenceDb(),
-      projectRoot: this.options.projectRoot,
-      ...(resolverHostCli !== undefined ? { hostCli: resolverHostCli } : {}),
+      ...(this.options.hostCli ? { hostCli: this.options.hostCli } : {}),
     })
   }
 

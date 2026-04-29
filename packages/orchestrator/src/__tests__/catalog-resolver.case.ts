@@ -93,4 +93,57 @@ describe('resolveCatalog', () => {
     const result = resolveCatalog(emptyCatalog, { db, projectRoot: '/tmp/test' })
     expect(Object.keys(result.agents)).toHaveLength(0)
   })
+
+  it('overlays active DB chains teams and workflows while skipping inactive definitions', () => {
+    const store = new CatalogStore(db)
+    store.createVersion({
+      kind: 'chain',
+      name: 'review-chain',
+      frontmatter: { name: 'Review chain' },
+      body: JSON.stringify({
+        kind: 'chain',
+        name: 'ignored-chain-name',
+        description: 'Runs review',
+        entry: 'review',
+        steps: [{ id: 'review', agent: 'reviewer', skills: [], description: 'Review', transitions: { completed: 'done' } }],
+      }),
+    })
+    store.createVersion({
+      kind: 'team',
+      name: 'review-team',
+      frontmatter: { name: 'Review team' },
+      body: JSON.stringify({
+        kind: 'team',
+        name: 'ignored-team-name',
+        description: 'Parallel review',
+        parallel: [{ role: 'reviewer', agent: 'reviewer', skills: [], focus: 'quality' }],
+        synthesize: { agent: 'reviewer', description: 'Summarize' },
+      }),
+    })
+    store.createVersion({
+      kind: 'workflow',
+      name: 'review-workflow',
+      frontmatter: { name: 'Review workflow' },
+      body: JSON.stringify({
+        kind: 'workflow',
+        name: 'ignored-workflow-name',
+        description: 'Workflow review',
+        entry: 'start',
+        phases: [{ id: 'start', kind: 'chain', ref: 'review-chain', on: { completed: 'done' } }],
+      }),
+    })
+    store.createVersion({
+      kind: 'chain',
+      name: 'inactive-chain',
+      frontmatter: { name: 'Inactive chain' },
+      body: JSON.stringify({ kind: 'chain', name: 'inactive-chain', entry: 'start', steps: [] }),
+    })
+    store.deactivateDefinition('chain', 'inactive-chain')
+
+    const result = resolveCatalog(emptyCatalog, { db, projectRoot: '/tmp/test' })
+    expect(result.chains['review-chain']).toMatchObject({ name: 'review-chain', source: 'db', path: 'catalog://chain/review-chain' })
+    expect(result.teams['review-team']).toMatchObject({ name: 'review-team', source: 'db', path: 'catalog://team/review-team' })
+    expect(result.workflows['review-workflow']).toMatchObject({ name: 'review-workflow', source: 'db', path: 'catalog://workflow/review-workflow' })
+    expect(result.chains['inactive-chain']).toBeUndefined()
+  })
 })

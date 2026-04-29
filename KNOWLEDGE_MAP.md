@@ -1,53 +1,41 @@
 # Project Knowledge Map
 
-> Navigable index of all project documentation.
-> The AI reads this for orientation. Update when creating new work items or ADRs.
+> Navigable index of all project documentation.  
+> The AI reads this for orientation. Update when creating new work items or ADRs.  
+> **Speckit layout:** specs go in `.specify/`; legacy `specs/` archived.
 
 ---
 
 ## Architecture Decisions
 
-| ADR | Decision | Feature | Status |
-|-----|----------|---------|--------|
-| [specs/adrs/001-title.md] | [what was decided] | [NNN-feature — or "Cross-cutting"] | Accepted |
+| ADR | Decision | Status |
+|-----|----------|--------|
+| [022] Speckit workflow alignment | Option B: Adapt & Enhance — absorbed speckit into ai-setup library, not a runtime dependency | Accepted |
+| [017] Gemini command layout | Gemini TOML commands in `library/gemini/commands/` with legacy fallback | Accepted |
 
 ## Active Features
 
-| ID | Name | Status | ADRs |
-|----|------|--------|------|
-| [specs/features/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN, NNN — or "None"] |
-
-## Active Bugfixes
-
-| ID | Name | Status |
-|----|------|--------|
-| [specs/bugfixes/001-name/] | [description] | [Research/Fix/Done] |
-
-## Active Refactors
-
-| ID | Name | Status | ADRs |
-|----|------|--------|------|
-| [specs/refactors/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN] |
-
-## Tech Debt
-
-| ID | Name | Priority | Status |
-|----|------|----------|--------|
-| [specs/tech-debt/001-name/] | [description] | [Low/Med/High/Critical] | [Identified/Planned/In Progress/Resolved] |
+| Spec | Name | Status |
+|------|------|--------|
+| [022](.specify/features/022-speckit-workflow-alignment/) | Speckit Workflow Alignment | Done |
+| workspace-root | Workspace Root Wizard | Done |
 
 ## Rules & Standards
 
 | Type | Files | Purpose |
 |------|-------|---------|
-| Rules | specs/rules/*.md | Prescriptive — WHAT to do |
-| Standards | specs/standards/*.md | Descriptive — HOW we do it |
+| Rules | `.claude/rules/*.md`, `.opencode/rules/*.md` | Prescriptive — WHAT to do |
+| Standards | `specs/standards/*.md` (legacy), `.specify/memory/` (new) | Descriptive — HOW we do it |
+| Constitution | `.specify/memory/constitution.md` | Governing contract for all workflows |
 
 ## Key Modules
 
-<!-- Map your codebase's main modules for quick AI orientation. -->
-
-| Path | Responsibility | Owner |
-|------|---------------|-------|
-| [src/module-a/] | [what it does] | [team/person] |
-| [src/module-b/] | [what it does] | [team/person] |
-| [src/shared/] | Shared utilities (read-only for agents) | [team] |
+| Path | Responsibility |
+|------|---------------|
+| `packages/ai-setup-go/` | Go CLI — canonical implementation (source of truth) |
+| `packages/ai-setup-go/library/` | Library: agents, skills, templates, commands, MCP catalog |
+| `packages/ai-setup-go/internal/adapter/` | Per-tool adapters (Claude, OpenCode, Gemini, Copilot, Codex) |
+| `packages/ai-setup-go/internal/scaffold/` | Scaffold pipeline (specs, constitution, MCP, templates, infra) |
+| `packages/ai-setup-ts/` | TypeScript CLI — mirrors Go behavior |
+| `packages/ai-setup-ts/src/adapters/` | TS per-tool adapters (parity with Go) |
+| `packages/orchestrator/` | MCP server for multi-agent orchestration (optional, user opt-in) |

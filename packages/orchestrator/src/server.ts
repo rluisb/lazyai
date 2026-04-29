@@ -564,6 +564,36 @@ export function createOrchestratorServer(options: ToolHandlerOptions): Orchestra
   )
 
   server.registerTool(
+    'catalog_deactivate',
+    {
+      description: 'Deactivate a catalog definition by clearing its active version while preserving immutable history.',
+      inputSchema: {
+        kind: CATALOG_KIND_EXTENDED_SCHEMA,
+        name: z.string().min(1),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(catalogHandlers.catalogDeactivate({
+      kind: args.kind as never,
+      name: args.name as string,
+    })),
+  )
+
+  server.registerTool(
+    'catalog_remove',
+    {
+      description: 'Remove a catalog definition and all versions. Destructive; use only when explicitly requested.',
+      inputSchema: {
+        kind: CATALOG_KIND_EXTENDED_SCHEMA,
+        name: z.string().min(1),
+      },
+    },
+    async (args: ToolArgs) => formatToolResult(catalogHandlers.catalogRemove({
+      kind: args.kind as never,
+      name: args.name as string,
+    })),
+  )
+
+  server.registerTool(
     'catalog_diff',
     {
       description: 'Compare two versions of a definition (returns both side-by-side).',

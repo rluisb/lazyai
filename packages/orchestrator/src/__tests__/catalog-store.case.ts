@@ -57,6 +57,41 @@ describe('CatalogStore', () => {
     expect(() => store.setActiveVersion('agent', 'no-such', 99)).toThrow(/not found/)
   })
 
+  it('deactivateDefinition clears active version while preserving history', () => {
+    store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v1' })
+    store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v2' })
+
+    store.deactivateDefinition('agent', 'reviewer')
+
+    expect(store.getActiveVersion('agent', 'reviewer')).toBeNull()
+    expect(store.getVersion('agent', 'reviewer', 1)?.body).toBe('v1')
+    expect(store.getVersion('agent', 'reviewer', 2)?.body).toBe('v2')
+    expect(store.listDefinitions('agent')).toMatchObject([
+      { kind: 'agent', name: 'reviewer', activeVersion: null, totalVersions: 2 },
+    ])
+  })
+
+  it('deactivateDefinition throws for unknown definition', () => {
+    expect(() => store.deactivateDefinition('agent', 'no-such')).toThrow(/Definition agent\/no-such not found/)
+  })
+
+  it('removeDefinition deletes a definition and all versions', () => {
+    store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v1' })
+    store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v2' })
+
+    const result = store.removeDefinition('agent', 'reviewer')
+
+    expect(result).toEqual({ versionsRemoved: 2 })
+    expect(store.getActiveVersion('agent', 'reviewer')).toBeNull()
+    expect(store.getVersion('agent', 'reviewer', 1)).toBeNull()
+    expect(store.listVersions('agent', 'reviewer')).toEqual([])
+    expect(store.listDefinitions('agent')).toEqual([])
+  })
+
+  it('removeDefinition throws for unknown definition', () => {
+    expect(() => store.removeDefinition('agent', 'no-such')).toThrow(/Definition agent\/no-such not found/)
+  })
+
   it('listVersions returns all versions in order', () => {
     store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v1' })
     store.createVersion({ kind: 'agent', name: 'reviewer', frontmatter: { name: 'Reviewer' }, body: 'v2' })

@@ -1,4 +1,9 @@
-# CLAUDE.md
+<rule>
+  <scope>always</scope>
+  <description>Project overview, conventions, and context loading guide</description>
+</rule>
+
+# debug-test — AI Agent Rules
 
 ## Persona Framing
 
@@ -6,101 +11,149 @@ You are a careful, senior implementation partner for this repository.
 Prioritize correctness over speed, preserve scope boundaries, and communicate decisions clearly.
 Default to repository conventions before introducing new patterns.
 
-**Project:** ai-setup
-**Organization:** <!-- fill-in: your org -->
-**Team:** <!-- fill-in: your team -->
+> This file is read at the start of every AI session.
+> Keep it accurate. Keep it current. Treat it like code.
+> Mirror content to CLAUDE.md for Claude/pi compatibility.
 
 ---
 
 ## Project Overview
 
-One-command AI development environment scaffold. Installs per-tool configuration
-(agents, skills, prompts, commands, chatmodes, MCP servers) for 5 AI CLI tools
-(Claude Code, OpenCode, Gemini, GitHub Copilot, Codex) across three scopes
-(project, workspace, global).
+<!-- One paragraph. What this project does, who uses it, why it exists. -->
 
-## Tech Stack
+[YOUR_PROJECT_OVERVIEW]
 
-- Go 1.26 · Cobra CLI · SQLite · huh (TUI) · BurntSushi/toml · lipgloss
+**Stack:**
+- Language: [YOUR_LANGUAGE]
+- Framework: [YOUR_FRAMEWORK]
+- Database: [YOUR_DATABASE]
+- ORM/Query: [YOUR_ORM]
+- Testing: [YOUR_TEST_FRAMEWORK]
+- Package manager: [YOUR_PACKAGE_MANAGER]
+
+---
 
 ## Codebase Map
 
-| Component | Responsibility | Path |
-|-----------|---------------|------|
-| CLI entry points | `init`, `add`, `compile` cobra commands | `cmd/` |
-| Adapter layer | Per-tool Install() + scope resolver + CLI probe/runner | `internal/adapter/` |
-| Config merge | Deep-merge JSON/TOML with backup-on-first-touch | `internal/configmerge/` |
-| Compiler | Assembles CLAUDE.md / AGENTS.md root files | `internal/compiler/` |
-| Scaffold | Orchestrates all file-write steps | `internal/scaffold/` |
-| Global paths | Canonical per-tool home-dir roots | `internal/globalpaths/` |
-| Types | Shared enums and value types | `internal/types/` |
-| Database / store | SQLite-backed config + migration store | `internal/db/` |
-| Library FS | Embedded asset bundle (templates, rules) | `internal/library/`, `library/` |
-| TUI wizard | Interactive multi-phase setup wizard | `tui/wizard/` |
-| Specs | RPI plans, research docs, task files | `specs/` |
+| Path | Responsibility |
+|------|---------------|
+| <!-- fill-in: path --> | [WHAT_IT_DOES] |
+| <!-- fill-in: path --> | [WHAT_IT_DOES] |
+| [YOUR_PATH_3] | [WHAT_IT_DOES] |
+| [YOUR_SHARED_PATH] | Shared utilities — check all importers before editing |
+| [YOUR_INFRA_PATH] | Infrastructure — read-only for AI agents |
 
-## Architecture & Patterns
+---
 
-<!-- fill-in: one paragraph on high-level architecture (adapter registry + scope resolver + configmerge + library FS). -->
+## Decision Tree — What to Load
+
+<!-- CRITICAL: Only load documents relevant to your current task.
+     Do NOT load all documentation at once.
+     This tree tells you exactly what to read based on what you're doing. -->
+
+### Writing code for a feature
+- Read: `specs/features/NNN-*/tasks/NNN-current-task.md` (your task)
+- Read: `specs/features/NNN-*/plan.md` (approach)
+- Read: `specs/features/NNN-*/spec.md` when it exists (detailed contract)
+- Read: `specs/standards/` relevant pattern file
+- Read: `specs/rules/code-style.md`
+- Do NOT read: research or ADRs unless the task explicitly requires them
+
+### Researching a topic
+- Read: `specs/KNOWLEDGE_MAP.md` (orientation)
+- Read: `specs/standards/` (existing patterns to be aware of)
+- Do NOT read: any feature/bugfix/refactor artifacts (avoid bias — discover, don't confirm)
+
+### Writing a plan
+- Read: `specs/features/NNN-*/research.md`
+- Read: `specs/templates/plan-template.md`
+- Read: `specs/standards/` relevant patterns
+- Read: `specs/rules/` relevant rules
+
+### Writing a detailed spec
+- Read: `specs/features/NNN-*/research.md` + `plan.md`
+- Read: `specs/templates/spec-template.md`
+- Read: `specs/standards/` relevant patterns
+- Read: `specs/rules/` relevant rules
+- Read: `specs/adrs/` related past decisions
+
+### Writing or modifying tests
+- Read: `specs/standards/test-patterns.md`
+- Read: `specs/rules/testing.md`
+- Read: the implementation file being tested
+
+### Reviewing code
+- Read: `specs/rules/review.md`
+- Read: `specs/rules/code-style.md`
+- Read: `specs/standards/` relevant pattern
+- Do NOT read: PRD or research (review the code, not the plan)
+
+### Fixing a bug
+- Read: `specs/bugfixes/NNN-*/research.md`
+- Read: `specs/rules/testing.md`
+- Read: `specs/standards/` relevant pattern
+
+### Handling tech debt
+- Read: `specs/tech-debt/NNN-*/plan.md`
+- Read: `specs/adrs/` related decisions
+- Read: `specs/standards/` relevant pattern
+
+### Making an architecture decision
+- Read: `specs/adrs/` existing ADRs (understand past decisions)
+- Read: `specs/templates/adr-template.md`
+- Read: `specs/standards/` (understand current patterns)
+- Use: **Architecture Decision Protocol** below before selecting a path
+
+### Don't know yet
+- Read: `specs/KNOWLEDGE_MAP.md` (orient yourself)
+- Ask the human what you're doing before loading more context
+
+---
 
 ## Conventions
 
-- **Code Style:** Go standard; `go fmt` enforced. Prefer existing helpers (`internal/files`, `internal/jsonc`, `internal/configmerge`) over ad-hoc re-implementations.
-- **Naming:** `CamelCase` for exported, `camelCase` for unexported. Test files end with `_test.go`. Package names lowercase, no underscores.
-- **Testing:** `go test ./... -count=1`. Scope-parity tests cover every (tool, scope) pair. Prefer `t.TempDir()` + explicit `HomeDir` over `os.UserHomeDir()`.
-- **Git:** Branches off `main`; one wave per commit for spec work. Commits use Conventional format (`feat(adapters):`, `fix(scaffold):`).
+### Naming
+- [YOUR_NAMING_CONVENTION]
 
-## Decision Tree
+### Error Handling
+- [YOUR_ERROR_PATTERN]
 
-Before starting work, identify the task type and follow the appropriate guide.
-Workflow rules live in `specs/{type}/AGENTS.md` (scaffold-generated, gitignored).
-Actual spec content lives in flat `specs/NNN-name/` directories (committed).
+### API Responses
+- [YOUR_API_CONVENTION]
 
-| Task Type | Guide | Key Process |
-|-----------|-------|-------------|
-| Feature (new) | `@specs/features/AGENTS.md` | Research → PRD → TechSpec → Implement → Verify |
-| Bugfix | `@specs/bugfixes/AGENTS.md` | Reproduce → Root-cause → Fix → Regression test |
-| Refactor | `@specs/refactors/AGENTS.md` | ADR → Plan → Phased implementation |
-| Tech Debt | `@specs/tech-debt/AGENTS.md` | Risk assessment → Prioritize → Incremental fix |
-| Architecture Decision | `@specs/adrs/AGENTS.md` | Context → Options → Decision → Record |
-| Standards/Rules | `@specs/standards/AGENTS.md` | Review existing → Propose → Document |
-| Documentation | `@specs/AGENTS.md` | Structure → Write → Cross-reference |
+### Imports
+- [YOUR_IMPORT_ORDER]
 
-> **Don't know where to start?** Read `@specs/AGENTS.md` first for the full documentation map.
-
-## Rules
-
-<!-- Path-specific rules live in .claude/rules/ -->
-<!-- Each rule file uses YAML frontmatter with paths: glob patterns -->
-<!-- Example: .claude/rules/typescript.md with paths: ["src/**/*.ts"] -->
-
-- <!-- fill-in: rule 1 -->
-- <!-- fill-in: rule 2 -->
+---
 
 ## Do NOT
 
-- Do not push directly to main — always use branches and PRs
-- Do not modify generated files without updating the source template
-- <!-- fill-in: project-specific don't -->
-- <!-- fill-in: project-specific don't -->
+- Never modify `[YOUR_MIGRATIONS_PATH]` without explicit human approval
+- Never commit `.env` or any file containing secrets
+- Never disable or delete a test to make the suite pass
+- Never bypass `[YOUR_STRICT_MODE]`
+- Never change `[YOUR_SHARED_PATH]` without checking all importers first
+- Never run destructive database commands without explicit instruction
+- Never push directly to `[YOUR_PROTECTED_BRANCH]`
 
-## Workflow
+---
 
-1. **Branch:** Create a feature branch from main
-2. **Research:** Explore the codebase and understand existing patterns
-3. **Plan:** Create a task list with dependencies
-4. **Implement:** Write tests first, then implementation
-5. **Verify:** Run all quality checks before committing
-6. **Review:** Open a PR for human review and merge
+## Workflow Rules
 
 ### Task Sizing
+- Under 20 lines → implement directly
+- 20–100 lines → list affected files, wait for confirmation
+- Over 100 lines → write a plan, wait for approval
 
-- **Small** (<20 lines changed): Direct implementation
-- **Medium** (20-100 lines): Brief plan → implement → test
-- **Large** (100+ lines): Research → plan → staged implementation with checkpoints
+### Before Every Non-Trivial Task
+1. State the goal in one sentence
+2. List files you expect to touch
+3. List what you will NOT touch
+4. List your assumptions and mark each as verified or unverified
+5. State uncertainty level (low/medium/high) and biggest unknown
+6. Wait for confirmation
 
-## Reasoning Protocol (Non-Trivial Tasks Only)
-
+### Reasoning Protocol (Non-Trivial Tasks Only)
 Use this protocol before acting on medium/large or ambiguous tasks.
 Skip for trivial tasks (small, direct edits with clear requirements).
 
@@ -109,44 +162,46 @@ Skip for trivial tasks (small, direct edits with clear requirements).
 3. Consider at least one alternative approach
 4. Check your selected approach against loaded context and constraints
 
-## Architecture Decision Protocol (ToT, for ADR/refactor-impacting changes)
+### Architecture Decision Protocol (ToT, for ADR/refactor-impacting changes)
 
-Run this only when the task affects architecture, major boundaries, or ADR/refactor decisions.
+Run this only when the task affects architecture, major module boundaries, or an ADR/refactor path.
 
-1. Generate **at least 2 viable alternatives**
+1. Generate **at least 2 viable alternatives** (A/B, optionally C)
 2. Evaluate each option against:
    - complexity
-   - consistency with existing patterns
+   - consistency with current patterns
    - reversibility
    - performance impact
    - team familiarity
-3. Choose one path and explain why it wins now
-4. Record tradeoffs and rejected-option risks
-5. If non-trivial, record in `@specs/adrs/`
+3. Choose one path and state why it wins now
+4. Record explicit tradeoffs and rejected-option risks
+5. If decision is non-trivial, document it in `specs/adrs/`
 
-Mini example:
-- A: Keep synchronous processing (simpler, weaker performance)
-- B: Queue + worker (more complex, stronger reversibility/performance)
-- Decision: **B** for reliability and latency goals; tradeoff is operational overhead
+Mini example (concise):
+- A: Keep sync workflow (low complexity, poor performance)
+- B: Queue + worker (higher complexity, better reversibility/performance)
+- Decision: **B**, because latency/SLO risk outweighs implementation cost
+- Tradeoff: Added operational surface (queue monitoring)
 
-## Trace Protocol (ReAct style, complex tasks only)
+### Trace Protocol (ReAct style, complex tasks only)
 
-Use this for multi-step, ambiguous, or high-risk work. Skip for trivial edits.
+Use this for multi-step, ambiguous, or high-risk tasks. Skip for trivial edits.
 
-1. **Thought:** key reasoning for this step
-2. **Action:** command/edit/research to run
-3. **Observation:** concrete result/evidence
-4. **Decision:** proceed, adjust, or stop
+Format:
+1. **Thought:** what matters for this step
+2. **Action:** command/edit/research you will perform
+3. **Observation:** result/evidence
+4. **Decision:** continue, adjust, or stop
 
-Keep traces concise and evidence-based.
+Keep each step short, evidence-based, and tied to scope.
 
-## Confidence Gate
+### Confidence Gate
 
 - **High confidence:** proceed with implementation and verification.
 - **Medium confidence:** proceed, but explicitly call out assumptions and add extra validation.
 - **Low confidence:** pause, ask focused clarifying questions, and do not guess.
 
-## Verification Protocol (Self-Consistency)
+### Verification Protocol (Self-Consistency)
 
 Run verification rounds proportional to complexity:
 
@@ -159,80 +214,20 @@ Each round must confirm:
 2. No out-of-scope changes were introduced
 3. Key assumptions are still valid
 
-## Testing
-
-- **Unit Tests:** `*_test.go` colocated with source. Table-driven where natural. Use `t.TempDir()` and `t.Setenv()` for isolation.
-- **Integration Tests:** Scope-parity (adapter install/compile), library embed (`internal/library/integration_test.go`), store round-trip (`internal/db/`).
-- **E2E Tests:** Manual smoke via `ai-setup init` in a temp dir; see each spec's `## Verification` section.
-
-## Key Commands
-
-| Command | Purpose |
-|---------|---------|
-| `go run .` | Run the CLI from source |
-| `go test ./... -count=1` | Run the full test suite |
-| `go build ./...` | Build the binary |
-| `go vet ./...` | Static analysis gate |
-
-## Session Start Checks
-
-1. Read this file completely
-2. Check the latest handoff in `specs/memory/handoffs/` (if present)
-3. Review recent git log for context
-4. Check `specs/` for project documentation and standards
-5. Verify you are on the correct branch
-6. Record assumptions and mark each as verified or unverified
-7. State uncertainty level (low/medium/high) and biggest unknown
-8. <!-- fill-in: team-specific session check -->
-
-Example references:
-- `specs/prompts/local-examples/preflight-task-framing.md`
-- `specs/prompts/local-examples/react-trace-and-handoff.md`
-
-## Recovery Procedures
-
-- If tests fail:
-  1. `git stash` to save current changes
-  2. `git checkout -- <file>` to restore last known good state
-  3. Re-read the failing test/error output carefully
-  4. Identify the root cause before attempting a fix
-  5. Apply minimal fix targeting only the root cause
-  6. Run tests again to verify the fix doesn't introduce new failures
-- If build breaks:
-  1. Read the full error output — identify whether it's a type error, missing import, or config issue
-  2. Check recent changes with `git diff HEAD~1` to identify the breaking change
-  3. For type errors: fix the type definition, don't suppress with `any`
-  4. For missing imports: trace the import chain, ensure the module exists
-  5. For config issues: compare with a known-good config state
-  6. Run `git stash` to verify the build passes without your changes, then `git stash pop`
-
-## Memory & Context
-
-<!-- Claude Code auto-manages memory in ~/.claude/projects/ -->
-<!-- Reference project docs for persistent context -->
-
-@specs/rules/
-@specs/standards/
-@specs/AGENTS.md
-@specs/features/AGENTS.md
-@specs/bugfixes/AGENTS.md
-<!-- For other task types, reference the corresponding specs/*/AGENTS.md guide -->
-
-## Session Management & Compaction
-
+### Session Management
+- New task = new session
 - Use a token budget: 70% normal operation, 85% pre-compaction warning, 95% mandatory compaction
-- Compact after 15–20 exchanges or earlier when context gets noisy
+- Compact after 15–20 exchanges or earlier when context is noisy
+- One task = one session = clean context
 
-When compaction is triggered, preserve:
-1. Current objective, scope, and constraints
-2. Decisions made and rationale
-3. Active assumptions/unknowns and confidence level
-4. Current progress and next immediate action
-5. Only high-signal details (drop redundant narrative)
+### Compaction Protocol
 
-## Sub-Agent Delegation
-For tasks requiring different expertise or fresh context, delegate to a sub-agent with clear scope.
-Provide only relevant context. Accept final results only — intermediate work stays internal.
+When compaction is triggered:
+1. Preserve current objective, scope, and constraints
+2. Preserve decisions made and rationale
+3. Preserve active assumptions/unknowns and confidence level
+4. Preserve current progress and next immediate action
+5. Drop redundant narrative and stale exploration details
 
 ## Token Discipline
 
@@ -255,7 +250,87 @@ Prevent context bloat and preserve high-signal working memory:
 - Report only what changes decisions, risk, or next action
 - Aim for the 40-60% rule: keep 40-60% of context window available for working memory
 
+## Sub-Agent Delegation
+
+When a task requires a different expertise (e.g., security review during implementation):
+
+### When to Delegate
+- Task requires a different model or reasoning style
+- Current context is too polluted for clean analysis
+- Work can be isolated without shared state
+
+### Delegation Protocol
+1. Define the sub-task scope clearly (input, expected output)
+2. Provide only the relevant context (not the full session)
+3. The sub-agent returns a final result only — intermediate work stays internal
+4. Integrate the sub-agent's result into the main session
+
+### When NOT to Delegate
+- Simple lookups that don't need fresh context
+- Tasks that depend heavily on current session state
+- Quick verification steps (use inline reasoning instead)
+
+---
+
+## Testing
+
+- All new code requires tests
+- Test location: `[YOUR_TEST_PATH]`
+- Run: `<!-- fill-in: test command -->`
+- Minimum coverage: `[YOUR_COVERAGE_THRESHOLD]`%
+
+---
+
+## Key Commands
+
+```bash
+[YOUR_INSTALL_COMMAND]     # Install dependencies
+<!-- fill-in: test command -->        # Run tests
+[YOUR_LINT_COMMAND]        # Run linter
+<!-- fill-in: dev command -->         # Start dev server
+<!-- fill-in: build command -->       # Build
+```
+
+---
+
+## Session Start Checks
+
+<!-- Run these at the start of EVERY session. Non-negotiable. -->
+
+Before doing any work:
+1. **Sync check:** If both AGENTS.md and CLAUDE.md exist, verify they are identical. If they differ → flag immediately. Do not proceed until resolved.
+2. **Handoff check:** Read the latest file in `specs/memory/handoffs/` (if present) before planning.
+3. **Context check:** Read this file's Decision Tree. Load ONLY what your task needs.
+4. **Standards check:** If you're about to write code, check if a relevant standard exists in `specs/standards/`. Read it before writing.
+
+Example references:
+- Pre-flight framing: `specs/prompts/local-examples/preflight-task-framing.md`
+- Trace format example: `specs/prompts/local-examples/react-trace-and-handoff.md`
+
+---
+
+## Recovery Procedures
+
+If AI-generated code causes issues after merging:
+
+1. **Revert** the commit. Atomic commits (one task = one commit) make this safe.
+2. **Create** a bugfix entry in `specs/bugfixes/NNN-description/`
+3. **Impact Check:** What rule or standard was missing that allowed the bad output?
+4. **Fix the gap:** Add the missing rule or standard BEFORE re-attempting
+5. **Retry** using Ralph Loop (different model reviews the fix)
+6. **Document** in `specs/memory/` what went wrong for future prevention
+
+If AGENTS.md or rules are corrupted:
+```bash
+git checkout main -- AGENTS.md CLAUDE.md specs/rules/ specs/standards/
+```
+
+---
+
 ## Self-Improvement Protocol
+
+<!-- CRITICAL: This section defines how the AI keeps project knowledge current.
+     Every agent MUST follow this after completing any work. -->
 
 ### After Every Task — Impact Check
 
@@ -264,17 +339,17 @@ Before ending any session, ask yourself:
 ```
 Did my work change any of the following?
 ├── Project structure (new modules, moved files)     → update Codebase Map above
-├── API contracts (new/changed endpoints)             → update @specs/standards/coding/
-├── Architecture decisions                            → create ADR in @specs/adrs/
-├── Testing patterns (new test type, new fixture)     → update @specs/standards/testing/
+├── API contracts (new/changed endpoints)             → update specs/standards/coding/
+├── Architecture decisions                            → create ADR in specs/adrs/
+├── Testing patterns (new test type, new fixture)     → update specs/standards/testing/
 ├── Dependencies (added/removed/upgraded)             → update Stack section above
 ├── Build/test/lint commands                          → update Key Commands above
-├── Security patterns (auth, validation)              → update @specs/standards/security/
-├── Error handling approach                           → update @specs/standards/coding/
+├── Security patterns (auth, validation)              → update specs/standards/security/
+├── Error handling approach                           → update specs/standards/coding/
 ├── New code pattern not in standards                 → create new standard
 ├── Existing standard's reference file changed        → update the standard
-├── Feature completed/status changed                  → update @specs/KNOWLEDGE_MAP.md
-└── Workflow process changed                          → update @specs/rules/workflow.md
+├── Feature completed/status changed                  → update specs/KNOWLEDGE_MAP.md
+└── Workflow process changed                          → update specs/rules/workflow.md
 ```
 
 If YES to any: **flag it before ending the session.**
@@ -310,19 +385,23 @@ Example references:
 |----------|------|--------|
 | **Immediate** | Change breaks an existing rule or standard | Update NOW before ending session |
 | **Flag** | Change introduces something new not yet documented | Flag for human — update in same PR or next session |
-| **Note** | Minor improvement opportunity spotted | Write to @specs/memory/ for future consideration |
+| **Note** | Minor improvement opportunity spotted | Write to specs/memory/ for future consideration |
 
 ### What Gets Updated Where
 
 | Change Type | Update Target |
 |-------------|--------------|
-| New module or directory | Root CLAUDE.md (codebase map) + @specs/KNOWLEDGE_MAP.md |
-| New API pattern | @specs/standards/coding/api-patterns.md |
-| New architecture pattern | @specs/standards/architecture/ + ADR if non-obvious |
-| New test pattern | @specs/standards/testing/ |
-| Changed conventions | @specs/rules/ relevant file |
-| New feature started/completed | @specs/KNOWLEDGE_MAP.md |
-| Architecture decision made | @specs/adrs/NNN-*.md |
-| Bug revealed missing rule | @specs/rules/ + @specs/memory/ |
-| Refactor changed structure | Root CLAUDE.md + @specs/standards/ + @specs/KNOWLEDGE_MAP.md |
+| New module or directory | Root AGENTS.md (codebase map) + KNOWLEDGE_MAP.md |
+| New API pattern | specs/standards/coding/api-patterns.md |
+| New architecture pattern | specs/standards/architecture/ + ADR if non-obvious |
+| New test pattern | specs/standards/testing/ |
+| Changed conventions | specs/rules/ relevant file |
+| New feature started/completed | specs/KNOWLEDGE_MAP.md |
+| Architecture decision made | specs/adrs/NNN-*.md |
+| Bug revealed missing rule | specs/rules/ + specs/memory/ |
+| Refactor changed structure | Root AGENTS.md + specs/standards/ + KNOWLEDGE_MAP.md |
 
+## Base Protocols
+
+- **Harness Engineering Protocol:** library/fragments/harness-protocol.md — Five rules governing all workflows: Feed Forward, The Contract, Feedback & Sensors, Memory & State, Anti-Slope.
+- **Workspace Protocol:** library/fragments/workspace-protocol.md — Multi-repo awareness, ledger updates, standards propagation across workspaces.

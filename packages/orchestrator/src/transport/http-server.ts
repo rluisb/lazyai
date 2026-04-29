@@ -7,6 +7,7 @@ import type { Logger } from '../logging/logger.js'
 import { createNoopLogger } from '../logging/logger.js'
 import { ClientTracker } from '../daemon/client-tracker.js'
 import { writeDiscovery, clearDiscovery } from '../daemon/discovery.js'
+import { handoffActiveRuns } from '../persistence.js'
 
 export interface HttpServerOptions extends ToolHandlerOptions {
   port: number
@@ -136,6 +137,12 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
     shutdownSignaled = true
     tracker?.clear()
     if (options.writeDiscoveryFile) clearDiscovery()
+    try {
+      await handoffActiveRuns(options.projectRoot, log)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      log.error('http-server.auto-handoff-failed', { error: msg })
+    }
     await Promise.all([...sessions.values()].map((t) => t.close().catch(() => { /* best-effort */ })))
     sessions.clear()
     await new Promise<void>((resolve, reject) => {

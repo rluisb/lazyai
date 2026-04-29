@@ -64,6 +64,13 @@ export class CatalogStore {
     return row.id
   }
 
+  private getDefinitionId(kind: CatalogKindExtended, name: string): number | null {
+    const row = this.db
+      .prepare<[string, string], { id: number }>('SELECT id FROM definitions WHERE kind = ? AND name = ?')
+      .get(kind, name)
+    return row?.id ?? null
+  }
+
   private nextVersion(definitionId: number): number {
     const row = this.db
       .prepare<[number], { max_v: number | null }>('SELECT MAX(version) AS max_v FROM definition_versions WHERE definition_id = ?')
@@ -126,6 +133,35 @@ export class CatalogStore {
       .run(row.dv_id, now, kind, name)
   }
 
+  deactivateDefinition(kind: CatalogKindExtended, name: string): void {
+    const definitionId = this.getDefinitionId(kind, name)
+    if (definitionId === null) throw new Error(`Definition ${kind}/${name} not found`)
+
+    const now = new Date().toISOString()
+    this.db
+      .prepare('UPDATE definitions SET active_version_id = NULL, updated_at = ? WHERE id = ?')
+      .run(now, definitionId)
+  }
+
+  removeDefinition(kind: CatalogKindExtended, name: string): { versionsRemoved: number } {
+    const definitionId = this.getDefinitionId(kind, name)
+    if (definitionId === null) throw new Error(`Definition ${kind}/${name} not found`)
+
+    const row = this.db
+      .prepare<[number], { total: number }>('SELECT COUNT(*) AS total FROM definition_versions WHERE definition_id = ?')
+      .get(definitionId)
+    const versionsRemoved = row?.total ?? 0
+
+    const remove = this.db.transaction((id: number) => {
+      this.db.prepare('UPDATE definitions SET active_version_id = NULL WHERE id = ?').run(id)
+      this.db.prepare('DELETE FROM definition_versions WHERE definition_id = ?').run(id)
+      this.db.prepare('DELETE FROM definitions WHERE id = ?').run(id)
+    })
+    remove(definitionId)
+
+    return { versionsRemoved }
+  }
+
   private readonly versionSelect = `
     dv.id,
     dv.definition_id AS "definitionId",
@@ -140,25 +176,25 @@ export class CatalogStore {
   `
 
   getActiveVersion(kind: CatalogKindExtended, name: string): DefinitionVersionRow | null {
-    return this.db
+    return (this.db
       .prepare(`
         SELECT ${this.versionSelect}
         FROM definitions d
         JOIN definition_versions dv ON d.active_version_id = dv.id
         WHERE d.kind = ? AND d.name = ?
       `)
-      .get(kind, name) as DefinitionVersionRow | null
+      .get(kind, name) as DefinitionVersionRow | undefined) ?? null
   }
 
   getVersion(kind: CatalogKindExtended, name: string, version: number): DefinitionVersionRow | null {
-    return this.db
+    return (this.db
       .prepare(`
         SELECT ${this.versionSelect}
         FROM definitions d
         JOIN definition_versions dv ON dv.definition_id = d.id
         WHERE d.kind = ? AND d.name = ? AND dv.version = ?
       `)
-      .get(kind, name, version) as DefinitionVersionRow | null
+      .get(kind, name, version) as DefinitionVersionRow | undefined) ?? null
   }
 
   listVersions(kind: CatalogKindExtended, name: string): DefinitionVersionRow[] {

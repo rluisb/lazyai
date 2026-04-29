@@ -23,6 +23,11 @@ export interface CatalogSetActiveInput {
   version: number
 }
 
+export interface CatalogDefinitionInput {
+  kind: CatalogKindExtended
+  name: string
+}
+
 export type CatalogGetVersionInput =
   | { kind: CatalogKindExtended; name: string; version: number }
   | { kind: CatalogKindExtended; name: string }
@@ -106,6 +111,16 @@ export class CatalogToolHandlers {
   catalogSetActive(input: CatalogSetActiveInput) {
     this.store.setActiveVersion(input.kind, input.name, input.version)
     return { kind: input.kind, name: input.name, activeVersion: input.version }
+  }
+
+  catalogDeactivate(input: CatalogDefinitionInput) {
+    this.store.deactivateDefinition(input.kind, input.name)
+    return { kind: input.kind, name: input.name, activeVersion: null, deactivated: true }
+  }
+
+  catalogRemove(input: CatalogDefinitionInput) {
+    const result = this.store.removeDefinition(input.kind, input.name)
+    return { kind: input.kind, name: input.name, removed: true, versionsRemoved: result.versionsRemoved }
   }
 
   catalogDiff(input: CatalogDiffInput) {

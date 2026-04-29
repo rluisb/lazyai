@@ -56,10 +56,11 @@ specs/**/AGENTS.md
 .codegraph/
 .logs/
 .mcp.json
-graphify-out/cache/
+graphify-out/
 
 # Logs
 *.log
 
 # OS
 .DS_Store
+PROJECT_UNDERSTANDING.md

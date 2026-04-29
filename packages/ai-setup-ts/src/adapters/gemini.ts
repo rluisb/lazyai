@@ -1,6 +1,7 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import {
+  copyWithRecord,
   copyLibraryDirectory,
   getOrchestratorSkillContent,
   installRootTemplateIfMissing,
@@ -8,6 +9,23 @@ import {
   writeContentWithRecord,
 } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
+
+/**
+ * Resolve the preferred Gemini commands directory.
+ * Checks library/gemini/commands/ first (spec 017 layout), falls back to
+ * library/commands/ (legacy). Returns the library-relative path.
+ */
+function resolveGeminiCommandsSubdir(libraryDir: string): string | undefined {
+  const preferred = path.join(libraryDir, 'gemini', 'commands')
+  if (files.isDirectory(preferred) && files.listDir(preferred).length > 0) {
+    return path.join('gemini', 'commands')
+  }
+  const legacy = path.join(libraryDir, 'commands')
+  if (files.isDirectory(legacy) && files.listDir(legacy).length > 0) {
+    return 'commands'
+  }
+  return undefined
+}
 
 export class GeminiAdapter implements ToolAdapter {
   getToolId(): string {
@@ -66,6 +84,24 @@ export class GeminiAdapter implements ToolAdapter {
         ctx,
         source: 'generated:orchestrator-skill',
       })
+    }
+
+    // Copy custom slash commands (TOML files). Prefer library/gemini/commands/,
+    // fall back to library/commands/ (legacy).
+    const commandsSubdir = resolveGeminiCommandsSubdir(ctx.libraryDir)
+    if (commandsSubdir) {
+      const commandsDir = path.join(ctx.libraryDir, commandsSubdir)
+      files.ensureDir(path.join(geminiDir, 'commands'))
+      for (const file of files.listDir(commandsDir)) {
+        const srcPath = path.join(commandsDir, file)
+        if (files.isDirectory(srcPath)) continue
+        await copyWithRecord({
+          src: srcPath,
+          dest: path.join(geminiDir, 'commands', path.basename(file)),
+          ctx,
+          warnOnSkip: true,
+        })
+      }
     }
 
     // Agents → skip entirely (Gemini has no agents concept)

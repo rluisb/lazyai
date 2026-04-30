@@ -3,6 +3,7 @@ import type { AgentId, ConflictStrategy, FileRecord, PromptId, SetupScope, Skill
 export interface AdapterContext {
   targetDir: string
   setupScope?: SetupScope
+  workspaceRoot?: string
   homeDir?: string
   libraryDir: string
   fileRecords: FileRecord[]

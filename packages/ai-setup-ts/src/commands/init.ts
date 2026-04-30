@@ -38,6 +38,7 @@ interface InitOptions {
   scope?: SetupScope
   type?: SetupType
   planningRepo?: string
+  workspaceRoot?: string
   repos?: string
   tools?: string
   cliTools?: string
@@ -65,6 +66,7 @@ export function registerInit(program: Command): void {
     .option('--scope <scope>', 'Setup scope: global | workspace | project')
     .option('--type <type>', 'Deprecated alias for --scope')
     .option('--planning-repo <path>', 'Planning repo location (workspace scope)')
+    .option('--workspace-root <path>', 'Workspace root directory for AI tool configs (workspace scope, defaults to parent of planning-repo)')
     .option('--repos <paths>', 'Workspace repo references as comma-separated relative paths')
     .option('--tools <tools>', 'Comma-separated tool list: opencode,claude-code,codex,copilot,gemini')
     .option('--cli-tools <tools>', 'Comma-separated CLI tools available (codegraph,qmd,rtk)')
@@ -138,6 +140,7 @@ export function registerInit(program: Command): void {
         scope?: SetupScope
         type?: SetupType
         planningRepo?: string
+        workspaceRoot?: string
         repos?: string[]
         tools?: ToolId[]
         cliTools?: string[]
@@ -156,6 +159,7 @@ export function registerInit(program: Command): void {
       else if (tomlConfig.default_scope) cliOverrides.scope = tomlConfig.default_scope
       if (opts.type) cliOverrides.type = opts.type
       if (opts.planningRepo) cliOverrides.planningRepo = opts.planningRepo
+      if (opts.workspaceRoot) cliOverrides.workspaceRoot = opts.workspaceRoot
       if (repos) cliOverrides.repos = repos
       if (tools) cliOverrides.tools = tools
       if (cliTools) cliOverrides.cliTools = cliTools

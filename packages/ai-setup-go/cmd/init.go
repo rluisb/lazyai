@@ -24,6 +24,7 @@ var initCmd = &cobra.Command{
 
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
+	initCmd.Flags().String("workspace-root", "", "Workspace root directory for AI tool configs (workspace scope)")
 	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, gemini, copilot, codex)")
 	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (orchestrator, filesystem, memory)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")

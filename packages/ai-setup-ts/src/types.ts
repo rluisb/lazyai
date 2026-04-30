@@ -20,6 +20,7 @@ export interface SetupConfig {
   enableServers?: string[]
   projectName: string
   workspaceName?: string
+  workspaceRoot?: string
   targetDir: string
   planningRepoPath?: string
   repos?: Array<{ name: string; path: string; type?: string; description?: string }>

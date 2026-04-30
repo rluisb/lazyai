@@ -9,6 +9,8 @@ export interface AdapterContext {
   fileRecords: FileRecord[]
   enableServers?: string[]
   localSecrets?: boolean
+  driveCLI?: boolean
+  driveCli?: boolean
   force?: boolean | undefined
   dryRun?: boolean
   strategy?: ConflictStrategy
@@ -18,6 +20,7 @@ export interface AdapterContext {
     agents?: AgentId[]
     skills?: SkillId[]
     prompts?: PromptId[]
+    opencodePlugins?: string[]
   }
 }
 

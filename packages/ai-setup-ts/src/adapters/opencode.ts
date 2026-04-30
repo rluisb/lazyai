@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'
@@ -10,6 +11,28 @@ import {
   isOrchestratorEnabled,
 } from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
+
+function installOpenCodePlugins(ctx: AdapterContext): void {
+  const plugins = ctx.selections?.opencodePlugins ?? []
+  if (plugins.length === 0) return
+
+  try {
+    execFileSync('opencode', ['--version'], { stdio: 'ignore' })
+  } catch {
+    console.warn('⚠️  OpenCode CLI not found; skipping plugin install')
+    return
+  }
+
+  for (const pluginModule of plugins) {
+    const args =
+      ctx.setupScope === 'global' ? ['plugin', '-g', pluginModule] : ['plugin', pluginModule]
+    try {
+      execFileSync('opencode', args, { stdio: 'ignore' })
+    } catch {
+      console.warn(`⚠️  Failed to install OpenCode plugin ${pluginModule}; continuing`)
+    }
+  }
+}
 
 export class OpenCodeAdapter implements ToolAdapter {
   getToolId(): string {
@@ -101,6 +124,7 @@ export class OpenCodeAdapter implements ToolAdapter {
       warnOnSkip: true,
     })
 
+    installOpenCodePlugins(ctx)
   }
 
   async remove(ctx: AdapterContext): Promise<void> {

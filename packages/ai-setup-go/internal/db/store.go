@@ -141,17 +141,20 @@ func writeMeta(exec sqlExecutor, m *types.Meta) error {
 
 // ReadConfig reads the config table.
 func (s *Store) ReadConfig() (*types.Config, error) {
-	var scope, toolsJSON, cliToolsJSON, enableServersJSON string
+	var scope, setupType, toolsJSON, cliToolsJSON, enableServersJSON string
 	var projectName, workspaceName, targetDir string
 	var planningDir, planningRepoPath, reposJSON, globalRef string
+	var workspaceRoot, housekeepingJSON string
 
 	err := s.db.QueryRow(`
-		SELECT scope, tools, cli_tools, enable_servers, project_name, workspace_name,
-		       target_dir, planning_dir, planning_repo_path, repos, global_ref
+		SELECT scope, setup_type, tools, cli_tools, enable_servers, project_name, workspace_name,
+		       target_dir, planning_dir, planning_repo_path, repos, global_ref,
+		       workspace_root, housekeeping
 		FROM config WHERE id = 1`,
-	).Scan(&scope, &toolsJSON, &cliToolsJSON, &enableServersJSON,
+	).Scan(&scope, &setupType, &toolsJSON, &cliToolsJSON, &enableServersJSON,
 		&projectName, &workspaceName, &targetDir,
-		&planningDir, &planningRepoPath, &reposJSON, &globalRef)
+		&planningDir, &planningRepoPath, &reposJSON, &globalRef,
+		&workspaceRoot, &housekeepingJSON)
 	if err != nil {
 		return nil, fmt.Errorf("query config: %w", err)
 	}
@@ -176,18 +179,30 @@ func (s *Store) ReadConfig() (*types.Config, error) {
 		return nil, fmt.Errorf("unmarshal repos: %w", err)
 	}
 
+	var housekeeping types.HousekeepingConfig
+	if err := json.Unmarshal([]byte(housekeepingJSON), &housekeeping); err != nil {
+		return nil, fmt.Errorf("unmarshal housekeeping: %w", err)
+	}
+
+	if setupType == "" {
+		setupType = scope
+	}
+
 	return &types.Config{
 		SetupScope:       types.SetupScope(scope),
+		SetupType:        types.SetupScope(setupType),
 		Tools:            tools,
 		CLITools:         cliTools,
 		EnableServers:    enableServers,
 		ProjectName:      projectName,
 		WorkspaceName:    workspaceName,
+		WorkspaceRoot:    workspaceRoot,
 		TargetDir:        targetDir,
 		PlanningDir:      planningDir,
 		PlanningRepoPath: planningRepoPath,
 		Repos:            repos,
 		GlobalRef:        globalRef,
+		Housekeeping:     &housekeeping,
 	}, nil
 }
 
@@ -209,14 +224,31 @@ func writeConfig(exec sqlExecutor, c *types.Config) error {
 		return fmt.Errorf("marshal repos: %w", err)
 	}
 
+	var housekeepingJSON []byte
+	if c.Housekeeping != nil {
+		housekeepingJSON, err = json.Marshal(c.Housekeeping)
+		if err != nil {
+			return fmt.Errorf("marshal housekeeping: %w", err)
+		}
+	} else {
+		housekeepingJSON = []byte("{}")
+	}
+
+	setupType := c.SetupType
+	if setupType == "" {
+		setupType = c.SetupScope
+	}
+
 	_, err = exec.Exec(`
 		INSERT OR REPLACE INTO config
-			(id, scope, tools, cli_tools, enable_servers, project_name, workspace_name,
-			 target_dir, planning_dir, planning_repo_path, repos, global_ref)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.SetupScope, string(toolsJSON), string(cliToolsJSON), string(enableServersJSON),
+			(id, scope, setup_type, tools, cli_tools, enable_servers, project_name, workspace_name,
+			 target_dir, planning_dir, planning_repo_path, repos, global_ref,
+			 workspace_root, housekeeping)
+		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.SetupScope, setupType, string(toolsJSON), string(cliToolsJSON), string(enableServersJSON),
 		c.ProjectName, c.WorkspaceName, c.TargetDir,
-		c.PlanningDir, c.PlanningRepoPath, string(reposJSON), c.GlobalRef)
+		c.PlanningDir, c.PlanningRepoPath, string(reposJSON), c.GlobalRef,
+		c.WorkspaceRoot, string(housekeepingJSON))
 	return err
 }
 
@@ -416,7 +448,7 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 // ReadTrackedFiles reads all tracked files.
 func (s *Store) ReadTrackedFiles() ([]types.TrackedFile, error) {
 	rows, err := s.db.Query(`
-		SELECT path, hash, source, owner, status, installed_at, last_checked_at
+		SELECT path, hash, source, owner, status, installed_at, last_checked_at, kind, link_target
 		FROM tracked_files ORDER BY path`)
 	if err != nil {
 		return nil, fmt.Errorf("query tracked files: %w", err)
@@ -426,13 +458,18 @@ func (s *Store) ReadTrackedFiles() ([]types.TrackedFile, error) {
 	var files []types.TrackedFile
 	for rows.Next() {
 		var f types.TrackedFile
-		var owner, status string
+		var owner, status, kind, linkTarget string
 		if err := rows.Scan(&f.Path, &f.Hash, &f.Source, &owner, &status,
-			&f.InstalledAt, &f.LastCheckedAt); err != nil {
+			&f.InstalledAt, &f.LastCheckedAt, &kind, &linkTarget); err != nil {
 			return nil, fmt.Errorf("scan tracked file: %w", err)
 		}
 		f.Owner = types.FileOwner(owner)
 		f.Status = types.FileStatus(status)
+		f.Kind = types.FileKind(kind)
+		f.LinkTarget = linkTarget
+		if f.Kind == "" {
+			f.Kind = types.FileKindFile
+		}
 		files = append(files, f)
 	}
 
@@ -448,12 +485,16 @@ func (s *Store) UpsertTrackedFile(file types.TrackedFile) error {
 }
 
 func upsertTrackedFile(db sqlExecutor, file types.TrackedFile) error {
+	kind := string(file.Kind)
+	if kind == "" {
+		kind = string(types.FileKindFile)
+	}
 	_, err := db.Exec(`
 		INSERT OR REPLACE INTO tracked_files
-			(path, hash, source, owner, status, installed_at, last_checked_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			(path, hash, source, owner, status, installed_at, last_checked_at, kind, link_target)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		file.Path, file.Hash, file.Source, string(file.Owner), string(file.Status),
-		file.InstalledAt, file.LastCheckedAt)
+		file.InstalledAt, file.LastCheckedAt, kind, file.LinkTarget)
 	return err
 }
 

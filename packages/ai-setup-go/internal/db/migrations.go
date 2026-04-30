@@ -32,6 +32,16 @@ var migrations = []struct {
 		Up:      migrationUp004,
 		Down:    migrationDown004,
 	},
+	{
+		Version: 5,
+		Up:      migrationUp005,
+		Down:    migrationDown005,
+	},
+	{
+		Version: 6,
+		Up:      migrationUp006,
+		Down:    migrationDown006,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -240,3 +250,27 @@ ALTER TABLE selections ADD COLUMN opencode_plugins TEXT NOT NULL DEFAULT '[]';
 const migrationDown004 = `
 ALTER TABLE selections DROP COLUMN opencode_plugins;
 `
+
+// migration 005 — add kind + link_target columns to tracked_files
+// (Go↔TS alignment: TS already has kind=file|symlink and linkTarget;
+// Go needs to support the same fields for cross-compatibility.)
+//
+// Also add workspace_root + housekeeping columns to config table
+// (Go↔TS alignment: Go types already define these but DB was missing them.)
+const migrationUp005 = `
+ALTER TABLE tracked_files ADD COLUMN kind TEXT NOT NULL DEFAULT 'file';
+ALTER TABLE tracked_files ADD COLUMN link_target TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN workspace_root TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN housekeeping TEXT NOT NULL DEFAULT '{}';
+`
+
+const migrationDown005 = `
+ALTER TABLE config DROP COLUMN housekeeping;
+ALTER TABLE config DROP COLUMN workspace_root;
+ALTER TABLE tracked_files DROP COLUMN link_target;
+ALTER TABLE tracked_files DROP COLUMN kind;
+`
+
+const migrationUp006 = "ALTER TABLE config ADD COLUMN setup_type TEXT NOT NULL DEFAULT '';"
+
+const migrationDown006 = "ALTER TABLE config DROP COLUMN setup_type;"

@@ -79,6 +79,40 @@ func TestToCopilotCLIMcp_EnvPreserved(t *testing.T) {
 	}
 }
 
+func TestToCopilotVSCodeMcp_InputsSortedByID(t *testing.T) {
+	servers := map[string]McpServer{
+		"alpha": {
+			Command: "npx",
+			Env: map[string]string{
+				"Z_TOKEN": "${Z_TOKEN}",
+			},
+		},
+		"beta": {
+			Command: "npx",
+			Env: map[string]string{
+				"A_TOKEN": "${A_TOKEN}",
+				"M_TOKEN": "${M_TOKEN}",
+			},
+		},
+	}
+
+	got := toCopilotVSCodeMcp(servers)
+	inputs, ok := got["inputs"].([]map[string]any)
+	if !ok {
+		t.Fatalf("expected inputs slice, got %T", got["inputs"])
+	}
+
+	wantIDs := []string{"A_TOKEN", "M_TOKEN", "Z_TOKEN"}
+	if len(inputs) != len(wantIDs) {
+		t.Fatalf("expected %d inputs, got %d: %v", len(wantIDs), len(inputs), inputs)
+	}
+	for i, wantID := range wantIDs {
+		if inputs[i]["id"] != wantID {
+			t.Fatalf("inputs[%d].id = %v, want %s (inputs=%v)", i, inputs[i]["id"], wantID, inputs)
+		}
+	}
+}
+
 // TestCompileCopilotCLIMcp_GlobalScope verifies ~/.copilot/mcp-config.json is
 // written when the probe passes (simulated via a pre-created ~/.copilot dir).
 func TestCompileCopilotCLIMcp_GlobalScope(t *testing.T) {

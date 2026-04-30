@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -516,7 +517,13 @@ func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
 
 	if len(placeholderIDs) > 0 {
 		inputs := make([]map[string]any, 0, len(placeholderIDs))
+		ids := make([]string, 0, len(placeholderIDs))
 		for id := range placeholderIDs {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+
+		for _, id := range ids {
 			inputs = append(inputs, map[string]any{
 				"type":        "promptString",
 				"id":          id,

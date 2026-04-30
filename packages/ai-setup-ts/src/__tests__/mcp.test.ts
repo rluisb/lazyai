@@ -296,7 +296,7 @@ describe('MCP scaffold and compile', () => {
     expect(mcpJson.mcpServers.remoteEnabled.url).toBe('https://example.com/remote-enabled')
   })
 
-  it('compileMcp deep merges claude local secrets and creates backup on first write', async () => {
+  it('compileMcp deep merges claude local secrets and creates .bak on first write', async () => {
     await scaffoldMcp({
       targetDir,
       libraryDir,
@@ -337,8 +337,9 @@ describe('MCP scaffold and compile', () => {
     expect(settingsLocal.mcpServers.oldServer).toEqual({ command: 'old' })
     expect(settingsLocal.mcpServers.stdioEnabled.command).toBe('npx')
 
-    const backupPath = `${settingsPath}.ai-setup-backup`
+    const backupPath = `${settingsPath}.bak`
     expect(fileExists(backupPath)).toBe(true)
+    expect(fileExists(`${settingsPath}.ai-setup-backup`)).toBe(false)
     expect(JSON.parse(readFile(backupPath))).toEqual({
       existingTopLevel: true,
       mcpServers: {
@@ -349,13 +350,164 @@ describe('MCP scaffold and compile', () => {
     })
   })
 
+  it('compileMcp accepts JSONC comments when merging existing JSON config', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.claude'))
+    const settingsPath = path.join(targetDir, '.claude', 'settings.local.json')
+    const existing = `{
+  // user-owned setting should survive merge
+  "existingTopLevel": true,
+  "mcpServers": {
+    "oldServer": { "command": "old" }
+  }
+}
+`
+    writeFile(settingsPath, existing)
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'project',
+      localSecrets: true,
+    })
+
+    const settingsLocal = JSON.parse(readFile(settingsPath))
+    expect(settingsLocal.existingTopLevel).toBe(true)
+    expect(settingsLocal.mcpServers.oldServer).toEqual({ command: 'old' })
+    expect(settingsLocal.mcpServers.stdioEnabled.command).toBe('npx')
+    expect(readFile(`${settingsPath}.bak`)).toBe(existing)
+  })
+
+  it('compileMcp errors on corrupt JSON config instead of overwriting it', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.claude'))
+    const settingsPath = path.join(targetDir, '.claude', 'settings.local.json')
+    const corrupt = '{ "mcpServers": '
+    writeFile(settingsPath, corrupt)
+
+    await expect(
+      compileMcp({
+        canonicalDir: targetDir,
+        toolTargetDir: targetDir,
+        toolId: 'claude-code',
+        fileRecords,
+        setupScope: 'project',
+        localSecrets: true,
+      }),
+    ).rejects.toThrow(/Failed to parse JSON config/)
+
+    expect(readFile(settingsPath)).toBe(corrupt)
+    expect(fileExists(`${settingsPath}.bak`)).toBe(false)
+  })
+
+  it('compileMcp replaces arrays wholesale during JSON deep merge', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.claude'))
+    const settingsPath = path.join(targetDir, '.claude', 'settings.local.json')
+    writeFile(
+      settingsPath,
+      `${JSON.stringify(
+        {
+          mcpServers: {
+            stdioEnabled: {
+              args: ['old-arg'],
+              userNote: 'preserved',
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    )
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'claude-code',
+      fileRecords,
+      setupScope: 'project',
+      localSecrets: true,
+    })
+
+    const settingsLocal = JSON.parse(readFile(settingsPath))
+    expect(settingsLocal.mcpServers.stdioEnabled.args).toEqual(['-y', 'mcp-stdio-enabled'])
+    expect(settingsLocal.mcpServers.stdioEnabled.userNote).toBe('preserved')
+  })
+
+  it('compileMcp creates .bak for existing opencode JSONC config', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.opencode'))
+    const configPath = path.join(targetDir, '.opencode', 'opencode.jsonc')
+    const existing = `{
+  // OpenCode permits comments in JSONC
+  "plugin": ["foo-plugin"],
+  "mcp": {
+    "legacy": {
+      "type": "local",
+      "command": ["legacy-cmd"]
+    }
+  }
+}
+`
+    writeFile(configPath, existing)
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'opencode',
+      fileRecords,
+      setupScope: 'project',
+    })
+
+    const opencodeConfig = JSON.parse(readFile(configPath))
+    expect(opencodeConfig.plugin).toEqual(['foo-plugin'])
+    expect(opencodeConfig.mcp.legacy.command).toEqual(['legacy-cmd'])
+    expect(opencodeConfig.mcp.stdioEnabled.type).toBe('local')
+    expect(readFile(`${configPath}.bak`)).toBe(existing)
+    expect(fileExists(`${configPath}.ai-setup-backup`)).toBe(false)
+  })
+
   it('compileMcp attempts Claude CLI reconciliation before file fallback', async () => {
     const execSpy = vi.spyOn(mcpCompilerInternals, 'execFileSync').mockImplementation((file, args) => {
       if (file === 'claude' && Array.isArray(args) && args[0] === '--version') {
         return Buffer.from('claude 1.0.0')
       }
 
-      if (file === 'claude' && Array.isArray(args) && args[0] === 'mcp') {
+      if (file === 'claude' && Array.isArray(args) && args[0] === 'mcp' && args[1] === 'get') {
+        throw new Error('not found')
+      }
+
+      if (file === 'claude' && Array.isArray(args) && args[0] === 'mcp' && args[1] === 'add-json') {
         return Buffer.from('ok')
       }
 
@@ -376,9 +528,13 @@ describe('MCP scaffold and compile', () => {
       toolId: 'claude-code',
       fileRecords,
       setupScope: 'project',
+      driveCLI: true,
     })
 
-    expect(execSpy).toHaveBeenCalledWith('claude', ['--version'], { stdio: 'ignore' })
+    expect(execSpy).toHaveBeenCalledWith('claude', ['mcp', 'get', 'stdioEnabled'], {
+      cwd: targetDir,
+      stdio: 'pipe',
+    })
     expect(execSpy).toHaveBeenCalledWith(
       'claude',
       [
@@ -391,10 +547,12 @@ describe('MCP scaffold and compile', () => {
           // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
           env: { API_KEY: '${API_KEY}' },
         }),
+        '-s',
+        'project',
       ],
-      { stdio: 'pipe' },
+      { cwd: targetDir, stdio: 'pipe' },
     )
-    expect(fileExists(path.join(targetDir, '.mcp.json'))).toBe(false)
+    expect(fileExists(path.join(targetDir, '.mcp.json'))).toBe(true)
   })
 
   it('enableServers option enables disabled MCP servers by name', async () => {
@@ -492,11 +650,60 @@ describe('MCP scaffold and compile', () => {
     })
 
     const configToml = readFile(path.join(targetDir, '.codex', 'config.toml'))
-    expect(configToml).toContain('[mcp_servers.remoteEnabled]')
+    expect(configToml).not.toContain('[mcp_servers.remoteEnabled]')
     expect(configToml).toContain('[mcp_servers.stdioEnabled]')
     expect(configToml).toContain('command = "npx"')
     // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
     expect(configToml).toContain('API_KEY = "${API_KEY}"')
+  })
+
+  it('compileMcp merges codex TOML with .bak first-touch and deterministic output', async () => {
+    await scaffoldMcp({
+      targetDir,
+      libraryDir,
+      fileRecords,
+      strategy: 'skip',
+      perFileOverrides: new Map(),
+    })
+
+    ensureDir(path.join(targetDir, '.codex'))
+    const configPath = path.join(targetDir, '.codex', 'config.toml')
+    const existing = `model = "gpt-5.5"
+
+[mcp_servers.legacy]
+command = "legacy"
+
+[mcp_servers.stdioEnabled]
+command = "old"
+`
+    writeFile(configPath, existing)
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'codex',
+      fileRecords,
+      setupScope: 'project',
+    })
+
+    const firstMerge = readFile(configPath)
+    expect(readFile(`${configPath}.bak`)).toBe(existing)
+    expect(firstMerge).toContain('model = "gpt-5.5"')
+    expect(firstMerge).toContain('[mcp_servers.legacy]')
+    expect(firstMerge).toContain('[mcp_servers.stdioEnabled]')
+    expect(firstMerge).toContain('args = [ "-y", "mcp-stdio-enabled" ]')
+    expect(firstMerge).not.toContain('command = "old"')
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'codex',
+      fileRecords,
+      setupScope: 'project',
+    })
+
+    expect(readFile(configPath)).toBe(firstMerge)
+    expect(readFile(`${configPath}.bak`)).toBe(existing)
   })
 
   it('compileMcp writes claude local secrets to .claude/settings.local.json', async () => {

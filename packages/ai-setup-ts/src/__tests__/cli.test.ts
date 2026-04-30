@@ -164,6 +164,65 @@ describe('cli init integration', () => {
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
   })
 
+  it('persists OpenCode plugins in non-interactive mode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'opencode-plugins-test',
+      '--no-interactive',
+      '--opencode-plugins',
+      '@opencode/context-files,@opencode/git-tools',
+    ])
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
+    expect(config.selections.opencodePlugins).toEqual(['@opencode/context-files', '@opencode/git-tools'])
+  })
+
+  it('persists local secrets and housekeeping init flags in non-interactive mode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'claude-code',
+      '--name',
+      'housekeeping-flags-test',
+      '--no-interactive',
+      '--local-secrets',
+      '--memory-path',
+      '.memory',
+      '--enable-obsidian',
+      '--obsidian-vault-path',
+      '/vault',
+      '--enable-qmd',
+      '--qmd-index-path',
+      '.qmd',
+      '--enable-codegraph',
+      '--codegraph-data-path',
+      '.codegraph',
+    ])
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
+    expect(config.config.localSecrets).toBe(true)
+    expect(config.config.housekeeping).toEqual({
+      memoryPath: '.memory',
+      enableObsidian: true,
+      obsidianVaultPath: '/vault',
+      enableQmd: true,
+      qmdIndexPath: '.qmd',
+      enableCodegraph: true,
+      codegraphDataPath: '.codegraph',
+    })
+  })
+
   it('init --dry-run shows plan output and writes no files', async () => {
     const tempDir = makeTempRepo()
     process.chdir(tempDir)

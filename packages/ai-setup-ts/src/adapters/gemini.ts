@@ -1,5 +1,6 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
+import { resolveGlobalToolTargetDir } from '../utils/global-paths.js'
 import {
   copyWithRecord,
   copyLibraryDirectory,
@@ -33,7 +34,15 @@ export class GeminiAdapter implements ToolAdapter {
   }
 
   async install(ctx: AdapterContext): Promise<void> {
-    const geminiDir = path.join(ctx.targetDir, '.gemini')
+    const isGlobal = ctx.setupScope === 'global'
+
+    // At global scope, use the resolved global target directory (e.g. ~/.gemini)
+    // At project/workspace scope, use .gemini/ under the target dir
+    const homeDir = ctx.homeDir ?? ''
+    const geminiDir = isGlobal
+      ? (resolveGlobalToolTargetDir('gemini', homeDir) ?? path.join(homeDir, '.gemini'))
+      : path.join(ctx.targetDir, '.gemini')
+
     files.ensureDir(geminiDir)
     files.ensureDir(path.join(geminiDir, 'skills'))
 
@@ -54,7 +63,7 @@ export class GeminiAdapter implements ToolAdapter {
 
       files.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2))
       ctx.fileRecords.push({
-        path: '.gemini/settings.json',
+        path: path.relative(ctx.targetDir, settingsPath),
         hash: files.fileHash(settingsPath),
         source: 'generated',
         owner: 'library',
@@ -66,7 +75,7 @@ export class GeminiAdapter implements ToolAdapter {
 
     console.log('♊  Installing Gemini CLI tools...')
 
-    // Skills → .gemini/skills/<name>/SKILL.md (directory per skill)
+    // Skills → <geminiDir>/skills/<name>/SKILL.md (directory per skill)
     await copyLibraryDirectory({
       ctx,
       sourceSubdir: 'skills',
@@ -107,10 +116,13 @@ export class GeminiAdapter implements ToolAdapter {
     // Agents → skip entirely (Gemini has no agents concept)
     // Prompts → skip (no templates dir in Gemini)
 
+    // Write root GEMINI.md template — skip if existing at global scope (like Go's SkipRootIfExists behavior)
     await installRootTemplateIfMissing({
       ctx,
       recordPath: 'GEMINI.md',
-      destPath: path.join(ctx.targetDir, 'GEMINI.md'),
+      destPath: isGlobal
+        ? path.join(geminiDir, 'GEMINI.md')
+        : path.join(ctx.targetDir, 'GEMINI.md'),
       templateSource: 'root/GEMINI.template.md',
     })
   }

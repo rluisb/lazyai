@@ -1,8 +1,9 @@
 import * as childProcess from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
+import { parse as parseToml, stringify as stringifyToml } from 'smol-toml'
 import type { FileRecord, SetupScope, ToolId } from '../types.js'
-import { ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
+import { copyFile, ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 import { stripJsonComments } from '../utils/jsonc.js'
 
 interface McpServer {
@@ -246,32 +247,114 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
   return result
 }
 
+function sortDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sortDeep(item))
+  }
+
+  if (!isPlainObject(value)) {
+    return value
+  }
+
+  const sorted: Record<string, unknown> = {}
+  for (const key of Object.keys(value).sort((a, b) => a.localeCompare(b))) {
+    sorted[key] = sortDeep(value[key])
+  }
+  return sorted
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function readJsonConfigObject(pathname: string): Record<string, unknown> {
+  if (!fileExists(pathname)) return {}
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(stripJsonComments(readFile(pathname))) as unknown
+  } catch (error) {
+    throw new Error(`Failed to parse JSON config ${pathname}: ${errorMessage(error)}`)
+  }
+
+  if (!isPlainObject(parsed)) {
+    throw new Error(`Failed to parse JSON config ${pathname}: expected a JSON object`)
+  }
+
+  return parsed
+}
+
 function backupJsonFile(pathname: string): void {
   if (!fileExists(pathname)) return
 
-  const existingContent = readFile(pathname)
-  if (existingContent.length === 0) return
-
-  const backupPath = `${pathname}.ai-setup-backup`
+  const backupPath = `${pathname}.bak`
   if (fileExists(backupPath)) return
 
-  writeFile(backupPath, existingContent)
+  copyFile(pathname, backupPath)
 }
 
 function mergeJsonFile(pathname: string, patch: Record<string, unknown>): Record<string, unknown> {
-  let existing: Record<string, unknown> = {}
   if (fileExists(pathname)) {
-    try {
-      const parsed = JSON.parse(readFile(pathname)) as unknown
-      existing = isPlainObject(parsed) ? parsed : {}
-    } catch {
-      existing = {}
+    const existing = readJsonConfigObject(pathname)
+    const merged = deepMerge(existing, patch)
+    backupJsonFile(pathname)
+    writeFile(pathname, `${JSON.stringify(sortDeep(merged), null, 2)}\n`)
+    return merged
+  }
+
+  const merged = deepMerge({}, patch)
+  writeFile(pathname, `${JSON.stringify(sortDeep(merged), null, 2)}\n`)
+  return merged
+}
+
+function backupTomlFile(pathname: string): void {
+  if (!fileExists(pathname)) return
+
+  const backupPath = `${pathname}.bak`
+  if (fileExists(backupPath)) return
+
+  writeFile(backupPath, readFile(pathname))
+}
+
+function readTomlObject(pathname: string): Record<string, unknown> {
+  if (!fileExists(pathname)) return {}
+
+  try {
+    const parsed = parseToml(readFile(pathname)) as unknown
+    return isPlainObject(parsed) ? parsed : {}
+  } catch (error) {
+    throw new Error(`Failed to parse TOML config ${pathname}: ${errorMessage(error)}`)
+  }
+}
+
+function mergeCodexTomlFile(pathname: string, servers: Record<string, McpServer>): Record<string, unknown> {
+  const existing = readTomlObject(pathname)
+  if (fileExists(pathname)) {
+    backupTomlFile(pathname)
+  }
+
+  const existingMcpServers = isPlainObject(existing.mcp_servers) ? existing.mcp_servers : {}
+  const managedNames = new Set(Object.keys(servers))
+  const preservedServers: Record<string, unknown> = {}
+
+  for (const [name, config] of Object.entries(existingMcpServers)) {
+    if (!managedNames.has(name)) {
+      preservedServers[name] = config
     }
   }
 
-  const merged = deepMerge(existing, patch)
-  backupJsonFile(pathname)
-  writeFile(pathname, `${JSON.stringify(merged, null, 2)}\n`)
+  const patch = toCodexTomlPatch(servers)
+  const managedServers = isPlainObject(patch.mcp_servers) ? patch.mcp_servers : {}
+  const merged: Record<string, unknown> = {
+    ...existing,
+    mcp_servers: {
+      ...preservedServers,
+      ...managedServers,
+    },
+  }
+
+  const content = stringifyToml(sortDeep(merged) as Record<string, unknown>)
+  writeFile(pathname, content.endsWith('\n') ? content : `${content}\n`)
   return merged
 }
 
@@ -284,15 +367,44 @@ function claudeCliAvailable(): boolean {
   }
 }
 
-function reconcileClaudeMcp(servers: Record<string, McpServer>): boolean {
+function cliWorkingDirectory(setupScope: SetupScope, toolTargetDir: string): string | undefined {
+  return setupScope === 'global' ? undefined : toolTargetDir
+}
+
+function reconcileClaudeMcp(
+  servers: Record<string, unknown>,
+  setupScope: SetupScope,
+  toolTargetDir: string,
+): boolean {
   if (!claudeCliAvailable()) return false
 
   try {
-    for (const [name, config] of Object.entries(servers)) {
-      mcpCompilerInternals.execFileSync('claude', ['mcp', 'add-json', name, JSON.stringify(config)], {
+    const cwd = cliWorkingDirectory(setupScope, toolTargetDir)
+    const scopeFlag = setupScope === 'global' ? 'user' : 'project'
+    const options: childProcess.ExecFileSyncOptions = cwd ? { stdio: 'pipe', cwd } : { stdio: 'pipe' }
+
+    for (const [name, config] of Object.entries(servers).sort(([a], [b]) => a.localeCompare(b))) {
+      try {
+        mcpCompilerInternals.execFileSync('claude', ['mcp', 'get', name], options)
+        continue
+      } catch {
+        // Not registered yet; add below.
+      }
+
+      mcpCompilerInternals.execFileSync('claude', ['mcp', 'add-json', name, JSON.stringify(config), '-s', scopeFlag], {
         stdio: 'pipe',
+        ...(cwd ? { cwd } : {}),
       })
     }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function codexCliAvailable(): boolean {
+  try {
+    mcpCompilerInternals.execFileSync('codex', ['--version'], { stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -312,63 +424,67 @@ function copilotProbePasses(homeDir: string): boolean {
   }
 }
 
-function codexSectionPrefix(sectionName: string): string {
-  return `[mcp_servers.${sectionName}]`
-}
+function toCodexTomlPatch(servers: Record<string, McpServer>): Record<string, unknown> {
+  const mcpServers: Record<string, unknown> = {}
 
-function stripManagedCodexSections(existing: string, managedNames: Set<string>): string {
-  const lines = existing.split('\n')
-  const kept: string[] = []
-  let skippingManagedSection = false
+  for (const [name, server] of Object.entries(servers).sort(([a], [b]) => a.localeCompare(b))) {
+    if (server.url || !server.command) continue
 
-  for (const line of lines) {
-    const match = line.match(/^\[mcp_servers\.([^\].]+)(?:\.env)?\]$/)
-    if (match?.[1]) {
-      skippingManagedSection = managedNames.has(match[1])
-      if (!skippingManagedSection) kept.push(line)
-      continue
-    }
-
-    if (line.match(/^\[[^\]]+\]$/)) {
-      skippingManagedSection = false
-      kept.push(line)
-      continue
-    }
-
-    if (!skippingManagedSection) {
-      kept.push(line)
-    }
+    const entry: Record<string, unknown> = {}
+    entry.command = server.command
+    if (server.args && server.args.length > 0) entry.args = server.args
+    if (server.env && Object.keys(server.env).length > 0) entry.env = sortDeep(server.env)
+    mcpServers[name] = entry
   }
 
-  return kept.join('\n').trim()
+  return { mcp_servers: mcpServers }
 }
 
-function renderCodexServer(name: string, server: McpServer): string {
-  const lines = [codexSectionPrefix(name)]
+function reconcileCodexMcp(servers: Record<string, McpServer>, toolTargetDir: string): boolean {
+  if (!codexCliAvailable()) return false
 
-  if (server.command) lines.push(`command = ${JSON.stringify(server.command)}`)
-  if (server.args && server.args.length > 0) {
-    lines.push(`args = [${server.args.map((arg) => JSON.stringify(arg)).join(', ')}]`)
-  }
-  if (server.env && Object.keys(server.env).length > 0) {
-    lines.push('', `[mcp_servers.${name}.env]`)
-    for (const [key, value] of Object.entries(server.env).sort(([a], [b]) => a.localeCompare(b))) {
-      lines.push(`${key} = ${JSON.stringify(value)}`)
+  let success = false
+  for (const [name, server] of Object.entries(servers).sort(([a], [b]) => a.localeCompare(b))) {
+    if (server.url || !server.command) continue
+
+    const args = ['mcp', 'add', name]
+    for (const [key, value] of Object.entries(server.env ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
+      args.push('--env', `${key}=${value}`)
+    }
+    args.push('--', server.command, ...(server.args ?? []))
+
+    try {
+      mcpCompilerInternals.execFileSync('codex', args, { stdio: 'pipe', cwd: toolTargetDir })
+      success = true
+    } catch {
+      return false
     }
   }
-
-  return lines.join('\n')
+  return success
 }
 
-function mergeCodexToml(existing: string, servers: Record<string, McpServer>): string {
-  const managedNames = new Set(Object.keys(servers))
-  const preserved = stripManagedCodexSections(existing, managedNames)
-  const renderedManaged = Object.entries(servers)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, server]) => renderCodexServer(name, server))
-    .join('\n\n')
+export function driveClaudeMcpViaCli(
+  canonicalDir: string,
+  toolTargetDir: string,
+  setupScope: SetupScope = 'project',
+): boolean {
+  const catalog = readCanonicalMcp(canonicalDir)
+  if (!catalog) return false
+  const enabledServers = getEnabledServers(catalog)
+  if (Object.keys(enabledServers).length === 0) return false
+  return reconcileClaudeMcp(toClaudeCodeMcpInner(enabledServers), setupScope, toolTargetDir)
+}
 
-  return `${[preserved, renderedManaged].filter(Boolean).join('\n\n').trimEnd()}\n`
+export function driveCodexMcpViaCli(canonicalDir: string, toolTargetDir: string): boolean {
+  const catalog = readCanonicalMcp(canonicalDir)
+  if (!catalog) return false
+  const enabledServers = getEnabledServers(catalog)
+  if (Object.keys(enabledServers).length === 0) return false
+  return reconcileCodexMcp(enabledServers, toolTargetDir)
+}
+
+function isDriveCliEnabled(opts: { driveCLI?: boolean; driveCli?: boolean }): boolean {
+  return opts.driveCLI === true || opts.driveCli === true
 }
 
 function upsertFileRecord(fileRecords: FileRecord[], record: FileRecord): void {
@@ -388,6 +504,8 @@ export interface CompileMcpOptions {
   setupScope?: SetupScope
   homeDir?: string
   localSecrets?: boolean
+  driveCLI?: boolean
+  driveCli?: boolean
 }
 
 export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
@@ -409,11 +527,8 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
 
       let existingConfig: Record<string, unknown> = {}
       if (fileExists(configPath)) {
-        try {
-          existingConfig = JSON.parse(stripJsonComments(readFile(configPath))) as Record<string, unknown>
-        } catch {
-          existingConfig = {}
-        }
+        existingConfig = readJsonConfigObject(configPath)
+        backupJsonFile(configPath)
       }
 
       const merged = {
@@ -422,7 +537,7 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         mcp: mergeOpenCodeMcp(existingConfig.mcp, ocMcpContent),
       }
 
-      writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`)
+      writeFile(configPath, `${JSON.stringify(sortDeep(merged), null, 2)}\n`)
       upsertFileRecord(opts.fileRecords, {
         path: path.relative(opts.toolTargetDir, configPath),
         hash: fileHash(configPath),
@@ -453,11 +568,12 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
         break
       }
 
+      if (isDriveCliEnabled(opts)) {
+        driveClaudeMcpViaCli(opts.canonicalDir, opts.toolTargetDir, setupScope)
+      }
+
       const mcpPath = path.join(opts.toolTargetDir, '.mcp.json')
       const content = toMcpJson(enabledServers)
-      if (reconcileClaudeMcp(content.mcpServers as Record<string, McpServer>)) {
-        break
-      }
       writeFile(mcpPath, `${JSON.stringify(content, null, 2)}\n`)
       upsertFileRecord(opts.fileRecords, {
         path: '.mcp.json',
@@ -518,9 +634,10 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       const toolRoot = resolveToolRoot('codex', opts.toolTargetDir, setupScope)
       ensureDir(toolRoot)
       const configPath = path.join(toolRoot, 'config.toml')
-      const existing = fileExists(configPath) ? readFile(configPath) : ''
-      const content = mergeCodexToml(existing, enabledServers)
-      writeFile(configPath, content)
+      if (isDriveCliEnabled(opts)) {
+        driveCodexMcpViaCli(opts.canonicalDir, opts.toolTargetDir)
+      }
+      mergeCodexTomlFile(configPath, enabledServers)
       upsertFileRecord(opts.fileRecords, {
         path: path.relative(opts.toolTargetDir, configPath),
         hash: fileHash(configPath),

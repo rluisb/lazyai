@@ -45,8 +45,14 @@ function normalizeSelections(
     agents: selections?.agents ?? [],
     skills: selections?.skills ?? [],
     prompts: selections?.prompts ?? [],
+    commands: selections?.commands ?? [],
+    chatmodes: selections?.chatmodes ?? [],
+    opencodeCommands: selections?.opencodeCommands ?? [],
+    opencodeModes: selections?.opencodeModes ?? [],
+    opencodePlugins: selections?.opencodePlugins ?? [],
     infra: selections?.infra ?? [],
     constitution: selections?.constitution ?? [],
+    preset: selections?.preset ?? 'standard',
   }
 }
 

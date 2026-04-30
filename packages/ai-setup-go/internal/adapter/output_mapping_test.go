@@ -64,10 +64,10 @@ func TestOutputMappingClaudeCodeAgents(t *testing.T) {
 		t.Errorf("claude agents Shape=%q, want %q", target.Shape, ShapeFlat)
 	}
 	if target.IncludeFile == nil {
-		t.Fatal("claude agents IncludeFile must filter orchestrator")
+		t.Fatal("claude agents must have an IncludeFile filter")
 	}
-	if target.IncludeFile("orchestrator.md") {
-		t.Error("orchestrator should be excluded from bulk agent copy")
+	if !target.IncludeFile("orchestrator.md") {
+		t.Error("orchestrator should be included — it is a first-class agent per Spec 022")
 	}
 	if !target.IncludeFile("scout.md") {
 		t.Error("scout should be included in bulk agent copy")

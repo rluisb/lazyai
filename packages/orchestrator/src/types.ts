@@ -522,8 +522,8 @@ export interface HandoffDocument {
   recipient?: string
   createdAt: string
   resumable: boolean
-  status: ChainState
-  plan: ExecutionPlan
+  status: ChainState | TeamState | WorkflowState
+  plan?: ExecutionPlan
 }
 
 export interface TeamTaskState {

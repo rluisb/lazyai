@@ -7,6 +7,7 @@ import { runCatalog } from './cli/catalog.js'
 import { parseServeArgs, runServe, SERVE_HELP } from './cli/serve.js'
 import { parseConnectArgs, runConnect, CONNECT_HELP } from './cli/connect.js'
 import { runInvoke } from './cli/invoke.js'
+import { parseInitArgs, runInit, INIT_HELP } from './cli/init.js'
 import { getPersistenceDb } from './persistence.js'
 import { getLogDir, getPort } from './config/paths.js'
 import { createLogger, type Logger } from './logging/logger.js'
@@ -28,6 +29,12 @@ export * from './logging/sink.js'
 export * from './persistence.js'
 export * from './server.js'
 export * from './tool-handlers.js'
+export * from './team-machine.js'
+export * from './workflow-machine.js'
+export { CatalogToolHandlers } from './catalog-tools.js'
+export type { CatalogListInput, CatalogCreateVersionInput, CatalogSetActiveInput, CatalogDefinitionInput, CatalogGetVersionInput, CatalogListVersionsInput, CatalogDiffInput, CatalogImportInput, CatalogExportVersionInput } from './catalog-tools.js'
+export * from './catalog/store.js'
+export * from './catalog/runtime.js'
 export * from './events/bus.js'
 export * from './queue/queue.js'
 export * from './queue/worker.js'
@@ -61,6 +68,13 @@ async function main(): Promise<void> {
 
   if (subcommand === 'invoke') {
     await runInvoke(getPersistenceDb(), rest)
+    return
+  }
+
+  if (subcommand === 'init') {
+    const parsed = parseInitArgs(rest)
+    if (parsed.help) { process.stdout.write(INIT_HELP); return }
+    await runInit(parsed)
     return
   }
 

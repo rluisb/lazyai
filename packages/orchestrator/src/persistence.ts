@@ -1,10 +1,12 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { ChainState, ErrorJournalEntry, ExecutionPlan, HandoffDocument, MaintenanceContractRecord, SyncStateSnapshot, TeamState, WorkflowState } from './types.js'
+import type { ChainState, ErrorJournalEntry, ExecutionPlan, HandoffDocument, MaintenanceContractRecord, RunKind, SyncStateSnapshot, TeamState, WorkflowState } from './types.js'
 import { openDatabase } from './db/index.js'
 import type { Db } from './db/index.js'
 import { runMigrations } from './db/migrations.js'
 import { getDatabasePath } from './config/paths.js'
+import type { Logger } from './logging/logger.js'
 
 // ---------------------------------------------------------------------------
 // DB singleton
@@ -270,6 +272,117 @@ export function loadExecutionPlan(projectRoot: string, planId: string): Executio
 // ---------------------------------------------------------------------------
 // Handoffs
 // ---------------------------------------------------------------------------
+
+export interface ActiveRunSummary {
+  runId: string
+  kind: RunKind
+  state: string
+}
+
+export interface AutoHandoffSummary {
+  handoffsCreated: number
+  errors: string[]
+}
+
+const selectActiveChains = (db: Db) =>
+  db.prepare<[], { id: string; state: string }>(`
+    SELECT id, state FROM chain_runs
+    WHERE state IN ('created', 'running', 'gated', 'paused')
+  `)
+
+const selectActiveTeams = (db: Db) =>
+  db.prepare<[], { id: string; state: string }>(`
+    SELECT id, state FROM team_runs
+    WHERE state IN ('created', 'running', 'synthesizing', 'paused')
+  `)
+
+const selectActiveWorkflows = (db: Db) =>
+  db.prepare<[], { id: string; state: string }>(`
+    SELECT id, state FROM workflow_runs
+    WHERE state IN ('created', 'waiting_on_child', 'running', 'gated', 'awaiting_recovery', 'paused')
+  `)
+
+export function listActiveRuns(): ActiveRunSummary[] {
+  const db = getDb()
+  return [
+    ...selectActiveChains(db).all().map((row) => ({ runId: row.id, kind: 'chain' as const, state: row.state })),
+    ...selectActiveTeams(db).all().map((row) => ({ runId: row.id, kind: 'team' as const, state: row.state })),
+    ...selectActiveWorkflows(db).all().map((row) => ({ runId: row.id, kind: 'workflow' as const, state: row.state })),
+  ]
+}
+
+export function handoffActiveRuns(projectRoot: string, log?: Logger): AutoHandoffSummary {
+  const activeRuns = listActiveRuns()
+  const errors: string[] = []
+  let handoffsCreated = 0
+
+  for (const run of activeRuns) {
+    try {
+      const createdAt = new Date().toISOString()
+
+      if (run.kind === 'chain') {
+        const state = loadChainState(projectRoot, run.runId)
+        state.state = 'handoff'
+        state.updatedAt = createdAt
+        const handoff: HandoffDocument = {
+          id: crypto.randomUUID(),
+          runId: state.chainId,
+          kind: 'chain',
+          summary: `Auto-handoff for chain ${state.chainId} at shutdown`,
+          createdAt,
+          resumable: true,
+          status: { ...state },
+        }
+        saveHandoff(projectRoot, handoff)
+        saveChainState(projectRoot, state)
+        handoffsCreated += 1
+        continue
+      }
+
+      if (run.kind === 'team') {
+        const state = loadTeamState(projectRoot, run.runId)
+        state.state = 'handoff'
+        state.updatedAt = createdAt
+        const handoff: HandoffDocument = {
+          id: crypto.randomUUID(),
+          runId: state.teamId,
+          kind: 'team',
+          summary: `Auto-handoff for team ${state.teamId} at shutdown`,
+          createdAt,
+          resumable: true,
+          status: { ...state },
+        }
+        saveHandoff(projectRoot, handoff)
+        saveTeamState(projectRoot, state)
+        handoffsCreated += 1
+        continue
+      }
+
+      const state = loadWorkflowState(projectRoot, run.runId)
+      state.state = 'handoff'
+      state.updatedAt = createdAt
+      const handoff: HandoffDocument = {
+        id: crypto.randomUUID(),
+        runId: state.workflowId,
+        kind: 'workflow',
+        summary: `Auto-handoff for workflow ${state.workflowId} at shutdown`,
+        createdAt,
+        resumable: true,
+        status: { ...state },
+      }
+      saveHandoff(projectRoot, handoff)
+      saveWorkflowState(projectRoot, state)
+      handoffsCreated += 1
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      const error = `Failed to auto-handoff ${run.kind} ${run.runId}: ${message}`
+      errors.push(error)
+      log?.error('persistence.auto-handoff-failed', { runId: run.runId, kind: run.kind, error: message })
+    }
+  }
+
+  return { handoffsCreated, errors }
+}
 
 const insertHandoff = (db: Db) =>
   db.prepare<[string, string, string, string, string]>(`

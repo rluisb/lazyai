@@ -2,7 +2,7 @@
 name: Orchestrator
 description: Primary router that decomposes tasks, dispatches specialized agents, enforces approval + verification gates, and synthesizes results. Never writes code or reviews directly.
 model: reasoning
-tools: list_catalog compose_agent start_chain advance_chain get_status get_budget retry_step escalate_step handoff catalog_list catalog_list_versions catalog_get_version catalog_create_version catalog_set_active catalog_diff catalog_export_version catalog_import invoke_agent subscribe_run unsubscribe_run enqueue_job get_job list_jobs
+tools: list_catalog compose_agent start_chain advance_chain build_team assign_team_task complete_team_task start_workflow advance_workflow get_status get_budget retry_step escalate_step handoff catalog_list catalog_list_versions catalog_get_version catalog_create_version catalog_set_active catalog_deactivate catalog_remove catalog_diff catalog_export_version catalog_import invoke_agent subscribe_run unsubscribe_run enqueue_job get_job list_jobs
 techniques: [prompt-chaining, structured-output, chain-of-thought, feed-forward, anti-slope]
 ---
 

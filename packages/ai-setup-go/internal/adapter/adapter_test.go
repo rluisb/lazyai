@@ -409,16 +409,14 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		t.Fatal("expected at least one tracked file record")
 	}
 
-	// Check that key files were created. The root AGENTS.md at .opencode/
-	// is the target of the `instructions: ["AGENTS.md"]` key and must exist
-	// at every scope (see TestOpenCodeAdapter_InstructionsKeyResolves).
+	// Check that key files were created. Adapter install preserves actual agent
+	// and skill definitions, but must not create reserved context docs inside the
+	// tool directory; root context docs are handled elsewhere.
 	keyFiles := []string{
 		".opencode/opencode.jsonc",
 		".opencode/agents/builder.md",
 		".opencode/agents/orchestrator.md",
 		".opencode/skills/implement/SKILL.md",
-		".opencode/agents/AGENTS.md",
-		".opencode/AGENTS.md",
 	}
 	// The pre-unification .json variant must never be produced on a fresh install.
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
@@ -428,6 +426,15 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		path := filepath.Join(targetDir, f)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected file %s was not created", f)
+		}
+	}
+	for _, f := range []string{
+		".opencode/AGENTS.md",
+		".opencode/agents/AGENTS.md",
+		".opencode/skills/AGENTS.md",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, f)); err == nil {
+			t.Errorf("reserved context doc %s should not be created by adapter install", f)
 		}
 	}
 
@@ -811,9 +818,9 @@ func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
 // --- Test: instructions key resolves to a real file at every scope ---
 //
 // opencode resolves entries in opencode.jsonc's `instructions` array
-// relative to the config file's directory. So `instructions: ["AGENTS.md"]`
-// in `<root>/opencode.jsonc` must point at `<root>/AGENTS.md` — and that
-// file must exist after install for each of project/workspace/global.
+// relative to the config file's directory. Project/workspace configs live in
+// `.opencode/`, so they must point up to the root AGENTS.md. Global configs
+// live alongside the global AGENTS.md and can use `AGENTS.md` directly.
 
 func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 	type scopeCase struct {
@@ -851,6 +858,16 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			targetDir := t.TempDir()
 			homeDir := t.TempDir()
+			rootDoc := filepath.Join(targetDir, "AGENTS.md")
+			if tc.scope == types.SetupScopeGlobal {
+				rootDoc = filepath.Join(homeDir, ".config", "opencode", "AGENTS.md")
+				if err := os.MkdirAll(filepath.Dir(rootDoc), 0o755); err != nil {
+					t.Fatalf("create global root doc dir: %v", err)
+				}
+			}
+			if err := os.WriteFile(rootDoc, []byte("# Root instructions\n"), 0o644); err != nil {
+				t.Fatalf("write root doc: %v", err)
+			}
 			ctx := &AdapterContext{
 				TargetDir:  targetDir,
 				SetupScope: tc.scope,

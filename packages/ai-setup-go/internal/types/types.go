@@ -22,6 +22,25 @@ const (
 	SetupScopeProject   SetupScope = "project"
 )
 
+// SetupPolicy defines how init should handle an existing setup.
+type SetupPolicy string
+
+const (
+	SetupPolicyAbsorb     SetupPolicy = "absorb"
+	SetupPolicyAdapt      SetupPolicy = "adapt"
+	SetupPolicyBackupOnly SetupPolicy = "backup-only"
+)
+
+// IsValidSetupPolicy reports whether policy is a recognized setup policy.
+func IsValidSetupPolicy(policy SetupPolicy) bool {
+	switch policy {
+	case SetupPolicyAbsorb, SetupPolicyAdapt, SetupPolicyBackupOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // ToolId identifies a supported AI coding tool.
 type ToolId string
 
@@ -537,6 +556,15 @@ type GitConventions struct {
 	TicketPattern string   `json:"ticketPattern"`
 }
 
+// FileKind indicates whether a tracked file is a regular file or a symbolic link.
+// This aligns with the TypeScript FileRecord.kind field.
+type FileKind string
+
+const (
+	FileKindFile    FileKind = "file"
+	FileKindSymlink FileKind = "symlink"
+)
+
 // TrackedFile represents a file managed by ai-setup.
 type TrackedFile struct {
 	Path          string     `json:"path"`
@@ -546,6 +574,8 @@ type TrackedFile struct {
 	Status        FileStatus `json:"status,omitempty"`
 	InstalledAt   string     `json:"installedAt,omitempty"`
 	LastCheckedAt string     `json:"lastCheckedAt,omitempty"`
+	Kind          FileKind   `json:"kind,omitempty"`
+	LinkTarget    string     `json:"linkTarget,omitempty"`
 }
 
 // RepoInfo describes a repository reference within a workspace.
@@ -559,6 +589,7 @@ type RepoInfo struct {
 // Config holds the core configuration for an ai-setup installation.
 type Config struct {
 	SetupScope       SetupScope          `json:"setupScope"`
+	SetupType        SetupScope          `json:"setupType,omitempty"`
 	Tools            []ToolId            `json:"tools"`
 	CLITools         []string            `json:"cliTools,omitempty"`
 	EnableServers    []string            `json:"enableServers,omitempty"`

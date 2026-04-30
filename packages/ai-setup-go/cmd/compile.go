@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
+	"github.com/ricardoborges-teachable/ai-setup/internal/compiler"
 	"github.com/ricardoborges-teachable/ai-setup/internal/db"
 	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -58,15 +59,15 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	// passed.
 	if validateContracts {
 		libFS := library.GetLibraryFS()
-		contracts, err := adapter.LoadSkillContracts(libFS)
+		contracts, err := compiler.LoadSkillContracts(libFS)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: contract load failed: %v\n", err)
 		} else {
-			issues := adapter.ValidateContracts(contracts)
+			issues := compiler.ValidateChain(contracts)
 			if len(issues) > 0 {
-				fmt.Fprintln(os.Stderr, adapter.FormatContractIssues(issues))
+				fmt.Fprintln(os.Stderr, compiler.FormatContractIssues(issues))
 			}
-			if adapter.HasContractErrors(issues) || (strictContracts && len(issues) > 0) {
+			if compiler.ContractValidationFails(issues, strictContracts) {
 				return fmt.Errorf("contract validation failed; pass --validate-contracts=false to override")
 			}
 		}

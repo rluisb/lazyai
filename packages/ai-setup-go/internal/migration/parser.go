@@ -11,6 +11,13 @@ import (
 
 var headingPattern = regexp.MustCompile(`(?m)^#\s+(.+?)\s*$`)
 
+var reservedContextMarkdownFiles = map[string]bool{
+	"AGENTS.md":               true,
+	"CLAUDE.md":               true,
+	"GEMINI.md":               true,
+	"copilot-instructions.md": true,
+}
+
 // ParseDetectedSetups converts detected setups into parsed migration inputs.
 func ParseDetectedSetups(ctx *MigrationContext, detections []DetectionResult) ([]ParsedSetup, error) {
 	parsedSetups := make([]ParsedSetup, 0, len(detections))
@@ -105,13 +112,6 @@ func parseOpenCodeRoot(sourcePath string, parsed *ParsedSetup) error {
 		parsed.Description = description
 	}
 
-	parsed.CustomSections = append(parsed.CustomSections, CustomSection{
-		ID:         "agents-root",
-		Title:      "Imported AGENTS.md",
-		Content:    content,
-		SourcePath: "AGENTS.md",
-	})
-
 	return nil
 }
 
@@ -123,7 +123,7 @@ func parseOpenCodeMarkdownDir(sourcePath, pattern string, add func(id, name, con
 
 	for _, match := range matches {
 		base := filepath.Base(match)
-		if strings.HasPrefix(base, "_") {
+		if strings.HasPrefix(base, "_") || reservedContextMarkdownFiles[base] {
 			continue
 		}
 

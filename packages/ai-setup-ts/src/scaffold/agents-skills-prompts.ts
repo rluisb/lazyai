@@ -9,6 +9,7 @@ export interface ScaffoldAgentsSkillsPromptsOptions {
   agents: AgentId[]
   skills: SkillId[]
   prompts: PromptId[]
+  opencodePlugins?: string[]
   enableServers?: string[]
   fileRecords: FileRecord[]
   force?: boolean
@@ -46,6 +47,7 @@ export async function scaffoldAgentsSkillsPrompts(opts: ScaffoldAgentsSkillsProm
       ...serverOpts,
       ...strategyOpts,
       ...perFileOverrideOpts,
+      selections: { agents: opts.agents, skills: opts.skills, prompts: opts.prompts, opencodePlugins: opts.opencodePlugins ?? [] },
     })
   }
 }

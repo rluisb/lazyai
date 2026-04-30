@@ -1,9 +1,45 @@
 package wizard
 
 import (
+	"encoding/json"
+	"os"
 	"reflect"
 	"testing"
 )
+
+func TestOpenCodePluginsExactURLs(t *testing.T) {
+	t.Parallel()
+
+	want := []string{
+		"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
+		"https://github.com/spoons-and-mirrors/subtask2",
+		"https://github.com/JRedeker/opencode-shell-strategy",
+		"https://github.com/boxpositron/envsitter-guard",
+		"https://github.com/kdcokenny/opencode-background-agents",
+	}
+
+	if !reflect.DeepEqual(opencodePluginURLs, want) {
+		t.Fatalf("opencodePluginURLs = %#v, want %#v", opencodePluginURLs, want)
+	}
+
+	data, err := os.ReadFile("../../library/opencode/plugins.json")
+	if err != nil {
+		t.Fatalf("read OpenCode plugin catalog: %v", err)
+	}
+	var catalog []struct {
+		Module string `json:"module"`
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatalf("parse OpenCode plugin catalog: %v", err)
+	}
+	got := make([]string, 0, len(catalog))
+	for _, plugin := range catalog {
+		got = append(got, plugin.Module)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("OpenCode plugin catalog = %#v, want %#v", got, want)
+	}
+}
 
 func TestBuildPhase5Result(t *testing.T) {
 	t.Parallel()

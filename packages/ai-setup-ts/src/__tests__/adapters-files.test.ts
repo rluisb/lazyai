@@ -184,7 +184,13 @@ describe('tool adapters', () => {
     const adapter = new CopilotAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
-    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
+    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '---\nname: implement\n---\n\n# implement')
+    ensureDir(path.join(libraryDir, 'copilot', 'agents'))
+    ensureDir(path.join(libraryDir, 'copilot', 'instructions'))
+    ensureDir(path.join(libraryDir, 'chatmodes'))
+    writeFile(path.join(libraryDir, 'copilot', 'agents', 'builder.agent.yaml'), 'name: builder\n')
+    writeFile(path.join(libraryDir, 'copilot', 'instructions', 'typescript.instructions.md'), '# TypeScript instructions')
+    writeFile(path.join(libraryDir, 'chatmodes', 'architect.chatmode.md'), '# Architect mode')
 
     await adapter.install({
       targetDir,
@@ -200,17 +206,28 @@ describe('tool adapters', () => {
 
     expect(fileExists(path.join(targetDir, '.github/instructions'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.github/prompts/plan.prompt.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.github/prompts/implement.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/agents/implement.agent.yaml'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/agents/builder.agent.yaml'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/instructions/typescript.instructions.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.github/chatmodes/architect.chatmode.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
 
-    expect(fileExists(path.join(targetDir, '.github/agents'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.github/AGENTS.md'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.github/prompts/AGENTS.md'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.github/templates/plan.md'))).toBe(false)
 
+    const skillAgent = readFile(path.join(targetDir, '.github/agents/implement.agent.yaml'))
+    expect(skillAgent).toContain('name: implement')
+    expect(skillAgent).toContain('displayName: Implement')
+    expect(skillAgent).toContain('model: claude-sonnet-4.5')
+    expect(skillAgent).toContain('prompt: |\n  # implement')
+
     expect(fileRecords.some((f) => f.path === '.github/prompts/plan.prompt.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === '.github/prompts/implement.prompt.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/agents/implement.agent.yaml')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/agents/builder.agent.yaml')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/instructions/typescript.instructions.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === '.github/chatmodes/architect.chatmode.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.github/copilot-instructions.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
   })
@@ -290,7 +307,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
   })
 
-  it('Codex adapter installs .agents skills directory-per-skill and root AGENTS.md', async () => {
+  it('Codex adapter installs .agents skills directory-per-skill, .codex config, and root AGENTS.md', async () => {
     const adapter = new CodexAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
@@ -313,8 +330,10 @@ describe('tool adapters', () => {
     // Root AGENTS.md should exist
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
 
-    // No .codex directory should exist
-    expect(fileExists(path.join(targetDir, '.codex'))).toBe(false)
+    // .codex directory now exists (holds config.toml + AGENTS.override.md)
+    expect(fileExists(path.join(targetDir, '.codex'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.codex/config.toml'))).toBe(true)
+    expect(fileExists(path.join(targetDir, '.codex/AGENTS.override.md'))).toBe(true)
 
     // No agents or templates directories (Codex has no separate agents dir)
     expect(fileExists(path.join(targetDir, '.agents/agents'))).toBe(false)
@@ -326,8 +345,10 @@ describe('tool adapters', () => {
 
   it('Codex adapter uses global scope correctly', async () => {
     const adapter = new CodexAdapter()
-    const globalTargetDir = path.join(targetDir, '.config', 'codex')
-    const globalAgentsDir = path.join(targetDir, '.config', '.agents')
+    // Simulate global: the wizard passes the canonical targetDir, and the adapter
+    // uses resolveCodexRoots to find ~/.codex and ~/.agents/skills from homeDir.
+    const homeDir = targetDir
+    const globalTargetDir = targetDir // canonical dir (targetDir is passed for relative paths)
     ensureDir(path.join(libraryDir, 'skills'))
     writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
     writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
@@ -335,6 +356,7 @@ describe('tool adapters', () => {
     await adapter.install({
       targetDir: globalTargetDir,
       setupScope: 'global',
+      homeDir,
       libraryDir,
       fileRecords,
       force: true,
@@ -343,13 +365,14 @@ describe('tool adapters', () => {
       },
     })
 
-    // Global scope: config stays in ~/.codex, shared skills go in ~/.agents/skills
-    expect(fileExists(path.join(globalAgentsDir, 'skills', 'implement', 'SKILL.md'))).toBe(true)
-    expect(fileExists(path.join(globalAgentsDir, 'skills', 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(globalAgentsDir, 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(globalTargetDir, 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(globalTargetDir, 'skills'))).toBe(false)
-    expect(fileExists(path.join(globalTargetDir, '.agents'))).toBe(false)
+    // Global scope: config at ~/.codex, skills at ~/.agents/skills
+    expect(fileExists(path.join(homeDir, '.codex', 'config.toml'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.codex', 'AGENTS.override.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.agents', 'skills', 'implement', 'SKILL.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.agents', 'skills', 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.agents', 'AGENTS.md'))).toBe(true)
+    // No root AGENTS.md at global scope
+    expect(fileExists(path.join(homeDir, 'AGENTS.md'))).toBe(false)
   })
 
   it('Claude Code adapter keeps global agents under .claude/agents', async () => {
@@ -396,7 +419,7 @@ describe('tool adapters', () => {
 
     expect(fileExists(path.join(homeDir, '.copilot', 'instructions'))).toBe(true)
     expect(fileExists(path.join(homeDir, '.copilot', 'prompts', 'plan.prompt.md'))).toBe(true)
-    expect(fileExists(path.join(homeDir, '.copilot', 'prompts', 'implement.prompt.md'))).toBe(true)
+    expect(fileExists(path.join(homeDir, '.copilot', 'agents', 'implement.agent.yaml'))).toBe(true)
     expect(fileExists(path.join(homeDir, '.copilot', 'copilot-instructions.md'))).toBe(false)
     expect(fileExists(path.join(homeDir, 'AGENTS.md'))).toBe(false)
   })
@@ -452,7 +475,7 @@ describe('tool adapters', () => {
     const opencodeOut = readFile(path.join(opencodeTarget, '.opencode/agents/orchestrator.md'))
     const codexOut = readFile(path.join(codexTarget, '.agents/skills/orchestrator/SKILL.md'))
     const geminiOut = readFile(path.join(geminiTarget, '.gemini/skills/orchestrator/SKILL.md'))
-    const copilotOut = readFile(path.join(copilotTarget, '.github/prompts/orchestrator.prompt.md'))
+    const copilotOut = readFile(path.join(copilotTarget, '.github/agents/orchestrator.agent.yaml'))
 
     expect(claudeOut).toContain('tools: list_catalog, compose_agent, start_chain, advance_chain, get_status, get_budget, retry_step, escalate_step, handoff')
     expect(claudeOut).toContain('# Orchestrator')
@@ -476,5 +499,8 @@ describe('tool adapters', () => {
     expect(codexOut).not.toContain('build_team')
     expect(geminiOut).not.toContain('build_team')
     expect(copilotOut).not.toContain('build_team')
+    expect(copilotOut).toContain('name: orchestrator')
+    expect(copilotOut).toContain('displayName: Orchestrator')
+    expect(copilotOut).toContain('model: claude-sonnet-4.5')
   })
 })

@@ -152,20 +152,6 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Install tool context files. At global scope ~/.claude/CLAUDE.md is the
-	// user's personal-conventions file; preserve any pre-existing copy
-	// (Spec 012 / Q3 decision).
-	if err := InstallToolContextFiles(InstallToolContextFilesOption{
-		Ctx:                ctx,
-		ToolDir:            claudeDir,
-		ContextFileName:    "CLAUDE.md",
-		AgentsDestDir:      "agents",
-		SkillsDestDir:      "skills",
-		SkipRootIfExists:   isGlobal,
-	}); err != nil {
-		return nil, err
-	}
-
 	// Root CLAUDE.md placement is handled centrally by scaffold/root.go
 	// (scope-aware); the adapter no longer installs it.
 

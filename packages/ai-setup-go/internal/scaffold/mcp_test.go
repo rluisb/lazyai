@@ -186,6 +186,54 @@ func TestScaffoldMcp_ReportsMissingNodeForOrchestrator(t *testing.T) {
 	}
 }
 
+func TestScaffoldMcp_WritesInternalAndRootSchemas(t *testing.T) {
+	targetDir := t.TempDir()
+	libraryDir := t.TempDir()
+	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
+  "servers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}`)
+
+	var records []types.TrackedFile
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"context7"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+		t.Fatalf("ScaffoldMcp: %v", err)
+	}
+
+	internalData, err := os.ReadFile(filepath.Join(targetDir, ".ai", "mcp.json"))
+	if err != nil {
+		t.Fatalf("read internal mcp: %v", err)
+	}
+	var internal map[string]json.RawMessage
+	if err := json.Unmarshal(internalData, &internal); err != nil {
+		t.Fatalf("unmarshal internal mcp: %v", err)
+	}
+	if _, ok := internal["servers"]; !ok {
+		t.Fatalf("internal .ai/mcp.json keys = %#v, want top-level servers", internal)
+	}
+	if _, ok := internal["mcpServers"]; ok {
+		t.Fatalf("internal .ai/mcp.json should not contain top-level mcpServers: %#v", internal)
+	}
+
+	rootData, err := os.ReadFile(filepath.Join(targetDir, ".mcp.json"))
+	if err != nil {
+		t.Fatalf("read root mcp: %v", err)
+	}
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(rootData, &root); err != nil {
+		t.Fatalf("unmarshal root mcp: %v", err)
+	}
+	if _, ok := root["mcpServers"]; !ok {
+		t.Fatalf("root .mcp.json keys = %#v, want top-level mcpServers", root)
+	}
+	if _, ok := root["servers"]; ok {
+		t.Fatalf("root .mcp.json should not contain top-level servers: %#v", root)
+	}
+}
+
 func readScaffoldedMcpCatalog(t *testing.T, path string) mcpCatalog {
 	t.Helper()
 	data, err := os.ReadFile(path)

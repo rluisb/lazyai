@@ -28,14 +28,22 @@ import { runWizard } from '../wizard/index.js'
 
 describe('wizard integration (non-interactive)', () => {
   let tempDir: string
+  let originalXdgConfigHome: string | undefined
 
   beforeEach(() => {
     tempDir = mkdtempSync(path.join(tmpdir(), 'ai-setup-wizard-integration-'))
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME
+    delete process.env.XDG_CONFIG_HOME
   })
 
   afterEach(() => {
     rmSync(tempDir, { recursive: true, force: true })
     vi.clearAllMocks()
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome
+    }
   })
 
   it('creates complete file tree in non-interactive mode', async () => {
@@ -195,10 +203,12 @@ describe('wizard integration (non-interactive)', () => {
     const manifest = JSON.parse(readFileSync(path.join(canonicalDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.config.setupScope).toBe('global')
     expect(manifest.config.targetDir).toBe(canonicalDir)
-    expect(manifest.config.tools).toEqual(['opencode', 'claude-code', 'copilot'])
+    expect(manifest.config.tools).toEqual(['opencode', 'claude-code', 'copilot', 'gemini', 'codex'])
     expect(manifest.config.projectName).toBe('global')
 
-    expect(infoSpy).toHaveBeenCalledWith("Gemini doesn't support file-based global config. Use project scope instead.")
+    // Gemini and Codex now support global scope, so no unsupported-tool messages for them.
+    // Only pi would trigger a message, and it's not in the tools list.
+    expect(infoSpy).not.toHaveBeenCalledWith("Gemini doesn't support file-based global config. Use project scope instead.")
 
     rmSync(homeDir, { recursive: true, force: true })
     infoSpy.mockRestore()

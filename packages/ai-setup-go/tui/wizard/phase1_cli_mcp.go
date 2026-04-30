@@ -71,15 +71,17 @@ func NewCliToolsSelect(defaults []string, preSelected []string) *huh.MultiSelect
 		return huh.NewMultiSelect[string]().Title("CLI Tools (Error loading catalog)")
 	}
 
-	selected := cloneStrings(preSelected)
+	selected := preSelected
 	if len(defaults) > 0 {
-		selected = cloneStrings(defaults)
+		selected = defaults
 	}
 
-	return huh.NewMultiSelect[string]().
+	field := huh.NewMultiSelect[string]().
 		Title("Which CLI tools would you like to enable?").
-		Options(cliToolOptionsFromCatalog(catalog)...).
-		Value(&selected)
+		Options(cliToolOptionsFromCatalog(catalog)...)
+
+	field.Value(&selected)
+	return field
 }
 
 func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {

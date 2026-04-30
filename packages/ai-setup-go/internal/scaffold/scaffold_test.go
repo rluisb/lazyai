@@ -300,6 +300,64 @@ func TestScaffoldAll_DryRun(t *testing.T) {
 	}
 }
 
+func TestScaffoldAll_AbsorbStrategyPreservesExistingRootFile(t *testing.T) {
+	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
+	ctx.Strategy = types.ConflictStrategySkip
+
+	agentsPath := filepath.Join(targetDir, "AGENTS.md")
+	const existingContent = "# Existing user AGENTS\n\nDo not replace me.\n"
+	if err := os.WriteFile(agentsPath, []byte(existingContent), 0o644); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+
+	if _, err := ScaffoldAll(ctx); err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	got, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	if string(got) != existingContent {
+		t.Fatalf("AGENTS.md content = %q, want preserved %q", string(got), existingContent)
+	}
+	if fileExistsInDir(targetDir, ".ai-setup-backup/AGENTS.md") {
+		t.Fatal("absorb/skip should not create a backup for preserved AGENTS.md")
+	}
+}
+
+func TestScaffoldAll_BackupOnlyStrategyReplacesAndBacksUpExistingRootFile(t *testing.T) {
+	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
+	ctx.Strategy = types.ConflictStrategyAlign
+
+	agentsPath := filepath.Join(targetDir, "AGENTS.md")
+	const existingContent = "# Existing user AGENTS\n\nReplace me after backing up.\n"
+	if err := os.WriteFile(agentsPath, []byte(existingContent), 0o644); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+
+	if _, err := ScaffoldAll(ctx); err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	got, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	if string(got) == existingContent {
+		t.Fatal("AGENTS.md was not replaced under backup-only/align behavior")
+	}
+
+	backupPath := filepath.Join(targetDir, ".ai-setup-backup", "AGENTS.md")
+	backup, err := os.ReadFile(backupPath)
+	if err != nil {
+		t.Fatalf("read AGENTS.md backup: %v", err)
+	}
+	if string(backup) != existingContent {
+		t.Fatalf("backup content = %q, want %q", string(backup), existingContent)
+	}
+}
+
 func TestScaffoldAll_NilLibraryFS(t *testing.T) {
 	ctx, _ := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
 	ctx.LibraryFS = nil

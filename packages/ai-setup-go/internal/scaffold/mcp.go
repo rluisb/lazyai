@@ -79,15 +79,8 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	}
 
 	var catalog mcpCatalog
-	if err := json.Unmarshal(data, &catalog.Servers); err != nil {
-		// Try wrapping in a top-level servers key
-		var wrapper struct {
-			Servers map[string]mcpServer `json:"servers"`
-		}
-		if err2 := json.Unmarshal(data, &wrapper); err2 != nil {
-			return err2
-		}
-		catalog = wrapper
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		return err
 	}
 
 	enabledServerNames := make(map[string]bool)
@@ -131,7 +124,14 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	// Also write .mcp.json at project root for tools that expect it there.
 	rootDest := filepath.Join(targetDir, ".mcp.json")
 	if rootAction, err := conflict.ApplyStrategy(rootDest, strategy, perFileOverrides, targetDir); err == nil && rootAction != "skip" {
-		if err := files.WriteFile(rootDest, content, 0o644); err == nil {
+		rootContent, err := json.MarshalIndent(struct {
+			MCPServers map[string]mcpServer `json:"mcpServers"`
+		}{MCPServers: catalog.Servers}, "", "  ")
+		if err != nil {
+			return err
+		}
+		rootContent = append(rootContent, '\n')
+		if err := files.WriteFile(rootDest, rootContent, 0o644); err == nil {
 			hash, _ := files.FileHash(rootDest)
 			rootRel, _ := filepath.Rel(targetDir, rootDest)
 			*fileRecords = append(*fileRecords, types.TrackedFile{

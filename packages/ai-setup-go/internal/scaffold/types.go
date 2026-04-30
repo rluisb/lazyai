@@ -28,6 +28,8 @@ type ScaffoldContext struct {
 	PlanningDir string
 	// SetupScope is the installation scope.
 	SetupScope types.SetupScope
+	// ExistingSetupPolicy controls how existing setup state is handled.
+	ExistingSetupPolicy types.SetupPolicy
 	// HomeDir is the user's home directory for global scope resolution.
 	HomeDir string
 	// Features controls which features are compiled into root files.

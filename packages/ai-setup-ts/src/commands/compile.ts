@@ -22,6 +22,8 @@ interface CompileOptions {
   dryRun?: boolean
   planningRepo?: string
   workspaceRoot?: string
+  driveCli?: boolean
+  localSecrets?: boolean
 }
 
 const libraryDir = resolveLibraryDir(dirname(fileURLToPath(import.meta.url)))
@@ -72,9 +74,11 @@ export function registerCompile(program: Command): void {
     .option('--scope <scope>', 'Scope: global | workspace | project')
     .option('--tools <tools>', 'Comma-separated tool list to compile')
     .option('--force', 'Overwrite existing files')
-     .option('--dry-run', 'Preview changes without writing files')
+    .option('--dry-run', 'Preview changes without writing files')
     .option('--planning-repo <path>', 'Planning repo path (for workspace scope)')
     .option('--workspace-root <path>', 'Workspace root directory for AI tool configs (workspace scope)')
+    .option('--drive-cli', 'Use tool CLIs to register MCP servers when supported')
+    .option('--local-secrets', 'Write Claude MCP servers to .claude/settings.local.json')
     .action(async (opts: CompileOptions) => {
       const cwd = process.cwd()
       const userHomeDir = homedir()
@@ -141,6 +145,8 @@ export function registerCompile(program: Command): void {
       }
       const strategy = opts.force ? 'backup-and-replace' : 'skip'
       const planningDir = store.config.planningDir ?? '.planning'
+      const driveCLI = opts.driveCli === true || store.config.driveCLI === true
+      const localSecrets = opts.localSecrets === true || store.config.localSecrets === true
 
       if (opts.dryRun) {
         console.log('[dry-run] Compile preview:')
@@ -194,6 +200,7 @@ export function registerCompile(program: Command): void {
           strategy,
           selections,
           ...(store.config.enableServers != null ? { enableServers: store.config.enableServers } : {}),
+          ...(driveCLI ? { driveCLI } : {}),
         })
 
         await compileMcp({
@@ -203,6 +210,8 @@ export function registerCompile(program: Command): void {
           fileRecords: [],
           setupScope: effectiveScope,
           homeDir: userHomeDir,
+          ...(driveCLI ? { driveCLI } : {}),
+          ...(localSecrets ? { localSecrets } : {}),
         })
       }
 

@@ -1,6 +1,9 @@
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import {
+  driveClaudeMcpViaCli,
+} from './mcp-compiler.js'
+import {
   copyLibraryDirectory,
   copyWithRecord,
   getOrchestratorAgentContent,
@@ -111,6 +114,10 @@ export class ClaudeCodeAdapter implements ToolAdapter {
         destPath: path.join(ctx.targetDir, 'CLAUDE.md'),
         templateSource: 'root/CLAUDE.template.md',
       })
+    }
+
+    if ((ctx.driveCLI === true || ctx.driveCli === true) && !isGlobal) {
+      driveClaudeMcpViaCli(ctx.targetDir, ctx.targetDir, ctx.setupScope ?? 'project')
     }
   }
 

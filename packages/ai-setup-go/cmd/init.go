@@ -33,6 +33,7 @@ func init() {
 	initCmd.Flags().String("name", "", "Project name")
 	initCmd.Flags().String("branch-pattern", "", "Git branch naming pattern")
 	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
+	initCmd.Flags().String("existing-setup-policy", string(types.SetupPolicyAbsorb), "How to handle existing setup (absorb, adapt, backup-only)")
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
 	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini, Claude Code, Codex)")
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
@@ -74,6 +75,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
 	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
+	existingSetupPolicyStr, _ := cmd.Flags().GetString("existing-setup-policy")
+	existingSetupPolicy, err := parseExistingSetupPolicy(existingSetupPolicyStr)
+	if err != nil {
+		return err
+	}
 
 	// Build CLI tools from flags.
 	var tools []types.ToolId
@@ -90,30 +96,31 @@ func runInit(cmd *cobra.Command, args []string) error {
 	targetDir, _ := os.Getwd()
 
 	config := &wizard.WizardConfig{
-		Interactive:          !nonInteractive,
-		Force:                force,
-		DryRun:               dryRun,
-		CLIDriveCLI:          driveCLI,
-		CLILocalSecrets:      localSecrets,
-		CLIOrg:               orgName,
-		CLITeam:              teamName,
-		CLIEnableServers:     enableServersStr,
-		HomeDir:              homeDir,
-		TargetDir:            targetDir,
-		CLIScope:             types.SetupScope(scopeStr),
-		CLITools:             tools,
-		CLIName:              nameStr,
-		CLIPreset:            preset,
-		CLIFeatures:          featuresStr,
-		CLIBranch:            branchPattern,
-		CLICommit:            commitPattern,
-		CLIMemoryPath:        memoryPath,
-		CLIEnableObsidian:    enableObsidian,
-		CLIObsidianVaultPath: obsidianVaultPath,
-		CLIEnableQmd:         enableQmd,
-		CLIQmdIndexPath:      qmdIndexPath,
-		CLIEnableCodegraph:   enableCodegraph,
-		CLICodegraphDataPath: codegraphDataPath,
+		Interactive:            !nonInteractive,
+		Force:                  force,
+		DryRun:                 dryRun,
+		CLIDriveCLI:            driveCLI,
+		CLILocalSecrets:        localSecrets,
+		CLIOrg:                 orgName,
+		CLITeam:                teamName,
+		CLIEnableServers:       enableServersStr,
+		HomeDir:                homeDir,
+		TargetDir:              targetDir,
+		CLIScope:               types.SetupScope(scopeStr),
+		CLITools:               tools,
+		CLIName:                nameStr,
+		CLIPreset:              preset,
+		CLIFeatures:            featuresStr,
+		CLIBranch:              branchPattern,
+		CLICommit:              commitPattern,
+		CLIMemoryPath:          memoryPath,
+		CLIEnableObsidian:      enableObsidian,
+		CLIObsidianVaultPath:   obsidianVaultPath,
+		CLIEnableQmd:           enableQmd,
+		CLIQmdIndexPath:        qmdIndexPath,
+		CLIEnableCodegraph:     enableCodegraph,
+		CLICodegraphDataPath:   codegraphDataPath,
+		CLIExistingSetupPolicy: existingSetupPolicy,
 	}
 
 	if nonInteractive {
@@ -121,6 +128,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	return runInitInteractive(config)
+}
+
+func parseExistingSetupPolicy(value string) (types.SetupPolicy, error) {
+	if value == "" {
+		return types.SetupPolicyAbsorb, nil
+	}
+
+	policy := types.SetupPolicy(value)
+	if !types.IsValidSetupPolicy(policy) {
+		return "", fmt.Errorf("invalid --existing-setup-policy %q (expected absorb, adapt, or backup-only)", value)
+	}
+	return policy, nil
 }
 
 func runInitInteractive(config *wizard.WizardConfig) error {
@@ -148,6 +167,9 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 	scaffoldResult, err := scaffold.ScaffoldAll(ctx)
 	if err != nil {
 		return fmt.Errorf("scaffold failed: %w", err)
+	}
+	if err := compileMCPForInit(ctx, scaffoldResult); err != nil {
+		return err
 	}
 
 	// Persist results to the SQLite store.
@@ -215,11 +237,13 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 
 	// Create Phase1 result from CLI flags.
 	phase1 := &wizard.Phase1Result{
-		Scope:        config.CLIScope,
-		Tools:        config.CLITools,
-		ProjectName:  config.CLIName,
-		Organization: config.CLIOrg,
-		Team:         config.CLITeam,
+		Scope:         config.CLIScope,
+		Tools:         config.CLITools,
+		ProjectName:   config.CLIName,
+		Organization:  config.CLIOrg,
+		Team:          config.CLITeam,
+		CliTools:      config.CLICliTools,
+		EnableServers: config.CLIEnableServers,
 	}
 
 	// Create Phase2 result from preset + features.
@@ -303,6 +327,9 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	if err != nil {
 		return fmt.Errorf("scaffold failed: %w", err)
 	}
+	if err := compileMCPForInit(ctx, scaffoldResult); err != nil {
+		return err
+	}
 
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
@@ -342,6 +369,36 @@ func printScaffoldSummary(result *scaffold.ScaffoldResult, ctx *scaffold.Scaffol
 			fmt.Printf("  • %v\n", e)
 		}
 	}
+}
+
+func compileMCPForInit(ctx *scaffold.ScaffoldContext, result *scaffold.ScaffoldResult) error {
+	if ctx == nil || result == nil || ctx.DryRun {
+		return nil
+	}
+
+	reg := adapter.NewRegistry()
+	for _, tool := range ctx.Tools {
+		adapt, err := reg.Get(tool)
+		if err != nil {
+			return fmt.Errorf("compile mcp for %s: %w", tool, err)
+		}
+
+		compileCtx := adapter.CompileContext{
+			TargetDir:     ctx.TargetDir,
+			HomeDir:       ctx.HomeDir,
+			SetupScope:    ctx.SetupScope,
+			LocalSecrets:  ctx.LocalSecrets,
+			WorkspaceRoot: ctx.TargetDir,
+			Repos:         ctx.Repos,
+		}
+		records, err := adapt.CompileMCP(compileCtx)
+		if err != nil {
+			return fmt.Errorf("compile mcp for %s: %w", tool, err)
+		}
+		result.Files = append(result.Files, records...)
+	}
+
+	return nil
 }
 
 // headerStyle returns a bold styled header with the primary color.

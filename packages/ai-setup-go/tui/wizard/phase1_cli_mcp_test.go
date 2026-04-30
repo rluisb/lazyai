@@ -53,6 +53,37 @@ func TestDefaultMcpSelectionPreservesExplicitSelection(t *testing.T) {
 	}
 }
 
+func TestAcliCliToolCatalogVisibility(t *testing.T) {
+	t.Parallel()
+
+	catalog, err := loadMcpCatalog()
+	if err != nil {
+		t.Fatalf("loadMcpCatalog: %v", err)
+	}
+
+	tool, ok := catalog.CliTools["acli"]
+	if !ok {
+		t.Fatalf("catalog.CliTools missing acli")
+	}
+	if want := "https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/"; tool.InstallHint != want {
+		t.Fatalf("acli install hint = %q, want %q", tool.InstallHint, want)
+	}
+	if _, ok := catalog.Servers["acli"]; ok {
+		t.Fatalf("catalog.Servers must not include acli")
+	}
+
+	found := false
+	for _, opt := range cliToolOptionsFromCatalog(catalog) {
+		if opt.Value == "acli" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("cliToolOptionsFromCatalog() missing acli")
+	}
+}
+
 func TestNormalizeMcpPresetDefaultsToRecommended(t *testing.T) {
 	t.Parallel()
 

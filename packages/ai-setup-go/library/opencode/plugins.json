@@ -1,14 +1,22 @@
 [
   {
-    "module": "@opencode/desktop-commander",
-    "description": "Terminal & desktop file management commands"
+    "module": "https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
+    "description": "Dynamic context pruning for OpenCode sessions"
   },
   {
-    "module": "@opencode/context-files",
-    "description": "Manage and pin context files for sessions"
+    "module": "https://github.com/spoons-and-mirrors/subtask2",
+    "description": "Subtask workflow support for OpenCode"
   },
   {
-    "module": "@opencode/git-tools",
-    "description": "Git integration helpers (log, diff, blame)"
+    "module": "https://github.com/JRedeker/opencode-shell-strategy",
+    "description": "Shell strategy controls for OpenCode"
+  },
+  {
+    "module": "https://github.com/boxpositron/envsitter-guard",
+    "description": "Environment guardrails for OpenCode"
+  },
+  {
+    "module": "https://github.com/kdcokenny/opencode-background-agents",
+    "description": "Background agent support for OpenCode"
   }
 ]

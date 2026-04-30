@@ -92,6 +92,16 @@ export const gitConventionsSchema = z.object({
   ticketPattern: z.string().default('[A-Z]+-[0-9]+'),
 })
 
+export const housekeepingConfigSchema = z.object({
+  memoryPath: z.string().optional(),
+  enableObsidian: z.boolean().optional(),
+  obsidianVaultPath: z.string().optional(),
+  enableQmd: z.boolean().optional(),
+  qmdIndexPath: z.string().optional(),
+  enableCodegraph: z.boolean().optional(),
+  codegraphDataPath: z.string().optional(),
+})
+
 export const configSchema = z.object({
   setupScope: setupScopeSchema,
   setupType: setupTypeSchema.optional(),
@@ -100,6 +110,7 @@ export const configSchema = z.object({
   enableServers: z.array(z.string()).optional(),
   projectName: z.string(),
   workspaceName: z.string().optional(),
+  workspaceRoot: z.string().optional(),
   targetDir: z.string(),
   planningDir: z.string().optional(),
   planningRepoPath: z.string().optional(),
@@ -114,7 +125,46 @@ export const configSchema = z.object({
     )
     .optional(),
   globalRef: z.string().optional(),
+  driveCLI: z.boolean().optional(),
+  localSecrets: z.boolean().optional(),
+  housekeeping: housekeepingConfigSchema.optional(),
 })
+
+// Gemini slash command IDs (TOML files under <geminiRoot>/commands/)
+export const commandIdSchema = z.enum([
+  'rpi',
+  'review',
+  'plan',
+  'speckit-analyze',
+  'speckit-checklist',
+  'speckit-clarify',
+  'speckit-constitution',
+  'speckit-implement',
+  'speckit-plan',
+  'speckit-specify',
+  'speckit-tasks',
+])
+
+// Copilot chat mode IDs
+export const chatModeIdSchema = z.enum(['architect', 'reviewer'])
+
+// OpenCode slash command IDs (distinct keyspace from Gemini CommandId)
+export const openCodeCommandIdSchema = z.enum([
+  'review',
+  'test',
+  'commit',
+  'speckit.analyze',
+  'speckit.checklist',
+  'speckit.clarify',
+  'speckit.constitution',
+  'speckit.implement',
+  'speckit.plan',
+  'speckit.specify',
+  'speckit.tasks',
+])
+
+// OpenCode chat mode IDs
+export const openCodeModeIdSchema = z.enum(['plan', 'audit'])
 
 export const wizardSelectionsSchema = z.object({
   templates: templateIdSchema.array(),
@@ -122,10 +172,16 @@ export const wizardSelectionsSchema = z.object({
   agents: agentIdSchema.array(),
   skills: skillIdSchema.array(),
   prompts: promptIdSchema.array(),
+  commands: commandIdSchema.array().optional(),
+  chatmodes: chatModeIdSchema.array().optional(),
+  opencodeCommands: openCodeCommandIdSchema.array().optional(),
+  opencodeModes: openCodeModeIdSchema.array().optional(),
+  opencodePlugins: z.array(z.string()).optional(),
   infra: infraIdSchema.array(),
   constitution: z.array(z.string()),
   features: featureFlagsSchema.optional(),
   gitConventions: gitConventionsSchema.optional(),
+  preset: presetLevelSchema.optional(),
 })
 
 export const trackedFileSchema = z.object({
@@ -173,6 +229,11 @@ export type Config = z.infer<typeof configSchema>
 export type Sync = z.infer<typeof syncSchema>
 export type FeatureFlags = z.infer<typeof featureFlagsSchema>
 export type GitConventions = z.infer<typeof gitConventionsSchema>
+export type HousekeepingConfig = z.infer<typeof housekeepingConfigSchema>
+export type CommandId = z.infer<typeof commandIdSchema>
+export type ChatModeId = z.infer<typeof chatModeIdSchema>
+export type OpenCodeCommandId = z.infer<typeof openCodeCommandIdSchema>
+export type OpenCodeModeId = z.infer<typeof openCodeModeIdSchema>
 
 export function defaultStore(): StoreData {
   const now = new Date().toISOString()
@@ -196,8 +257,14 @@ export function defaultStore(): StoreData {
       agents: [],
       skills: [],
       prompts: [],
+      commands: [],
+      chatmodes: [],
+      opencodeCommands: [],
+      opencodeModes: [],
+      opencodePlugins: [],
       infra: [],
       constitution: [],
+      preset: 'standard',
     },
     files: [],
     sync: {

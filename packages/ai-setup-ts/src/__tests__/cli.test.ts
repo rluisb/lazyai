@@ -10,6 +10,7 @@ import type { StoreData } from '../store/schema.js'
 
 describe('cli init integration', () => {
   let originalCwd: string
+  let originalXdgConfigHome: string | undefined
 
   const makeTempRepo = (): string => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-init-'))
@@ -44,10 +45,17 @@ describe('cli init integration', () => {
 
   beforeEach(() => {
     originalCwd = process.cwd()
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME
+    delete process.env.XDG_CONFIG_HOME
   })
 
   afterEach(() => {
     process.chdir(originalCwd)
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome
+    }
   })
 
   it('runs full init and writes expected file tree', async () => {
@@ -162,6 +170,65 @@ describe('cli init integration', () => {
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
     expect(config.config.tools).toEqual(['opencode'])
     expect(config.files.some((f: { path: string }) => f.path.startsWith('.opencode/'))).toBe(true)
+  })
+
+  it('persists OpenCode plugins in non-interactive mode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'opencode',
+      '--name',
+      'opencode-plugins-test',
+      '--no-interactive',
+      '--opencode-plugins',
+      '@opencode/context-files,@opencode/git-tools',
+    ])
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
+    expect(config.selections.opencodePlugins).toEqual(['@opencode/context-files', '@opencode/git-tools'])
+  })
+
+  it('persists local secrets and housekeeping init flags in non-interactive mode', async () => {
+    const tempDir = makeTempRepo()
+    process.chdir(tempDir)
+
+    await runInit([
+      '--scope',
+      'project',
+      '--tools',
+      'claude-code',
+      '--name',
+      'housekeeping-flags-test',
+      '--no-interactive',
+      '--local-secrets',
+      '--memory-path',
+      '.memory',
+      '--enable-obsidian',
+      '--obsidian-vault-path',
+      '/vault',
+      '--enable-qmd',
+      '--qmd-index-path',
+      '.qmd',
+      '--enable-codegraph',
+      '--codegraph-data-path',
+      '.codegraph',
+    ])
+
+    const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData
+    expect(config.config.localSecrets).toBe(true)
+    expect(config.config.housekeeping).toEqual({
+      memoryPath: '.memory',
+      enableObsidian: true,
+      obsidianVaultPath: '/vault',
+      enableQmd: true,
+      qmdIndexPath: '.qmd',
+      enableCodegraph: true,
+      codegraphDataPath: '.codegraph',
+    })
   })
 
   it('init --dry-run shows plan output and writes no files', async () => {

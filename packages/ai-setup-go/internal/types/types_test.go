@@ -171,6 +171,19 @@ func TestIsValidSetupScope(t *testing.T) {
 	}
 }
 
+func TestIsValidExistingSetupPolicy(t *testing.T) {
+	t.Parallel()
+
+	for _, policy := range []SetupPolicy{SetupPolicyAbsorb, SetupPolicyAdapt, SetupPolicyBackupOnly} {
+		if !IsValidSetupPolicy(policy) {
+			t.Errorf("IsValidSetupPolicy(%q) = false, want true", policy)
+		}
+	}
+	if IsValidSetupPolicy("invalid") {
+		t.Error("IsValidSetupPolicy(\"invalid\") = true, want false")
+	}
+}
+
 func TestIsValidToolId(t *testing.T) {
 	t.Parallel()
 

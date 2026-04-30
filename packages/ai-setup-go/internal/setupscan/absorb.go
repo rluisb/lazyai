@@ -27,6 +27,13 @@ const (
 	scanRegistryVersion = 1
 )
 
+var reservedContextMarkdownFiles = map[string]bool{
+	"AGENTS.md":               true,
+	"CLAUDE.md":               true,
+	"GEMINI.md":               true,
+	"copilot-instructions.md": true,
+}
+
 type OperationResult struct {
 	Mode         string             `json:"mode"`
 	RegistryPath string             `json:"registryPath"`
@@ -411,9 +418,33 @@ func backupIfNeeded(path string, operation *OperationResult, backupSet map[strin
 
 func copyPath(sourcePath, destinationPath string) error {
 	if files.DirExists(sourcePath) {
-		return files.CopyDir(sourcePath, destinationPath)
+		return copyDirSkippingReservedContextDocs(sourcePath, destinationPath)
 	}
 	return files.CopyFile(sourcePath, destinationPath)
+}
+
+func copyDirSkippingReservedContextDocs(sourcePath, destinationPath string) error {
+	return filepath.WalkDir(sourcePath, func(current string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		rel, err := filepath.Rel(sourcePath, current)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return files.EnsureDir(destinationPath)
+		}
+		if !entry.IsDir() && reservedContextMarkdownFiles[entry.Name()] {
+			return nil
+		}
+
+		dest := filepath.Join(destinationPath, rel)
+		if entry.IsDir() {
+			return files.EnsureDir(dest)
+		}
+		return files.CopyFile(current, dest)
+	})
 }
 
 func pathsMatch(sourcePath, destinationPath string) (bool, error) {
@@ -446,6 +477,9 @@ func pathFingerprint(path string) (string, error) {
 			return walkErr
 		}
 		if current == path {
+			return nil
+		}
+		if !entry.IsDir() && reservedContextMarkdownFiles[entry.Name()] {
 			return nil
 		}
 		rel, err := filepath.Rel(path, current)

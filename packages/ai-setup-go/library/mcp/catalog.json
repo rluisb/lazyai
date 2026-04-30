@@ -119,6 +119,11 @@
     }
   },
   "cliTools": {
+    "acli": {
+      "description": "Atlassian CLI for Jira and Confluence workflows",
+      "installHint": "https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/",
+      "enabled": false
+    },
     "gh": {
       "description": "GitHub CLI for repository, issue, and PR operations (never pushes without explicit user approval)",
       "installHint": "brew install gh",
@@ -127,6 +132,41 @@
     "rtk": {
       "description": "Token-efficient output formatting",
       "installHint": "brew install rtk",
+      "enabled": false
+    },
+    "codegraph": {
+      "description": "Code knowledge graph for semantic exploration",
+      "installHint": "bun install -g codegraph",
+      "enabled": true
+    },
+    "qmd": {
+      "description": "Markdown knowledge base search",
+      "installHint": "brew install qmd",
+      "enabled": true
+    },
+    "graphify": {
+      "description": "Knowledge graph builder and query engine for codebases",
+      "installHint": "brew install graphify",
+      "enabled": true
+    },
+    "ob": {
+      "description": "Obsidian vault read/write access for persistent knowledge",
+      "installHint": "npm install -g obsidian-cli",
+      "enabled": true
+    },
+    "memoria": {
+      "description": "Git history analysis and code memory",
+      "installHint": "npx @byronwade/memoria",
+      "enabled": true
+    },
+    "playwright": {
+      "description": "Browser automation and testing via Playwright MCP",
+      "installHint": "npx @playwright/mcp",
+      "enabled": false
+    },
+    "fetch": {
+      "description": "HTTP fetch for web content retrieval",
+      "installHint": "npx @modelcontextprotocol/server-fetch",
       "enabled": false
     }
   }

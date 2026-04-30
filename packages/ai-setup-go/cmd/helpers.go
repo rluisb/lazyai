@@ -153,40 +153,51 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		enableServers = config.CLIEnableServers
 	}
 
+	existingSetupPolicy := config.CLIExistingSetupPolicy
+	if existingSetupPolicy == "" {
+		existingSetupPolicy = types.SetupPolicyAbsorb
+		config.CLIExistingSetupPolicy = existingSetupPolicy
+	}
+	strategy := conflictStrategyForSetupPolicy(existingSetupPolicy)
+	if existingSetupPolicy == types.SetupPolicyAdapt {
+		warnAdaptFallbackForUnsupportedTools(result.Phase1.Tools)
+	}
+
 	ctx := &scaffold.ScaffoldContext{
-		TargetDir:        config.TargetDir,
-		LibraryDir:       libDir,
-		LibraryFS:        libFS,
-		Tools:            result.Phase1.Tools,
-		CLITools:         cliTools,
-		EnableServers:    enableServers,
-		ProjectName:      result.Phase1.ProjectName,
-		PlanningDir:      "specs",
-		SetupScope:       result.Phase1.Scope,
-		HomeDir:          config.HomeDir,
-		Features:         &features,
-		GitConventions:   &gitConvs,
-		Strategy:         types.ConflictStrategyAlign,
-		Force:            config.Force,
-		DryRun:           config.DryRun,
-		DriveCLI:         config.CLIDriveCLI,
-		LocalSecrets:     config.CLILocalSecrets,
-		Organization:     firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
-		Team:             firstNonEmpty(result.Phase1.Team, config.CLITeam),
-		Agents:           agents,
-		Skills:           skills,
-		Prompts:          prompts,
-		Commands:         commands,
-		ChatModes:        chatmodes,
-		OpenCodeCommands: opencodeCommands,
-		OpenCodeModes:    opencodeModes,
-		OpenCodePlugins:  opencodePlugins,
-		Templates:        templates,
-		Rules:            rules,
-		Infra:            infra,
-		SpecsDirs:        specsDirs,
-		Housekeeping:     housekeepingFromResult(result),
-		PlanningRepoPath: config.HomeDir,
+		TargetDir:           config.TargetDir,
+		LibraryDir:          libDir,
+		LibraryFS:           libFS,
+		Tools:               result.Phase1.Tools,
+		CLITools:            cliTools,
+		EnableServers:       enableServers,
+		ProjectName:         result.Phase1.ProjectName,
+		PlanningDir:         "specs",
+		SetupScope:          result.Phase1.Scope,
+		ExistingSetupPolicy: existingSetupPolicy,
+		HomeDir:             config.HomeDir,
+		Features:            &features,
+		GitConventions:      &gitConvs,
+		Strategy:            strategy,
+		Force:               config.Force,
+		DryRun:              config.DryRun,
+		DriveCLI:            config.CLIDriveCLI,
+		LocalSecrets:        config.CLILocalSecrets,
+		Organization:        firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
+		Team:                firstNonEmpty(result.Phase1.Team, config.CLITeam),
+		Agents:              agents,
+		Skills:              skills,
+		Prompts:             prompts,
+		Commands:            commands,
+		ChatModes:           chatmodes,
+		OpenCodeCommands:    opencodeCommands,
+		OpenCodeModes:       opencodeModes,
+		OpenCodePlugins:     opencodePlugins,
+		Templates:           templates,
+		Rules:               rules,
+		Infra:               infra,
+		SpecsDirs:           specsDirs,
+		Housekeeping:        housekeepingFromResult(result),
+		PlanningRepoPath:    config.HomeDir,
 	}
 
 	if config.HomeDir == "" {
@@ -194,6 +205,26 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	}
 
 	return ctx, nil
+}
+
+func conflictStrategyForSetupPolicy(policy types.SetupPolicy) types.ConflictStrategy {
+	switch policy {
+	case types.SetupPolicyBackupOnly:
+		return types.ConflictStrategyAlign
+	case types.SetupPolicyAbsorb, types.SetupPolicyAdapt:
+		return types.ConflictStrategySkip
+	default:
+		return types.ConflictStrategySkip
+	}
+}
+
+func warnAdaptFallbackForUnsupportedTools(tools []types.ToolId) {
+	for _, tool := range tools {
+		if tool == types.ToolIdOpenCode {
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "WARN: --existing-setup-policy=adapt is MVP-supported for OpenCode only; preserving existing %s files via absorb behavior\n", tool)
+	}
 }
 
 // writeStoreFromScaffoldResult writes the scaffold results to the SQLite database.

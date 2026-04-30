@@ -32,11 +32,16 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 		t.Errorf("agent written at legacy flat path %q (regression of spec 012 Task 001)", flatLegacy)
 	}
 
-	// agents/CLAUDE.md (tool-context for the agents directory) must live next
-	// to the agents — not at the personal-conventions path.
-	agentsContext := filepath.Join(claudeDir, "agents", "CLAUDE.md")
-	if !files.FileExists(agentsContext) {
-		t.Errorf("agents/CLAUDE.md context file missing at %q", agentsContext)
+	// Reserved context docs inside the Claude tool directory are handled
+	// elsewhere and must not be created by adapter install.
+	for _, path := range []string{
+		filepath.Join(claudeDir, "CLAUDE.md"),
+		filepath.Join(claudeDir, "agents", "CLAUDE.md"),
+		filepath.Join(claudeDir, "skills", "CLAUDE.md"),
+	} {
+		if files.FileExists(path) {
+			t.Errorf("reserved context doc should not be created at %q", path)
+		}
 	}
 }
 

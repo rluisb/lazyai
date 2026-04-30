@@ -438,6 +438,29 @@ func TestRunImportCopiesConfigsIntoAiSetupImportsAndBacksUpManagedDestination(t 
 	}
 }
 
+func TestRunImportCopiesAgentDirectoryButSkipsNestedReservedContextDocs(t *testing.T) {
+	homeDir := t.TempDir()
+	targetDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "opencode.jsonc"), `{"version":"1.0.0"}`)
+	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "agents", "builder.md"), "# Builder\n\nBuild things.")
+	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "agents", "AGENTS.md"), "# Nested Context\n\nDo not import.")
+
+	inventory, err := Run(Options{HomeDir: homeDir, TargetDir: targetDir, Import: true})
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+
+	opencode := findTarget(t, inventory.CurrentState.Targets, "opencode")
+	detection := detectionForScope(t, opencode, "project")
+	importedAgentsDir := filepath.Join(inventory.Operation.ImportRoot, "opencode", importDirectoryName(detection.Scope, detection.Origin, detection.RootPath), "agents")
+	if !filesExist(t, filepath.Join(importedAgentsDir, "builder.md")) {
+		t.Fatalf("expected builder agent to be imported")
+	}
+	if filesExist(t, filepath.Join(importedAgentsDir, "AGENTS.md")) {
+		t.Fatalf("nested reserved context doc should not be imported")
+	}
+}
+
 func findTarget(t *testing.T, targets []ObservedTarget, id string) ObservedTarget {
 	t.Helper()
 	for _, target := range targets {

@@ -72,7 +72,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	if !files.FileExists(jsoncPath) {
 		defaultConfig := map[string]any{
 			"$schema":      "https://opencode.ai/config.json",
-			"instructions": []any{"AGENTS.md"},
+			"instructions": []any{openCodeInstructionsPath(ctx)},
 			"permission": map[string]any{
 				"edit": "ask",
 				"bash": "ask",
@@ -169,24 +169,19 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
-	// Install tool context files (AGENTS.md in each directory).
-	if err := InstallToolContextFiles(InstallToolContextFilesOption{
-		Ctx:             ctx,
-		ToolDir:         ocDir,
-		ContextFileName: "AGENTS.md",
-		AgentsDestDir:   "agents",
-		SkillsDestDir:   "skills",
-		WarnOnSkip:      true,
-	}); err != nil {
-		return nil, err
-	}
-
 	// Install selected plugins via the opencode CLI if the binary is present.
 	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
 		log.Printf("Warning: plugin install failed: %v", err)
 	}
 
 	return ctx.FileRecords, nil
+}
+
+func openCodeInstructionsPath(ctx *AdapterContext) string {
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		return "AGENTS.md"
+	}
+	return "../AGENTS.md"
 }
 
 func (a *OpenCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

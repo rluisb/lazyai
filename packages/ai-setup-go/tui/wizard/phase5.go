@@ -329,16 +329,10 @@ func opencodeBinaryPresent() bool {
 func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseAction, error) {
 	selected := append([]string(nil), current...)
 
-	options := []huh.Option[string]{
-		huh.NewOption("Desktop Commander (@opencode/desktop-commander)", "@opencode/desktop-commander"),
-		huh.NewOption("Context Files (@opencode/context-files)", "@opencode/context-files"),
-		huh.NewOption("Git Tools (@opencode/git-tools)", "@opencode/git-tools"),
-	}
-
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
 		Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
-		Options(append(options, huh.NewOption("↩ Back", "__phase5_back__"))...).
+		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
 
 	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
@@ -357,6 +351,22 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 		}
 	}
 	return filtered, PhaseContinue, nil
+}
+
+func opencodePluginOptions() []huh.Option[string] {
+	options := make([]huh.Option[string], 0, len(opencodePluginURLs))
+	for _, url := range opencodePluginURLs {
+		options = append(options, huh.NewOption(url, url))
+	}
+	return options
+}
+
+var opencodePluginURLs = []string{
+	"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
+	"https://github.com/spoons-and-mirrors/subtask2",
+	"https://github.com/JRedeker/opencode-shell-strategy",
+	"https://github.com/boxpositron/envsitter-guard",
+	"https://github.com/kdcokenny/opencode-background-agents",
 }
 
 func boolToInt(value bool) int {

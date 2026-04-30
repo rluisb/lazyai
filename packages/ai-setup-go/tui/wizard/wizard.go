@@ -2,8 +2,9 @@
 // built on top of the Charm Bracelet TUI stack (bubbletea, lipgloss, huh).
 //
 // Phase ordering (as executed in RunWizardWithDefaults):
-//   Phase 1 (context) → Phase 2 (features) → Phase 3 (conflicts, conditional)
-//   → Phase 5 (optional tooling) → Phase 4 (review & confirm)
+//
+//	Phase 1 (context) → Phase 2 (features) → Phase 3 (conflicts, conditional)
+//	→ Phase 5 (optional tooling) → Phase 4 (review & confirm)
 //
 // Title convention: each interactive sub-screen title uses the format
 // "<PhaseTitle> — <n>/<N>: <StepTitle>" where <n> is the current step and
@@ -50,22 +51,23 @@ type WizardConfig struct {
 	TargetDir string
 
 	// CLI overrides (populated from flags).
-	CLIScope             types.SetupScope
-	CLITools             []types.ToolId
-	CLIName              string
-	CLIPreset            types.PresetLevel
-	CLIFeatures          []string
-	CLIBranch            string
-	CLICommit            string
-	CLICliTools          []string
-	CLIEnableServers     []string
-	CLIMemoryPath        string
-	CLIEnableObsidian    bool
-	CLIObsidianVaultPath string
-	CLIEnableQmd         bool
-	CLIQmdIndexPath      string
-	CLIEnableCodegraph   bool
-	CLICodegraphDataPath string
+	CLIScope               types.SetupScope
+	CLITools               []types.ToolId
+	CLIName                string
+	CLIPreset              types.PresetLevel
+	CLIFeatures            []string
+	CLIBranch              string
+	CLICommit              string
+	CLICliTools            []string
+	CLIEnableServers       []string
+	CLIMemoryPath          string
+	CLIEnableObsidian      bool
+	CLIObsidianVaultPath   string
+	CLIEnableQmd           bool
+	CLIQmdIndexPath        string
+	CLIEnableCodegraph     bool
+	CLICodegraphDataPath   string
+	CLIExistingSetupPolicy types.SetupPolicy
 
 	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
 	// scaffolding to the tool's own CLI instead of direct-write.
@@ -111,154 +113,85 @@ func RunWizard(config *WizardConfig) (*WizardResult, error) {
 // The defaults are used when re-running phases (e.g., when the user goes back).
 // If defaults are nil, no pre-filling occurs.
 //
-// Phase ordering: 1 → 2 → 3 (conditional) → 5 → 4.
+// Phase ordering: 1, 2, 5 (interactive form) → 3 (conditional) → 4.
 func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*WizardResult, error) {
 	result := &WizardResult{}
 
-	// Seed result from defaults.
-	var phase2Defaults *Phase2Result
-	if defaults != nil {
-		if defaults.Phase1 != nil {
-			result.Phase1 = defaults.Phase1
+	if !config.Interactive {
+		var err error
+		var p1 *Phase1Result
+		var p2 *Phase2Result
+		var p5 *Phase5Result
+
+		if defaults != nil {
+			p1, _, err = RunPhase1(defaults.Phase1, true)
+			if err != nil {
+				return nil, err
+			}
+			result.Phase1 = p1
+
+			p2, _, err = RunPhase2(result.Phase1.Scope, defaults.Phase2, true)
+			if err != nil {
+				return nil, err
+			}
+			result.Phase2 = p2
+
+			opencodeSelected := toolsContain(result.Phase1.Tools, types.ToolIdOpenCode)
+			p5, _, err = RunPhase5(defaults.Phase5, true, opencodeSelected)
+			if err != nil {
+				return nil, err
+			}
+			result.Phase5 = p5
 		}
-		phase2Defaults = defaults.Phase2
+	} else {
+		state := initWizardState(defaults)
+		form := buildInteractiveForm(state).WithAccessible(!config.Interactive)
+
+		if err := form.Run(); err != nil {
+			return nil, ErrUserCancelled
+		}
+
+		p1, p2, p5 := extractResults(state)
+		result.Phase1 = p1
+		result.Phase2 = p2
+		result.Phase5 = p5
 	}
 
-	// Run the Phase 1-2 loop. Returns when both phases are complete.
-	result, err := runPhase12Loop(config, result, phase2Defaults)
+	// Compute the install plan from Phase 1+2 results.
+	plan, err := ComputePlan(config)
+	if err != nil {
+		return nil, fmt.Errorf("computing install plan: %w", err)
+	}
+
+	// Convert internal ConflictInfo to conflict.Conflict for Phase 3.
+	conflicts := BuildConflictList(plan)
+
+	// Phase 3: conflict resolution (only if conflicts exist)
+	if len(conflicts) > 0 {
+		phase3, action, err := RunPhase3(conflicts, !config.Interactive)
+		if err != nil {
+			return nil, err
+		}
+		if action == PhaseCancel {
+			return nil, ErrUserCancelled
+		}
+		result.Phase3 = phase3
+	} else {
+		// No conflicts — create a default Phase3 result (skip all)
+		result.Phase3 = &Phase3Result{
+			Strategy: types.ConflictStrategySkip,
+		}
+	}
+
+	// Phase 4: confirm
+	phase4, action, err := RunPhase4(plan, !config.Interactive)
 	if err != nil {
 		return nil, err
 	}
-
-	// --- Phases 3-5 with outer loop for back navigation ---
-	for {
-		// Compute the install plan from Phase 1+2 results.
-		plan, err := ComputePlan(config)
-		if err != nil {
-			return nil, fmt.Errorf("computing install plan: %w", err)
-		}
-
-		// Convert internal ConflictInfo to conflict.Conflict for Phase 3.
-		conflicts := BuildConflictList(plan)
-
-		// Phase 3: conflict resolution (only if conflicts exist)
-		if len(conflicts) > 0 {
-			phase3, action, err := RunPhase3(conflicts, !config.Interactive)
-			if err != nil {
-				return nil, err
-			}
-			if action == PhaseCancel {
-				return nil, ErrUserCancelled
-			}
-			result.Phase3 = phase3
-			if action == PhaseBack {
-				// Go back to Phase 2 — re-run Phase 1-2 loop
-				result, err = runPhase12Loop(config, result, result.Phase2)
-				if err != nil {
-					return nil, err
-				}
-				continue
-			}
-		} else {
-			// No conflicts — create a default Phase3 result (skip all)
-			result.Phase3 = &Phase3Result{
-				Strategy: types.ConflictStrategySkip,
-			}
-		}
-
-		opencodeSelected := toolsContain(result.Phase1.Tools, types.ToolIdOpenCode)
-		phase5, action, err := RunPhase5(result.Phase5, !config.Interactive, opencodeSelected)
-		if err != nil {
-			return nil, err
-		}
-		if action == PhaseCancel {
-			return nil, ErrUserCancelled
-		}
-		result.Phase5 = phase5
-		if action == PhaseBack {
-			if len(conflicts) > 0 {
-				continue
-			}
-			result, err = runPhase12Loop(config, result, result.Phase2)
-			if err != nil {
-				return nil, err
-			}
-			continue
-		}
-
-		// Phase 4: confirm
-		phase4, action, err := RunPhase4(plan, !config.Interactive)
-		if err != nil {
-			return nil, err
-		}
-		if action == PhaseCancel {
-			return nil, ErrUserCancelled
-		}
-		result.Phase4 = phase4
-		if action == PhaseBack {
-			// Go back: if there were conflicts, re-run Phase 3; otherwise back to Phase 2
-			if len(conflicts) > 0 {
-				// Re-run this loop from the top (will re-compute plan)
-				continue
-			}
-			// Go back to Phase 2 — re-run Phase 1-2 loop
-			result, err = runPhase12Loop(config, result, result.Phase2)
-			if err != nil {
-				return nil, err
-			}
-			continue
-		}
-
-		// Confirmed — break out
-		break
+	if action == PhaseCancel {
+		return nil, ErrUserCancelled
 	}
-
-	return result, nil
-}
-
-// runPhase12Loop runs phases 1 and 2 with back-navigation between them.
-// If defaults are provided, they are used to pre-fill prompts on re-runs.
-func runPhase12Loop(config *WizardConfig, result *WizardResult, phase2Defaults *Phase2Result) (*WizardResult, error) {
-	currentPhase := 1
-
-	for currentPhase >= 1 && currentPhase <= 2 {
-		switch currentPhase {
-		case 1:
-			phase1Defaults := result.Phase1
-			phase1, action, err := RunPhase1(phase1Defaults, !config.Interactive)
-			if err != nil {
-				return nil, err
-			}
-			if action == PhaseCancel {
-				return nil, ErrUserCancelled
-			}
-			result.Phase1 = phase1
-			if action == PhaseBack {
-				// Can't go back from Phase 1 — just continue
-				continue
-			}
-			currentPhase = 2
-
-		case 2:
-			phase2, action, err := RunPhase2(
-				result.Phase1.Scope,
-				phase2Defaults,
-				!config.Interactive,
-			)
-			if err != nil {
-				return nil, err
-			}
-			if action == PhaseCancel {
-				return nil, ErrUserCancelled
-			}
-			result.Phase2 = phase2
-			if action == PhaseBack {
-				currentPhase = 1
-				continue
-			}
-			currentPhase = 3
-		}
-	}
+	result.Phase4 = phase4
 
 	return result, nil
 }

@@ -75,6 +75,23 @@ func runPhase1NonInteractive(defaults *Phase1Result) (*Phase1Result, PhaseAction
 	if defaults.ProjectName == "" {
 		return nil, PhaseCancel, fmt.Errorf("project name is required in non-interactive mode")
 	}
+
+	if defaults.McpPreset == "" {
+		defaults.McpPreset = McpPresetRecommended
+	}
+	if len(defaults.EnableServers) == 0 {
+		defaults.EnableServers = defaultMcpServersForPreset(defaults.McpPreset)
+	}
+	if len(defaults.CliTools) == 0 {
+		defaults.CliTools = detectInstalledCliToolsFromCatalog()
+	}
+	if len(defaults.Skills) == 0 {
+		defaults.Skills = types.ALL_SKILLS
+	}
+	if len(defaults.Agents) == 0 {
+		defaults.Agents = types.ALL_AGENTS
+	}
+
 	return defaults, PhaseContinue, nil
 }
 

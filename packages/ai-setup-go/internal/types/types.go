@@ -22,6 +22,25 @@ const (
 	SetupScopeProject   SetupScope = "project"
 )
 
+// SetupPolicy defines how init should handle an existing setup.
+type SetupPolicy string
+
+const (
+	SetupPolicyAbsorb     SetupPolicy = "absorb"
+	SetupPolicyAdapt      SetupPolicy = "adapt"
+	SetupPolicyBackupOnly SetupPolicy = "backup-only"
+)
+
+// IsValidSetupPolicy reports whether policy is a recognized setup policy.
+func IsValidSetupPolicy(policy SetupPolicy) bool {
+	switch policy {
+	case SetupPolicyAbsorb, SetupPolicyAdapt, SetupPolicyBackupOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // ToolId identifies a supported AI coding tool.
 type ToolId string
 

@@ -25,6 +25,8 @@ export interface ManifestWithFeatures extends AiSetupConfig {
   features?: FeatureFlags
   gitConventions?: GitConventions
   enableServers?: string[]
+  driveCLI?: boolean
+  localSecrets?: boolean
 }
 
 /**
@@ -42,6 +44,8 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
       setupScope: data.config.setupScope,
       ...(data.config.setupType ? { setupType: data.config.setupType } : {}),
       tools: data.config.tools,
+      ...(data.config.driveCLI != null ? { driveCLI: data.config.driveCLI } : {}),
+      ...(data.config.localSecrets != null ? { localSecrets: data.config.localSecrets } : {}),
       ...(data.config.cliTools != null ? { cliTools: data.config.cliTools } : {}),
       ...(data.config.enableServers != null ? { enableServers: data.config.enableServers } : {}),
       projectName: data.config.projectName,

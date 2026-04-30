@@ -56,7 +56,17 @@ interface InitOptions {
   branchPattern?: string
   commitPattern?: string
   enableServers?: string
+  opencodePlugins?: string
   installMode?: string
+  driveCli?: boolean
+  localSecrets?: boolean
+  memoryPath?: string
+  enableObsidian?: boolean
+  obsidianVaultPath?: string
+  enableQmd?: boolean
+  qmdIndexPath?: string
+  enableCodegraph?: boolean
+  codegraphDataPath?: string
 }
 
 export function registerInit(program: Command): void {
@@ -111,7 +121,17 @@ export function registerInit(program: Command): void {
       '--enable-servers <servers>',
       'Comma-separated MCP servers to enable (e.g., atlassian,playwright,orchestrator)'
     )
+    .option('--opencode-plugins <plugins>', 'Comma-separated OpenCode plugins to persist')
     .option('--install-mode <mode>', 'Install mode: copy | symlink (default: copy)')
+    .option('--drive-cli', 'Use tool CLIs to register MCP servers when supported')
+    .option('--local-secrets', 'Write MCP secrets to local-only tool config when supported')
+    .option('--memory-path <path>', 'Knowledge memory path for housekeeping')
+    .option('--enable-obsidian', 'Enable Obsidian housekeeping integration')
+    .option('--obsidian-vault-path <path>', 'Obsidian vault path for housekeeping')
+    .option('--enable-qmd', 'Enable QMD housekeeping integration')
+    .option('--qmd-index-path <path>', 'QMD index path for housekeeping')
+    .option('--enable-codegraph', 'Enable CodeGraph housekeeping integration')
+    .option('--codegraph-data-path <path>', 'CodeGraph data path for housekeeping')
     .addHelpText('after', FEATURES_HELP)
     .action(async (opts: InitOptions) => {
       const targetDir = process.cwd()
@@ -152,7 +172,19 @@ export function registerInit(program: Command): void {
         branchPattern?: string
         commitPattern?: string
         enableServers?: string[]
+        opencodePlugins?: string[]
         installMode?: 'copy' | 'symlink'
+        driveCLI?: boolean
+        localSecrets?: boolean
+        housekeeping?: {
+          memoryPath?: string
+          enableObsidian?: boolean
+          obsidianVaultPath?: string
+          enableQmd?: boolean
+          qmdIndexPath?: string
+          enableCodegraph?: boolean
+          codegraphDataPath?: string
+        }
       } = {}
 
       if (opts.scope) cliOverrides.scope = opts.scope
@@ -174,6 +206,20 @@ export function registerInit(program: Command): void {
       if (opts.branchPattern) cliOverrides.branchPattern = opts.branchPattern
       if (opts.commitPattern) cliOverrides.commitPattern = opts.commitPattern
       if (opts.enableServers) cliOverrides.enableServers = opts.enableServers.split(',').map((s) => s.trim()).filter(Boolean)
+      if (opts.opencodePlugins) cliOverrides.opencodePlugins = opts.opencodePlugins.split(',').map((s) => s.trim()).filter(Boolean)
+      if (opts.driveCli) cliOverrides.driveCLI = true
+      if (opts.localSecrets) cliOverrides.localSecrets = true
+
+      const housekeeping = {
+        ...(opts.memoryPath ? { memoryPath: opts.memoryPath } : {}),
+        ...(opts.enableObsidian ? { enableObsidian: true } : {}),
+        ...(opts.obsidianVaultPath ? { obsidianVaultPath: opts.obsidianVaultPath } : {}),
+        ...(opts.enableQmd ? { enableQmd: true } : {}),
+        ...(opts.qmdIndexPath ? { qmdIndexPath: opts.qmdIndexPath } : {}),
+        ...(opts.enableCodegraph ? { enableCodegraph: true } : {}),
+        ...(opts.codegraphDataPath ? { codegraphDataPath: opts.codegraphDataPath } : {}),
+      }
+      if (Object.keys(housekeeping).length > 0) cliOverrides.housekeeping = housekeeping
 
       // Check if we should migrate
       if (opts.migrate) {

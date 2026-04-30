@@ -165,7 +165,11 @@ async function runPhase12Loop(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
+    opencodePlugins?: string[]
     installMode?: 'copy' | 'symlink'
+    driveCLI?: boolean
+    localSecrets?: boolean
+    housekeeping?: StoreData['config']['housekeeping']
   }
   targetDir: string
 }): Promise<WizardState> {
@@ -349,10 +353,14 @@ export async function runWizard(opts: {
     branchPattern?: string
     commitPattern?: string
     enableServers?: string[]
-      installMode?: 'copy' | 'symlink'
-    }
-    targetDir: string
-  }): Promise<void> {
+    opencodePlugins?: string[]
+    installMode?: 'copy' | 'symlink'
+    driveCLI?: boolean
+    localSecrets?: boolean
+    housekeeping?: StoreData['config']['housekeeping']
+  }
+  targetDir: string
+}): Promise<void> {
   const tracker = new OperationTracker('init')
 
   try {
@@ -436,6 +444,8 @@ export async function runWizard(opts: {
       } = state
 
       const userHomeDir = opts.homeDir ?? homedir()
+      const driveCLI = opts.cliOverrides.driveCLI === true || manifest?.driveCLI === true
+      const localSecrets = opts.cliOverrides.localSecrets === true || manifest?.localSecrets === true
       const effectiveTargetDir =
         setupScope === 'workspace'
           ? (() => {
@@ -490,6 +500,7 @@ export async function runWizard(opts: {
         skills,
         templates: templateIds,
         rules: ruleIds,
+        ...(opts.cliOverrides.opencodePlugins ? { opencodePlugins: opts.cliOverrides.opencodePlugins } : {}),
       }
       const fileRecords: FileRecord[] = []
 
@@ -551,6 +562,9 @@ export async function runWizard(opts: {
         ...(planningRepoPath ? { planningRepoPath } : {}),
         ...(repos && repos.length > 0 ? { repos } : {}),
         ...(globalRef ? { globalRef } : {}),
+        ...(driveCLI ? { driveCLI } : {}),
+        ...(localSecrets ? { localSecrets } : {}),
+        ...(opts.cliOverrides.housekeeping ? { housekeeping: opts.cliOverrides.housekeeping } : {}),
         selections,
         interactive: opts.interactive,
         force: opts.force,
@@ -715,6 +729,7 @@ export async function runWizard(opts: {
           skills: selections.skills,
           prompts: selections.prompts,
           ...(enableServers ? { enableServers } : {}),
+          ...(driveCLI ? { driveCLI } : {}),
           fileRecords,
           strategy,
           perFileOverrides,
@@ -730,6 +745,8 @@ export async function runWizard(opts: {
             fileRecords,
             setupScope,
             homeDir: userHomeDir,
+            ...(driveCLI ? { driveCLI } : {}),
+            ...(localSecrets ? { localSecrets } : {}),
           })
         }
         tracker.trackSuccess('compile:mcp')
@@ -772,7 +789,14 @@ export async function runWizard(opts: {
             fileRecords: [],
             force: opts.force,
             strategy,
+            selections: {
+              agents: selections.agents,
+              skills: selections.skills,
+              prompts: selections.prompts,
+              opencodePlugins: selections.opencodePlugins ?? [],
+            },
             ...(opts.cliOverrides.installMode ? { installMode: opts.cliOverrides.installMode } : {}),
+            ...(driveCLI ? { driveCLI } : {}),
           })
 
           await compileMcp({
@@ -782,6 +806,8 @@ export async function runWizard(opts: {
             fileRecords: [],
             setupScope,
             homeDir: userHomeDir,
+            ...(driveCLI ? { driveCLI } : {}),
+            ...(localSecrets ? { localSecrets } : {}),
           })
         }
       }
@@ -827,6 +853,9 @@ export async function runWizard(opts: {
           ...(repos && repos.length > 0 ? { repos } : {}),
           ...(globalRef ? { globalRef } : {}),
           planningDir,
+          ...(driveCLI ? { driveCLI } : {}),
+          ...(localSecrets ? { localSecrets } : {}),
+          ...(opts.cliOverrides.housekeeping ? { housekeeping: opts.cliOverrides.housekeeping } : {}),
         },
         selections: {
           ...selections,

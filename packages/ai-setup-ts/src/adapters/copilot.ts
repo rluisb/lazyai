@@ -2,10 +2,16 @@ import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import type { PromptId, SkillId } from '../types.js'
-import { resolveConflict } from '../utils/conflicts.js'
 import * as files from '../utils/files.js'
-import { ensureModeAgentFrontmatter, stripYamlFrontmatter } from '../utils/frontmatter.js'
-import { getOrchestratorPromptContent, installRootTemplateIfMissing, isOrchestratorEnabled, writeContentWithRecord } from './shared.js'
+import { stripYamlFrontmatter } from '../utils/frontmatter.js'
+import {
+  copyLibraryDirectory,
+  copyWithRecord,
+  getOrchestratorPromptContent,
+  installRootTemplateIfMissing,
+  isOrchestratorEnabled,
+  writeContentWithRecord,
+} from './shared.js'
 import type { AdapterContext, ToolAdapter } from './types.js'
 
 export class CopilotAdapter implements ToolAdapter {
@@ -25,15 +31,40 @@ export class CopilotAdapter implements ToolAdapter {
 
     files.ensureDir(githubDir)
 
+    const agentsDir = path.join(githubDir, 'agents')
+    files.ensureDir(agentsDir)
     const instructionsDir = path.join(githubDir, 'instructions')
     files.ensureDir(instructionsDir)
     const promptsDir = path.join(githubDir, 'prompts')
     files.ensureDir(promptsDir)
+    const chatmodesDir = path.join(githubDir, 'chatmodes')
+    files.ensureDir(chatmodesDir)
 
     console.log('🤖  Installing GitHub Copilot tools...')
 
     const selectedSkills = ctx.selections?.skills ? new Set(ctx.selections.skills) : undefined
     const selectedPrompts = ctx.selections?.prompts ? new Set(ctx.selections.prompts) : undefined
+
+    await copyLibraryDirectory({
+      ctx,
+      sourceSubdir: 'copilot/agents',
+      toDestPath: file => path.join(agentsDir, path.basename(file)),
+      includeFile: file => file.endsWith('.agent.yaml') && (!isOrchestratorEnabled(ctx) || file !== 'orchestrator.agent.yaml'),
+    })
+
+    await copyLibraryDirectory({
+      ctx,
+      sourceSubdir: 'copilot/instructions',
+      toDestPath: file => path.join(instructionsDir, path.basename(file)),
+      includeFile: file => file.endsWith('.instructions.md'),
+    })
+
+    await copyLibraryDirectory({
+      ctx,
+      sourceSubdir: 'chatmodes',
+      toDestPath: file => path.join(chatmodesDir, path.basename(file)),
+      includeFile: file => file.endsWith('.chatmode.md'),
+    })
 
     // Prompts - Copilot prompt files use the .prompt.md suffix
     const promptTemplatesDir = path.join(ctx.libraryDir, 'prompts')
@@ -43,14 +74,14 @@ export class CopilotAdapter implements ToolAdapter {
       const srcPath = path.join(promptTemplatesDir, file)
       if (files.isDirectory(srcPath)) continue
       const destFile = `${path.parse(file).name}.prompt.md`
-      await this.copyFileWithRecord(
-        srcPath,
-        path.join(promptsDir, destFile),
+      await copyWithRecord({
+        src: srcPath,
+        dest: path.join(promptsDir, destFile),
         ctx,
-      )
+      })
     }
 
-    // Skills - transformed into Copilot prompt files
+    // Skills - transformed into Copilot agent files
     const skillsDir = path.join(ctx.libraryDir, 'skills')
     for (const file of files.listDir(skillsDir)) {
       const src = path.join(skillsDir, file)
@@ -58,17 +89,22 @@ export class CopilotAdapter implements ToolAdapter {
       const fileId = path.parse(file).name as SkillId
       if (selectedSkills && !selectedSkills.has(fileId)) continue
       const parsed = path.parse(file)
-      const destFile = `${parsed.name}.prompt.md`
-      const dest = path.join(promptsDir, destFile)
-      await this.copySkillAsPromptWithRecord(src, dest, ctx)
+      const destFile = `${parsed.name}.agent.yaml`
+      const dest = path.join(agentsDir, destFile)
+      await copyWithRecord({
+        src,
+        dest,
+        ctx,
+        transform: content => skillToAgentYaml(fileId, stripYamlFrontmatter(content)),
+      })
     }
 
     if (isOrchestratorEnabled(ctx)) {
       await writeContentWithRecord({
-        dest: path.join(promptsDir, 'orchestrator.prompt.md'),
-        content: getOrchestratorPromptContent(ctx),
+        dest: path.join(agentsDir, 'orchestrator.agent.yaml'),
+        content: skillToAgentYaml('orchestrator', stripYamlFrontmatter(getOrchestratorPromptContent(ctx))),
         ctx,
-        source: 'generated:orchestrator-prompt',
+        source: 'generated:orchestrator-agent',
       })
     }
 
@@ -94,49 +130,43 @@ export class CopilotAdapter implements ToolAdapter {
     console.log('🗑️  Removing GitHub Copilot tools...')
     // Basic remove implementation
   }
+}
 
-  private async copyFileWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const relPath = path.relative(ctx.targetDir, dest)
-    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
-    const resolution = await resolveConflict(dest, relPath, {
-      force: ctx.force,
-      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
-    })
-    if (resolution === 'skip') return
-    if (resolution === 'backup-and-overwrite') {
-      files.backupFile(dest, ctx.targetDir)
-    }
-
-    files.copyFile(src, dest)
-    ctx.fileRecords.push({
-      path: relPath,
-      hash: files.fileHash(dest),
-      source: path.relative(ctx.libraryDir, src),
-      owner: 'library',
-    })
+export function skillToAgentYaml(skillId: string, skillBody: string): string {
+  const body = skillBody.trim()
+  if (body.length === 0) {
+    throw new Error(`skill ${skillId} has no content`)
   }
 
-  private async copySkillAsPromptWithRecord(src: string, dest: string, ctx: AdapterContext): Promise<void> {
-    const relPath = path.relative(ctx.targetDir, dest)
-    const effectiveStrategy = ctx.perFileOverrides?.get(dest) ?? ctx.strategy
-    const resolution = await resolveConflict(dest, relPath, {
-      force: ctx.force,
-      ...(effectiveStrategy ? { strategy: effectiveStrategy } : {}),
-    })
-    if (resolution === 'skip') return
-    if (resolution === 'backup-and-overwrite') {
-      files.backupFile(dest, ctx.targetDir)
-    }
+  return `name: ${skillId}
+displayName: ${toDisplayName(skillId)}
+description: >
+  ${skillId} skill for the ai-setup orchestrator.
+model: claude-sonnet-4.5
+tools:
+  - "*"
+promptParts:
+  includeAISafety: true
+  includeToolInstructions: true
+  includeParallelToolCalling: true
+  includeCustomAgentInstructions: false
+prompt: |
+${indentLines(body, '  ')}
+`
+}
 
-    const transformed = ensureModeAgentFrontmatter(stripYamlFrontmatter(files.readFile(src)))
-    files.writeFile(dest, transformed)
-    ctx.fileRecords.push({
-      path: relPath,
-      hash: files.fileHash(dest),
-      source: path.relative(ctx.libraryDir, src),
-      owner: 'library',
-    })
-  }
+function toDisplayName(skillId: string): string {
+  return skillId
+    .split('-')
+    .map(part => (part.length > 0 ? `${part[0]?.toUpperCase()}${part.slice(1)}` : part))
+    .join(' ')
+}
+
+function indentLines(text: string, indent: string): string {
+  return text
+    .split('\n')
+    .map((line, index, lines) => (line !== '' || index < lines.length - 1 ? `${indent}${line}` : line))
+    .join('\n')
 }
 
 function copilotProbePasses(homeDir: string): boolean {

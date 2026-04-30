@@ -30,8 +30,8 @@ interface CopyWithRecordOptions {
 
 interface CopyLibraryDirectoryOptions {
   ctx: AdapterContext
-  sourceSubdir: SelectionKey
-  selectionKey: SelectionKey
+  sourceSubdir: string
+  selectionKey?: SelectionKey
   toDestPath: (file: string) => string
   dryRun?: boolean
   warnOnSkip?: boolean
@@ -146,7 +146,7 @@ export async function copyWithRecord(opts: CopyWithRecordOptions): Promise<void>
 }
 
 export async function copyLibraryDirectory(opts: CopyLibraryDirectoryOptions): Promise<void> {
-  const selected = getSelectionSet(opts.ctx, opts.selectionKey)
+  const selected = opts.selectionKey ? getSelectionSet(opts.ctx, opts.selectionKey) : undefined
   const sourceDir = path.join(opts.ctx.libraryDir, opts.sourceSubdir)
 
   const entries = files.listDir(sourceDir)

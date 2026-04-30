@@ -10,6 +10,7 @@ import type { StoreData } from '../store/schema.js'
 
 describe('cli init integration', () => {
   let originalCwd: string
+  let originalXdgConfigHome: string | undefined
 
   const makeTempRepo = (): string => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-setup-init-'))
@@ -44,10 +45,17 @@ describe('cli init integration', () => {
 
   beforeEach(() => {
     originalCwd = process.cwd()
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME
+    delete process.env.XDG_CONFIG_HOME
   })
 
   afterEach(() => {
     process.chdir(originalCwd)
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome
+    }
   })
 
   it('runs full init and writes expected file tree', async () => {

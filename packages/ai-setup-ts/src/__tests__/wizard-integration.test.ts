@@ -28,14 +28,22 @@ import { runWizard } from '../wizard/index.js'
 
 describe('wizard integration (non-interactive)', () => {
   let tempDir: string
+  let originalXdgConfigHome: string | undefined
 
   beforeEach(() => {
     tempDir = mkdtempSync(path.join(tmpdir(), 'ai-setup-wizard-integration-'))
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME
+    delete process.env.XDG_CONFIG_HOME
   })
 
   afterEach(() => {
     rmSync(tempDir, { recursive: true, force: true })
     vi.clearAllMocks()
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome
+    }
   })
 
   it('creates complete file tree in non-interactive mode', async () => {

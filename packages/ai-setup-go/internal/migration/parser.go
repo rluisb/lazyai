@@ -14,7 +14,6 @@ var headingPattern = regexp.MustCompile(`(?m)^#\s+(.+?)\s*$`)
 var reservedContextMarkdownFiles = map[string]bool{
 	"AGENTS.md":               true,
 	"CLAUDE.md":               true,
-	"GEMINI.md":               true,
 	"copilot-instructions.md": true,
 }
 

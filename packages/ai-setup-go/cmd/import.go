@@ -12,7 +12,7 @@ import (
 var importCmd = &cobra.Command{
 	Use:   "import [source]",
 	Short: "Import configuration from another AI tool setup",
-	Long: `Import configuration from another AI tool setup (e.g., OpenCode, Claude Code, Gemini, Copilot)
+	Long: `Import configuration from another AI tool setup (e.g., OpenCode, Claude Code, Copilot)
 into ai-setup format. The source can be a path to a directory containing an existing setup.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runImport,

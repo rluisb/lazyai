@@ -159,9 +159,15 @@ func (s *Store) ReadConfig() (*types.Config, error) {
 		return nil, fmt.Errorf("query config: %w", err)
 	}
 
-	var tools []types.ToolId
-	if err := json.Unmarshal([]byte(toolsJSON), &tools); err != nil {
+	var toolsRaw []types.ToolId
+	if err := json.Unmarshal([]byte(toolsJSON), &toolsRaw); err != nil {
 		return nil, fmt.Errorf("unmarshal tools: %w", err)
+	}
+	tools := make([]types.ToolId, 0, len(toolsRaw))
+	for _, t := range toolsRaw {
+		if types.IsValidToolId(t) {
+			tools = append(tools, t)
+		}
 	}
 
 	var cliTools []string

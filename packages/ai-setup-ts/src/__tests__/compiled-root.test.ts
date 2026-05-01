@@ -54,7 +54,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'],
+      tools: ['claude-code', 'opencode', 'copilot'],
       projectName: 'test-project',
       planningDir: '.ai/planning',
       fileRecords,
@@ -63,18 +63,15 @@ describe('scaffoldCompiledRoot', () => {
     })
 
     // Check that the expected shared/tool-specific root files were created
-    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(false)
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
-    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(false)
 
     // Verify file records have correct source annotations
-    const claudeRecord = fileRecords.find((r) => r.path === 'CLAUDE.md')
-    expect(claudeRecord?.source).toBe('compiled:claude-code')
-
     const agentsRecord = fileRecords.find((r) => r.path === 'AGENTS.md')
-    expect(agentsRecord?.source).toBe('compiled:opencode')
+    expect(agentsRecord?.source).toMatch(/^compiled:(claude-code|opencode)$/)
 
     const copilotRecord = fileRecords.find((r) => r.path === '.github/copilot-instructions.md')
     expect(copilotRecord?.source).toBe('compiled:copilot')
@@ -159,7 +156,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('compiles shared root outputs for all supported tools with camelCase feature conditions', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
+    const tools = ['claude-code', 'opencode', 'copilot'] as const
 
     await scaffoldCompiledRoot({
       targetDir,
@@ -172,12 +169,7 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    const rootFiles = [
-      'CLAUDE.md',
-      'AGENTS.md',
-      '.github/copilot-instructions.md',
-      'GEMINI.md',
-    ]
+    const rootFiles = ['AGENTS.md', '.github/copilot-instructions.md']
 
     for (const rootFile of rootFiles) {
       const content = readFile(path.join(targetDir, rootFile))
@@ -209,7 +201,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'gemini'],
+      tools: ['claude-code', 'copilot'],
       projectName: 'records-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -226,39 +218,56 @@ describe('scaffoldCompiledRoot', () => {
     }
   })
 
-  it('skip strategy prevents overwriting existing files', async () => {
+  it('preserves existing CLAUDE.md and appends AGENTS reference once', async () => {
     // Create an existing file
     const existingPath = path.join(targetDir, 'CLAUDE.md')
     ensureDir(path.dirname(existingPath))
     writeFile(existingPath, 'EXISTING CONTENT')
-    const originalHash = fs.readFileSync(existingPath, 'utf-8')
 
-    // Run scaffoldCompiledRoot with skip strategy
+    for (let i = 0; i < 2; i += 1) {
+      await scaffoldCompiledRoot({
+        targetDir,
+        libraryDir,
+        tools: ['claude-code'],
+        projectName: 'skip-test',
+        planningDir: '.ai/planning',
+        fileRecords,
+        strategy: 'skip' as ConflictStrategy,
+        perFileOverrides: new Map(),
+      })
+    }
+
+    const currentContent = readFile(existingPath)
+    expect(currentContent).toContain('EXISTING CONTENT')
+    const reference = '<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file.'
+    expect(currentContent.match(/ai-setup: AGENTS\.md reference/g)?.length).toBe(1)
+    expect(currentContent).toContain(reference)
+
+    const record = fileRecords.find((r) => r.path === 'CLAUDE.md')
+    expect(record).toBeUndefined()
+  })
+
+  it('does not create CLAUDE.md for a clean Claude Code project', async () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
       tools: ['claude-code'],
-      projectName: 'skip-test',
+      projectName: 'clean-claude-test',
       planningDir: '.ai/planning',
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
       perFileOverrides: new Map(),
     })
 
-    // File should not have been modified
-    const currentContent = readFile(existingPath)
-    expect(currentContent).toBe(originalHash)
-
-    // File should NOT be in records if skipped
-    const record = fileRecords.find((r) => r.path === 'CLAUDE.md')
-    expect(record).toBeUndefined()
+    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(false)
   })
 
   it('handles multiple tools with distinct output files', async () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['opencode', 'codex'],
+      tools: ['opencode', 'copilot'],
       projectName: 'multi-tool-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -266,9 +275,7 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // Both opencode and codex write AGENTS.md, but they have different source origins
-    // There may be one AGENTS.md file with the last tool's source, or multiple records
-    // This is a behavior test: verify that both tools processed
+    // Both supported tools should process without requiring removed tool support.
     expect(fileRecords.length).toBeGreaterThan(0)
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
   })
@@ -339,7 +346,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('generates valid content for all supported tools', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
+    const tools = ['claude-code', 'opencode', 'copilot'] as const
 
     for (const tool of tools) {
       const toolTargetDir = makeTempDir(`ai-setup-tool-${tool}-`)

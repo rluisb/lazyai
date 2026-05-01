@@ -64,10 +64,6 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"root/AGENTS.template.md": &fstest.MapFile{
 			Data: []byte("# {{PROJECT_NAME}}\n\nProject agents."),
 		},
-		"root/CLAUDE.template.md": &fstest.MapFile{
-			Data: []byte("# {{PROJECT_NAME}}\n\nClaude Code instructions."),
-		},
-
 		// Orchestration minimal structure
 		"orchestration/chains/feature.json": &fstest.MapFile{
 			Data: []byte(`{"name":"feature","steps":[]}`),

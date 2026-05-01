@@ -7,7 +7,7 @@ import { splitYamlFrontmatter } from '../utils/frontmatter.js'
 import { stripJsonComments } from '../utils/jsonc.js'
 
 type SetupScope = 'global' | 'project' | 'workspace'
-type SetupToolId = 'claude-code' | 'codex' | 'copilot' | 'gemini' | 'opencode' | 'pi'
+type SetupToolId = 'claude-code' | 'copilot' | 'opencode'
 type ResourceState = 'managed' | 'adoptable' | 'conflict' | 'user-owned' | 'missing'
 
 interface RegistryRoot {
@@ -273,37 +273,6 @@ const SETUP_TOOLS: RegistryTool[] = [
     ],
   },
   {
-    id: 'codex',
-    name: 'Codex CLI',
-    supportedScopes: ['global', 'project', 'workspace'],
-    roots: [
-      {
-        scope: 'global',
-        origin: 'global',
-        rootPath: '<HOME_DIR>/.codex',
-        expectedFiles: ['config.toml'],
-        optionalPaths: [],
-        desiredExpectedFiles: ['config.toml'],
-      },
-      {
-        scope: 'project',
-        origin: 'project',
-        rootPath: '<TARGET_DIR>/.codex',
-        expectedFiles: ['config.toml'],
-        optionalPaths: [],
-        desiredExpectedFiles: ['config.toml'],
-      },
-      {
-        scope: 'workspace',
-        origin: 'workspace',
-        rootPath: '<TARGET_DIR>/.codex',
-        expectedFiles: ['config.toml'],
-        optionalPaths: [],
-        desiredExpectedFiles: ['config.toml'],
-      },
-    ],
-  },
-  {
     id: 'copilot',
     name: 'GitHub Copilot CLI',
     supportedScopes: ['global', 'project', 'workspace'],
@@ -336,37 +305,6 @@ const SETUP_TOOLS: RegistryTool[] = [
     ],
   },
   {
-    id: 'gemini',
-    name: 'Gemini CLI',
-    supportedScopes: ['global', 'project', 'workspace'],
-    roots: [
-      {
-        scope: 'global',
-        origin: 'global',
-        rootPath: '<HOME_DIR>/.gemini',
-        expectedFiles: ['settings.json'],
-        optionalPaths: ['commands'],
-        desiredExpectedFiles: ['commands', 'settings.json'],
-      },
-      {
-        scope: 'project',
-        origin: 'project',
-        rootPath: '<TARGET_DIR>/.gemini',
-        expectedFiles: ['settings.json'],
-        optionalPaths: ['commands'],
-        desiredExpectedFiles: ['commands', 'settings.json'],
-      },
-      {
-        scope: 'workspace',
-        origin: 'workspace',
-        rootPath: '<TARGET_DIR>/.gemini',
-        expectedFiles: ['settings.json'],
-        optionalPaths: ['commands'],
-        desiredExpectedFiles: ['commands', 'settings.json'],
-      },
-    ],
-  },
-  {
     id: 'opencode',
     name: 'OpenCode',
     supportedScopes: ['global', 'project', 'workspace'],
@@ -394,29 +332,6 @@ const SETUP_TOOLS: RegistryTool[] = [
         expectedFiles: ['opencode.jsonc'],
         optionalPaths: ['opencode.json', 'agents', 'skills', 'commands', 'modes', 'AGENTS.md'],
         desiredExpectedFiles: ['AGENTS.md', 'agents', 'commands', 'modes', 'opencode.json', 'opencode.jsonc', 'skills'],
-      },
-    ],
-  },
-  {
-    id: 'pi',
-    name: 'Pi',
-    supportedScopes: ['project', 'workspace'],
-    roots: [
-      {
-        scope: 'project',
-        origin: 'project',
-        rootPath: '<TARGET_DIR>/.pi',
-        expectedFiles: ['settings.json'],
-        optionalPaths: ['skills', 'prompts'],
-        desiredExpectedFiles: ['prompts', 'settings.json', 'skills'],
-      },
-      {
-        scope: 'workspace',
-        origin: 'workspace',
-        rootPath: '<TARGET_DIR>/.pi',
-        expectedFiles: ['settings.json'],
-        optionalPaths: ['skills', 'prompts'],
-        desiredExpectedFiles: ['prompts', 'settings.json', 'skills'],
       },
     ],
   },

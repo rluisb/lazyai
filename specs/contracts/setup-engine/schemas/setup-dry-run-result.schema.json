@@ -24,7 +24,7 @@
     },
     "toolId": {
       "type": "string",
-      "enum": ["claude-code", "codex", "copilot", "gemini", "opencode", "pi"]
+      "enum": ["claude-code", "copilot", "opencode"]
     },
     "resourceState": {
       "type": "string",

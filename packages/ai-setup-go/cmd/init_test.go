@@ -63,6 +63,34 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	}
 }
 
+func TestInitNonInteractiveDryRunWritesNoFiles(t *testing.T) {
+	dir := t.TempDir()
+	ensureTestLibraryFS(t)
+	withWorkingDir(t, dir)
+
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeProject,
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:   types.PresetLevelMinimal,
+		DryRun:      true,
+	}
+
+	captureOutput(t, func() {
+		if err := runInitNonInteractive(config); err != nil {
+			t.Fatalf("runInitNonInteractive: %v", err)
+		}
+	})
+
+	for _, rel := range []string{".ai-setup.db", "AGENTS.md", ".opencode", ".ai", ".specify"} {
+		if fileExists(filepath.Join(dir, rel)) {
+			t.Fatalf("dry-run created %s", rel)
+		}
+	}
+}
+
 func TestInitNonInteractiveDefaultsExistingSetupPolicy(t *testing.T) {
 	dir := t.TempDir()
 	config := &wizard.WizardConfig{

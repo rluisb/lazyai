@@ -65,9 +65,9 @@ All AI behavior is defined in version-controlled files:
 
 | File | Purpose |
 |------|---------|
-| `AGENTS.md` / `CLAUDE.md` | Project overview, conventions, decision tree |
+| `AGENTS.md` | Canonical project overview, conventions, decision tree |
 | `docs/rules/*.md` | Prescriptive rules (what to do / not do) |
 | `docs/standards/**/*.md` | Descriptive patterns (how we do it, with real code references) |
-| `.pi/agents/*.md` | Agent role definitions (scope, tools, behavior) |
+| `.opencode/`, `.claude/`, `.github/`, `.vscode/` | Supported tool project config, skills, prompts, and MCP files |
 
 All changes to these files require tech lead approval (see `CODEOWNERS`).

@@ -3,9 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ClaudeCodeAdapter } from '../adapters/claude-code.js'
-import { CodexAdapter } from '../adapters/codex.js'
 import { CopilotAdapter } from '../adapters/copilot.js'
-import { GeminiAdapter } from '../adapters/gemini.js'
 import { OpenCodeAdapter } from '../adapters/opencode.js'
 import type { FileRecord } from '../types.js'
 import {
@@ -115,7 +113,6 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'tool-agents/root-dir.md'), '# root context')
     writeFile(path.join(libraryDir, 'root/AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nRoot agent instructions')
     writeFile(path.join(libraryDir, 'root/GEMINI.template.md'), '# GEMINI root')
-    writeFile(path.join(libraryDir, 'root/CLAUDE.template.md'), '# CLAUDE root')
     writeFile(path.join(libraryDir, 'root/copilot-instructions.template.md'), '# Copilot repo instructions')
   })
 
@@ -232,40 +229,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
   })
 
-  it('Gemini adapter installs .gemini skills/<name>/SKILL.md and root GEMINI.md (no agents, no templates)', async () => {
-    const adapter = new GeminiAdapter()
-
-    ensureDir(path.join(libraryDir, 'skills'))
-    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-
-    await adapter.install({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      force: true,
-      selections: {
-        skills: ['implement'],
-      },
-    })
-
-    // Skills use directory format: .gemini/skills/<name>/SKILL.md
-    expect(fileExists(path.join(targetDir, '.gemini/skills/implement/SKILL.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.gemini/settings.json'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
-
-    const settings = JSON.parse(readFile(path.join(targetDir, '.gemini/settings.json')))
-    expect(settings.model.name).toBe('gemini-2.5-pro')
-
-    // Gemini has NO agents or templates concepts
-    expect(fileExists(path.join(targetDir, '.gemini/agents'))).toBe(false)
-    expect(fileExists(path.join(targetDir, '.gemini/templates'))).toBe(false)
-
-    expect(fileRecords.some((f) => f.path === '.gemini/skills/implement/SKILL.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === '.gemini/settings.json')).toBe(true)
-    expect(fileRecords.some((f) => f.path === 'GEMINI.md')).toBe(true)
-  })
-
-  it('Claude Code adapter installs .claude layout and root CLAUDE.md', async () => {
+  it('Claude Code adapter installs .claude layout without root CLAUDE.md', async () => {
     const adapter = new ClaudeCodeAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
@@ -290,7 +254,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.claude/templates'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.claude/rules'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.claude/rules/typescript.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(false)
 
     expect(JSON.parse(readFile(path.join(targetDir, '.claude/settings.json')))).toEqual({
       permissions: {
@@ -304,75 +268,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === '.claude/settings.json')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/skills/implement/SKILL.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/rules/typescript.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
-  })
-
-  it('Codex adapter installs .agents skills directory-per-skill, .codex config, and root AGENTS.md', async () => {
-    const adapter = new CodexAdapter()
-
-    ensureDir(path.join(libraryDir, 'skills'))
-    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-    writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
-
-    await adapter.install({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      force: true,
-      selections: {
-        skills: ['implement'],
-      },
-    })
-
-    // Codex uses AgentSkills standard: .agents/skills/<name>/SKILL.md
-    expect(fileExists(path.join(targetDir, '.agents/skills/implement/SKILL.md'))).toBe(true)
-
-    // Root AGENTS.md should exist
-    expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
-
-    // .codex directory now exists (holds config.toml + AGENTS.override.md)
-    expect(fileExists(path.join(targetDir, '.codex'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.codex/config.toml'))).toBe(true)
-    expect(fileExists(path.join(targetDir, '.codex/AGENTS.override.md'))).toBe(true)
-
-    // No agents or templates directories (Codex has no separate agents dir)
-    expect(fileExists(path.join(targetDir, '.agents/agents'))).toBe(false)
-    expect(fileExists(path.join(targetDir, '.agents/templates'))).toBe(false)
-
-    expect(fileRecords.some((f) => f.path === '.agents/skills/implement/SKILL.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
-  })
-
-  it('Codex adapter uses global scope correctly', async () => {
-    const adapter = new CodexAdapter()
-    // Simulate global: the wizard passes the canonical targetDir, and the adapter
-    // uses resolveCodexRoots to find ~/.codex and ~/.agents/skills from homeDir.
-    const homeDir = targetDir
-    const globalTargetDir = targetDir // canonical dir (targetDir is passed for relative paths)
-    ensureDir(path.join(libraryDir, 'skills'))
-    writeFile(path.join(libraryDir, 'skills', 'implement.md'), '# implement')
-    writeFile(path.join(libraryDir, 'root', 'AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nCodex agent instructions')
-
-    await adapter.install({
-      targetDir: globalTargetDir,
-      setupScope: 'global',
-      homeDir,
-      libraryDir,
-      fileRecords,
-      force: true,
-      selections: {
-        skills: ['implement'],
-      },
-    })
-
-    // Global scope: config at ~/.codex, skills at ~/.agents/skills
-    expect(fileExists(path.join(homeDir, '.codex', 'config.toml'))).toBe(true)
-    expect(fileExists(path.join(homeDir, '.codex', 'AGENTS.override.md'))).toBe(true)
-    expect(fileExists(path.join(homeDir, '.agents', 'skills', 'implement', 'SKILL.md'))).toBe(true)
-    expect(fileExists(path.join(homeDir, '.agents', 'skills', 'AGENTS.md'))).toBe(true)
-    expect(fileExists(path.join(homeDir, '.agents', 'AGENTS.md'))).toBe(true)
-    // No root AGENTS.md at global scope
-    expect(fileExists(path.join(homeDir, 'AGENTS.md'))).toBe(false)
+    expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(false)
   })
 
   it('Claude Code adapter keeps global agents under .claude/agents', async () => {
@@ -427,8 +323,6 @@ describe('tool adapters', () => {
   it('adds orchestration guidance files for supported adapters when orchestrator is enabled', async () => {
     const claudeTarget = makeTempDir('ai-setup-claude-orchestrator-')
     const opencodeTarget = makeTempDir('ai-setup-opencode-orchestrator-')
-    const codexTarget = makeTempDir('ai-setup-codex-orchestrator-')
-    const geminiTarget = makeTempDir('ai-setup-gemini-orchestrator-')
     const copilotTarget = makeTempDir('ai-setup-copilot-orchestrator-')
 
     await new ClaudeCodeAdapter().install({
@@ -447,22 +341,6 @@ describe('tool adapters', () => {
       enableServers: ['orchestrator'],
     })
 
-    await new CodexAdapter().install({
-      targetDir: codexTarget,
-      libraryDir,
-      fileRecords: [],
-      force: true,
-      enableServers: ['orchestrator'],
-    })
-
-    await new GeminiAdapter().install({
-      targetDir: geminiTarget,
-      libraryDir,
-      fileRecords: [],
-      force: true,
-      enableServers: ['orchestrator'],
-    })
-
     await new CopilotAdapter().install({
       targetDir: copilotTarget,
       libraryDir,
@@ -473,8 +351,6 @@ describe('tool adapters', () => {
 
     const claudeOut = readFile(path.join(claudeTarget, '.claude/agents/orchestrator.md'))
     const opencodeOut = readFile(path.join(opencodeTarget, '.opencode/agents/orchestrator.md'))
-    const codexOut = readFile(path.join(codexTarget, '.agents/skills/orchestrator/SKILL.md'))
-    const geminiOut = readFile(path.join(geminiTarget, '.gemini/skills/orchestrator/SKILL.md'))
     const copilotOut = readFile(path.join(copilotTarget, '.github/agents/orchestrator.agent.yaml'))
 
     expect(claudeOut).toContain('tools: list_catalog, compose_agent, start_chain, advance_chain, get_status, get_budget, retry_step, escalate_step, handoff')
@@ -483,7 +359,7 @@ describe('tool adapters', () => {
     expect(opencodeOut).toContain('<!-- allowed-tools: list_catalog, compose_agent, start_chain, advance_chain, get_status, get_budget, retry_step, escalate_step, handoff -->')
     expect(opencodeOut).toContain('<!-- Recommended model: opus -->')
 
-    for (const out of [codexOut, geminiOut, copilotOut]) {
+    for (const out of [copilotOut]) {
       expect(out).toContain('## Allowed MCP Tools')
       expect(out).toContain('- list_catalog')
       expect(out).toContain('- compose_agent')
@@ -496,8 +372,6 @@ describe('tool adapters', () => {
       expect(out).toContain('- handoff')
     }
 
-    expect(codexOut).not.toContain('build_team')
-    expect(geminiOut).not.toContain('build_team')
     expect(copilotOut).not.toContain('build_team')
     expect(copilotOut).toContain('name: orchestrator')
     expect(copilotOut).toContain('displayName: Orchestrator')

@@ -71,6 +71,6 @@ describe('e2e project workflows', () => {
     expect(fs.existsSync(path.join(tempDir, '.opencode'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.claude'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
+    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
   }, 20000)
 })

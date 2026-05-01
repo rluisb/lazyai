@@ -8,10 +8,7 @@ function formatTools(tools: ToolId[]): string {
   const toolNames: Record<ToolId, string> = {
     opencode: 'OpenCode',
     'claude-code': 'Claude Code',
-    gemini: 'Gemini CLI',
     copilot: 'GitHub Copilot',
-    codex: 'Codex',
-    pi: 'Pi',
   }
   return tools.map((t) => toolNames[t] || t).join(', ')
 }
@@ -100,10 +97,7 @@ export async function runPhase4(opts: {
     const toolRoots: Record<string, string> = {
       opencode: '.opencode/',
       'claude-code': '.claude/',
-      gemini: '.gemini/',
       copilot: '.github/',
-      codex: '.codex/',
-      pi: '.pi/',
     }
     for (const tool of opts.config.tools) {
       const toolPlan = opts.plan.filter((f) => f.destPath.includes(toolRoots[tool] ?? tool))

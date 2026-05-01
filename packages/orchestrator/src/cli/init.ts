@@ -12,14 +12,14 @@ then recommend a deterministic orchestration path for an optional task.
 
 Options:
   --task <text>       Task/request to recommend orchestration for
-  --host <host>       claude-code | codex | opencode | gemini | copilot (default: opencode)
+  --host <host>       claude-code | opencode | copilot (default: opencode)
   --project <path>    Project root (default: cwd)
   --json              Machine-readable JSON output
   --verbose           Include definition source/path details
   -h, --help          Show this help
 `
 
-const HOSTS: HostCli[] = ['claude-code', 'codex', 'opencode', 'gemini', 'copilot']
+const HOSTS: HostCli[] = ['claude-code', 'opencode', 'copilot']
 
 export interface InitCliOptions {
   task?: string

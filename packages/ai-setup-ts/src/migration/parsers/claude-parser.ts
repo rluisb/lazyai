@@ -9,7 +9,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { glob } from 'glob';
 import { resolveLibraryDir } from '../../utils/files.js';
-import { diff3 } from '../diff/diff3.js';
 import type { 
   AgentDefinition,
   CommandDefinition,CustomSection, 
@@ -254,47 +253,11 @@ export class ClaudeCodeParser extends BaseParser {
     const warnings: string[] = [];
     const conflicts: MergeConflict[] = [];
 
-    // Load ai-setup templates
-    const templateDir = libraryDir;
+    void strategy;
+    void libraryDir;
 
-    // Merge CLAUDE.md
-    try {
-      const templatePath = path.join(templateDir, 'root', 'CLAUDE.template.md');
-      const templateContent = await fs.readFile(templatePath, 'utf-8');
-      
-      if (existing.files.find(f => f.path === 'CLAUDE.md')) {
-        const existingContent = existing.files.find(f => f.path === 'CLAUDE.md')?.content;
-        const lines = templateContent.split('\n');
-        const existingLines = (existingContent ?? '').split('\n');
-        
-        const diff3Result = diff3(lines, existingLines, lines);
-        
-        if (diff3Result.hasConflicts) {
-          if (strategy === 'smart') {
-            conflicts.push(...diff3Result.conflicts.map(conflict => ({
-              file: 'CLAUDE.md',
-              lineStart: conflict.lineStart,
-              lineEnd: conflict.lineEnd,
-              baseContent: conflict.base.join('\n'),
-              oursContent: conflict.ours.join('\n'),
-              theirsContent: conflict.theirs.join('\n'),
-            })));
-            modifiedFiles.push('CLAUDE.md');
-          } else if (strategy === 'preserve') {
-            warnings.push('CLAUDE.md: keeping existing version');
-          } else if (strategy === 'replace') {
-            newFiles.push('CLAUDE.md');
-          } else if (strategy === 'append') {
-            modifiedFiles.push('CLAUDE.md');
-          }
-        } else {
-          modifiedFiles.push('CLAUDE.md');
-        }
-      } else {
-        newFiles.push('CLAUDE.md');
-      }
-    } catch (error) {
-      warnings.push(`Could not merge CLAUDE.md: ${error}`);
+    if (existing.files.find(f => f.path === 'CLAUDE.md')) {
+      modifiedFiles.push('CLAUDE.md');
     }
 
     // Migrate agents

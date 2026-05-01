@@ -846,6 +846,4 @@ var perToolMCPConfig = map[string]string{
 	"opencode":    ".opencode/opencode.jsonc",
 	"claude-code": ".mcp.json",
 	"copilot":     ".vscode/mcp.json",
-	"gemini":      ".gemini/settings.json",
-	"codex":       "", // global, no project-local file
 }

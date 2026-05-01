@@ -94,7 +94,7 @@ export interface ComposeAgentInput {
   domainSkill?: string
   modeSkill?: string
   stepInstructions?: string
-  cliTool?: 'claude-code' | 'codex' | 'opencode' | 'gemini' | 'copilot'
+  cliTool?: HostCli
   outputContract?: ComposedAgentSpec['outputContract']
   rootContext?: RootContextLayer
   allowedTools?: string[]

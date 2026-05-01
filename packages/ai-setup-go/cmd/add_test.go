@@ -27,8 +27,11 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	assertToolSet(t, storeData.Config.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
 	assertAgentSet(t, storeData.Selections.Agents, types.AgentIdBuilder)
 	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdPlan)
-	if !fileExists(filepath.Join(dir, "CLAUDE.md")) {
-		t.Fatal("expected CLAUDE.md to exist after adding claude-code")
+	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
+		t.Fatal("expected AGENTS.md to exist after adding claude-code")
+	}
+	if fileExists(filepath.Join(dir, "CLAUDE.md")) {
+		t.Fatal("did not expect CLAUDE.md to be created after adding claude-code")
 	}
 }
 

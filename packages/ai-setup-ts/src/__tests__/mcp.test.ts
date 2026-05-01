@@ -239,34 +239,6 @@ describe('MCP scaffold and compile', () => {
     expect(copilot.servers.stdioDisabled).toBeUndefined()
   })
 
-  it('compileMcp generates .gemini/settings.json with $VAR env syntax and warns on remote servers', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'gemini',
-      fileRecords,
-      setupScope: 'project',
-    })
-
-    const gemini = JSON.parse(readFile(path.join(targetDir, '.gemini', 'settings.json')))
-    expect(gemini.mcpServers.stdioEnabled.env.API_KEY).toBe('$API_KEY')
-    expect(gemini.mcpServers.stdioEnabled.includeTools).toBeUndefined()
-    expect(warnSpy).toHaveBeenCalledWith('⚠️  Skipping remote server "remoteEnabled" for gemini (not supported)')
-    warnSpy.mockRestore()
-    expect(gemini.mcpServers.remoteDisabled).toBeUndefined()
-    expect(gemini.mcpServers.remoteEnabled).toBeUndefined()
-  })
-
   it('compileMcp generates .mcp.json for claude-code', async () => {
     vi.spyOn(mcpCompilerInternals, 'execFileSync').mockImplementation((file, args) => {
       if (file === 'claude' && Array.isArray(args) && args[0] === '--version') {
@@ -630,80 +602,6 @@ describe('MCP scaffold and compile', () => {
 
     const catalog = JSON.parse(readFile(path.join(targetDir, '.ai', 'mcp.json')))
     expect(catalog.servers.nonexistent).toBeUndefined()
-  })
-
-  it('compileMcp writes codex MCP config.toml', async () => {
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'codex',
-      fileRecords,
-      setupScope: 'project',
-    })
-
-    const configToml = readFile(path.join(targetDir, '.codex', 'config.toml'))
-    expect(configToml).not.toContain('[mcp_servers.remoteEnabled]')
-    expect(configToml).toContain('[mcp_servers.stdioEnabled]')
-    expect(configToml).toContain('command = "npx"')
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder assertion
-    expect(configToml).toContain('API_KEY = "${API_KEY}"')
-  })
-
-  it('compileMcp merges codex TOML with .bak first-touch and deterministic output', async () => {
-    await scaffoldMcp({
-      targetDir,
-      libraryDir,
-      fileRecords,
-      strategy: 'skip',
-      perFileOverrides: new Map(),
-    })
-
-    ensureDir(path.join(targetDir, '.codex'))
-    const configPath = path.join(targetDir, '.codex', 'config.toml')
-    const existing = `model = "gpt-5.5"
-
-[mcp_servers.legacy]
-command = "legacy"
-
-[mcp_servers.stdioEnabled]
-command = "old"
-`
-    writeFile(configPath, existing)
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'codex',
-      fileRecords,
-      setupScope: 'project',
-    })
-
-    const firstMerge = readFile(configPath)
-    expect(readFile(`${configPath}.bak`)).toBe(existing)
-    expect(firstMerge).toContain('model = "gpt-5.5"')
-    expect(firstMerge).toContain('[mcp_servers.legacy]')
-    expect(firstMerge).toContain('[mcp_servers.stdioEnabled]')
-    expect(firstMerge).toContain('args = [ "-y", "mcp-stdio-enabled" ]')
-    expect(firstMerge).not.toContain('command = "old"')
-
-    await compileMcp({
-      canonicalDir: targetDir,
-      toolTargetDir: targetDir,
-      toolId: 'codex',
-      fileRecords,
-      setupScope: 'project',
-    })
-
-    expect(readFile(configPath)).toBe(firstMerge)
-    expect(readFile(`${configPath}.bak`)).toBe(existing)
   })
 
   it('compileMcp writes claude local secrets to .claude/settings.local.json', async () => {

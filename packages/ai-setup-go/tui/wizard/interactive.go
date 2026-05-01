@@ -1,28 +1,24 @@
 package wizard
 
 import (
-	"fmt"
-
 	"charm.land/huh/v2"
 
-	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
 type WizardState struct {
 	// Phase 1
-	Scope           string
-	Tools           []string
-	CodexConfirm    bool
-	Skills          []string
-	Agents          []string
-	McpPreset       string
-	McpServers      []string
-	ProjectName     string
-	CliTools        []string
-	Organization    string
-	Team            string
+	Scope        string
+	Tools        []string
+	Skills       []string
+	Agents       []string
+	McpPreset    string
+	McpServers   []string
+	ProjectName  string
+	CliTools     []string
+	Organization string
+	Team         string
 
 	// Phase 2
 	Preset           string
@@ -32,7 +28,6 @@ type WizardState struct {
 	CommitPattern    string
 	CustomCommit     string
 	RequireTicket    bool
-	Commands         []string
 	ChatModes        []string
 	OpenCodeCommands []string
 	OpenCodeModes    []string
@@ -50,7 +45,7 @@ type WizardState struct {
 
 func initWizardState(defaults *WizardResult) *WizardState {
 	s := &WizardState{}
-	
+
 	// Set Phase 1 Defaults
 	s.Scope = string(defaultPhase1Scope())
 	s.ProjectName = defaultPhase1ProjectName()
@@ -59,16 +54,32 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.Agents = agentIDsToStrings(types.ALL_AGENTS)
 	s.CliTools = detectInstalledCliToolsFromCatalog() // pre-select installed ones
 	s.McpServers = defaultMcpServersForPreset(McpPresetRecommended)
-	
+
 	if defaults != nil && defaults.Phase1 != nil {
-		if defaults.Phase1.Scope != "" { s.Scope = string(defaults.Phase1.Scope) }
-		if len(defaults.Phase1.Tools) > 0 { s.Tools = toolIDsToStrings(defaults.Phase1.Tools) }
-		if len(defaults.Phase1.Skills) > 0 { s.Skills = skillIDsToStrings(defaults.Phase1.Skills) }
-		if len(defaults.Phase1.Agents) > 0 { s.Agents = agentIDsToStrings(defaults.Phase1.Agents) }
-		if defaults.Phase1.McpPreset != "" { s.McpPreset = string(defaults.Phase1.McpPreset) }
-		if defaults.Phase1.ProjectName != "" { s.ProjectName = defaults.Phase1.ProjectName }
-		if len(defaults.Phase1.CliTools) > 0 { s.CliTools = defaults.Phase1.CliTools }
-		if len(defaults.Phase1.EnableServers) > 0 { s.McpServers = defaults.Phase1.EnableServers }
+		if defaults.Phase1.Scope != "" {
+			s.Scope = string(defaults.Phase1.Scope)
+		}
+		if len(defaults.Phase1.Tools) > 0 {
+			s.Tools = toolIDsToStrings(defaults.Phase1.Tools)
+		}
+		if len(defaults.Phase1.Skills) > 0 {
+			s.Skills = skillIDsToStrings(defaults.Phase1.Skills)
+		}
+		if len(defaults.Phase1.Agents) > 0 {
+			s.Agents = agentIDsToStrings(defaults.Phase1.Agents)
+		}
+		if defaults.Phase1.McpPreset != "" {
+			s.McpPreset = string(defaults.Phase1.McpPreset)
+		}
+		if defaults.Phase1.ProjectName != "" {
+			s.ProjectName = defaults.Phase1.ProjectName
+		}
+		if len(defaults.Phase1.CliTools) > 0 {
+			s.CliTools = defaults.Phase1.CliTools
+		}
+		if len(defaults.Phase1.EnableServers) > 0 {
+			s.McpServers = defaults.Phase1.EnableServers
+		}
 		s.Organization = defaults.Phase1.Organization
 		s.Team = defaults.Phase1.Team
 	}
@@ -82,39 +93,61 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.CommitPattern = gitDefs.CommitPattern
 	s.CustomCommit = gitDefs.CommitPattern
 	s.RequireTicket = gitDefs.RequireTicket
-	s.Commands = commandIdsToStrings(types.ALL_COMMANDS[:])
 	s.ChatModes = chatModeIdsToStrings(types.ALL_CHATMODES[:])
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
 
 	if defaults != nil && defaults.Phase2 != nil {
-		if defaults.Phase2.Preset != "" { s.Preset = string(defaults.Phase2.Preset) }
-		if defaults.Phase2.Features != nil { s.Features = featureSelectionFromFlags(defaults.Phase2.Features) }
+		if defaults.Phase2.Preset != "" {
+			s.Preset = string(defaults.Phase2.Preset)
+		}
+		if defaults.Phase2.Features != nil {
+			s.Features = featureSelectionFromFlags(defaults.Phase2.Features)
+		}
 		if defaults.Phase2.GitConv != nil {
-			if defaults.Phase2.GitConv.BranchPattern != "" { s.BranchPattern = defaults.Phase2.GitConv.BranchPattern }
-			if defaults.Phase2.GitConv.CommitPattern != "" { s.CommitPattern = defaults.Phase2.GitConv.CommitPattern }
+			if defaults.Phase2.GitConv.BranchPattern != "" {
+				s.BranchPattern = defaults.Phase2.GitConv.BranchPattern
+			}
+			if defaults.Phase2.GitConv.CommitPattern != "" {
+				s.CommitPattern = defaults.Phase2.GitConv.CommitPattern
+			}
 			s.RequireTicket = defaults.Phase2.GitConv.RequireTicket
 		}
-		if len(defaults.Phase2.Commands) > 0 { s.Commands = commandIdsToStrings(defaults.Phase2.Commands) }
-		if len(defaults.Phase2.ChatModes) > 0 { s.ChatModes = chatModeIdsToStrings(defaults.Phase2.ChatModes) }
-		if len(defaults.Phase2.OpenCodeCommands) > 0 { s.OpenCodeCommands = opencodeCommandIdsToStrings(defaults.Phase2.OpenCodeCommands) }
-		if len(defaults.Phase2.OpenCodeModes) > 0 { s.OpenCodeModes = opencodeModeIdsToStrings(defaults.Phase2.OpenCodeModes) }
+		if len(defaults.Phase2.ChatModes) > 0 {
+			s.ChatModes = chatModeIdsToStrings(defaults.Phase2.ChatModes)
+		}
+		if len(defaults.Phase2.OpenCodeCommands) > 0 {
+			s.OpenCodeCommands = opencodeCommandIdsToStrings(defaults.Phase2.OpenCodeCommands)
+		}
+		if len(defaults.Phase2.OpenCodeModes) > 0 {
+			s.OpenCodeModes = opencodeModeIdsToStrings(defaults.Phase2.OpenCodeModes)
+		}
 	}
 
 	// Set Phase 5 Defaults
 	s.MemoryPath = "specs/memory"
 	s.QmdIndexPath = ".qmd-index"
 	s.CodegraphDataPath = ".codegraph"
-	
+
 	if defaults != nil && defaults.Phase5 != nil {
-		if defaults.Phase5.MemoryPath != "" { s.MemoryPath = defaults.Phase5.MemoryPath }
+		if defaults.Phase5.MemoryPath != "" {
+			s.MemoryPath = defaults.Phase5.MemoryPath
+		}
 		s.EnableObsidian = defaults.Phase5.EnableObsidian
-		if defaults.Phase5.ObsidianVaultPath != "" { s.ObsidianVaultPath = defaults.Phase5.ObsidianVaultPath }
+		if defaults.Phase5.ObsidianVaultPath != "" {
+			s.ObsidianVaultPath = defaults.Phase5.ObsidianVaultPath
+		}
 		s.EnableQmd = defaults.Phase5.EnableQmd
-		if defaults.Phase5.QmdIndexPath != "" { s.QmdIndexPath = defaults.Phase5.QmdIndexPath }
+		if defaults.Phase5.QmdIndexPath != "" {
+			s.QmdIndexPath = defaults.Phase5.QmdIndexPath
+		}
 		s.EnableCodegraph = defaults.Phase5.EnableCodegraph
-		if defaults.Phase5.CodegraphDataPath != "" { s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath }
-		if len(defaults.Phase5.OpenCodePlugins) > 0 { s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins }
+		if defaults.Phase5.CodegraphDataPath != "" {
+			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
+		}
+		if len(defaults.Phase5.OpenCodePlugins) > 0 {
+			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
+		}
 	}
 
 	return s
@@ -141,15 +174,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				}, &state.Scope).
 				Value(&state.Tools),
 		),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title(fmt.Sprintf("Codex CLI is not installed.\n\n%s\n\nContinue anyway?", detect.CodexInstallHint())).
-				Affirmative("Continue").
-				Negative("Go back and fix").
-				Value(&state.CodexConfirm),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "codex") || detect.IsCodexInstalled()
-		}),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Skills").
@@ -195,7 +219,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Organization Name").
-				Description("Leave blank to skip — stays as <!-- fill-in --> in CLAUDE.md").
+				Description("Leave blank to skip — stays as <!-- fill-in --> in AGENTS.md").
 				Value(&state.Organization),
 		),
 		huh.NewGroup(
@@ -252,17 +276,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Title("Require Ticket").
 				Value(&state.RequireTicket),
 		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Gemini Commands").
-				Description("Select Gemini custom slash commands to install. Deselect to skip.").
-				Options(
-					huh.NewOption("RPI workflow command (rpi)", string(types.CommandIdRpi)),
-					huh.NewOption("Review command (review)", string(types.CommandIdReview)),
-					huh.NewOption("Plan command (plan)", string(types.CommandIdPlan)),
-				).
-				Value(&state.Commands),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Copilot Chat Modes").
@@ -348,27 +361,18 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 					huh.NewOption("Git Tools (@opencode/git-tools)", "@opencode/git-tools"),
 				).
 				Value(&state.OpenCodePlugins),
-		).WithHideFunc(func() bool { 
-			return !containsString(state.Tools, "opencode") || !opencodeBinaryPresent() 
+		).WithHideFunc(func() bool {
+			return !containsString(state.Tools, "opencode") || !opencodeBinaryPresent()
 		}),
 	}
-	
+
 	return huh.NewForm(groups...)
 }
 
 func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Result) {
 	// Phase 1
 	validTools := filterToolsByScope(stringsToToolIDs(state.Tools), types.SetupScope(state.Scope))
-	if containsString(state.Tools, "codex") && !detect.IsCodexInstalled() && !state.CodexConfirm {
-		filtered := make([]types.ToolId, 0)
-		for _, t := range validTools {
-			if t != types.ToolIdCodex {
-				filtered = append(filtered, t)
-			}
-		}
-		validTools = filtered
-	}
-	
+
 	p1 := buildPhase1Result(
 		types.SetupScope(state.Scope),
 		validTools,
@@ -391,7 +395,7 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	if commit == "custom" {
 		commit = state.CustomCommit
 	}
-	
+
 	p2 := buildPhase2Result(
 		p1.Scope,
 		types.PresetLevel(state.Preset),
@@ -399,7 +403,6 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		branch,
 		commit,
 		state.RequireTicket,
-		stringsToCommandIds(state.Commands),
 		stringsToChatModeIds(state.ChatModes),
 		stringsToOpenCodeCommandIds(state.OpenCodeCommands),
 		stringsToOpenCodeModeIds(state.OpenCodeModes),

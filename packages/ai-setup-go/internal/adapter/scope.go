@@ -19,19 +19,11 @@ import (
 var ErrScopeUnsupported = errors.New("scope not supported for this tool")
 
 // IsScopeSupported reports whether the given tool has a defined on-disk layout
-// for the given scope. Wizard + non-interactive callers use this to filter the
-// tool list before invoking adapters. Copilot now supports global scope; the
+// for the given scope. Wizard + non-interactive callers use this to validate
+// tool selections before invoking adapters. Copilot supports global scope; the
 // adapter itself probes for CLI/home presence and skips if not available.
 func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
-	if !types.IsValidSetupScope(scope) || !types.IsValidToolId(tool) {
-		return false
-	}
-	switch tool {
-	case types.ToolIdPi:
-		return scope == types.SetupScopeProject || scope == types.SetupScopeWorkspace
-	default:
-		return true
-	}
+	return types.IsValidSetupScope(scope) && types.IsValidToolId(tool)
 }
 
 // ResolveToolRoot returns the primary directory the adapter should write into
@@ -40,8 +32,6 @@ func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
 // falls back to TargetDir (backward compat). For global scope, uses HomeDir.
 // Callers should use this instead of hard-coding paths.
 //
-// Codex has two logical roots (config vs. skills); callers that need both
-// should use ResolveCodexRoots instead.
 func ResolveToolRoot(tool types.ToolId, scope types.SetupScope, ctx *AdapterContext) (string, error) {
 	if !IsScopeSupported(tool, scope) {
 		return "", fmt.Errorf("%w: tool=%s scope=%s", ErrScopeUnsupported, tool, scope)
@@ -76,52 +66,16 @@ func ResolveToolRoot(tool types.ToolId, scope types.SetupScope, ctx *AdapterCont
 	return "", fmt.Errorf("%w: unknown scope %q", ErrScopeUnsupported, scope)
 }
 
-// ResolveCodexRoots returns the two distinct directories Codex actually reads:
-// configRoot holds config.toml + AGENTS.md (or AGENTS.md at the repo root for
-// project/workspace scope); skillsRoot holds <name>/SKILL.md subdirs.
-//
-// Upstream split (locked decision 3):
-//   - project/workspace: configRoot=<target>/.codex, skillsRoot=<target>/.agents/skills
-//   - global:            configRoot=~/.codex,        skillsRoot=~/.agents/skills
-func ResolveCodexRoots(scope types.SetupScope, ctx *AdapterContext) (configRoot, skillsRoot string, err error) {
-	if ctx == nil {
-		return "", "", fmt.Errorf("ResolveCodexRoots: nil AdapterContext")
-	}
-	switch scope {
-	case types.SetupScopeProject, types.SetupScopeWorkspace:
-		configRoot = filepath.Join(ctx.TargetDir, ".codex")
-		skillsRoot = filepath.Join(ctx.TargetDir, ".agents", "skills")
-		return configRoot, skillsRoot, nil
-	case types.SetupScopeGlobal:
-		home, herr := resolveHomeDir(ctx)
-		if herr != nil {
-			return "", "", herr
-		}
-		configRoot = filepath.Join(home, ".codex")
-		skillsRoot = globalpaths.ResolveCodexSkillsGlobalDir(home)
-		return configRoot, skillsRoot, nil
-	}
-	return "", "", fmt.Errorf("%w: unknown scope %q", ErrScopeUnsupported, scope)
-}
-
 // projectSubdir returns the directory name a tool expects under the target
-// (project or workspace root). Codex is a special case: it returns ".codex"
-// (for config.toml only) — callers that need skills as well should use
-// ResolveCodexRoots.
+// (project or workspace root).
 func projectSubdir(tool types.ToolId) string {
 	switch tool {
 	case types.ToolIdClaudeCode:
 		return ".claude"
 	case types.ToolIdOpenCode:
 		return ".opencode"
-	case types.ToolIdGemini:
-		return ".gemini"
 	case types.ToolIdCopilot:
 		return ".github"
-	case types.ToolIdCodex:
-		return ".codex"
-	case types.ToolIdPi:
-		return ".pi"
 	}
 	return ""
 }

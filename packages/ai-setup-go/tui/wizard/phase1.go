@@ -8,7 +8,6 @@ import (
 	"charm.land/huh/v2"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/adapter"
-	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -40,7 +39,7 @@ type Phase1Result struct {
 	CliTools      []string
 	EnableServers []string
 	// Organization and Team are optional identity fields that populate the
-	// [YOUR_ORG] / [YOUR_TEAM] placeholders in the generated CLAUDE.md.
+	// [YOUR_ORG] / [YOUR_TEAM] placeholders in the generated AGENTS.md.
 	// Empty → left as <!-- fill-in --> markers.
 	Organization string
 	Team         string
@@ -70,7 +69,7 @@ func runPhase1NonInteractive(defaults *Phase1Result) (*Phase1Result, PhaseAction
 		return nil, PhaseCancel, fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(defaults.Tools) == 0 {
-		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex, pi)")
+		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot)")
 	}
 	if defaults.ProjectName == "" {
 		return nil, PhaseCancel, fmt.Errorf("project name is required in non-interactive mode")
@@ -306,12 +305,7 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 		return nil, PhaseBack, nil
 	}
 
-	tools := stringsToToolIDs(selectedTools)
-	filteredTools, err := filterUninstalledCodex(tools)
-	if err != nil {
-		return nil, PhaseCancel, err
-	}
-	return filteredTools, PhaseContinue, nil
+	return stringsToToolIDs(selectedTools), PhaseContinue, nil
 }
 
 // toolOptionsForScope returns the AI tool multi-select options filtered to
@@ -320,10 +314,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 	all := []huh.Option[string]{
 		huh.NewOption("OpenCode", "opencode"),
 		huh.NewOption("Claude Code", "claude-code"),
-		huh.NewOption("Gemini CLI", "gemini"),
 		huh.NewOption("GitHub Copilot", "copilot"),
-		huh.NewOption("Codex (OpenAI)", "codex"),
-		huh.NewOption("Pi", "pi"),
 	}
 	if scope == "" {
 		return all
@@ -486,7 +477,7 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 }
 
 // askProjectIdentity collects optional Organization and Team values used to
-// fill [YOUR_ORG] / [YOUR_TEAM] in the generated CLAUDE.md. Both fields
+// fill [YOUR_ORG] / [YOUR_TEAM] in the generated AGENTS.md. Both fields
 // accept empty input (enter to skip — stays as <!-- fill-in --> marker).
 func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (string, string, PhaseAction, error) {
 	org := currentOrg
@@ -495,7 +486,7 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 
 	orgField := huh.NewInput().
 		Title(info.Title()).
-		Description("Organization name (leave blank to skip — stays as <!-- fill-in --> in CLAUDE.md).").
+		Description("Organization name (leave blank to skip — stays as <!-- fill-in --> in AGENTS.md).").
 		Value(&org)
 	teamField := huh.NewInput().
 		Title("Team").
@@ -516,33 +507,6 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 		return "", "", PhaseBack, nil
 	}
 	return strings.TrimSpace(org), strings.TrimSpace(team), PhaseContinue, nil
-}
-
-func filterUninstalledCodex(tools []types.ToolId) ([]types.ToolId, error) {
-	if !containsTool(tools, string(types.ToolIdCodex)) || detect.IsCodexInstalled() {
-		return tools, nil
-	}
-
-	confirm := false
-	if err := huh.NewConfirm().
-		Title(fmt.Sprintf("Codex CLI is not installed.\n\n%s\n\nContinue anyway?", detect.CodexInstallHint())).
-		Affirmative("Continue").
-		Negative("Remove codex from selection").
-		Value(&confirm).
-		Run(); err != nil {
-		return nil, fmt.Errorf("phase 1 cancelled: %w", err)
-	}
-	if confirm {
-		return tools, nil
-	}
-
-	filtered := make([]types.ToolId, 0, len(tools))
-	for _, tool := range tools {
-		if tool != types.ToolIdCodex {
-			filtered = append(filtered, tool)
-		}
-	}
-	return filtered, nil
 }
 
 func validateProjectName(name string) error {

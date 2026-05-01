@@ -152,7 +152,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Root CLAUDE.md placement is handled centrally by scaffold/root.go
+	// Root AGENTS.md placement is handled centrally by scaffold/root.go.
 	// (scope-aware); the adapter no longer installs it.
 
 	// CLI-driven MCP registration: when DriveCLI=true, attempt to register MCP

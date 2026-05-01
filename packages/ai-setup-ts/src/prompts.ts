@@ -51,16 +51,14 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
   if (opts.tools && opts.tools.length > 0) {
     config.tools = opts.tools
   } else if (!opts.interactive) {
-    throw new Error('--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)')
+    throw new Error('--tools is required in non-interactive mode (opencode, claude-code, copilot)')
   } else {
     const tools = await p.multiselect({
       message: 'Which AI tools are you using?',
       options: [
         { value: 'opencode', label: 'OpenCode', hint: 'Uses .opencode/ directory + AGENTS.md' },
-        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + CLAUDE.md' },
-        { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ directory + GEMINI.md' },
+        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + AGENTS.md' },
         { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + copilot-instructions.md' },
-        { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
       ],
       required: true,
     })
@@ -94,11 +92,9 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
 
 export function outroSuccess(config: SetupConfig): void {
   const rootFiles = new Set<string>()
-  if (config.tools.includes('opencode') || config.tools.includes('codex')) {
+  if (config.tools.includes('opencode') || config.tools.includes('claude-code')) {
     rootFiles.add('AGENTS.md')
   }
-  if (config.tools.includes('claude-code')) rootFiles.add('CLAUDE.md')
-  if (config.tools.includes('gemini')) rootFiles.add('GEMINI.md')
   if (config.tools.includes('copilot')) rootFiles.add('.github/copilot-instructions.md')
 
   const fileList = rootFiles.size > 0 ? Array.from(rootFiles).join(', ') : 'your config files'

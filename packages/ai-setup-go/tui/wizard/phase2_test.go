@@ -84,7 +84,6 @@ func TestBuildPhase2Result(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil,
 	)
 
 	if result.Preset != types.PresetLevelCustom {
@@ -112,7 +111,7 @@ func TestBuildPhase2Result(t *testing.T) {
 func TestBuildPhase2ResultGitConventionDefaults(t *testing.T) {
 	t.Parallel()
 
-	result := buildPhase2Result(types.SetupScopeGlobal, "", nil, "", "", false, nil, nil, nil, nil)
+	result := buildPhase2Result(types.SetupScopeGlobal, "", nil, "", "", false, nil, nil, nil)
 	wantPreset := preset.DefaultPresetForScope(types.SetupScopeGlobal)
 	wantFeatures := preset.ResolvePreset(wantPreset)
 	wantGit := types.DefaultGitConventions()
@@ -158,7 +157,7 @@ func TestPhase2StepInfoFor(t *testing.T) {
 	}
 
 	info := phase2StepInfoFor(3, types.PresetLevelCustom, defaults)
-	if got, want := info.Title(), "Features & Conventions — 3/9: Branch Pattern (previous: {ticket}/{description})"; got != want {
+	if got, want := info.Title(), "Features & Conventions — 3/8: Branch Pattern (previous: {ticket}/{description})"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
@@ -168,39 +167,33 @@ func TestPhase2StepInfoFor(t *testing.T) {
 	}
 }
 
-func TestPhase2StepInfo_CommandsAndChatModes(t *testing.T) {
+func TestPhase2StepInfo_ChatModesAndOpenCode(t *testing.T) {
 	t.Parallel()
 
 	defaults := &Phase2Result{
 		Preset:    types.PresetLevelCustom,
-		Commands:  []types.CommandId{types.CommandIdRpi, types.CommandIdReview},
 		ChatModes: []types.ChatModeId{types.ChatModeIdArchitect},
 	}
 
-	commandsInfo := phase2StepInfoFor(6, types.PresetLevelCustom, defaults)
-	if got, want := commandsInfo.Title(), "Features & Conventions — 6/9: Gemini Commands (previous: rpi, review)"; got != want {
-		t.Fatalf("commands title = %q, want %q", got, want)
-	}
-
-	chatmodesInfo := phase2StepInfoFor(7, types.PresetLevelCustom, defaults)
-	if got, want := chatmodesInfo.Title(), "Features & Conventions — 7/9: Copilot Chat Modes (previous: architect)"; got != want {
+	chatmodesInfo := phase2StepInfoFor(6, types.PresetLevelCustom, defaults)
+	if got, want := chatmodesInfo.Title(), "Features & Conventions — 6/8: Copilot Chat Modes (previous: architect)"; got != want {
 		t.Fatalf("chatmodes title = %q, want %q", got, want)
 	}
 
-	// Opencode steps (8, 9) appear only for the custom preset.
-	occmdInfo := phase2StepInfoFor(8, types.PresetLevelCustom, &Phase2Result{
+	// Opencode steps (7, 8) appear only for the custom preset.
+	occmdInfo := phase2StepInfoFor(7, types.PresetLevelCustom, &Phase2Result{
 		Preset:           types.PresetLevelCustom,
 		OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 	})
-	if got, want := occmdInfo.Title(), "Features & Conventions — 8/9: OpenCode Commands (previous: review)"; got != want {
+	if got, want := occmdInfo.Title(), "Features & Conventions — 7/8: OpenCode Commands (previous: review)"; got != want {
 		t.Fatalf("opencode commands title = %q, want %q", got, want)
 	}
 
-	ocmodeInfo := phase2StepInfoFor(9, types.PresetLevelCustom, &Phase2Result{
+	ocmodeInfo := phase2StepInfoFor(8, types.PresetLevelCustom, &Phase2Result{
 		Preset:        types.PresetLevelCustom,
 		OpenCodeModes: []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
 	})
-	if got, want := ocmodeInfo.Title(), "Features & Conventions — 9/9: OpenCode Modes (previous: plan)"; got != want {
+	if got, want := ocmodeInfo.Title(), "Features & Conventions — 8/8: OpenCode Modes (previous: plan)"; got != want {
 		t.Fatalf("opencode modes title = %q, want %q", got, want)
 	}
 }
@@ -226,21 +219,17 @@ func TestPhase2Stepping_NonCustomSkipsCommandsAndChatmodes(t *testing.T) {
 	}
 }
 
-// TestBuildPhase2Result_CustomPreservesCommands confirms that custom preset
-// carries Commands/ChatModes/OpenCodeCommands/OpenCodeModes through; non-
+// TestBuildPhase2Result_CustomPreservesToolSelections confirms that custom preset
+// carries ChatModes/OpenCodeCommands/OpenCodeModes through; non-
 // custom presets strip them (preset defaults handle selection).
-func TestBuildPhase2Result_CustomPreservesCommands(t *testing.T) {
+func TestBuildPhase2Result_CustomPreservesToolSelections(t *testing.T) {
 	t.Parallel()
 
-	cmds := []types.CommandId{types.CommandIdRpi, types.CommandIdPlan}
 	modes := []types.ChatModeId{types.ChatModeIdReviewer}
 	occmds := []types.OpenCodeCommandId{types.OpenCodeCommandIdReview, types.OpenCodeCommandIdTest}
 	ocmodes := []types.OpenCodeModeId{types.OpenCodeModeIdPlan}
 
-	custom := buildPhase2Result(types.SetupScopeProject, types.PresetLevelCustom, nil, "", "", false, cmds, modes, occmds, ocmodes)
-	if !reflect.DeepEqual(custom.Commands, cmds) {
-		t.Errorf("custom.Commands = %v, want %v", custom.Commands, cmds)
-	}
+	custom := buildPhase2Result(types.SetupScopeProject, types.PresetLevelCustom, nil, "", "", false, modes, occmds, ocmodes)
 	if !reflect.DeepEqual(custom.ChatModes, modes) {
 		t.Errorf("custom.ChatModes = %v, want %v", custom.ChatModes, modes)
 	}
@@ -251,10 +240,7 @@ func TestBuildPhase2Result_CustomPreservesCommands(t *testing.T) {
 		t.Errorf("custom.OpenCodeModes = %v, want %v", custom.OpenCodeModes, ocmodes)
 	}
 
-	standard := buildPhase2Result(types.SetupScopeProject, types.PresetLevelStandard, nil, "", "", false, cmds, modes, occmds, ocmodes)
-	if len(standard.Commands) != 0 {
-		t.Errorf("standard.Commands = %v; non-custom must drop explicit list", standard.Commands)
-	}
+	standard := buildPhase2Result(types.SetupScopeProject, types.PresetLevelStandard, nil, "", "", false, modes, occmds, ocmodes)
 	if len(standard.ChatModes) != 0 {
 		t.Errorf("standard.ChatModes = %v; non-custom must drop explicit list", standard.ChatModes)
 	}

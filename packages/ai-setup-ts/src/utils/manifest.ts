@@ -95,7 +95,6 @@ export function extractSelections(manifest: ManifestWithFeatures): Partial<Wizar
         f.endsWith(`/${a}.md`) &&
         (f.includes('.claude/') ||
           f.includes('.opencode/') ||
-          f.includes('.gemini/') ||
           f.includes('.agents/') ||
           f.includes('.github/')),
     ),

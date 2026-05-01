@@ -13,7 +13,7 @@ Default to repository conventions before introducing new patterns.
 
 > This file is read at the start of every AI session.
 > Keep it accurate. Keep it current. Treat it like code.
-> Mirror content to CLAUDE.md for Claude/pi compatibility.
+> AGENTS.md is the canonical AI agent instruction file. Existing CLAUDE.md files may reference this file, but new projects should not generate root CLAUDE.md.
 
 ---
 
@@ -298,7 +298,7 @@ When a task requires a different expertise (e.g., security review during impleme
 <!-- Run these at the start of EVERY session. Non-negotiable. -->
 
 Before doing any work:
-1. **Sync check:** If both AGENTS.md and CLAUDE.md exist, verify they are identical. If they differ → flag immediately. Do not proceed until resolved.
+1. **Canonical instruction check:** AGENTS.md is authoritative. If CLAUDE.md exists, treat it as a compatibility reference only; do not require it to mirror AGENTS.md.
 2. **Handoff check:** Read the latest file in `specs/memory/handoffs/` (if present) before planning.
 3. **Context check:** Read this file's Decision Tree. Load ONLY what your task needs.
 4. **Standards check:** If you're about to write code, check if a relevant standard exists in `specs/standards/`. Read it before writing.
@@ -322,7 +322,7 @@ If AI-generated code causes issues after merging:
 
 If AGENTS.md or rules are corrupted:
 ```bash
-git checkout main -- AGENTS.md CLAUDE.md specs/rules/ specs/standards/
+git checkout main -- AGENTS.md specs/rules/ specs/standards/
 ```
 
 ---

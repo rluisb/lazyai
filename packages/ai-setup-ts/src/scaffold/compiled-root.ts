@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import path from 'node:path'
 import { type FragmentContext, TemplateCompiler } from '../compiler/index.js'
 import type { FeatureFlags, GitConventions } from '../store/schema.js'
@@ -18,6 +19,8 @@ const DEFAULT_ENABLED_FEATURES: FeatureFlags = {
   bugResolution: true,
   pivotHandling: true,
 }
+
+const CLAUDE_AGENTS_REFERENCE = '<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file.'
 
 export interface ScaffoldCompiledRootOptions {
   targetDir: string
@@ -120,6 +123,10 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
 
   // Compile for each tool
   for (const tool of tools) {
+    if (tool === 'claude-code') {
+      appendClaudeAgentsReference(targetDir, setupScope)
+    }
+
     const compiler = new TemplateCompiler({
       libraryDir,
       outputDir: targetDir,
@@ -154,7 +161,7 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
 
     // Write each compiled file
     for (const file of result.files) {
-      // Map 'root.md' to tool-specific filename (e.g., CLAUDE.md, AGENTS.md)
+      // Map 'root.md' to the current root instruction filename (e.g., AGENTS.md).
       let outputPath = file.relativePath
       if (outputPath === 'root.md') {
         outputPath = ROOT_FILE_BY_TOOL[tool]
@@ -183,4 +190,17 @@ export async function scaffoldCompiledRoot(opts: ScaffoldCompiledRootOptions): P
       })
     }
   }
+}
+
+function appendClaudeAgentsReference(targetDir: string, setupScope?: SetupScope): void {
+  if (setupScope != null && setupScope !== 'project' && setupScope !== 'workspace') return
+
+  const claudePath = path.join(targetDir, 'CLAUDE.md')
+  if (!fs.existsSync(claudePath)) return
+
+  const content = fs.readFileSync(claudePath, 'utf-8')
+  if (content.includes(CLAUDE_AGENTS_REFERENCE)) return
+
+  const separator = content.endsWith('\n') ? '\n' : '\n\n'
+  writeFile(claudePath, `${content}${separator}${CLAUDE_AGENTS_REFERENCE}\n`)
 }

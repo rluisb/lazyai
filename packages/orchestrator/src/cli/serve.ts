@@ -10,7 +10,7 @@ import { registerBuiltinHandlers } from '../queue/handlers.js'
 export const SERVE_HELP = `Usage: ai-setup-orchestrator serve [options]
 
 Start the orchestrator as a shared HTTP server over TCP.
-Multiple CLI clients (Claude Code, OpenCode, Codex) can connect simultaneously
+Multiple CLI clients (Claude Code, OpenCode, Copilot) can connect simultaneously
 via the MCP Streamable HTTP transport at http://127.0.0.1:<port>/mcp.
 
 On startup a discovery file is written to the XDG data directory so other

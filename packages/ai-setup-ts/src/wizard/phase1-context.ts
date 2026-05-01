@@ -58,11 +58,8 @@ const MCP_PRESET_OPTIONS: Array<{ value: McpWizardPreset; label: string; hint: s
 
 const TOOL_OPTIONS: Array<{ value: ToolId; label: string; hint: string }> = [
   { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
-  { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
-  { value: 'gemini', label: 'Gemini CLI', hint: 'Uses .gemini/ with settings.json + GEMINI.md' },
+  { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + AGENTS.md' },
   { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
-  { value: 'codex', label: 'Codex (OpenAI)', hint: 'Uses .agents/skills/ + AGENTS.md' },
-  { value: 'pi', label: 'Pi', hint: 'Uses .pi/ with settings.json, skills, and prompts' },
 ]
 
 function loadMcpCatalog(_targetDir: string): McpCatalog | null {
@@ -116,7 +113,8 @@ function defaultMcpSelection(current: string[] | undefined, preset: McpWizardPre
 }
 
 export function filterToolsByScope(tools: ToolId[], scope: SetupScope): ToolId[] {
-  return tools.filter((tool) => tool !== 'pi' || scope === 'project' || scope === 'workspace')
+  void scope
+  return tools
 }
 
 export function toolOptionsForScope(scope: SetupScope): Array<{ value: ToolId; label: string; hint: string }> {
@@ -313,7 +311,7 @@ export async function runPhase1(opts: {
       throw new Error('--scope is required in non-interactive mode (global | workspace | project)')
     }
     if (!tools || tools.length === 0) {
-      throw new Error('--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex, pi)')
+      throw new Error('--tools is required in non-interactive mode (opencode, claude-code, copilot)')
     }
     if (!projectName) {
       throw new Error('Project name is required in non-interactive mode (use --name or provide via config)')
@@ -429,13 +427,12 @@ export async function runPhase1(opts: {
   }
   tools = toolsResult as ToolId[]
 
-  const skillsResult = (await p.multiselect({
+  const skillsResult = await p.multiselect<string>({
     message: `Which skills should be installed? (previous: ${priorSkills.join(', ')})`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- @clack infers narrow types from options
-    options: ALL_SKILLS.map((skill) => ({ value: skill as string, label: skill, hint: 'Skill' })) as any,
+    options: ALL_SKILLS.map((skill) => ({ value: skill as string, label: skill, hint: 'Skill' })),
     initialValues: priorSkills,
     required: true,
-  })) as SkillId[]
+  })
 
   if (p.isCancel(skillsResult)) {
     p.cancel('Setup cancelled.')

@@ -92,7 +92,6 @@ describe('cli init integration', () => {
       'specs/templates/AGENTS.md',
       'specs/rules/AGENTS.md',
       'AGENTS.md',
-      'CLAUDE.md',
       '.git/hooks/pre-commit',
       '.claude/agents',
       '.claude/skills',
@@ -512,8 +511,8 @@ describe('cli init integration', () => {
 
     expect(fs.existsSync(path.join(tempDir, '.claude', 'skills'))).toBe(true)
     expect(fs.existsSync(path.join(tempDir, '.claude', 'rules'))).toBe(true)
-    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
-    const compiledRootContent = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8')
+    expect(fs.existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
+    const compiledRootContent = fs.readFileSync(path.join(tempDir, 'AGENTS.md'), 'utf-8')
     expect(compiledRootContent).toContain('<system-context>')
 
     const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.ai-setup.json'), 'utf-8')) as StoreData

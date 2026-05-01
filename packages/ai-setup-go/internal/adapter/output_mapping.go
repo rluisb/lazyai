@@ -185,42 +185,6 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Notes: "OpenCode prompts ship as commands",
 			},
 		},
-		types.ToolIdGemini: {
-			AssetKindAgents: {
-				Tool: types.ToolIdGemini, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Gemini has no agents concept",
-			},
-			AssetKindSkills: {
-				Tool: types.ToolIdGemini, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
-				Shape: ShapeDirPerItem,
-			},
-			AssetKindTemplates: {
-				Tool: types.ToolIdGemini, Kind: AssetKindTemplates,
-				SourceSubdir: "templates", DestSubdir: "templates",
-				Shape: ShapeFlat,
-				Notes: "Speckit templates at .gemini/templates/",
-			},
-			AssetKindCommands: {
-				Tool: types.ToolIdGemini, Kind: AssetKindCommands,
-				SourceSubdir: "gemini/commands", DestSubdir: "commands",
-				Shape: ShapeFlat,
-				Notes: "Gemini custom commands are TOML; legacy fallback handled in adapter",
-			},
-			AssetKindChatModes: {
-				Tool: types.ToolIdGemini, Kind: AssetKindChatModes,
-				Shape: ShapeNone,
-			},
-			AssetKindOutputStyles: {
-				Tool: types.ToolIdGemini, Kind: AssetKindOutputStyles,
-				Shape: ShapeNone,
-			},
-			AssetKindPrompts: {
-				Tool: types.ToolIdGemini, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-			},
-		},
 		types.ToolIdCopilot: {
 			AssetKindAgents: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindAgents,
@@ -262,76 +226,6 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Notes: "Copilot prompts at .github/prompts/<name>.prompt.md",
 			},
 		},
-		types.ToolIdCodex: {
-			AssetKindAgents: {
-				Tool: types.ToolIdCodex, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Codex has no native agents directory; AGENTS.override.md is the override surface",
-			},
-			AssetKindSkills: {
-				Tool: types.ToolIdCodex, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
-				Shape: ShapeDirPerItem,
-				Notes: "Codex skills live at .agents/skills/<name>/SKILL.md (skillsRoot, not configRoot)",
-			},
-			AssetKindTemplates: {
-				Tool: types.ToolIdCodex, Kind: AssetKindTemplates,
-				SourceSubdir: "templates", DestSubdir: "templates",
-				Shape: ShapeFlat,
-				Notes: "Speckit templates at .codex/templates/ (configRoot)",
-			},
-			AssetKindCommands: {
-				Tool: types.ToolIdCodex, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-			},
-			AssetKindChatModes: {
-				Tool: types.ToolIdCodex, Kind: AssetKindChatModes,
-				Shape: ShapeNone,
-			},
-			AssetKindOutputStyles: {
-				Tool: types.ToolIdCodex, Kind: AssetKindOutputStyles,
-				Shape: ShapeNone,
-			},
-			AssetKindPrompts: {
-				Tool: types.ToolIdCodex, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-			},
-		},
-		types.ToolIdPi: {
-			AssetKindAgents: {
-				Tool: types.ToolIdPi, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Pi has no agents surface in current layout",
-			},
-			AssetKindSkills: {
-				Tool: types.ToolIdPi, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
-				Shape: ShapeDirPerItem,
-			},
-			AssetKindTemplates: {
-				Tool: types.ToolIdPi, Kind: AssetKindTemplates,
-				SourceSubdir: "templates", DestSubdir: "templates",
-				Shape: ShapeFlat,
-				Notes: "Speckit templates at .pi/templates/",
-			},
-			AssetKindCommands: {
-				Tool: types.ToolIdPi, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-			},
-			AssetKindChatModes: {
-				Tool: types.ToolIdPi, Kind: AssetKindChatModes,
-				Shape: ShapeNone,
-			},
-			AssetKindOutputStyles: {
-				Tool: types.ToolIdPi, Kind: AssetKindOutputStyles,
-				Shape: ShapeNone,
-			},
-			AssetKindPrompts: {
-				Tool: types.ToolIdPi, Kind: AssetKindPrompts,
-				SourceSubdir: "prompts", DestSubdir: "prompts",
-				Shape: ShapeFlat,
-			},
-		},
 	}
 	outputMappings = m
 	return m
@@ -370,8 +264,7 @@ func OutputTargetsForTool(tool types.ToolId) (map[AssetKind]OutputTarget, error)
 func ValidateOutputCoverage() error {
 	per := buildOutputMappings()
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdGemini,
-		types.ToolIdCopilot, types.ToolIdCodex, types.ToolIdPi,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
 	} {
 		entries, ok := per[tool]
 		if !ok {

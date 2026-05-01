@@ -6,8 +6,6 @@ import "github.com/ricardoborges-teachable/ai-setup/internal/types"
 // Ported from src/scaffold/root-file-map.ts.
 var RootFileByTool = map[types.ToolId]string{
 	types.ToolIdOpenCode:   "AGENTS.md",
-	types.ToolIdClaudeCode: "CLAUDE.md",
-	types.ToolIdGemini:     "GEMINI.md",
+	types.ToolIdClaudeCode: "AGENTS.md",
 	types.ToolIdCopilot:    ".github/copilot-instructions.md",
-	types.ToolIdCodex:      "AGENTS.md",
 }

@@ -37,7 +37,6 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 				Agents:           ctx.Agents,
 				Skills:           ctx.Skills,
 				Prompts:          ctx.Prompts,
-				Commands:         ctx.Commands,
 				ChatModes:        ctx.ChatModes,
 				OpenCodeCommands: ctx.OpenCodeCommands,
 				OpenCodeModes:    ctx.OpenCodeModes,

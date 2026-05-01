@@ -23,6 +23,13 @@ func getLibraryDir() string {
 	return dir
 }
 
+func validateToolFlag(tool string) error {
+	if tool == "" || types.IsValidToolId(types.ToolId(tool)) {
+		return nil
+	}
+	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", tool)
+}
+
 // openStore opens the SQLite database for the given target directory.
 // It also auto-imports from .ai-setup.json if the DB doesn't exist yet.
 func openStore(targetDir string) (*db.DB, error) {
@@ -88,7 +95,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var agents []types.AgentId
 	var skills []types.SkillId
 	var prompts []types.PromptId
-	var commands []types.CommandId
 	var chatmodes []types.ChatModeId
 	var opencodeCommands []types.OpenCodeCommandId
 	var opencodeModes []types.OpenCodeModeId
@@ -99,7 +105,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		agents = types.ALL_AGENTS[:]
 		skills = types.ALL_SKILLS[:]
 		prompts = types.ALL_PROMPTS[:]
-		commands = types.ALL_COMMANDS[:]
 		chatmodes = types.ALL_CHATMODES[:]
 		opencodeCommands = types.ALL_OPENCODE_COMMANDS[:]
 		opencodeModes = types.ALL_OPENCODE_MODES[:]
@@ -110,9 +115,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	// commands/chatmodes selection, honour their explicit choice instead of
 	// the ALL_* defaults.
 	if presetLevel == types.PresetLevelCustom {
-		if result.Phase2.Commands != nil {
-			commands = result.Phase2.Commands
-		}
 		if result.Phase2.ChatModes != nil {
 			chatmodes = result.Phase2.ChatModes
 		}
@@ -187,7 +189,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Agents:              agents,
 		Skills:              skills,
 		Prompts:             prompts,
-		Commands:            commands,
 		ChatModes:           chatmodes,
 		OpenCodeCommands:    opencodeCommands,
 		OpenCodeModes:       opencodeModes,
@@ -250,7 +251,6 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.Agents = ctx.Agents
 	storeData.Selections.Skills = ctx.Skills
 	storeData.Selections.Prompts = ctx.Prompts
-	storeData.Selections.Commands = ctx.Commands
 	storeData.Selections.ChatModes = ctx.ChatModes
 	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
 	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes

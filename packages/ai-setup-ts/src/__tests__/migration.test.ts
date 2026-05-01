@@ -250,11 +250,9 @@ describe('Parser Registry', () => {
     // Create a multi-adapter setup
     await fs.writeFile(path.join(tempDir, 'AGENTS.md'), '# Test\n');
     await fs.writeFile(path.join(tempDir, 'CLAUDE.md'), '# Test\n');
-    await fs.writeFile(path.join(tempDir, 'GEMINI.md'), '# Test\n');
     
     await fs.mkdir(path.join(tempDir, '.opencode'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.claude'), { recursive: true });
-    await fs.mkdir(path.join(tempDir, '.gemini'), { recursive: true });
     await fs.mkdir(path.join(tempDir, '.github'), { recursive: true });
     
     await fs.writeFile(
@@ -266,7 +264,6 @@ describe('Parser Registry', () => {
     
     expect(adapters).toContain('opencode');
     expect(adapters).toContain('claude-code');
-    expect(adapters).toContain('gemini');
     expect(adapters).toContain('copilot');
     
     await fs.rm(tempDir, { recursive: true, force: true });

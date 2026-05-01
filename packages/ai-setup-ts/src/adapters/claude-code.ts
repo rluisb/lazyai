@@ -7,7 +7,6 @@ import {
   copyLibraryDirectory,
   copyWithRecord,
   getOrchestratorAgentContent,
-  installRootTemplateIfMissing,
   installToolContextFiles,
   isOrchestratorEnabled,
 } from './shared.js'
@@ -106,15 +105,6 @@ export class ClaudeCodeAdapter implements ToolAdapter {
       skillsDestDir: 'skills',
       skipRootIfExists: isGlobal,
     })
-
-    if (!isGlobal) {
-      await installRootTemplateIfMissing({
-        ctx,
-        recordPath: 'CLAUDE.md',
-        destPath: path.join(ctx.targetDir, 'CLAUDE.md'),
-        templateSource: 'root/CLAUDE.template.md',
-      })
-    }
 
     if ((ctx.driveCLI === true || ctx.driveCli === true) && !isGlobal) {
       driveClaudeMcpViaCli(ctx.targetDir, ctx.targetDir, ctx.setupScope ?? 'project')

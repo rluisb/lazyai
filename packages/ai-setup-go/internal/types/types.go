@@ -47,10 +47,7 @@ type ToolId string
 const (
 	ToolIdOpenCode   ToolId = "opencode"
 	ToolIdClaudeCode ToolId = "claude-code"
-	ToolIdGemini     ToolId = "gemini"
 	ToolIdCopilot    ToolId = "copilot"
-	ToolIdCodex      ToolId = "codex"
-	ToolIdPi         ToolId = "pi"
 )
 
 // AgentId identifies a specialized agent role.
@@ -112,24 +109,6 @@ const (
 	PromptIdResearch     PromptId = "research"
 )
 
-// CommandId identifies a Gemini custom slash command (TOML file under
-// <geminiRoot>/commands/).
-type CommandId string
-
-const (
-	CommandIdRpi               CommandId = "rpi"
-	CommandIdReview            CommandId = "review"
-	CommandIdPlan              CommandId = "plan"
-	CommandIdSpeckitAnalyze    CommandId = "speckit-analyze"
-	CommandIdSpeckitChecklist  CommandId = "speckit-checklist"
-	CommandIdSpeckitClarify    CommandId = "speckit-clarify"
-	CommandIdSpeckitConstitute CommandId = "speckit-constitution"
-	CommandIdSpeckitImplement  CommandId = "speckit-implement"
-	CommandIdSpeckitPlan       CommandId = "speckit-plan"
-	CommandIdSpeckitSpecify    CommandId = "speckit-specify"
-	CommandIdSpeckitTasks      CommandId = "speckit-tasks"
-)
-
 // ChatModeId identifies a GitHub Copilot chat mode (markdown file under
 // <githubDir>/chatmodes/).
 type ChatModeId string
@@ -140,8 +119,7 @@ const (
 )
 
 // OpenCodeCommandId identifies an opencode slash command (markdown file
-// under <opencodeRoot>/commands/). Distinct keyspace from Gemini's
-// CommandId — opencode commands have their own frontmatter schema.
+// under <opencodeRoot>/commands/).
 type OpenCodeCommandId string
 
 const (
@@ -439,20 +417,6 @@ var (
 		PromptIdResearch,
 	}
 
-	ALL_COMMANDS = []CommandId{
-		CommandIdRpi,
-		CommandIdReview,
-		CommandIdPlan,
-		CommandIdSpeckitAnalyze,
-		CommandIdSpeckitChecklist,
-		CommandIdSpeckitClarify,
-		CommandIdSpeckitConstitute,
-		CommandIdSpeckitImplement,
-		CommandIdSpeckitPlan,
-		CommandIdSpeckitSpecify,
-		CommandIdSpeckitTasks,
-	}
-
 	ALL_CHATMODES = []ChatModeId{
 		ChatModeIdArchitect,
 		ChatModeIdReviewer,
@@ -611,7 +575,6 @@ type WizardSelections struct {
 	Agents           []AgentId           `json:"agents"`
 	Skills           []SkillId           `json:"skills"`
 	Prompts          []PromptId          `json:"prompts"`
-	Commands         []CommandId         `json:"commands"`
 	ChatModes        []ChatModeId        `json:"chatmodes"`
 	OpenCodeCommands []OpenCodeCommandId `json:"opencodeCommands"`
 	OpenCodeModes    []OpenCodeModeId    `json:"opencodeModes"`
@@ -797,7 +760,7 @@ func IsValidSetupScope(s SetupScope) bool {
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
 	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdGemini, ToolIdCopilot, ToolIdCodex, ToolIdPi:
+	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot:
 		return true
 	default:
 		return false

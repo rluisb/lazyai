@@ -12,7 +12,7 @@ import (
 var importCmd = &cobra.Command{
 	Use:   "import [source]",
 	Short: "Import configuration from another AI tool setup",
-	Long: `Import configuration from another AI tool setup (e.g., OpenCode, Claude Code, Gemini, Copilot)
+	Long: `Import configuration from another AI tool setup (e.g., OpenCode, Claude Code, Copilot)
 into ai-setup format. The source can be a path to a directory containing an existing setup.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runImport,
@@ -44,6 +44,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 	strategyStr, _ := cmd.Flags().GetString("strategy")
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	skipBackup, _ := cmd.Flags().GetBool("skip-backup")
+	if err := validateToolFlag(toolFlag); err != nil {
+		return err
+	}
 
 	strategy := migration.MergeStrategy(strategyStr)
 	if strategy == "" {

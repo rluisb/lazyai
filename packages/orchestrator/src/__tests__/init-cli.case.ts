@@ -116,6 +116,11 @@ describe('init cli', () => {
     })
   })
 
+  it('parseInitArgs rejects removed host cli tools', () => {
+    expect(() => parseInitArgs(['--host', 'codex'])).toThrow('Unknown host: codex')
+    expect(() => parseInitArgs(['--host', 'gemini'])).toThrow('Unknown host: gemini')
+  })
+
   it('runInit --json emits valid JSON with inventory and root files', async () => {
     const fixture = setupFixture()
     const { out, output } = createBuffer()

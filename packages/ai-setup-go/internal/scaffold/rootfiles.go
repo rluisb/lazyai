@@ -15,8 +15,6 @@ import (
 // Kept for backward compatibility. Ported from src/scaffold/root-files.ts.
 var deprecatedRootTemplateByFile = map[string]string{
 	"AGENTS.md":                       "root/AGENTS.template.md",
-	"CLAUDE.md":                       "root/CLAUDE.template.md",
-	"GEMINI.md":                       "root/GEMINI.template.md",
 	".github/copilot-instructions.md": "root/copilot-instructions.template.md",
 }
 

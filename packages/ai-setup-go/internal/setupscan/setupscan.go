@@ -344,12 +344,7 @@ func supportedTargets(opts Options) []targetSpec {
 }
 
 func supportedScopesForTool(tool types.ToolId) []types.SetupScope {
-	switch tool {
-	case types.ToolIdPi:
-		return []types.SetupScope{types.SetupScopeProject, types.SetupScopeWorkspace}
-	default:
-		return []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace}
-	}
+	return []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace}
 }
 
 func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
@@ -360,34 +355,17 @@ func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"settings.json"}, []string{"settings.local.json", "agents", "skills", "commands", "output-styles"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"settings.json"}, []string{"settings.local.json", "agents", "skills", "commands", "output-styles"}),
 		}
-	case types.ToolIdCodex:
-		return []rootSpec{
-			codexRootSpec(types.SetupScopeGlobal, "global", opts),
-			codexRootSpec(types.SetupScopeProject, "project", opts),
-			codexRootSpec(types.SetupScopeWorkspace, "workspace", opts),
-		}
 	case types.ToolIdCopilot:
 		return []rootSpec{
 			copilotGlobalRootSpec(opts),
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"copilot-instructions.md"}, []string{"agents", "instructions", "prompts", "chatmodes"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"copilot-instructions.md"}, []string{"agents", "instructions", "prompts", "chatmodes"}),
 		}
-	case types.ToolIdGemini:
-		return []rootSpec{
-			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"settings.json"}, []string{"commands"}),
-			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"settings.json"}, []string{"commands"}),
-			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"settings.json"}, []string{"commands"}),
-		}
 	case types.ToolIdOpenCode:
 		return []rootSpec{
 			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"opencode.jsonc"}, []string{"opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"}),
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"opencode.jsonc"}, []string{"opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"opencode.jsonc"}, []string{"opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"}),
-		}
-	case types.ToolIdPi:
-		return []rootSpec{
-			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"settings.json"}, []string{"skills", "prompts"}),
-			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"settings.json"}, []string{"skills", "prompts"}),
 		}
 	}
 	return nil
@@ -403,22 +381,6 @@ func toolRootSpec(tool types.ToolId, scope types.SetupScope, origin string, opts
 		ExpectedFiles: expectedFiles,
 		OptionalPaths: optionalPaths,
 		VersionFiles:  expectedFiles,
-	}
-}
-
-func codexRootSpec(scope types.SetupScope, origin string, opts Options) rootSpec {
-	ctx := &adapter.AdapterContext{TargetDir: opts.TargetDir, HomeDir: opts.HomeDir, SetupScope: scope}
-	return rootSpec{
-		Scope:  scope,
-		Origin: origin,
-		Resolve: func(_ Options) (string, error) {
-			configRoot, _, err := adapter.ResolveCodexRoots(scope, ctx)
-			return configRoot, err
-		},
-		CountRootOnly: false,
-		ExpectedFiles: []string{"config.toml"},
-		OptionalPaths: []string{},
-		VersionFiles:  []string{"config.toml"},
 	}
 }
 

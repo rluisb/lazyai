@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
 import { discoverExtensions, getExtendedAvailable } from '../extensions/discovery.js'
 
 function makeTempDir(prefix: string): string {
@@ -28,10 +28,11 @@ describe('discoverExtensions', () => {
 
     const results = discoverExtensions(dir)
     expect(results.length).toBe(1)
-    expect(results[0]!.name).toBe('my-pack')
-    expect(results[0]!.kind).toBe('local')
-    expect(results[0]!.content.skills).toEqual(['custom-skill'])
-    expect(results[0]!.content.agents).toEqual(['my-agent'])
+    expect(results[0]).toMatchObject({
+      name: 'my-pack',
+      kind: 'local',
+      content: { skills: ['custom-skill'], agents: ['my-agent'] },
+    })
     rmSync(dir, { recursive: true, force: true })
   })
 
@@ -45,7 +46,7 @@ describe('discoverExtensions', () => {
 
     const results = discoverExtensions(dir)
     expect(results.length).toBe(1)
-    expect(results[0]!.content.agents).toEqual(['security-reviewer'])
+    expect(results[0]).toMatchObject({ content: { agents: ['security-reviewer'] } })
     rmSync(dir, { recursive: true, force: true })
   })
 

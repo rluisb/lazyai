@@ -159,9 +159,15 @@ func (s *Store) ReadConfig() (*types.Config, error) {
 		return nil, fmt.Errorf("query config: %w", err)
 	}
 
-	var tools []types.ToolId
-	if err := json.Unmarshal([]byte(toolsJSON), &tools); err != nil {
+	var toolsRaw []types.ToolId
+	if err := json.Unmarshal([]byte(toolsJSON), &toolsRaw); err != nil {
 		return nil, fmt.Errorf("unmarshal tools: %w", err)
+	}
+	tools := make([]types.ToolId, 0, len(toolsRaw))
+	for _, t := range toolsRaw {
+		if types.IsValidToolId(t) {
+			tools = append(tools, t)
+		}
 	}
 
 	var cliTools []string
@@ -315,8 +321,8 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		return nil, fmt.Errorf("unmarshal gitConventions: %w", err)
 	}
 
-	var commands []types.CommandId
-	if err := json.Unmarshal([]byte(commandsJSON), &commands); err != nil {
+	var legacyCommands []string
+	if err := json.Unmarshal([]byte(commandsJSON), &legacyCommands); err != nil {
 		return nil, fmt.Errorf("unmarshal commands: %w", err)
 	}
 	var chatmodes []types.ChatModeId
@@ -342,7 +348,6 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 		Agents:           agents,
 		Skills:           skills,
 		Prompts:          prompts,
-		Commands:         commands,
 		ChatModes:        chatmodes,
 		OpenCodeCommands: opencodeCommands,
 		OpenCodeModes:    opencodeModes,
@@ -404,10 +409,7 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 		gitConventionsJSON = []byte("{}")
 	}
 
-	commandsJSON, err := json.Marshal(s.Commands)
-	if err != nil {
-		return fmt.Errorf("marshal commands: %w", err)
-	}
+	commandsJSON := []byte("[]")
 	chatmodesJSON, err := json.Marshal(s.ChatModes)
 	if err != nil {
 		return fmt.Errorf("marshal chatmodes: %w", err)

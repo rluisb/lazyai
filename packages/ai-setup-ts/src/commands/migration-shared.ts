@@ -1,9 +1,9 @@
 import path from 'node:path'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
+import { DETECTION_NAMES } from '../migration/detector.js'
 import { detectAdapters, detectExistingSetup, formatPlan, importSetup } from '../migration/index.js'
 import type { MergeStrategy, MigrationResult } from '../migration/types.js'
-import { DETECTION_NAMES } from '../migration/detector.js'
 
 export interface MigrationCommandOptions {
   path?: string
@@ -19,12 +19,11 @@ export interface MigrationCommandOptions {
 const ADAPTER_LABELS: Record<string, string> = {
   opencode: 'OpenCode',
   'claude-code': 'Claude Code',
-  gemini: 'Gemini CLI',
   copilot: 'GitHub Copilot',
 }
 
 export const VALID_MERGE_STRATEGIES: MergeStrategy[] = ['smart', 'preserve', 'replace', 'append']
-export const MIGRATION_MARKER_HINT = 'Expected markers include: AGENTS.md, CLAUDE.md, GEMINI.md, .opencode/, .claude/, .gemini/, or .github/copilot-instructions.md'
+export const MIGRATION_MARKER_HINT = 'Expected markers include: AGENTS.md, CLAUDE.md, .opencode/, .claude/, or .github/copilot-instructions.md'
 
 const STRATEGY_DESCRIPTIONS: Record<MergeStrategy, string> = {
   smart: 'attempt a 3-way merge and stop when manual review is required',

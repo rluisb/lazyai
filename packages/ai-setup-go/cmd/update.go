@@ -81,7 +81,6 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		Agents:           storeData.Selections.Agents,
 		Skills:           storeData.Selections.Skills,
 		Prompts:          storeData.Selections.Prompts,
-		Commands:         storeData.Selections.Commands,
 		ChatModes:        storeData.Selections.ChatModes,
 		OpenCodeCommands: storeData.Selections.OpenCodeCommands,
 		OpenCodeModes:    storeData.Selections.OpenCodeModes,

@@ -17,9 +17,12 @@ import (
 // errMemoryDocScopeUnsupported is returned by memoryDocDestPath for Copilot × global.
 var errMemoryDocScopeUnsupported = errors.New("memory doc not supported at this scope")
 
+const claudeAgentsReference = "<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file."
+
 // memoryDocDestPath returns the absolute path where the tool's memory doc
-// (AGENTS.md / CLAUDE.md / GEMINI.md / .github/copilot-instructions.md) should
-// land for the given scope. Returns errMemoryDocScopeUnsupported when the
+// (AGENTS.md / GEMINI.md / .github/copilot-instructions.md, or existing
+// CLAUDE.md compatibility reference updates) should land for the given scope.
+// Returns errMemoryDocScopeUnsupported when the
 // combination is not supported (e.g. Copilot × global).
 //
 // Placement rules:
@@ -165,15 +168,24 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 
 	// Compile for each tool.
 	for _, tool := range opts.Tools {
+		if tool == types.ToolIdClaudeCode {
+			if err := appendClaudeAgentsReference(opts); err != nil {
+				return err
+			}
+		}
+
 		outputFile, ok := RootFileByTool[tool]
 		if !ok {
 			continue
 		}
 
 		// Read the tool-specific root template from the library FS.
-		templateRelPath := "root/" + outputFile + ".template.md"
+		templateRelPath := deprecatedRootTemplateByFile[outputFile]
+		if templateRelPath == "" {
+			templateRelPath = "root/" + outputFile + ".template.md"
+		}
 		if !files.ExistsFS(opts.LibraryFS, templateRelPath) {
-			// Try alternative naming: AGENTS.template.md, CLAUDE.template.md, etc.
+			// Try alternative naming: AGENTS.template.md, copilot-instructions.template.md, etc.
 			baseName := strings.TrimSuffix(outputFile, filepath.Ext(outputFile))
 			templateRelPath = "root/" + baseName + ".template.md"
 			if !files.ExistsFS(opts.LibraryFS, templateRelPath) {
@@ -252,6 +264,33 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 	return nil
 }
 
+func appendClaudeAgentsReference(opts ScaffoldCompiledRootOptions) error {
+	if opts.SetupScope != types.SetupScopeProject && opts.SetupScope != types.SetupScopeWorkspace && opts.SetupScope != "" {
+		return nil
+	}
+
+	claudePath := filepath.Join(opts.TargetDir, "CLAUDE.md")
+	if !files.FileExists(claudePath) {
+		return nil
+	}
+
+	data, err := files.ReadFile(claudePath)
+	if err != nil {
+		return err
+	}
+	content := string(data)
+	if strings.Contains(content, claudeAgentsReference) {
+		return nil
+	}
+
+	separator := "\n\n"
+	if strings.HasSuffix(content, "\n") {
+		separator = "\n"
+	}
+	updated := content + separator + claudeAgentsReference + "\n"
+	return files.WriteFile(claudePath, []byte(updated), 0o644)
+}
+
 // ScaffoldCompiledRootOptions holds the options for compiling root files.
 type ScaffoldCompiledRootOptions struct {
 	TargetDir        string
@@ -278,8 +317,8 @@ type ScaffoldCompiledRootOptions struct {
 	Repos []types.RepoInfo
 }
 
-// fillClaudeMdPlaceholders replaces [YOUR_*] placeholders in a CLAUDE.md /
-// AGENTS.md / GEMINI.md template with values derived from opts, or with
+// fillClaudeMdPlaceholders replaces [YOUR_*] placeholders in an AGENTS.md /
+// GEMINI.md template with values derived from opts, or with
 // <!-- fill-in: hint --> markers when the value is unknown or subjective.
 // Applying this centrally means each tool's root file gets consistent
 // substitutions.
@@ -324,25 +363,25 @@ func fillClaudeMdPlaceholders(content string, opts ScaffoldCompiledRootOptions) 
 
 	// Subjective fields — always fill-in markers.
 	subjectiveMarkers := map[string]string{
-		"[YOUR_ARCHITECTURE_NOTES]":       "<!-- fill-in: architecture and key patterns -->",
-		"[YOUR_CODE_STYLE]":               "<!-- fill-in: code style -->",
-		"[YOUR_NAMING_CONVENTIONS]":       "<!-- fill-in: naming conventions -->",
-		"[YOUR_TESTING_STRATEGY]":         "<!-- fill-in: testing strategy -->",
-		"[YOUR_GIT_WORKFLOW]":             "<!-- fill-in: git workflow -->",
-		"[YOUR_RULE_1]":                   "<!-- fill-in: rule 1 -->",
-		"[YOUR_RULE_2]":                   "<!-- fill-in: rule 2 -->",
-		"[YOUR_DO_NOT_1]":                 "<!-- fill-in: project-specific don't -->",
-		"[YOUR_DO_NOT_2]":                 "<!-- fill-in: project-specific don't -->",
-		"[YOUR_UNIT_TESTING_STRATEGY]":    "<!-- fill-in: unit testing strategy -->",
+		"[YOUR_ARCHITECTURE_NOTES]":           "<!-- fill-in: architecture and key patterns -->",
+		"[YOUR_CODE_STYLE]":                   "<!-- fill-in: code style -->",
+		"[YOUR_NAMING_CONVENTIONS]":           "<!-- fill-in: naming conventions -->",
+		"[YOUR_TESTING_STRATEGY]":             "<!-- fill-in: testing strategy -->",
+		"[YOUR_GIT_WORKFLOW]":                 "<!-- fill-in: git workflow -->",
+		"[YOUR_RULE_1]":                       "<!-- fill-in: rule 1 -->",
+		"[YOUR_RULE_2]":                       "<!-- fill-in: rule 2 -->",
+		"[YOUR_DO_NOT_1]":                     "<!-- fill-in: project-specific don't -->",
+		"[YOUR_DO_NOT_2]":                     "<!-- fill-in: project-specific don't -->",
+		"[YOUR_UNIT_TESTING_STRATEGY]":        "<!-- fill-in: unit testing strategy -->",
 		"[YOUR_INTEGRATION_TESTING_STRATEGY]": "<!-- fill-in: integration testing strategy -->",
-		"[YOUR_E2E_TESTING_STRATEGY]":     "<!-- fill-in: e2e testing strategy -->",
-		"[YOUR_SESSION_CHECK]":            "<!-- fill-in: team-specific session check -->",
-		"[YOUR_COMPONENT_1]":              "<!-- fill-in: component -->",
-		"[YOUR_COMPONENT_2]":              "<!-- fill-in: component -->",
-		"[YOUR_RESPONSIBILITY_1]":         "<!-- fill-in: responsibility -->",
-		"[YOUR_RESPONSIBILITY_2]":         "<!-- fill-in: responsibility -->",
-		"[YOUR_PATH_1]":                   "<!-- fill-in: path -->",
-		"[YOUR_PATH_2]":                   "<!-- fill-in: path -->",
+		"[YOUR_E2E_TESTING_STRATEGY]":         "<!-- fill-in: e2e testing strategy -->",
+		"[YOUR_SESSION_CHECK]":                "<!-- fill-in: team-specific session check -->",
+		"[YOUR_COMPONENT_1]":                  "<!-- fill-in: component -->",
+		"[YOUR_COMPONENT_2]":                  "<!-- fill-in: component -->",
+		"[YOUR_RESPONSIBILITY_1]":             "<!-- fill-in: responsibility -->",
+		"[YOUR_RESPONSIBILITY_2]":             "<!-- fill-in: responsibility -->",
+		"[YOUR_PATH_1]":                       "<!-- fill-in: path -->",
+		"[YOUR_PATH_2]":                       "<!-- fill-in: path -->",
 	}
 	for placeholder, marker := range subjectiveMarkers {
 		content = strings.ReplaceAll(content, placeholder, marker)

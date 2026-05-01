@@ -32,7 +32,6 @@ type Phase2Result struct {
 	Preset           types.PresetLevel
 	Features         *types.FeatureFlags
 	GitConv          *types.GitConventions
-	Commands         []types.CommandId         // populated only when Preset == Custom
 	ChatModes        []types.ChatModeId        // populated only when Preset == Custom
 	OpenCodeCommands []types.OpenCodeCommandId // populated only when Preset == Custom
 	OpenCodeModes    []types.OpenCodeModeId    // populated only when Preset == Custom
@@ -97,7 +96,7 @@ func runPhase2NonInteractive(scope types.SetupScope, defaults *Phase2Result) (*P
 		}
 	}
 
-	return buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket, nil, nil, nil, nil), PhaseContinue, nil
+	return buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket, nil, nil, nil), PhaseContinue, nil
 }
 
 func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phase2Result, PhaseAction, error) {
@@ -110,7 +109,7 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 	}
 
 	currentStep := 1
-	for currentStep >= 1 && currentStep <= 9 {
+	for currentStep >= 1 && currentStep <= 8 {
 		presetForStep := state.Preset
 		if presetForStep == "" {
 			presetForStep = defaultPhase2Preset(scope, defaults)
@@ -128,7 +127,6 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 			state.Preset = presetValue
 			if state.Preset != types.PresetLevelCustom {
 				state.Features = nil
-				state.Commands = nil
 				state.ChatModes = nil
 				state.OpenCodeCommands = nil
 				state.OpenCodeModes = nil
@@ -179,18 +177,7 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 			state.RequireTicket = requireTicket
 			currentStep = nextPhase2Step(currentStep, state.Preset)
 		case 6:
-			commands, action, err := askCommands(state.Commands, phase2StepInfoFor(6, presetForStep, defaults))
-			if err != nil {
-				return nil, action, err
-			}
-			if action == PhaseBack {
-				currentStep = previousPhase2Step(currentStep, state.Preset)
-				continue
-			}
-			state.Commands = commands
-			currentStep = nextPhase2Step(currentStep, state.Preset)
-		case 7:
-			chatmodes, action, err := askChatModes(state.ChatModes, phase2StepInfoFor(7, presetForStep, defaults))
+			chatmodes, action, err := askChatModes(state.ChatModes, phase2StepInfoFor(6, presetForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -200,8 +187,8 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 			}
 			state.ChatModes = chatmodes
 			currentStep = nextPhase2Step(currentStep, state.Preset)
-		case 8:
-			occmds, action, err := askOpenCodeCommands(state.OpenCodeCommands, phase2StepInfoFor(8, presetForStep, defaults))
+		case 7:
+			occmds, action, err := askOpenCodeCommands(state.OpenCodeCommands, phase2StepInfoFor(7, presetForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -211,8 +198,8 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 			}
 			state.OpenCodeCommands = occmds
 			currentStep = nextPhase2Step(currentStep, state.Preset)
-		case 9:
-			ocmodes, action, err := askOpenCodeModes(state.OpenCodeModes, phase2StepInfoFor(9, presetForStep, defaults))
+		case 8:
+			ocmodes, action, err := askOpenCodeModes(state.OpenCodeModes, phase2StepInfoFor(8, presetForStep, defaults))
 			if err != nil {
 				return nil, action, err
 			}
@@ -225,7 +212,7 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 		}
 	}
 
-	return buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket, state.Commands, state.ChatModes, state.OpenCodeCommands, state.OpenCodeModes), PhaseContinue, nil
+	return buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket, state.ChatModes, state.OpenCodeCommands, state.OpenCodeModes), PhaseContinue, nil
 }
 
 type phase2InteractiveState struct {
@@ -234,13 +221,12 @@ type phase2InteractiveState struct {
 	BranchPattern    string
 	CommitPattern    string
 	RequireTicket    bool
-	Commands         []types.CommandId
 	ChatModes        []types.ChatModeId
 	OpenCodeCommands []types.OpenCodeCommandId
 	OpenCodeModes    []types.OpenCodeModeId
 }
 
-func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool, commands []types.CommandId, chatmodes []types.ChatModeId, opencodeCommands []types.OpenCodeCommandId, opencodeModes []types.OpenCodeModeId) *Phase2Result {
+func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool, chatmodes []types.ChatModeId, opencodeCommands []types.OpenCodeCommandId, opencodeModes []types.OpenCodeModeId) *Phase2Result {
 	resolvedPreset := presetValue
 	if resolvedPreset == "" {
 		resolvedPreset = preset.DefaultPresetForScope(scope)
@@ -265,12 +251,10 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 
 	// Only carry explicit selections when the user chose custom preset.
 	// For non-custom presets, caller (helpers.go) falls back to ALL_* defaults.
-	var resolvedCommands []types.CommandId
 	var resolvedChatModes []types.ChatModeId
 	var resolvedOpenCodeCommands []types.OpenCodeCommandId
 	var resolvedOpenCodeModes []types.OpenCodeModeId
 	if resolvedPreset == types.PresetLevelCustom {
-		resolvedCommands = append([]types.CommandId(nil), commands...)
 		resolvedChatModes = append([]types.ChatModeId(nil), chatmodes...)
 		resolvedOpenCodeCommands = append([]types.OpenCodeCommandId(nil), opencodeCommands...)
 		resolvedOpenCodeModes = append([]types.OpenCodeModeId(nil), opencodeModes...)
@@ -286,7 +270,6 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 			RequireTicket: requireTicket,
 			TicketPattern: gitDefaults.TicketPattern,
 		},
-		Commands:         resolvedCommands,
 		ChatModes:        resolvedChatModes,
 		OpenCodeCommands: resolvedOpenCodeCommands,
 		OpenCodeModes:    resolvedOpenCodeModes,
@@ -426,34 +409,6 @@ func askRequireTicket(current bool, info phase2StepInfo) (bool, PhaseAction, err
 	return requireTicket, PhaseContinue, nil
 }
 
-func askCommands(current []types.CommandId, info phase2StepInfo) ([]types.CommandId, PhaseAction, error) {
-	selected := commandIdsToStrings(current)
-	if len(selected) == 0 {
-		selected = commandIdsToStrings(types.ALL_COMMANDS[:])
-	}
-
-	options := []huh.Option[string]{
-		huh.NewOption("RPI workflow command (rpi)", string(types.CommandIdRpi)),
-		huh.NewOption("Review command (review)", string(types.CommandIdReview)),
-		huh.NewOption("Plan command (plan)", string(types.CommandIdPlan)),
-	}
-
-	field := huh.NewMultiSelect[string]().
-		Title(info.Title()).
-		Description("Select Gemini custom slash commands to install. Deselect to skip.").
-		Options(appendPhase2BackOption(options)...).
-		Value(&selected)
-
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
-		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
-	}
-
-	if containsString(selected, phase2BackValue) {
-		return nil, PhaseBack, nil
-	}
-	return stringsToCommandIds(selected), PhaseContinue, nil
-}
-
 func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.ChatModeId, PhaseAction, error) {
 	selected := chatModeIdsToStrings(current)
 	if len(selected) == 0 {
@@ -479,25 +434,6 @@ func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.Chat
 		return nil, PhaseBack, nil
 	}
 	return stringsToChatModeIds(selected), PhaseContinue, nil
-}
-
-func commandIdsToStrings(ids []types.CommandId) []string {
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		out = append(out, string(id))
-	}
-	return out
-}
-
-func stringsToCommandIds(values []string) []types.CommandId {
-	out := make([]types.CommandId, 0, len(values))
-	for _, v := range values {
-		if v == phase2BackValue {
-			continue
-		}
-		out = append(out, types.CommandId(v))
-	}
-	return out
 }
 
 func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo) ([]types.OpenCodeCommandId, PhaseAction, error) {
@@ -725,21 +661,16 @@ func phase2StepInfoFor(step int, presetValue types.PresetLevel, defaults *Phase2
 			info.Previous = fmt.Sprintf("%t", defaults.GitConv.RequireTicket)
 		}
 	case 6:
-		info.StepTitle = "Gemini Commands"
-		if defaults != nil && len(defaults.Commands) > 0 {
-			info.Previous = strings.Join(commandIdsToStrings(defaults.Commands), ", ")
-		}
-	case 7:
 		info.StepTitle = "Copilot Chat Modes"
 		if defaults != nil && len(defaults.ChatModes) > 0 {
 			info.Previous = strings.Join(chatModeIdsToStrings(defaults.ChatModes), ", ")
 		}
-	case 8:
+	case 7:
 		info.StepTitle = "OpenCode Commands"
 		if defaults != nil && len(defaults.OpenCodeCommands) > 0 {
 			info.Previous = strings.Join(opencodeCommandIdsToStrings(defaults.OpenCodeCommands), ", ")
 		}
-	case 9:
+	case 8:
 		info.StepTitle = "OpenCode Modes"
 		if defaults != nil && len(defaults.OpenCodeModes) > 0 {
 			info.Previous = strings.Join(opencodeModeIdsToStrings(defaults.OpenCodeModes), ", ")
@@ -750,15 +681,15 @@ func phase2StepInfoFor(step int, presetValue types.PresetLevel, defaults *Phase2
 
 func phase2Total(presetValue types.PresetLevel) int {
 	if presetValue == types.PresetLevelCustom {
-		return 9
+		return 8
 	}
 	return 4
 }
 
 func previousPhase2Step(current int, presetValue types.PresetLevel) int {
 	previous := current - 1
-	// Non-custom presets skip the Features step (2) and the Commands/Chatmodes
-	// steps (6, 7 — unreachable for non-custom presets, but guard anyway).
+	// Non-custom presets skip the Features step (2) and custom-only
+	// artifact selection steps.
 	if presetValue != types.PresetLevelCustom && previous == 2 {
 		previous--
 	}
@@ -774,10 +705,10 @@ func nextPhase2Step(current int, presetValue types.PresetLevel) int {
 		next++
 	}
 	// After RequireTicket (step 5), jump past the custom-only selection
-	// steps (6 = Gemini Commands, 7 = Copilot Chat Modes, 8 = OpenCode
-	// Commands, 9 = OpenCode Modes) for non-custom presets.
+	// steps (6 = Copilot Chat Modes, 7 = OpenCode Commands, 8 = OpenCode
+	// Modes) for non-custom presets.
 	if presetValue != types.PresetLevelCustom && next == 6 {
-		next = 10 // exit loop (loop condition is currentStep <= 9)
+		next = 9 // exit loop (loop condition is currentStep <= 8)
 	}
 	return next
 }

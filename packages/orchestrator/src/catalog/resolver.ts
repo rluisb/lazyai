@@ -130,7 +130,7 @@ function dbRowToWorkflow(row: DbBodyRow): WorkflowDefinition | null {
   }
 }
 
-export type ResolverHostCli = 'opencode' | 'claude-code' | 'codex'
+export type ResolverHostCli = 'opencode' | 'claude-code' | 'copilot'
 
 export interface ResolverOptions {
   db: Db
@@ -205,13 +205,13 @@ export function resolveCatalog(base: OrchestrationCatalog, opts: ResolverOptions
 
 function resolveHostScans(
   projectRoot: string,
-  hostCli?: string,
+  hostCli?: ResolverHostCli,
 ): ReturnType<typeof mergeScannedCatalogs> {
   // Scan the union of all relevant host dirs; project-level wins last (highest priority)
   const catalogs = []
 
-  // opencode global (unless running in codex mode)
-  if (hostCli !== 'codex') {
+  // opencode global
+  if (hostCli === 'opencode' || hostCli === 'claude-code' || !hostCli) {
     try { catalogs.push(scanOpencodeGlobal()) } catch { /* skip if path doesn't exist */ }
   }
 

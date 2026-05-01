@@ -143,20 +143,10 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     const rootContent = readFile(rootAgentsTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName)
     if (
       data.config.tools.includes('opencode')
+      || data.config.tools.includes('claude-code')
       || data.config.tools.includes('copilot')
     ) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
-    }
-  }
-
-  if (data.config.tools.includes('claude-code')) {
-    const rootClaudeTemplatePath = join(libraryDir, 'root/CLAUDE.template.md')
-    if (fileExists(rootClaudeTemplatePath)) {
-      addContent(
-        'CLAUDE.md',
-        'root/CLAUDE.template.md',
-        readFile(rootClaudeTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
-      )
     }
   }
 

@@ -53,6 +53,9 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 	validateContracts, _ := cmd.Flags().GetBool("validate-contracts")
 	strictContracts, _ := cmd.Flags().GetBool("strict-contracts")
+	if err := validateToolFlag(toolFilter); err != nil {
+		return err
+	}
 
 	// Spec 022 / E2.2: validate skill chain before compile. Issues at error
 	// severity always block; warnings block only when --strict-contracts is

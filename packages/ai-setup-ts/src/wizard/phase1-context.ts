@@ -58,7 +58,7 @@ const MCP_PRESET_OPTIONS: Array<{ value: McpWizardPreset; label: string; hint: s
 
 const TOOL_OPTIONS: Array<{ value: ToolId; label: string; hint: string }> = [
   { value: 'opencode', label: 'OpenCode', hint: 'Uses opencode.json + .opencode/ directory + AGENTS.md' },
-  { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + CLAUDE.md' },
+  { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ with rules, skills, agents + AGENTS.md' },
   { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + root AGENTS.md' },
 ]
 

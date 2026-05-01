@@ -61,7 +61,7 @@ describe('wizard integration (non-interactive)', () => {
     expect(existsSync(path.join(tempDir, 'specs', 'bugfixes'))).toBe(true)
 
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(false)
     expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(false)
     expect(existsSync(path.join(tempDir, '.specify', 'memory'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.specify', 'memory', 'constitution.md'))).toBe(true)

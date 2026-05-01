@@ -1,3 +1,4 @@
+import * as fs from 'node:fs'
 import path from 'node:path'
 import type { ConflictStrategy, FileRecord, SetupScope } from '../types.js'
 import { applyStrategy } from '../utils/conflict-strategy.js'
@@ -41,7 +42,7 @@ export function detectExistingSpecs(targetDir: string): { hasSpecs: boolean; hig
   if (!isDirectory(specsDir)) return { hasSpecs: false, highestNumber: 0 }
 
   let highest = 0
-  const entries = fileExists(specsDir) ? require('node:fs').readdirSync(specsDir, { withFileTypes: true }) : []
+  const entries = fileExists(specsDir) ? fs.readdirSync(specsDir, { withFileTypes: true }) : []
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
     const match = entry.name.match(/^(\d{3})-/)

@@ -182,7 +182,7 @@ function getOperationPrefix(op: FileOperation): string {
  * CREATE  .ai/agents/orchestrator.md
  * CREATE  .ai/skills/tdd-loop.md
  * MODIFY  .gitignore (add 4 entries)
- * REPLACE CLAUDE.md (will overwrite)
+ * REPLACE AGENTS.md (will overwrite)
  */
 export function formatFileOps(files: FileOpItem[]): string {
   return files

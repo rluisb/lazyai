@@ -77,7 +77,7 @@ export async function computePlan(
     )
   }
 
-  // 2) root constitution (e.g., AGENTS.md or CLAUDE.md)
+  // 2) root constitution (e.g., AGENTS.md or GEMINI.md)
   const rootFiles = new Set<string>()
   for (const tool of config.tools) {
     const rootFile = ROOT_FILE_BY_TOOL[tool]

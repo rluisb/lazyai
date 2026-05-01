@@ -86,9 +86,9 @@ type ScaffoldContext struct {
 	Framework           string
 	WorkspaceType       string
 	ProjectInstructions string
-	ProjectDescription  string // optional; substituted into CLAUDE.md [YOUR_PROJECT_DESCRIPTION]
-	Organization        string // optional; substituted into CLAUDE.md [YOUR_ORG]
-	Team                string // optional; substituted into CLAUDE.md [YOUR_TEAM]
+	ProjectDescription  string // optional; substituted into AGENTS.md [YOUR_PROJECT_DESCRIPTION]
+	Organization        string // optional; substituted into AGENTS.md [YOUR_ORG]
+	Team                string // optional; substituted into AGENTS.md [YOUR_TEAM]
 }
 
 // ScaffoldResult holds the outcome of a scaffold run.

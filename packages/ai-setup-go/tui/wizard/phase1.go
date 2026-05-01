@@ -39,7 +39,7 @@ type Phase1Result struct {
 	CliTools      []string
 	EnableServers []string
 	// Organization and Team are optional identity fields that populate the
-	// [YOUR_ORG] / [YOUR_TEAM] placeholders in the generated CLAUDE.md.
+	// [YOUR_ORG] / [YOUR_TEAM] placeholders in the generated AGENTS.md.
 	// Empty → left as <!-- fill-in --> markers.
 	Organization string
 	Team         string
@@ -477,7 +477,7 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 }
 
 // askProjectIdentity collects optional Organization and Team values used to
-// fill [YOUR_ORG] / [YOUR_TEAM] in the generated CLAUDE.md. Both fields
+// fill [YOUR_ORG] / [YOUR_TEAM] in the generated AGENTS.md. Both fields
 // accept empty input (enter to skip — stays as <!-- fill-in --> marker).
 func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (string, string, PhaseAction, error) {
 	org := currentOrg
@@ -486,7 +486,7 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 
 	orgField := huh.NewInput().
 		Title(info.Title()).
-		Description("Organization name (leave blank to skip — stays as <!-- fill-in --> in CLAUDE.md).").
+		Description("Organization name (leave blank to skip — stays as <!-- fill-in --> in AGENTS.md).").
 		Value(&org)
 	teamField := huh.NewInput().
 		Title("Team").

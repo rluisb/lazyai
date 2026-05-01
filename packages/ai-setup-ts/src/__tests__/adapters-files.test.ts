@@ -113,7 +113,6 @@ describe('tool adapters', () => {
     writeFile(path.join(libraryDir, 'tool-agents/root-dir.md'), '# root context')
     writeFile(path.join(libraryDir, 'root/AGENTS.template.md'), '# [YOUR_PROJECT_NAME]\nRoot agent instructions')
     writeFile(path.join(libraryDir, 'root/GEMINI.template.md'), '# GEMINI root')
-    writeFile(path.join(libraryDir, 'root/CLAUDE.template.md'), '# CLAUDE root')
     writeFile(path.join(libraryDir, 'root/copilot-instructions.template.md'), '# Copilot repo instructions')
   })
 
@@ -230,7 +229,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === 'AGENTS.md')).toBe(true)
   })
 
-  it('Claude Code adapter installs .claude layout and root CLAUDE.md', async () => {
+  it('Claude Code adapter installs .claude layout without root CLAUDE.md', async () => {
     const adapter = new ClaudeCodeAdapter()
 
     ensureDir(path.join(libraryDir, 'skills'))
@@ -255,7 +254,7 @@ describe('tool adapters', () => {
     expect(fileExists(path.join(targetDir, '.claude/templates'))).toBe(false)
     expect(fileExists(path.join(targetDir, '.claude/rules'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.claude/rules/typescript.md'))).toBe(true)
-    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'CLAUDE.md'))).toBe(false)
 
     expect(JSON.parse(readFile(path.join(targetDir, '.claude/settings.json')))).toEqual({
       permissions: {
@@ -269,7 +268,7 @@ describe('tool adapters', () => {
     expect(fileRecords.some((f) => f.path === '.claude/settings.json')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/skills/implement/SKILL.md')).toBe(true)
     expect(fileRecords.some((f) => f.path === '.claude/rules/typescript.md')).toBe(true)
-    expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(true)
+    expect(fileRecords.some((f) => f.path === 'CLAUDE.md')).toBe(false)
   })
 
   it('Claude Code adapter keeps global agents under .claude/agents', async () => {

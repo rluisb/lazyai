@@ -304,7 +304,6 @@ This is where `ai-setup` stores core setup data such as:
 From that canonical layer, `ai-setup` compiles tool-native files into the formats each assistant expects:
 
 - `AGENTS.md`
-- `CLAUDE.md`
 - `.github/copilot-instructions.md`
 - `.opencode/`
 - `.claude/`
@@ -411,7 +410,6 @@ my-app/
 ├── .ai-setup.json
 ├── .env.example                # only if enabled MCP servers require env vars
 ├── AGENTS.md
-├── CLAUDE.md
 ├── .mcp.json
 ├── .vscode/
 │   └── mcp.json
@@ -537,7 +535,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 - **everything lives in the workspace root** (the planning repo) — referenced repos are never touched
 - the workspace root gets the full canonical setup: `.ai/`, specs, tool directories, MCP configs
 - referenced repos are scanned for stack detection (language, framework, commands)
-- detected repo info is included in the compiled root files (`AGENTS.md`, `CLAUDE.md`, etc.) so AI agents know what's in the workspace
+- detected repo info is included in the compiled root files (`AGENTS.md`, `.github/copilot-instructions.md`, etc.) so AI agents know what's in the workspace
 - per-repo ledgers and state snapshots are written to the workspace root under `specs/memory/repos/`
 - launch your AI tool from the workspace root — it reads config there and navigates into repos to edit code
 
@@ -566,7 +564,6 @@ planning-repo/                          ← workspace root (everything lives her
 │   └── mcp.json
 ├── .ai-setup.json
 ├── AGENTS.md                           ← includes "Workspace Repos" section with detected stacks
-├── CLAUDE.md                           ← includes "Workspace Repos" section with detected stacks
 ├── .mcp.json
 ├── .opencode/
 │   ├── opencode.json
@@ -664,8 +661,8 @@ AGENTS.md
 
 ### Claude Code
 
-- **Description:** Claude Code root instructions, agents, skills, and rules scaffold
-- **Root file:** `CLAUDE.md`
+- **Description:** Claude Code agents, skills, rules scaffold, with root instructions in `AGENTS.md`
+- **Root file:** `AGENTS.md` (existing root `CLAUDE.md` is preserved and receives an AGENTS.md reference)
 - **Config directory:** `.claude/`
 - **Global scope support:** **Yes** — `~/.claude/`
 - **MCP config:** `.mcp.json`
@@ -676,7 +673,7 @@ AGENTS.md
 <summary>Claude Code file tree (project scope)</summary>
 
 ```text
-CLAUDE.md
+AGENTS.md
 .mcp.json
 .claude/
 ├── CLAUDE.md

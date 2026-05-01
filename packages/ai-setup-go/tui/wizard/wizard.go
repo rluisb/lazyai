@@ -79,7 +79,7 @@ type WizardConfig struct {
 	CLILocalSecrets bool
 
 	// CLIOrg and CLITeam populate [YOUR_ORG] / [YOUR_TEAM] in the generated
-	// CLAUDE.md. Empty values become <!-- fill-in --> markers.
+	// AGENTS.md. Empty values become <!-- fill-in --> markers.
 	CLIOrg  string
 	CLITeam string
 }

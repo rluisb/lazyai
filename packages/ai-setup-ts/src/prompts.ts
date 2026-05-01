@@ -57,7 +57,7 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
       message: 'Which AI tools are you using?',
       options: [
         { value: 'opencode', label: 'OpenCode', hint: 'Uses .opencode/ directory + AGENTS.md' },
-        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + CLAUDE.md' },
+        { value: 'claude-code', label: 'Claude Code', hint: 'Uses .claude/ directory + AGENTS.md' },
         { value: 'copilot', label: 'GitHub Copilot', hint: 'Uses .github/ + copilot-instructions.md' },
       ],
       required: true,
@@ -92,10 +92,9 @@ export async function runPrompts(opts: PromptOptions): Promise<SetupConfig> {
 
 export function outroSuccess(config: SetupConfig): void {
   const rootFiles = new Set<string>()
-  if (config.tools.includes('opencode')) {
+  if (config.tools.includes('opencode') || config.tools.includes('claude-code')) {
     rootFiles.add('AGENTS.md')
   }
-  if (config.tools.includes('claude-code')) rootFiles.add('CLAUDE.md')
   if (config.tools.includes('copilot')) rootFiles.add('.github/copilot-instructions.md')
 
   const fileList = rootFiles.size > 0 ? Array.from(rootFiles).join(', ') : 'your config files'

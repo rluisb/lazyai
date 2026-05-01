@@ -44,6 +44,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 	strategyStr, _ := cmd.Flags().GetString("strategy")
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	skipBackup, _ := cmd.Flags().GetBool("skip-backup")
+	if err := validateToolFlag(toolFlag); err != nil {
+		return err
+	}
 
 	strategy := migration.MergeStrategy(strategyStr)
 	if strategy == "" {

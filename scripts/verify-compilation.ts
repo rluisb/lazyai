@@ -43,7 +43,6 @@ async function main() {
   const expectedTools = ['claude-code', 'opencode', 'copilot']
   const expectedRootTemplates = [
     'root/AGENTS.template.md',
-    'root/CLAUDE.template.md',
     'root/copilot-instructions.template.md',
     'tool-templates/shared/root.template.md',
   ]

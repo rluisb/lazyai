@@ -97,15 +97,13 @@ echo "!docs/memory/AGENTS.md" >> .gitignore
 
 **Verify:**
 ```bash
-ls CLAUDE.md AGENTS.md CLAUDE.local.md
+ls AGENTS.md
 ls docs/rules docs/standards docs/templates docs/adrs docs/features
 ls .pi/agents .pi/skills .pi/templates
 ```
 
 - [ ] Directory structure created
-- [ ] `CLAUDE.md` created
 - [ ] `AGENTS.md` created
-- [ ] `CLAUDE.local.md` is in `.gitignore`
 
 ---
 
@@ -148,7 +146,7 @@ cp AI-Agentic-Setup-Templates/AGENTS.md AGENTS.md
 
 ---
 
-### Step 1.3 — Fill in root AGENTS.md and CLAUDE.md
+### Step 1.3 — Fill in root AGENTS.md
 
 Open `AGENTS.md` and fill every `[YOUR_*]` placeholder:
 
@@ -163,13 +161,7 @@ Open `AGENTS.md` and fill every `[YOUR_*]` placeholder:
 - [ ] Key commands filled
 - [ ] Self-improvement protocol reviewed
 
-Then copy identical content to `CLAUDE.md`:
-```bash
-cp AGENTS.md CLAUDE.md
-```
-
-- [ ] Both files identical: `diff AGENTS.md CLAUDE.md`
-- [ ] Both committed to repo
+- [ ] AGENTS.md committed to repo
 
 ---
 
@@ -750,4 +742,3 @@ Scout → Planner (PRD) → Planner (TechSpec) → Planner (Tasks) → Builder �
 ---
 
 > **This document is executable.** Every checkbox is a real action. Every template is ready to fill. Every validation test confirms the step worked. Work top to bottom. Do not skip validations.
-

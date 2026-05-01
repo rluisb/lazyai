@@ -37,8 +37,8 @@ func init() {
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
 	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Claude Code)")
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
-	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in CLAUDE.md)")
-	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in CLAUDE.md)")
+	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in AGENTS.md)")
+	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in AGENTS.md)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
 	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
@@ -161,6 +161,14 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 	ctx, err := buildScaffoldContext(result, config)
 	if err != nil {
 		return fmt.Errorf("building scaffold context: %w", err)
+	}
+	if ctx.DryRun {
+		fmt.Println("[dry-run] Would create ai-setup files for:")
+		fmt.Printf("  • Scope: %s\n", ctx.SetupScope)
+		fmt.Printf("  • Tools: %v\n", ctx.Tools)
+		fmt.Printf("  • Project: %s\n", ctx.ProjectName)
+		fmt.Println("Dry run complete. No files written.")
+		return nil
 	}
 
 	// Run the scaffold pipeline.
@@ -320,6 +328,14 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	ctx, err := buildScaffoldContext(result, config)
 	if err != nil {
 		return fmt.Errorf("building scaffold context: %w", err)
+	}
+	if ctx.DryRun {
+		fmt.Println("[dry-run] Would create ai-setup files for:")
+		fmt.Printf("  • Scope: %s\n", ctx.SetupScope)
+		fmt.Printf("  • Tools: %v\n", ctx.Tools)
+		fmt.Printf("  • Project: %s\n", ctx.ProjectName)
+		fmt.Println("Dry run complete. No files written.")
+		return nil
 	}
 
 	// Run the scaffold pipeline.

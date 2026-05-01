@@ -121,11 +121,30 @@ func newCompileCommand(dir, tool string, dryRun bool) *cobra.Command {
 	cmd.Flags().String("dir", "", "")
 	cmd.Flags().String("tool", "", "")
 	cmd.Flags().Bool("dry-run", false, "")
+	cmd.Flags().Bool("local-secrets", false, "")
+	cmd.Flags().Bool("validate-contracts", true, "")
+	cmd.Flags().Bool("strict-contracts", false, "")
 	_ = cmd.Flags().Set("dir", dir)
 	if tool != "" {
 		_ = cmd.Flags().Set("tool", tool)
 	}
 	_ = cmd.Flags().Set("dry-run", boolString(dryRun))
+	return cmd
+}
+
+func newImportCommand(tool string, nonInteractive, preview bool) *cobra.Command {
+	cmd := &cobra.Command{}
+	cmd.Flags().String("tool", "", "")
+	cmd.Flags().Bool("non-interactive", false, "")
+	cmd.Flags().Bool("preview", false, "")
+	cmd.Flags().String("strategy", "smart", "")
+	cmd.Flags().Bool("verbose", false, "")
+	cmd.Flags().Bool("skip-backup", false, "")
+	if tool != "" {
+		_ = cmd.Flags().Set("tool", tool)
+	}
+	_ = cmd.Flags().Set("non-interactive", boolString(nonInteractive))
+	_ = cmd.Flags().Set("preview", boolString(preview))
 	return cmd
 }
 

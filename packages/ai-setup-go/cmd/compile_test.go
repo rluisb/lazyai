@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -43,6 +44,45 @@ func TestCompileMissingConfigReturnsError(t *testing.T) {
 	cmd := newCompileCommand(dir, "", false)
 	if err := runCompile(cmd, nil); err == nil || err.Error() != "no MCP config found at .ai/mcp.json. Run 'ai-setup init' first" {
 		t.Fatalf("runCompile error = %v, want missing-config error", err)
+	}
+}
+
+func TestCompileWithUnsupportedToolFailsFastBeforeConfigValidation(t *testing.T) {
+	dir := t.TempDir()
+	cmd := newCompileCommand(dir, "gemini", true)
+
+	stdout, stderr := captureOutput(t, func() {
+		err := runCompile(cmd, nil)
+		if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: opencode, claude-code, copilot)" {
+			t.Fatalf("runCompile error = %v, want unsupported-tool error", err)
+		}
+	})
+
+	combined := stdout + stderr
+	if strings.Contains(combined, "contract") {
+		t.Fatalf("output = %q, did not expect contract validation output", combined)
+	}
+	if strings.Contains(combined, "MCP config") {
+		t.Fatalf("output = %q, did not expect MCP config validation output", combined)
+	}
+}
+
+func TestCompileWithSupportedToolDryRunSucceeds(t *testing.T) {
+	dir := t.TempDir()
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
+	})
+	writeCanonicalMCPConfig(t, dir)
+
+	cmd := newCompileCommand(dir, "opencode", true)
+	stdout, _ := captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile dry-run: %v", err)
+		}
+	})
+
+	if !strings.Contains(stdout, "Would compile MCP config for OpenCode") {
+		t.Fatalf("stdout = %q, want OpenCode dry-run compile output", stdout)
 	}
 }
 

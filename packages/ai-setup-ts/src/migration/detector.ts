@@ -32,27 +32,10 @@ export const DETECTION_PATTERNS: Record<string, string[]> = {
     '.claude/commands/*.md',
     '.claude/rules/*.md',
   ],
-  gemini: [
-    '.gemini/**/*',
-    'GEMINI.md',
-    '.gemini/agents/*.md',
-    '.gemini/skills/*.md',
-  ],
   copilot: [
     '.github/copilot-instructions.md',
     '.github/prompts/*.md',
     '.github/instructions/*.md',
-  ],
-  codex: [
-    '.codex/**/*',
-    '.codex/config.toml',
-    '.agents/skills/*.md',
-  ],
-  pi: [
-    '.pi/**/*',
-    '.pi/settings.json',
-    '.pi/skills/*.md',
-    '.pi/prompts/*.md',
   ],
 };
 
@@ -94,10 +77,7 @@ export const OBSERVED_PATTERNS: Record<string, string[]> = {
 export const DETECTION_NAMES: Record<string, string> = {
   opencode: 'OpenCode',
   'claude-code': 'Claude Code',
-  gemini: 'Gemini CLI',
   copilot: 'GitHub Copilot',
-  codex: 'Codex (OpenAI)',
-  pi: 'Pi',
   cursor: 'Cursor',
   aider: 'Aider',
   continue: 'Continue',
@@ -107,7 +87,7 @@ export const DETECTION_NAMES: Record<string, string> = {
 }
 
 /** Tools that ai-setup can install and manage. */
-export const SUPPORTED_TOOLS = new Set(['opencode', 'claude-code', 'gemini', 'copilot', 'codex', 'pi'])
+export const SUPPORTED_TOOLS = new Set(['opencode', 'claude-code', 'copilot'])
 
 /** All detectable tools (supported + observed). */
 export function allDetectableTools(): string[] {
@@ -247,7 +227,7 @@ function calculatePriority(filePath: string, _adapterId: string): number {
   const normalized = filePath.toLowerCase();
 
   // Root config files are highest priority
-  if (/^AGENTS\.md$|^CLAUDE\.md$|^GEMINI\.md$/i.test(filePath)) {
+  if (/^AGENTS\.md$|^CLAUDE\.md$/i.test(filePath)) {
     priority += 100;
   }
 
@@ -298,7 +278,6 @@ function calculateConfidence(files: DetectedFile[], _adapterId: string): number 
   const hasRootConfig = files.some(f => 
     f.path === 'AGENTS.md' || 
     f.path === 'CLAUDE.md' ||
-    f.path === 'GEMINI.md' ||
     f.path.includes('copilot-instructions')
   );
   if (hasRootConfig) {

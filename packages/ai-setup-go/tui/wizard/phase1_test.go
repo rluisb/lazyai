@@ -13,7 +13,7 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 
 	defaults := &Phase1Result{
 		Scope:         types.SetupScopeProject,
-		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 		Skills:        []types.SkillId{types.SkillIdImplement},
 		Agents:        []types.AgentId{types.AgentIdBuilder},
 		McpPreset:     McpPresetRecommended,
@@ -52,7 +52,7 @@ func TestBuildPhase1Result(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCodex}
+			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCopilot}
 			skills := []types.SkillId{types.SkillIdImplement, types.SkillIdPlan}
 			agents := []types.AgentId{types.AgentIdBuilder, types.AgentIdReviewer}
 			cliTools := []string{"gh"}
@@ -85,7 +85,7 @@ func TestBuildPhase1Result(t *testing.T) {
 				t.Fatalf("EnableServers = %#v, want %#v", result.EnableServers, servers)
 			}
 
-			tools[0] = types.ToolIdGemini
+			tools[0] = types.ToolIdClaudeCode
 			skills[0] = types.SkillIdResearch
 			agents[0] = types.AgentIdScout
 			cliTools[0] = "rtk"
@@ -169,7 +169,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 
 	defaults := &Phase1Result{
 		Scope:       types.SetupScopeProject,
-		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdGemini},
+		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 		Skills:      []types.SkillId{types.SkillIdImplement, types.SkillIdPlan},
 		Agents:      []types.AgentId{types.AgentIdBuilder},
 		McpPreset:   McpPresetRecommended,
@@ -177,7 +177,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	}
 
 	info := phase1StepInfoFor(2, types.SetupScopeProject, defaults)
-	if got, want := info.Title(), "Setup Context — 2/9: AI Tools (previous: opencode, gemini)"; got != want {
+	if got, want := info.Title(), "Setup Context — 2/9: AI Tools (previous: opencode, claude-code)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
@@ -235,25 +235,22 @@ func TestDetectInstalledCliTools(t *testing.T) {
 	}
 }
 
-func TestToolOptionsForScope_FiltersCopilotGlobal(t *testing.T) {
+func TestToolOptionsForScope_ReturnsSupportedTools(t *testing.T) {
 	t.Parallel()
 
 	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	// Count: 5 tools at global (Pi excluded — project/workspace only)
-	if len(globalOpts) != 5 {
-		t.Errorf("global options count = %d, want 5", len(globalOpts))
+	if len(globalOpts) != 3 {
+		t.Errorf("global options count = %d, want 3", len(globalOpts))
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	// Count: 6 tools at project (includes Pi)
-	if len(projectOpts) != 6 {
-		t.Errorf("project options count = %d, want 6", len(projectOpts))
+	if len(projectOpts) != 3 {
+		t.Errorf("project options count = %d, want 3", len(projectOpts))
 	}
 
 	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	// Count: 6 tools at workspace (includes Pi)
-	if len(workspaceOpts) != 6 {
-		t.Errorf("workspace options count = %d, want 6", len(workspaceOpts))
+	if len(workspaceOpts) != 3 {
+		t.Errorf("workspace options count = %d, want 3", len(workspaceOpts))
 	}
 }
 
@@ -263,13 +260,11 @@ func TestFilterToolsByScope_DropsIncompatible(t *testing.T) {
 	tools := []types.ToolId{
 		types.ToolIdClaudeCode,
 		types.ToolIdCopilot,
-		types.ToolIdGemini,
+		types.ToolId("gemini"),
 	}
 	got := filterToolsByScope(tools, types.SetupScopeGlobal)
-	// Copilot is now supported at global scope (with probe gating)
-	// All 3 tools should remain
-	if len(got) != 3 {
-		t.Errorf("filtered tools count = %d, want 3", len(got))
+	if len(got) != 2 {
+		t.Errorf("filtered tools count = %d, want 2", len(got))
 	}
 }
 

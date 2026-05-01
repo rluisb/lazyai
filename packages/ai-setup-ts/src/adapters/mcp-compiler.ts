@@ -1,7 +1,6 @@
 import * as childProcess from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml'
 import type { FileRecord, SetupScope, ToolId } from '../types.js'
 import { copyFile, ensureDir, fileExists, fileHash, readFile, writeFile } from '../utils/files.js'
 import { stripJsonComments } from '../utils/jsonc.js'
@@ -183,23 +182,6 @@ function toCopilotCliMcp(servers: Record<string, McpServer>): Record<string, unk
   return { mcpServers: entries }
 }
 
-function toGeminiSettings(servers: Record<string, McpServer>): Record<string, unknown> {
-  const mcpServers: Record<string, unknown> = {}
-  for (const [name, server] of Object.entries(servers)) {
-    if (server.url) {
-      console.warn(`⚠️  Skipping remote server "${name}" for gemini (not supported)`)
-      continue
-    }
-    const entry: Record<string, unknown> = {
-      command: server.command,
-      args: server.args,
-    }
-    if (server.env) entry.env = transformEnvSyntax(server.env, '$$$1')
-    mcpServers[name] = entry
-  }
-  return { mcpServers }
-}
-
 function transformEnvSyntax(envObj: Record<string, string>, targetPattern: string): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [key, value] of Object.entries(envObj)) {
@@ -216,10 +198,6 @@ function resolveToolRoot(toolId: ToolId, targetDir: string, setupScope: SetupSco
       return path.join(targetDir, '.opencode')
     case 'claude-code':
       return path.join(targetDir, '.claude')
-    case 'gemini':
-      return path.join(targetDir, '.gemini')
-    case 'codex':
-      return path.join(targetDir, '.codex')
     default:
       return targetDir
   }
@@ -307,57 +285,6 @@ function mergeJsonFile(pathname: string, patch: Record<string, unknown>): Record
   return merged
 }
 
-function backupTomlFile(pathname: string): void {
-  if (!fileExists(pathname)) return
-
-  const backupPath = `${pathname}.bak`
-  if (fileExists(backupPath)) return
-
-  writeFile(backupPath, readFile(pathname))
-}
-
-function readTomlObject(pathname: string): Record<string, unknown> {
-  if (!fileExists(pathname)) return {}
-
-  try {
-    const parsed = parseToml(readFile(pathname)) as unknown
-    return isPlainObject(parsed) ? parsed : {}
-  } catch (error) {
-    throw new Error(`Failed to parse TOML config ${pathname}: ${errorMessage(error)}`)
-  }
-}
-
-function mergeCodexTomlFile(pathname: string, servers: Record<string, McpServer>): Record<string, unknown> {
-  const existing = readTomlObject(pathname)
-  if (fileExists(pathname)) {
-    backupTomlFile(pathname)
-  }
-
-  const existingMcpServers = isPlainObject(existing.mcp_servers) ? existing.mcp_servers : {}
-  const managedNames = new Set(Object.keys(servers))
-  const preservedServers: Record<string, unknown> = {}
-
-  for (const [name, config] of Object.entries(existingMcpServers)) {
-    if (!managedNames.has(name)) {
-      preservedServers[name] = config
-    }
-  }
-
-  const patch = toCodexTomlPatch(servers)
-  const managedServers = isPlainObject(patch.mcp_servers) ? patch.mcp_servers : {}
-  const merged: Record<string, unknown> = {
-    ...existing,
-    mcp_servers: {
-      ...preservedServers,
-      ...managedServers,
-    },
-  }
-
-  const content = stringifyToml(sortDeep(merged) as Record<string, unknown>)
-  writeFile(pathname, content.endsWith('\n') ? content : `${content}\n`)
-  return merged
-}
-
 function claudeCliAvailable(): boolean {
   try {
     mcpCompilerInternals.execFileSync('claude', ['--version'], { stdio: 'ignore' })
@@ -402,15 +329,6 @@ function reconcileClaudeMcp(
   }
 }
 
-function codexCliAvailable(): boolean {
-  try {
-    mcpCompilerInternals.execFileSync('codex', ['--version'], { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
-
 function copilotProbePasses(homeDir: string): boolean {
   if (fileExists(path.join(homeDir, '.copilot'))) {
     return true
@@ -424,45 +342,6 @@ function copilotProbePasses(homeDir: string): boolean {
   }
 }
 
-function toCodexTomlPatch(servers: Record<string, McpServer>): Record<string, unknown> {
-  const mcpServers: Record<string, unknown> = {}
-
-  for (const [name, server] of Object.entries(servers).sort(([a], [b]) => a.localeCompare(b))) {
-    if (server.url || !server.command) continue
-
-    const entry: Record<string, unknown> = {}
-    entry.command = server.command
-    if (server.args && server.args.length > 0) entry.args = server.args
-    if (server.env && Object.keys(server.env).length > 0) entry.env = sortDeep(server.env)
-    mcpServers[name] = entry
-  }
-
-  return { mcp_servers: mcpServers }
-}
-
-function reconcileCodexMcp(servers: Record<string, McpServer>, toolTargetDir: string): boolean {
-  if (!codexCliAvailable()) return false
-
-  let success = false
-  for (const [name, server] of Object.entries(servers).sort(([a], [b]) => a.localeCompare(b))) {
-    if (server.url || !server.command) continue
-
-    const args = ['mcp', 'add', name]
-    for (const [key, value] of Object.entries(server.env ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
-      args.push('--env', `${key}=${value}`)
-    }
-    args.push('--', server.command, ...(server.args ?? []))
-
-    try {
-      mcpCompilerInternals.execFileSync('codex', args, { stdio: 'pipe', cwd: toolTargetDir })
-      success = true
-    } catch {
-      return false
-    }
-  }
-  return success
-}
-
 export function driveClaudeMcpViaCli(
   canonicalDir: string,
   toolTargetDir: string,
@@ -473,14 +352,6 @@ export function driveClaudeMcpViaCli(
   const enabledServers = getEnabledServers(catalog)
   if (Object.keys(enabledServers).length === 0) return false
   return reconcileClaudeMcp(toClaudeCodeMcpInner(enabledServers), setupScope, toolTargetDir)
-}
-
-export function driveCodexMcpViaCli(canonicalDir: string, toolTargetDir: string): boolean {
-  const catalog = readCanonicalMcp(canonicalDir)
-  if (!catalog) return false
-  const enabledServers = getEnabledServers(catalog)
-  if (Object.keys(enabledServers).length === 0) return false
-  return reconcileCodexMcp(enabledServers, toolTargetDir)
 }
 
 function isDriveCliEnabled(opts: { driveCLI?: boolean; driveCli?: boolean }): boolean {
@@ -615,36 +486,5 @@ export async function compileMcp(opts: CompileMcpOptions): Promise<void> {
       break
     }
 
-    case 'gemini': {
-      const toolRoot = resolveToolRoot('gemini', opts.toolTargetDir, setupScope)
-      ensureDir(toolRoot)
-      const settingsPath = path.join(toolRoot, 'settings.json')
-      const content = toGeminiSettings(enabledServers)
-      writeFile(settingsPath, `${JSON.stringify(content, null, 2)}\n`)
-      upsertFileRecord(opts.fileRecords, {
-        path: path.relative(opts.toolTargetDir, settingsPath),
-        hash: fileHash(settingsPath),
-        source: 'compiled:mcp:gemini',
-        owner: 'library',
-      })
-      break
-    }
-
-    case 'codex': {
-      const toolRoot = resolveToolRoot('codex', opts.toolTargetDir, setupScope)
-      ensureDir(toolRoot)
-      const configPath = path.join(toolRoot, 'config.toml')
-      if (isDriveCliEnabled(opts)) {
-        driveCodexMcpViaCli(opts.canonicalDir, opts.toolTargetDir)
-      }
-      mergeCodexTomlFile(configPath, enabledServers)
-      upsertFileRecord(opts.fileRecords, {
-        path: path.relative(opts.toolTargetDir, configPath),
-        hash: fileHash(configPath),
-        source: 'compiled:mcp:codex',
-        owner: 'library',
-      })
-      break
-    }
   }
 }

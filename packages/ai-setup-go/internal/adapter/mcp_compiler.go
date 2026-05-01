@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/configmerge"
@@ -86,13 +85,8 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileClaudeCodeMCP(ctx, enabledServers)
 	case types.ToolIdCopilot:
 		return compileCopilotMCP(ctx, enabledServers)
-	case types.ToolIdGemini:
-		return compileGeminiMCP(ctx, enabledServers)
-	case types.ToolIdCodex:
-		return compileCodexMCP(ctx, enabledServers)
 	default:
-		// Tool has no MCP config format — return unchanged.
-		return ctx.FileRecords, nil
+		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", toolId)
 	}
 }
 
@@ -545,52 +539,6 @@ func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini MCP compilation
-// ---------------------------------------------------------------------------
-
-func compileGeminiMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
-	root, err := ResolveToolRoot(types.ToolIdGemini, ctx.SetupScope, ctx.toAdapterContext())
-	if err != nil {
-		return ctx.FileRecords, err
-	}
-	_ = files.EnsureDir(root)
-	settingsPath := filepath.Join(root, "settings.json")
-	content := toGeminiSettings(servers)
-
-	if err := WriteJSONFile(settingsPath, content); err != nil {
-		return ctx.FileRecords, err
-	}
-
-	hash, _ := files.FileHash(settingsPath)
-	recordPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
-	if recordPath == "" || recordPath == "." {
-		recordPath = settingsPath
-	}
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: recordPath, Hash: hash, Source: "compiled:mcp:gemini", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-func toGeminiSettings(servers map[string]McpServer) map[string]any {
-	mcpServers := make(map[string]any)
-	for name, server := range servers {
-		if server.URL != "" {
-			log.Printf("Skipping remote server %q for gemini (not supported)", name)
-			continue
-		}
-		entry := map[string]any{
-			"command": server.Command,
-			"args":    server.Args,
-		}
-		if server.Env != nil {
-			entry["env"] = transformEnvSyntax(server.Env, "$$$1")
-		}
-		mcpServers[name] = entry
-	}
-	return map[string]any{"mcpServers": mcpServers}
-}
-
-// ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
@@ -604,51 +552,3 @@ func transformEnvSyntax(envObj map[string]string, targetPattern string) map[stri
 	}
 	return result
 }
-
-// ---------------------------------------------------------------------------
-// Codex MCP compilation
-// ---------------------------------------------------------------------------
-
-// compileCodexMCP writes enabled MCP servers into the scope-correct config.toml
-// under the [mcp_servers.*] tables using deep-merge so user-authored keys survive.
-func compileCodexMCP(ctx CompileContext, enabledServers map[string]McpServer) ([]types.TrackedFile, error) {
-	configRoot, _, err := ResolveCodexRoots(ctx.SetupScope, ctx.toAdapterContext())
-	if err != nil {
-		return ctx.FileRecords, err
-	}
-	configPath := filepath.Join(configRoot, "config.toml")
-
-	mcpServers := make(map[string]any, len(enabledServers))
-	for name, srv := range enabledServers {
-		entry := map[string]any{}
-		if srv.Command != "" {
-			entry["command"] = srv.Command
-		}
-		if len(srv.Args) > 0 {
-			entry["args"] = srv.Args
-		}
-		if len(srv.Env) > 0 {
-			entry["env"] = srv.Env
-		}
-		mcpServers[name] = entry
-	}
-
-	patch := map[string]any{"mcp_servers": mcpServers}
-	if _, err := configmerge.MergeTOMLFile(configPath, patch); err != nil {
-		return ctx.FileRecords, err
-	}
-
-	hash, _ := files.FileHash(configPath)
-	recordPath, _ := filepath.Rel(ctx.TargetDir, configPath)
-	if recordPath == "" || recordPath == "." {
-		recordPath = configPath
-	}
-	log.Printf("[codex] compiled MCP config -> %s (%d servers)", configPath, len(enabledServers))
-	return append(ctx.FileRecords, types.TrackedFile{
-		Path: recordPath, Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerLibrary,
-	}), nil
-}
-
-// Ensure all format strings with %s in log statements are correct.
-// This blank import ensures strings is available.
-var _ = strings.TrimSpace

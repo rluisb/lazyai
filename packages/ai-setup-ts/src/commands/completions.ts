@@ -12,7 +12,7 @@ type Shell = 'bash' | 'zsh' | 'fish'
 
 const COMMANDS = ['init', 'add', 'update', 'doctor', 'status', 'compile', 'eject', 'list', 'info', 'create', 'completions']
 
-const TOOLS = ['opencode', 'claude-code', 'copilot', 'gemini', 'codex']
+const TOOLS = ['opencode', 'claude-code', 'copilot']
 
 const SCOPES = ['project', 'global', 'workspace']
 
@@ -135,8 +135,6 @@ _ai_setup() {
         'opencode:OpenCode AI assistant'
         'claude-code:Claude Code assistant'
         'copilot:GitHub Copilot'
-        'gemini:Google Gemini'
-        'codex:OpenAI Codex'
     )
 
     scopes=(

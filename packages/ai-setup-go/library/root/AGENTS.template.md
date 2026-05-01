@@ -13,7 +13,7 @@ Default to repository conventions before introducing new patterns.
 
 > This file is read at the start of every AI session.
 > Keep it accurate. Keep it current. Treat it like code.
-> Mirror content to CLAUDE.md for Claude/pi compatibility.
+> Mirror content to CLAUDE.md for Claude Code compatibility.
 
 ---
 

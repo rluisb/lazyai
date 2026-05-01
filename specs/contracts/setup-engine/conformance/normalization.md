@@ -72,4 +72,4 @@ Any of the following should fail parity:
 - TS emits a tool, scope, state, action, or preset not in the contract.
 - TS changes Go field names or casing.
 - TS normalizes away real state differences such as `adoptable` vs `managed`.
-- TS treats global Pi as supported.
+- TS emits removed tool IDs (`codex`, `gemini`, or `pi`) as supported.

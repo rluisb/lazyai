@@ -51,7 +51,7 @@ describe('wizard integration (non-interactive)', () => {
       interactive: false,
       cliOverrides: {
         scope: 'project',
-        tools: ['opencode', 'claude-code', 'gemini', 'copilot', 'codex'],
+        tools: ['opencode', 'claude-code', 'copilot'],
         name: 'test-project',
       },
       targetDir: tempDir,
@@ -62,13 +62,13 @@ describe('wizard integration (non-interactive)', () => {
 
     expect(existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, 'CLAUDE.md'))).toBe(true)
-    expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(true)
+    expect(existsSync(path.join(tempDir, 'GEMINI.md'))).toBe(false)
     expect(existsSync(path.join(tempDir, '.specify', 'memory'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.specify', 'memory', 'constitution.md'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.ai', 'mcp.json'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.opencode', 'opencode.jsonc'))).toBe(true)
     expect(existsSync(path.join(tempDir, '.vscode', 'mcp.json'))).toBe(true)
-    expect(existsSync(path.join(tempDir, '.gemini', 'settings.json'))).toBe(true)
+    expect(existsSync(path.join(tempDir, '.gemini', 'settings.json'))).toBe(false)
 
     expect(existsSync(path.join(tempDir, '.ai-setup.json'))).toBe(true)
 
@@ -174,7 +174,7 @@ describe('wizard integration (non-interactive)', () => {
     expect(manifest.config.tools).toEqual(['opencode'])
   })
 
-  it('global scope scaffolds into ~/.ai and logs unsupported tools', async () => {
+  it('global scope scaffolds supported tools into ~/.ai', async () => {
     const homeDir = mkdtempSync(path.join(tmpdir(), 'ai-setup-home-'))
     mkdirSync(path.join(homeDir, '.copilot'), { recursive: true })
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
@@ -184,7 +184,7 @@ describe('wizard integration (non-interactive)', () => {
       homeDir,
       cliOverrides: {
         scope: 'global',
-        tools: ['opencode', 'claude-code', 'copilot', 'gemini', 'codex'],
+        tools: ['opencode', 'claude-code', 'copilot'],
       },
       targetDir: tempDir,
     })
@@ -203,12 +203,10 @@ describe('wizard integration (non-interactive)', () => {
     const manifest = JSON.parse(readFileSync(path.join(canonicalDir, '.ai-setup.json'), 'utf-8'))
     expect(manifest.config.setupScope).toBe('global')
     expect(manifest.config.targetDir).toBe(canonicalDir)
-    expect(manifest.config.tools).toEqual(['opencode', 'claude-code', 'copilot', 'gemini', 'codex'])
+    expect(manifest.config.tools).toEqual(['opencode', 'claude-code', 'copilot'])
     expect(manifest.config.projectName).toBe('global')
 
-    // Gemini and Codex now support global scope, so no unsupported-tool messages for them.
-    // Only pi would trigger a message, and it's not in the tools list.
-    expect(infoSpy).not.toHaveBeenCalledWith("Gemini doesn't support file-based global config. Use project scope instead.")
+    expect(infoSpy).not.toHaveBeenCalled()
 
     rmSync(homeDir, { recursive: true, force: true })
     infoSpy.mockRestore()

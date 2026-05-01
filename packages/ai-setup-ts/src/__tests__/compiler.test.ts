@@ -673,8 +673,8 @@ describe('Real library integration', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('compiles all 5 supported tools without errors', () => {
-    const tools: ToolId[] = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini']
+  it('compiles all supported tools without errors', () => {
+    const tools: ToolId[] = ['claude-code', 'opencode', 'copilot']
     const context: FragmentContext = {
       projectName: 'Integration Test',
       planningDir: 'planning',

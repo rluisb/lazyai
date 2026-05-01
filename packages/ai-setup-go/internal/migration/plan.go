@@ -120,7 +120,6 @@ func FormatPlan(plan *MigrationPlan) string {
 	adapterLabels := map[string]string{
 		"opencode":    "OpenCode",
 		"claude-code": "Claude Code",
-		"gemini":      "Gemini CLI",
 		"copilot":     "GitHub Copilot",
 	}
 

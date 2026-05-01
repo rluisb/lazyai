@@ -27,6 +27,6 @@ export function loadRuntimeCatalog(options: RuntimeCatalogOptions): Orchestratio
   })
 }
 
-function isResolverHostCli(hostCli: HostCli | undefined): hostCli is 'opencode' | 'claude-code' | 'codex' {
-  return hostCli === 'opencode' || hostCli === 'claude-code' || hostCli === 'codex'
+function isResolverHostCli(hostCli: HostCli | undefined): hostCli is 'opencode' | 'claude-code' | 'copilot' {
+  return hostCli === 'opencode' || hostCli === 'claude-code' || hostCli === 'copilot'
 }

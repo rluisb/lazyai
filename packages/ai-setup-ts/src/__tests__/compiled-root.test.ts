@@ -54,7 +54,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'],
+      tools: ['claude-code', 'opencode', 'copilot'],
       projectName: 'test-project',
       planningDir: '.ai/planning',
       fileRecords,
@@ -67,7 +67,7 @@ describe('scaffoldCompiledRoot', () => {
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, '.github/copilot-instructions.md'))).toBe(true)
     expect(fileExists(path.join(targetDir, 'INSTRUCTIONS.md'))).toBe(false)
-    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(true)
+    expect(fileExists(path.join(targetDir, 'GEMINI.md'))).toBe(false)
 
     // Verify file records have correct source annotations
     const claudeRecord = fileRecords.find((r) => r.path === 'CLAUDE.md')
@@ -159,7 +159,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('compiles shared root outputs for all supported tools with camelCase feature conditions', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
+    const tools = ['claude-code', 'opencode', 'copilot'] as const
 
     await scaffoldCompiledRoot({
       targetDir,
@@ -176,7 +176,6 @@ describe('scaffoldCompiledRoot', () => {
       'CLAUDE.md',
       'AGENTS.md',
       '.github/copilot-instructions.md',
-      'GEMINI.md',
     ]
 
     for (const rootFile of rootFiles) {
@@ -209,7 +208,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['claude-code', 'gemini'],
+      tools: ['claude-code', 'copilot'],
       projectName: 'records-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -258,7 +257,7 @@ describe('scaffoldCompiledRoot', () => {
     await scaffoldCompiledRoot({
       targetDir,
       libraryDir,
-      tools: ['opencode', 'codex'],
+      tools: ['opencode', 'copilot'],
       projectName: 'multi-tool-test',
       planningDir: '.ai/planning',
       fileRecords,
@@ -266,9 +265,7 @@ describe('scaffoldCompiledRoot', () => {
       perFileOverrides: new Map(),
     })
 
-    // Both opencode and codex write AGENTS.md, but they have different source origins
-    // There may be one AGENTS.md file with the last tool's source, or multiple records
-    // This is a behavior test: verify that both tools processed
+    // Both supported tools should process without requiring removed tool support.
     expect(fileRecords.length).toBeGreaterThan(0)
     expect(fileExists(path.join(targetDir, 'AGENTS.md'))).toBe(true)
   })
@@ -339,7 +336,7 @@ describe('scaffoldCompiledRoot', () => {
   })
 
   it('generates valid content for all supported tools', async () => {
-    const tools = ['claude-code', 'opencode', 'codex', 'copilot', 'gemini'] as const
+    const tools = ['claude-code', 'opencode', 'copilot'] as const
 
     for (const tool of tools) {
       const toolTargetDir = makeTempDir(`ai-setup-tool-${tool}-`)

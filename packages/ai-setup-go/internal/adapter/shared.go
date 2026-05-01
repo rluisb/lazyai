@@ -187,7 +187,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 type CopyLibraryDirectoryOption struct {
 	Ctx          *AdapterContext
 	SourceSubdir string // subdirectory within library (e.g. "agents", "skills")
-	SelectionKey string // "agents", "skills", "prompts", "commands", "chatmodes", "opencodeCommands", or "opencodeModes"
+	SelectionKey string // "agents", "skills", "prompts", "chatmodes", "opencodeCommands", or "opencodeModes"
 	ToDestPath   func(file string) string
 	WarnOnSkip   bool
 	Transform    func(content []byte) []byte
@@ -222,7 +222,6 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
 	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
 	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
-	selectedCommands := selectionSet(opts.Ctx.Selections.Commands)
 	selectedChatModes := selectionSet(opts.Ctx.Selections.ChatModes)
 	selectedOpenCodeCommands := selectionSet(opts.Ctx.Selections.OpenCodeCommands)
 	selectedOpenCodeModes := selectionSet(opts.Ctx.Selections.OpenCodeModes)
@@ -256,10 +255,6 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
 				continue
 			}
-		case "commands":
-			if selectedCommands != nil && !selectedCommands[types.CommandId(fileIDVal)] {
-				continue
-			}
 		case "chatmodes":
 			if selectedChatModes != nil && !selectedChatModes[types.ChatModeId(fileIDVal)] {
 				continue
@@ -288,7 +283,6 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 	selectedAgents := selectionSet(opts.Ctx.Selections.Agents)
 	selectedSkills := selectionSet(opts.Ctx.Selections.Skills)
 	selectedPrompts := selectionSet(opts.Ctx.Selections.Prompts)
-	selectedCommands := selectionSet(opts.Ctx.Selections.Commands)
 	selectedChatModes := selectionSet(opts.Ctx.Selections.ChatModes)
 	selectedOpenCodeCommands := selectionSet(opts.Ctx.Selections.OpenCodeCommands)
 	selectedOpenCodeModes := selectionSet(opts.Ctx.Selections.OpenCodeModes)
@@ -320,10 +314,6 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 			}
 		case "prompts":
 			if selectedPrompts != nil && !selectedPrompts[types.PromptId(fileIDVal)] {
-				continue
-			}
-		case "commands":
-			if selectedCommands != nil && !selectedCommands[types.CommandId(fileIDVal)] {
 				continue
 			}
 		case "chatmodes":

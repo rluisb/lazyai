@@ -1,7 +1,0 @@
-name = "speckit-plan"
-description = "Create a technical implementation plan with your chosen tech stack"
-prompt = """
-Load and follow the `speckit-plan` skill.
-
-Creates the technical implementation plan from the spec. Defines tech stack, architecture, constitution compliance check, and project structure. Produces `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, and `contracts/`.
-"""

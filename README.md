@@ -17,7 +17,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
   - [Global Scope](#52-global-scope)
   - [Workspace Scope](#53-workspace-scope)
 - [Supported Tools](#supported-tools)
-  - [OpenCode](#opencode) · [Claude Code](#claude-code) · [Gemini CLI](#gemini-cli) · [GitHub Copilot](#github-copilot) · [Codex](#codex)
+  - [OpenCode](#opencode) · [Claude Code](#claude-code) · [GitHub Copilot](#github-copilot)
 - [Commands Reference](#commands-reference)
   - [`init`](#init) · [`compile`](#compile) · [`add`](#add) · [`update`](#update) · [`doctor`](#doctor) · [`status`](#status) · [`create`](#create) · [`import`](#import) · [`migrate`](#migrate) · [`eject`](#eject) · [`list`](#list) · [`info`](#info) · [`orchestration`](#orchestration) · [`completions`](#completions)
 - [Library Content](#library-content)
@@ -53,12 +53,11 @@ npx github:ricardoborges-teachable/ai-setup init
 This launches the setup wizard, where you choose:
 
 - scope: `project`, `global`, or `workspace`
-- AI tools: OpenCode, Claude Code, Gemini CLI, GitHub Copilot, Codex
+- AI tools: OpenCode, Claude Code, GitHub Copilot
 - CLI tools: which locally installed CLI tools to use as execution surfaces
 - optional MCP integrations
 - optional orchestration scaffolding via `orchestrator`
 - feature preset and git conventions
-- Codex install detection (skips Codex adapter when Codex CLI is not installed)
 
 ### Non-interactive setup
 
@@ -67,7 +66,7 @@ This launches the setup wizard, where you choose:
 ```bash
 npx github:ricardoborges-teachable/ai-setup init \
   --scope project \
-  --tools opencode,claude-code,copilot,gemini,codex \
+  --tools opencode,claude-code,copilot \
   --enable-servers orchestrator \
   --name my-app \
   --preset standard \
@@ -105,7 +104,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 1. create canonical, tool-agnostic files under `.ai/`
 2. scaffold specs/templates/rules/infra based on the selected preset
 3. compile root instructions for each selected tool
-4. generate tool-native directories such as `.opencode/`, `.claude/`, `.gemini/`, `.github/`, and `.agents/`
+4. generate tool-native directories such as `.opencode/`, `.claude/`, `.github/`, and `.vscode/`
 5. write `.ai-setup.json` to track managed files, hashes, selections, and operations
 6. generate `.env.example` when enabled MCP servers require environment variables
 7. scaffold `.ai/orchestration/` when the optional `orchestrator` MCP server is enabled
@@ -185,7 +184,7 @@ This is **opt-in**. If you never enable `orchestrator`, nothing about your exist
 ```bash
 ai-setup init \
   --scope project \
-  --tools opencode,claude-code,codex,copilot,gemini \
+  --tools opencode,claude-code,copilot \
   --enable-servers orchestrator \
   --name my-app \
   --preset standard \
@@ -238,11 +237,9 @@ When `orchestrator` is enabled, `ai-setup` also generates tool-specific orchestr
 
 - OpenCode: `.opencode/agents/orchestrator.md`
 - Claude Code: `.claude/agents/orchestrator.md`
-- Codex: `.agents/skills/orchestrator/SKILL.md`
-- Gemini CLI: `.gemini/skills/orchestrator/SKILL.md`
 - GitHub Copilot: `.github/prompts/orchestrator.prompt.md`
 
-MCP server registration is compiled for tools that have project-local MCP config output. Codex still gets the orchestrator skill scaffold, but `ai-setup` does not generate a project-local Codex MCP config file.
+MCP server registration is compiled for supported tools that have project-local MCP config output.
 
 ### How to use the orchestrator MCP in your CLI tool
 
@@ -271,21 +268,10 @@ MCP server registration is compiled for tools that have project-local MCP config
   - Best for: orchestrator agent + task-based coordination
   - Example request: `Use the orchestrator to start the bugfix chain for the login failure.`
 
-- **Gemini CLI**
-  - Reads: `.gemini/settings.json` + `.gemini/skills/orchestrator/SKILL.md`
-  - Best for: sequential orchestration guidance (Gemini has no native subagent concept)
-  - Example request: `Use the orchestrator skill to start the review chain for this change.`
-
 - **GitHub Copilot**
   - Reads: `.vscode/mcp.json` + `.github/prompts/orchestrator.prompt.md`
   - Best for: prompt-driven orchestration guidance inside the workspace
   - Example request: `Use the orchestrator prompt and walk me through the code-review workflow.`
-
-- **Codex**
-  - Gets: `.agents/skills/orchestrator/SKILL.md`
-  - Important limitation: `ai-setup` does **not** generate a project-local Codex MCP config file.
-  - Practical meaning: the orchestrator skill is scaffolded, but you must connect the orchestrator MCP server through your Codex/global MCP configuration before Codex can call runtime tools.
-  - Example request after MCP is connected: `Use the orchestrator skill and start the refactor chain for the cache layer.`
 
 ### Docs + demo
 
@@ -319,13 +305,11 @@ From that canonical layer, `ai-setup` compiles tool-native files into the format
 
 - `AGENTS.md`
 - `CLAUDE.md`
-- `GEMINI.md`
 - `.github/copilot-instructions.md`
 - `.opencode/`
 - `.claude/`
-- `.gemini/`
 - `.github/`
-- `.agents/`
+- `.vscode/`
 - per-tool MCP config files
 - tool-native orchestration guidance files when the optional `orchestrator` server is enabled
 
@@ -398,16 +382,14 @@ This is what powers:
 
 - OpenCode
 - Claude Code
-- Gemini CLI
 - GitHub Copilot
-- Codex
 
 **Example command:**
 
 ```bash
 npx github:ricardoborges-teachable/ai-setup init \
   --scope project \
-  --tools opencode,claude-code,copilot,gemini,codex \
+  --tools opencode,claude-code,copilot \
   --name my-app \
   --preset standard \
   --enable-servers atlassian,orchestrator \
@@ -430,7 +412,6 @@ my-app/
 ├── .env.example                # only if enabled MCP servers require env vars
 ├── AGENTS.md
 ├── CLAUDE.md
-├── GEMINI.md
 ├── .mcp.json
 ├── .vscode/
 │   └── mcp.json
@@ -445,15 +426,10 @@ my-app/
 │   ├── rules/
 │   ├── agents/
 │   └── skills/
-├── .gemini/
-│   ├── settings.json
-│   └── skills/
 ├── .github/
 │   ├── copilot-instructions.md
 │   ├── instructions/
 │   └── prompts/
-├── .agents/
-│   └── skills/
 └── specs/
     ├── adrs/
     ├── bugfixes/
@@ -465,7 +441,7 @@ my-app/
     └── templates/
 ```
 
-_Trimmed for readability. Tool-context helper files such as `.opencode/AGENTS.md`, `.claude/CLAUDE.md`, and `.agents/AGENTS.md` are also generated where applicable._
+_Trimmed for readability. Tool-context helper files such as `.opencode/AGENTS.md` and `.claude/CLAUDE.md` are also generated where applicable._
 </details>
 
 ### 5.2 Global Scope
@@ -493,11 +469,9 @@ _Trimmed for readability. Tool-context helper files such as `.opencode/AGENTS.md
 
 - ✅ OpenCode
 - ✅ Claude Code
-- ❌ Gemini CLI
-- ❌ GitHub Copilot
-- ❌ Codex
+- ✅ GitHub Copilot
 
-Unsupported tools are skipped during global compilation. For Copilot and Gemini, `ai-setup` prints a message telling you to use project scope instead.
+All currently supported tools can be selected for global compilation.
 
 **Example command:**
 
@@ -567,7 +541,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 - per-repo ledgers and state snapshots are written to the workspace root under `specs/memory/repos/`
 - launch your AI tool from the workspace root — it reads config there and navigates into repos to edit code
 
-**Supported tools:** all 5 project-scope tools are supported for workspace root generation.
+**Supported tools:** OpenCode, Claude Code, and GitHub Copilot are supported for workspace root generation.
 
 **Example command:**
 
@@ -731,36 +705,6 @@ CLAUDE.md
 ```
 </details>
 
-### Gemini CLI
-
-- **Description:** Gemini CLI root instructions plus skill library
-- **Root file:** `GEMINI.md`
-- **Config directory:** `.gemini/`
-- **Global scope support:** **No**
-- **MCP config:** merged into `.gemini/settings.json`
-- **MCP format:** `{"mcpServers": {...}}` JSON using `$VAR` env syntax
-- **Special behavior:** Gemini has **no agent concept**, so only skills are generated; remote MCP servers are skipped for Gemini output
-
-<details>
-<summary>Gemini file tree (project scope)</summary>
-
-```text
-GEMINI.md
-.gemini/
-├── settings.json
-└── skills/
-    ├── anti-speculation/SKILL.md
-    ├── extract-standards/SKILL.md
-    ├── implement/SKILL.md
-    ├── iterate/SKILL.md
-    ├── memory-write/SKILL.md
-    ├── parallel-execution/SKILL.md
-    ├── plan/SKILL.md
-    ├── research/SKILL.md
-    └── tdd-loop/SKILL.md
-```
-</details>
-
 ### GitHub Copilot
 
 - **Description:** repo instructions and prompt files for GitHub Copilot workflows
@@ -793,36 +737,6 @@ AGENTS.md
     └── tdd-loop.prompt.md
 .vscode/
 └── mcp.json
-```
-</details>
-
-### Codex
-
-- **Description:** OpenAI Codex-compatible root instructions plus AgentSkills-standard skill layout
-- **Root file:** `AGENTS.md`
-- **Config directory:** `.agents/`
-- **Global scope support:** **No**
-- **MCP config:** none generated
-- **Special behavior:** there is **no `.codex/` project directory**; Codex uses `.agents/skills/` and root `AGENTS.md`, while Codex CLI config remains global in `~/.codex/`
-
-<details>
-<summary>Codex file tree (project scope)</summary>
-
-```text
-AGENTS.md
-.agents/
-├── AGENTS.md
-└── skills/
-    ├── AGENTS.md
-    ├── anti-speculation/SKILL.md
-    ├── extract-standards/SKILL.md
-    ├── implement/SKILL.md
-    ├── iterate/SKILL.md
-    ├── memory-write/SKILL.md
-    ├── parallel-execution/SKILL.md
-    ├── plan/SKILL.md
-    ├── research/SKILL.md
-    └── tdd-loop/SKILL.md
 ```
 </details>
 
@@ -904,7 +818,7 @@ Initializes a new managed AI setup, creates canonical `.ai/` state, scaffolds li
 | `--type <type>` | deprecated alias | — | Deprecated alias for `--scope` |
 | `--planning-repo <path>` | path | — | Planning repo location for workspace scope |
 | `--repos <paths>` | comma-separated paths | — | Workspace repo references |
-| `--tools <tools>` | comma-separated tool IDs | prompt | `opencode,claude-code,codex,copilot,gemini` |
+| `--tools <tools>` | comma-separated tool IDs | prompt | `opencode,claude-code,copilot` |
 | `--cli-tools <tools>` | comma-separated names | — | Locally installed CLI tools / install-gated MCP helpers |
 | `--name <name>` | string | dir-derived | Project or workspace name |
 | `--force` | boolean | `false` | Overwrite managed files and create backups |
@@ -989,7 +903,7 @@ Adds another tool adapter to an existing managed setup in the current directory.
 
 | Argument | Type | Description |
 |---|---|---|
-| `<tool>` | tool ID | One of `opencode`, `claude-code`, `gemini`, `copilot`, `codex` |
+| `<tool>` | tool ID | One of `opencode`, `claude-code`, `copilot` |
 
 **Examples**
 
@@ -1601,8 +1515,6 @@ This file contains the full catalog of bundled servers, including:
 | OpenCode | `.opencode/opencode.jsonc` | Includes enabled + disabled servers with OpenCode-specific structure |
 | Claude Code | `.mcp.json` | Includes only enabled servers |
 | GitHub Copilot | `.vscode/mcp.json` | Includes only enabled servers |
-| Gemini CLI | `.gemini/settings.json` | Includes only enabled stdio servers; remote servers are skipped |
-| Codex | none | No MCP file is generated |
 
 ### Enabling servers
 
@@ -1655,17 +1567,14 @@ Built-in migration detection/import currently supports:
 
 - OpenCode
 - Claude Code
-- Gemini CLI
 - GitHub Copilot
 
 Detection looks for markers such as:
 
 - `AGENTS.md`
 - `CLAUDE.md`
-- `GEMINI.md`
 - `.opencode/`
 - `.claude/`
-- `.gemini/`
 - `.github/copilot-instructions.md`
 
 ### Merge strategies

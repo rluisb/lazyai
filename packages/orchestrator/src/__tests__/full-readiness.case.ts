@@ -269,8 +269,6 @@ describe('2. CHAIN LIFECYCLE — across all hosts', () => {
   const hosts: Array<{ name: string; host: ToolHandlerOptions['hostCli'] }> = [
     { name: 'opencode', host: 'opencode' },
     { name: 'claude-code', host: 'claude-code' },
-    { name: 'codex', host: 'codex' },
-    { name: 'gemini', host: 'gemini' },
     { name: 'copilot', host: 'copilot' },
   ]
 
@@ -330,8 +328,6 @@ describe('3. TEAM LIFECYCLE — across all hosts', () => {
   const hosts: Array<{ name: string; host: ToolHandlerOptions['hostCli'] }> = [
     { name: 'opencode', host: 'opencode' },
     { name: 'claude-code', host: 'claude-code' },
-    { name: 'codex', host: 'codex' },
-    { name: 'gemini', host: 'gemini' },
     { name: 'copilot', host: 'copilot' },
   ]
 
@@ -457,7 +453,7 @@ describe('4. WORKFLOW LIFECYCLE — across all hosts', () => {
   const hosts: Array<{ name: string; host: ToolHandlerOptions['hostCli'] }> = [
     { name: 'opencode', host: 'opencode' },
     { name: 'claude-code', host: 'claude-code' },
-    { name: 'codex', host: 'codex' },
+    { name: 'copilot', host: 'copilot' },
   ]
 
   for (const { name, host } of hosts) {
@@ -744,7 +740,7 @@ describe('9. EVENT BUS', () => {
 // ---------------------------------------------------------------------------
 
 describe('10. HOST CLI CATALOG RESOLUTION', () => {
-  const hosts: ToolHandlerOptions['hostCli'][] = ['opencode', 'claude-code', 'codex', 'gemini', 'copilot']
+  const hosts: ToolHandlerOptions['hostCli'][] = ['opencode', 'claude-code', 'copilot']
 
   for (const host of hosts) {
     it(`10a. ${host}: listCatalog works and returns expected kinds`, () => {

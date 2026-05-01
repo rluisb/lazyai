@@ -15,8 +15,7 @@ func TestOutputCoverageIsExhaustive(t *testing.T) {
 
 func TestOutputTargetsAllKnownTools(t *testing.T) {
 	tools := []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdGemini,
-		types.ToolIdCopilot, types.ToolIdCodex, types.ToolIdPi,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
 	}
 	for _, tool := range tools {
 		entries, err := OutputTargetsForTool(tool)
@@ -33,8 +32,7 @@ func TestOutputTargetsAllKnownTools(t *testing.T) {
 
 func TestOutputMappingSpeckitTemplatesShipForEveryTool(t *testing.T) {
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdGemini,
-		types.ToolIdCopilot, types.ToolIdCodex, types.ToolIdPi,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
 	} {
 		target, ok := LookupOutputTarget(tool, AssetKindTemplates)
 		if !ok {
@@ -89,26 +87,12 @@ func TestOutputMappingCopilotSkillsRewritesExt(t *testing.T) {
 
 func TestOutputMappingDirPerItemShape(t *testing.T) {
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdGemini,
-		types.ToolIdCodex, types.ToolIdPi,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode,
 	} {
 		target, _ := LookupOutputTarget(tool, AssetKindSkills)
 		if target.Shape != ShapeDirPerItem {
 			t.Errorf("tool %q skills Shape=%q, want %q (skills must be <name>/SKILL.md)",
 				tool, target.Shape, ShapeDirPerItem)
 		}
-	}
-}
-
-func TestOutputMappingShapeNoneHasNoSourceOrDest(t *testing.T) {
-	target, _ := LookupOutputTarget(types.ToolIdGemini, AssetKindAgents)
-	if target.Shape != ShapeNone {
-		t.Errorf("gemini agents Shape=%q, want ShapeNone", target.Shape)
-	}
-	if target.SourceSubdir != "" {
-		t.Errorf("ShapeNone target should have empty SourceSubdir, got %q", target.SourceSubdir)
-	}
-	if target.DestSubdir != "" {
-		t.Errorf("ShapeNone target should have empty DestSubdir, got %q", target.DestSubdir)
 	}
 }

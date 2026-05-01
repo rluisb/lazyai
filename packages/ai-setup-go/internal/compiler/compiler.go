@@ -38,22 +38,6 @@ var ToolOverrideMap = map[string]ToolOverrides{
 			"- Reusable prompts: `.github/prompts/<name>.prompt.md`\n" +
 			"- Agent instructions: `AGENTS.md` at project root",
 	},
-	"gemini": {
-		Description: "This project uses Gemini CLI with ai-setup integration.",
-		RootFile:    "GEMINI.md",
-		Notes: "## Gemini CLI-Specific Notes\n\n" +
-			"- Project settings: `.gemini/settings.json`\n" +
-			"- Skills: `.gemini/skills/<name>/SKILL.md`\n" +
-			"- No agents concept (agents are inline in GEMINI.md)\n" +
-			"- Context traversal: walks up to .git boundary loading GEMINI.md files",
-	},
-	"codex": {
-		Description: "This project uses OpenAI Codex CLI with ai-setup integration.",
-		Notes: "## Codex-Specific Notes\n\n" +
-			"- Agents are defined inline in this file (no separate agents directory)\n" +
-			"- Skills use AgentSkills standard: `.agents/skills/*/SKILL.md`\n" +
-			"- No `.codex/` project directory (global config only in `~/.codex/`)",
-	},
 }
 
 // CompiledFile represents a single compiled output file.

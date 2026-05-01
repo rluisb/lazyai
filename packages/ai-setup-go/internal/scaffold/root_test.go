@@ -45,12 +45,6 @@ func TestMemoryDocDestPath(t *testing.T) {
 		// opencode
 		{"opencode_project", types.ToolIdOpenCode, types.SetupScopeProject, filepath.Join(target, "AGENTS.md"), false},
 		{"opencode_global", types.ToolIdOpenCode, types.SetupScopeGlobal, filepath.Join(home, ".config", "opencode", "AGENTS.md"), false},
-		// gemini
-		{"gemini_project", types.ToolIdGemini, types.SetupScopeProject, filepath.Join(target, "GEMINI.md"), false},
-		{"gemini_global", types.ToolIdGemini, types.SetupScopeGlobal, filepath.Join(home, ".gemini", "GEMINI.md"), false},
-		// codex
-		{"codex_project", types.ToolIdCodex, types.SetupScopeProject, filepath.Join(target, "AGENTS.md"), false},
-		{"codex_global", types.ToolIdCodex, types.SetupScopeGlobal, filepath.Join(home, ".codex", "AGENTS.md"), false},
 		// copilot
 		{"copilot_project", types.ToolIdCopilot, types.SetupScopeProject, filepath.Join(target, ".github", "copilot-instructions.md"), false},
 		{"copilot_workspace", types.ToolIdCopilot, types.SetupScopeWorkspace, filepath.Join(target, ".github", "copilot-instructions.md"), false},

@@ -16,9 +16,7 @@ func TestAllAdapters_SatisfyToolAdapter(t *testing.T) {
 	// this won't compile.
 	var _ ToolAdapter = (*OpenCodeAdapter)(nil)
 	var _ ToolAdapter = (*ClaudeCodeAdapter)(nil)
-	var _ ToolAdapter = (*CodexAdapter)(nil)
 	var _ ToolAdapter = (*CopilotAdapter)(nil)
-	var _ ToolAdapter = (*GeminiAdapter)(nil)
 }
 
 // --- Test: CanRunHeadless returns correct values per adapter ---
@@ -31,9 +29,7 @@ func TestCanRunHeadless_Values(t *testing.T) {
 	}{
 		{"OpenCode", &OpenCodeAdapter{}, false},
 		{"ClaudeCode", &ClaudeCodeAdapter{}, true},
-		{"Codex", &CodexAdapter{}, true},
 		{"Copilot", &CopilotAdapter{}, false},
-		{"Gemini", &GeminiAdapter{}, false},
 	}
 
 	for _, tc := range tests {
@@ -57,7 +53,6 @@ func TestRunHeadlessValidation_NoOpAdapters(t *testing.T) {
 	adapters := []ToolAdapter{
 		&OpenCodeAdapter{},
 		&CopilotAdapter{},
-		&GeminiAdapter{},
 	}
 
 	for _, adapter := range adapters {
@@ -78,12 +73,11 @@ func TestRunHeadlessValidation_ToolNotInstalled(t *testing.T) {
 		SetupScope: types.SetupScopeProject,
 	}
 
-	// Claude Code and Codex should return nil (non-fatal) when the tool is not on PATH.
+	// Claude Code should return nil (non-fatal) when the tool is not on PATH.
 	// We can't easily remove them from PATH, but we can verify the behavior
 	// by checking that the method doesn't panic and returns nil.
 	adapters := []ToolAdapter{
 		&ClaudeCodeAdapter{},
-		&CodexAdapter{},
 	}
 
 	for _, adapter := range adapters {
@@ -120,31 +114,11 @@ func TestRunHeadlessValidation_ClaudeCode_Installed(t *testing.T) {
 	}
 }
 
-func TestRunHeadlessValidation_Codex_Installed(t *testing.T) {
-	// Skip if codex is not on PATH.
-	if _, err := exec.LookPath("codex"); err != nil {
-		t.Skip("codex not on PATH, skipping installed test")
-	}
-
-	ctx := &AdapterContext{
-		TargetDir:  t.TempDir(),
-		SetupScope: types.SetupScopeProject,
-	}
-
-	adapter := &CodexAdapter{}
-	err := adapter.RunHeadlessValidation(ctx)
-
-	// Should be non-fatal even if the command itself fails.
-	if err != nil {
-		t.Errorf("RunHeadlessValidation should be non-fatal, got: %v", err)
-	}
-}
-
 // --- Test: RunHeadlessValidation uses correct target directory ---
 
 func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping headless validation test in short mode (requires claude/codex CLI)")
+		t.Skip("skipping headless validation test in short mode (requires claude CLI)")
 	}
 	// Create a temp dir with a marker file to verify cmd.Dir is set correctly.
 	targetDir := t.TempDir()
@@ -158,11 +132,10 @@ func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
 		SetupScope: types.SetupScopeProject,
 	}
 
-	// Both adapters should use ctx.TargetDir as the working directory.
+	// Claude adapter should use ctx.TargetDir as the working directory.
 	// We verify this indirectly by ensuring no panic/error from invalid dir.
 	adapters := []ToolAdapter{
 		&ClaudeCodeAdapter{},
-		&CodexAdapter{},
 	}
 
 	for _, adapter := range adapters {

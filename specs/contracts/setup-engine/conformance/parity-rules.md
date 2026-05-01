@@ -30,8 +30,6 @@ Supported scopes are `global`, `project`, and `workspace`.
 - `setup --list --global` filters to global roots and emits `scopeFilter: "global"`.
 - `setup --dry-run` defaults to project scope.
 - `setup --dry-run --global` uses global scope.
-- Pi supports only project and workspace scopes.
-
 Project and workspace layouts are project-shaped and rooted at the selected target directory.
 
 ## Shared path rules

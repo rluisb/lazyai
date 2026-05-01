@@ -15,8 +15,6 @@ func TestResolveGlobalToolTargetDir(t *testing.T) {
 	}{
 		{types.ToolIdOpenCode, filepath.Join(home, ".config", "opencode")},
 		{types.ToolIdClaudeCode, filepath.Join(home, ".claude")},
-		{types.ToolIdGemini, filepath.Join(home, ".gemini")},
-		{types.ToolIdCodex, filepath.Join(home, ".codex")},
 		{types.ToolIdCopilot, filepath.Join(home, ".copilot")},
 	}
 	for _, c := range cases {
@@ -31,15 +29,6 @@ func TestResolveGlobalToolTargetDir(t *testing.T) {
 	}
 }
 
-func TestResolveCodexSkillsGlobalDir(t *testing.T) {
-	home := "/tmp/fakehome"
-	got := ResolveCodexSkillsGlobalDir(home)
-	want := filepath.Join(home, ".agents", "skills")
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
 func TestIsGlobalSupportedTool(t *testing.T) {
 	cases := []struct {
 		tool types.ToolId
@@ -47,10 +36,10 @@ func TestIsGlobalSupportedTool(t *testing.T) {
 	}{
 		{types.ToolIdClaudeCode, true},
 		{types.ToolIdOpenCode, true},
-		{types.ToolIdGemini, true},
-		{types.ToolIdCodex, true},
 		{types.ToolIdCopilot, true}, // now supported with probe gating
-		{types.ToolIdPi, false},
+		{types.ToolId("gemini"), false},
+		{types.ToolId("codex"), false},
+		{types.ToolId("pi"), false},
 	}
 	for _, c := range cases {
 		got := IsGlobalSupportedTool(c.tool)

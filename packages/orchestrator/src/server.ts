@@ -38,7 +38,7 @@ import { registerBuiltinHandlers } from './queue/handlers.js'
 const CATALOG_KIND_EXTENDED_SCHEMA = z.enum(['agent', 'skill', 'chain', 'team', 'workflow', 'mode', 'command'])
 
 const CATALOG_KIND_SCHEMA = z.enum(['chain', 'team', 'workflow', 'domain', 'mode'])
-const HOST_CLI_SCHEMA = z.enum(['claude-code', 'codex', 'opencode', 'gemini', 'copilot'])
+const HOST_CLI_SCHEMA = z.enum(['claude-code', 'opencode', 'copilot'])
 const RUN_KIND_SCHEMA = z.enum(['chain', 'team', 'workflow'])
 const BUDGET_SCHEMA = z.record(z.unknown())
 const STEP_USAGE_SCHEMA = z.object({

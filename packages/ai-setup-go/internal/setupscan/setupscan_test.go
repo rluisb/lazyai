@@ -14,8 +14,6 @@ func TestScanDetectsObservedTargetsAndSharedPaths(t *testing.T) {
 
 	mustWriteFile(t, filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc"), `{"version":"1.2.3"}`)
 	mustWriteFile(t, filepath.Join(targetDir, ".claude", "settings.json"), `{"theme":"dark"}`)
-	mustWriteFile(t, filepath.Join(targetDir, ".codex", "config.toml"), "version = \"0.9.0\"\n")
-	mustWriteFile(t, filepath.Join(targetDir, ".pi", "settings.json"), `{"compaction":{"enabled":true}}`)
 	mustMkdir(t, filepath.Join(homeDir, ".ai-setup"))
 	mustMkdir(t, filepath.Join(targetDir, ".ai"))
 
@@ -42,14 +40,6 @@ func TestScanDetectsObservedTargetsAndSharedPaths(t *testing.T) {
 
 	claude := findTarget(t, inventory.CurrentState.Targets, "claude-code")
 	assertDetectionStatus(t, claude, "project", "detected")
-
-	codex := findTarget(t, inventory.CurrentState.Targets, "codex")
-	if version := detectionForScope(t, codex, "project").Version; version != "0.9.0" {
-		t.Fatalf("codex project version = %q, want 0.9.0", version)
-	}
-
-	pi := findTarget(t, inventory.CurrentState.Targets, "pi")
-	assertDetectionStatus(t, pi, "project", "detected")
 
 	if _, err := json.Marshal(inventory); err != nil {
 		t.Fatalf("inventory marshal: %v", err)
@@ -168,7 +158,7 @@ func TestScanProducesDeterministicTargetOrdering(t *testing.T) {
 	for _, target := range inventory.CurrentState.Targets {
 		got = append(got, target.ID)
 	}
-	want := []string{"claude-code", "codex", "copilot", "gemini", "opencode", "pi"}
+	want := []string{"claude-code", "copilot", "opencode"}
 	if len(got) != len(want) {
 		t.Fatalf("target count = %d, want %d", len(got), len(want))
 	}
@@ -192,38 +182,6 @@ func TestScanDoesNotTreatBareGithubDirectoryAsCopilotDetection(t *testing.T) {
 	copilot := findTarget(t, inventory.CurrentState.Targets, "copilot")
 	if got := detectionForScope(t, copilot, "project").Status; got != "missing" {
 		t.Fatalf("copilot project status = %q, want missing", got)
-	}
-}
-
-func TestScanIncludesPiSupportedScopesAndCandidateRoots(t *testing.T) {
-	homeDir := t.TempDir()
-	targetDir := t.TempDir()
-
-	inventory, err := Scan(Options{HomeDir: homeDir, TargetDir: targetDir})
-	if err != nil {
-		t.Fatalf("Scan: %v", err)
-	}
-
-	var pi DesiredTarget
-	found := false
-	for _, target := range inventory.DesiredState.Targets {
-		if target.ID == "pi" {
-			pi = target
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatal("expected pi target in desired state")
-	}
-	if got := strings.Join(pi.SupportedScopes, ","); got != "project,workspace" {
-		t.Fatalf("pi supported scopes = %q, want project,workspace", got)
-	}
-	if len(pi.CandidateRoots) != 2 {
-		t.Fatalf("pi candidate root count = %d, want 2", len(pi.CandidateRoots))
-	}
-	if pi.CandidateRoots[0].RootPath != filepath.Join(targetDir, ".pi") {
-		t.Fatalf("pi project root = %q, want %q", pi.CandidateRoots[0].RootPath, filepath.Join(targetDir, ".pi"))
 	}
 }
 

@@ -134,28 +134,12 @@ export function getCliContext(host: CliContext['host'] = 'opencode'): CliContext
       supportsStructuredOutput: true,
       mcpServerName: 'ai-setup-orchestrator',
     },
-    codex: {
-      host: 'codex',
-      dispatchMode: 'native-subagent',
-      supportsSubagents: true,
-      supportsParallelTeams: false,
-      supportsStructuredOutput: true,
-      mcpServerName: 'ai-setup-orchestrator',
-    },
     opencode: {
       host: 'opencode',
       dispatchMode: 'task-tool',
       supportsSubagents: true,
       supportsParallelTeams: false,
       supportsStructuredOutput: true,
-      mcpServerName: 'ai-setup-orchestrator',
-    },
-    gemini: {
-      host: 'gemini',
-      dispatchMode: 'instruction-only',
-      supportsSubagents: false,
-      supportsParallelTeams: false,
-      supportsStructuredOutput: false,
       mcpServerName: 'ai-setup-orchestrator',
     },
     copilot: {

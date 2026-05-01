@@ -25,7 +25,7 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
 	initCmd.Flags().String("workspace-root", "", "Workspace root directory for AI tool configs (workspace scope)")
-	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, gemini, copilot, codex)")
+	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot)")
 	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (orchestrator, filesystem, memory)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
@@ -35,7 +35,7 @@ func init() {
 	initCmd.Flags().String("commit-pattern", "", "Git commit message pattern")
 	initCmd.Flags().String("existing-setup-policy", string(types.SetupPolicyAbsorb), "How to handle existing setup (absorb, adapt, backup-only)")
 	initCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
-	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Gemini, Claude Code, Codex)")
+	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Claude Code)")
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
 	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in CLAUDE.md)")
 	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in CLAUDE.md)")
@@ -202,7 +202,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(config.CLITools) == 0 {
-		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, gemini, copilot, codex)")
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot)")
 	}
 
 	// Drop tools that don't support the chosen scope (e.g. copilot × global).

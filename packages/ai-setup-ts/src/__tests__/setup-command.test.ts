@@ -58,8 +58,7 @@ describe('setup command parity', () => {
     expect(result.mode).toBe('list')
     expect(result.scopeFilter).toBeUndefined()
     expect(result.sharedPaths.map(({ id }) => id)).toEqual(['global-ai-setup', 'project-ai'])
-    expect(result.targets.map(({ id }) => id)).toEqual(['claude-code', 'codex', 'copilot', 'gemini', 'opencode', 'pi'])
-    expect(result.targets.find(({ id }) => id === 'pi')?.supportedScopes).toEqual(['project', 'workspace'])
+    expect(result.targets.map(({ id }) => id)).toEqual(['claude-code', 'copilot', 'opencode'])
     expect(result.targets.find(({ id }) => id === 'claude-code')?.candidateRoots.map(({ scope }) => scope)).toEqual([
       'global',
       'project',
@@ -434,11 +433,11 @@ tools:
     await expect(runSetup(['--list', '--tool', 'unknown-tool'])).rejects.toThrow('unknown tool "unknown-tool"')
   })
 
-  it('rejects unsupported Pi global setup filtering', async () => {
-    const repoDir = makeTempRepo('ai-setup-setup-pi-global-')
+  it('rejects removed setup tools', async () => {
+    const repoDir = makeTempRepo('ai-setup-setup-removed-tool-')
     process.chdir(repoDir)
 
-    await expect(runSetup(['--dry-run', '--global', '--tool', 'pi'])).rejects.toThrow('tool "pi" does not support scope "global"')
+    await expect(runSetup(['--dry-run', '--global', '--tool', 'pi'])).rejects.toThrow('unknown tool "pi"')
   })
 
   it('rejects combining --all with --tool', async () => {

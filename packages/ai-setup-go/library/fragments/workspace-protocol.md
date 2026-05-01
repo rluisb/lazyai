@@ -46,8 +46,6 @@ This protocol governs how skills and agents move between repos, where they recor
 | Claude Code | `<workspace>/.claude/` |
 | Copilot | `<workspace>/.github/` |
 | OpenCode | `<workspace>/.opencode/` |
-| Codex | `<workspace>/.codex/` |
-| Gemini | `<workspace>/.gemini/` |
 
 **Why.** A workspace-rooted install lets agents read and write across every sibling repo in one session without re-bootstrapping. Project-rooted installs duplicate config, drift apart, and force agents to lose state when crossing repo boundaries.
 

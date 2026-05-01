@@ -55,9 +55,6 @@ const PER_TOOL_MCP_CONFIG: Record<ToolId, string | null> = {
   opencode: 'opencode.jsonc',
   'claude-code': '.mcp.json',
   copilot: '.vscode/mcp.json',
-  gemini: '.gemini/settings.json',
-  codex: null,
-  pi: '.pi/settings.json',
 }
 
 export function registerServer(program: Command): void {
@@ -654,13 +651,7 @@ function getOrchestratorAgentPathForTool(tool: ToolId, targetDir: string): strin
       return join(targetDir, '.opencode', 'agents', 'orchestrator.md')
     case 'claude-code':
       return join(targetDir, '.claude', 'agents', 'orchestrator.md')
-    case 'gemini':
-      return join(targetDir, '.gemini', 'skills', 'orchestrator', 'SKILL.md')
-    case 'codex':
-      return join(targetDir, '.agents', 'skills', 'orchestrator', 'SKILL.md')
     case 'copilot':
       return join(targetDir, '.github', 'prompts', 'orchestrator.prompt.md')
-    case 'pi':
-      return null
   }
 }

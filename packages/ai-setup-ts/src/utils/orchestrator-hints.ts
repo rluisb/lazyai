@@ -17,25 +17,10 @@ export function orchestratorHintPaths(tool: ToolId): OrchestratorHintPaths {
         agentPath: '.claude/agents/orchestrator.md',
         skillPath: '.claude/skills/orchestrate/SKILL.md',
       }
-    case 'gemini':
-      return {
-        agentPath: '.gemini/skills/orchestrator/SKILL.md',
-        skillPath: '.gemini/skills/orchestrate/SKILL.md',
-      }
-    case 'codex':
-      return {
-        agentPath: '.agents/skills/orchestrator/SKILL.md',
-        skillPath: '.agents/skills/orchestrate/SKILL.md',
-      }
     case 'copilot':
       return {
         agentPath: '.github/prompts/orchestrator.prompt.md',
         skillPath: '.github/prompts/orchestrate.prompt.md',
-      }
-    case 'pi':
-      return {
-        agentPath: 'AGENTS.md',
-        skillPath: '.pi/skills/orchestrate/SKILL.md',
       }
   }
 }

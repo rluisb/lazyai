@@ -42,21 +42,10 @@ const ADAPTER_PATHS: Record<ToolId, { agentDir?: string; skillDir: string; promp
     skillDir: '.opencode/skills',
     commandDir: '.opencode/commands',
   },
-  gemini: {
-    skillDir: '.gemini/skills',
-  },
   copilot: {
     // Copilot uses AGENTS.md at the repository root for agent instructions.
     skillDir: '.github/prompts',
     promptDir: '.github/prompts',
-  },
-  codex: {
-    // Codex agents are inline in AGENTS.md, skills use AgentSkills standard
-    skillDir: '.agents/skills',
-  },
-  pi: {
-    skillDir: '.pi/skills',
-    promptDir: '.pi/prompts',
   },
 }
 
@@ -124,7 +113,7 @@ export async function computePlan(
   for (const tool of config.tools) {
     const paths = ADAPTER_PATHS[tool]
 
-    // Only add agents if tool supports them (Codex has inline agents)
+    // Only add agents if tool supports them.
     if (paths.agentDir) {
       for (const agentId of selections.agents) {
         planned.push(
@@ -141,7 +130,7 @@ export async function computePlan(
     for (const skillId of selections.skills) {
       const skillDestPath = tool === 'copilot'
         ? `${skillId}.prompt.md`
-        : tool === 'claude-code' || tool === 'opencode' || tool === 'codex' || tool === 'gemini'
+        : tool === 'claude-code' || tool === 'opencode'
           ? `${skillId}/SKILL.md`
           : `${skillId}.md`
       planned.push(
@@ -154,7 +143,7 @@ export async function computePlan(
       )
     }
 
-    if (tool === 'claude-code' || tool === 'opencode' || tool === 'codex') {
+    if (tool === 'claude-code' || tool === 'opencode') {
       continue
     }
 

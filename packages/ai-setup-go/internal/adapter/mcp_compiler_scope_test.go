@@ -47,24 +47,6 @@ func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 			},
 		},
 		{
-			name: "gemini",
-			tool: types.ToolIdGemini,
-			expects: []expect{
-				{scope: types.SetupScopeProject, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".gemini", "settings.json") }},
-				{scope: types.SetupScopeWorkspace, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".gemini", "settings.json") }},
-				{scope: types.SetupScopeGlobal, writePathUnder: func(_, h string) string { return filepath.Join(h, ".gemini", "settings.json") }},
-			},
-		},
-		{
-			name: "codex",
-			tool: types.ToolIdCodex,
-			expects: []expect{
-				{scope: types.SetupScopeProject, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".codex", "config.toml") }},
-				{scope: types.SetupScopeWorkspace, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".codex", "config.toml") }},
-				{scope: types.SetupScopeGlobal, writePathUnder: func(_, h string) string { return filepath.Join(h, ".codex", "config.toml") }},
-			},
-		},
-		{
 			name: "claude-code",
 			tool: types.ToolIdClaudeCode,
 			expects: []expect{

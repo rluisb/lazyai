@@ -65,7 +65,6 @@ export async function checkDrift(
     'specs/**/*',
     '.opencode/**/*',
     '.claude/**/*',
-    '.gemini/**/*',
     '.github/copilot-instructions.md',
     '.github/prompts/**/*',
     '.github/instructions/**/*',

@@ -94,7 +94,7 @@ function readSkillsMd(
   const records: Record<string, SkillDefinition> = {}
   if (!fs.existsSync(dir)) return records
 
-  // Two layouts: dir/SKILL.md (opencode/codex style) or dir/*.md (flat)
+  // Two layouts: dir/SKILL.md (opencode style) or dir/*.md (flat)
   for (const entry of fs.readdirSync(dir)) {
     const entryPath = path.join(dir, entry)
     let filePath: string

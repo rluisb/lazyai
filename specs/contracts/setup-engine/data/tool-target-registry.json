@@ -56,46 +56,6 @@
       ]
     },
     {
-      "id": "codex",
-      "name": "Codex CLI",
-      "supportedScopes": ["global", "project", "workspace"],
-      "roots": [
-        {
-          "scope": "global",
-          "origin": "global",
-          "rootPath": "<HOME_DIR>/.codex",
-          "countRootOnly": false,
-          "expectedFiles": ["config.toml"],
-          "optionalPaths": [],
-          "desiredExpectedFiles": ["config.toml"],
-          "versionFiles": ["config.toml"],
-          "secondaryRoots": [{"id": "skills", "rootPath": "<HOME_DIR>/.agents/skills"}]
-        },
-        {
-          "scope": "project",
-          "origin": "project",
-          "rootPath": "<TARGET_DIR>/.codex",
-          "countRootOnly": false,
-          "expectedFiles": ["config.toml"],
-          "optionalPaths": [],
-          "desiredExpectedFiles": ["config.toml"],
-          "versionFiles": ["config.toml"],
-          "secondaryRoots": [{"id": "skills", "rootPath": "<TARGET_DIR>/.agents/skills"}]
-        },
-        {
-          "scope": "workspace",
-          "origin": "workspace",
-          "rootPath": "<TARGET_DIR>/.codex",
-          "countRootOnly": false,
-          "expectedFiles": ["config.toml"],
-          "optionalPaths": [],
-          "desiredExpectedFiles": ["config.toml"],
-          "versionFiles": ["config.toml"],
-          "secondaryRoots": [{"id": "skills", "rootPath": "<TARGET_DIR>/.agents/skills"}]
-        }
-      ]
-    },
-    {
       "id": "copilot",
       "name": "GitHub Copilot CLI",
       "supportedScopes": ["global", "project", "workspace"],
@@ -133,43 +93,6 @@
       ]
     },
     {
-      "id": "gemini",
-      "name": "Gemini CLI",
-      "supportedScopes": ["global", "project", "workspace"],
-      "roots": [
-        {
-          "scope": "global",
-          "origin": "global",
-          "rootPath": "<HOME_DIR>/.gemini",
-          "countRootOnly": false,
-          "expectedFiles": ["settings.json"],
-          "optionalPaths": ["commands"],
-          "desiredExpectedFiles": ["commands", "settings.json"],
-          "versionFiles": ["settings.json"]
-        },
-        {
-          "scope": "project",
-          "origin": "project",
-          "rootPath": "<TARGET_DIR>/.gemini",
-          "countRootOnly": false,
-          "expectedFiles": ["settings.json"],
-          "optionalPaths": ["commands"],
-          "desiredExpectedFiles": ["commands", "settings.json"],
-          "versionFiles": ["settings.json"]
-        },
-        {
-          "scope": "workspace",
-          "origin": "workspace",
-          "rootPath": "<TARGET_DIR>/.gemini",
-          "countRootOnly": false,
-          "expectedFiles": ["settings.json"],
-          "optionalPaths": ["commands"],
-          "desiredExpectedFiles": ["commands", "settings.json"],
-          "versionFiles": ["settings.json"]
-        }
-      ]
-    },
-    {
       "id": "opencode",
       "name": "OpenCode",
       "supportedScopes": ["global", "project", "workspace"],
@@ -203,33 +126,6 @@
           "optionalPaths": ["opencode.json", "agents", "skills", "commands", "modes", "AGENTS.md"],
           "desiredExpectedFiles": ["AGENTS.md", "agents", "commands", "modes", "opencode.json", "opencode.jsonc", "skills"],
           "versionFiles": ["opencode.jsonc"]
-        }
-      ]
-    },
-    {
-      "id": "pi",
-      "name": "Pi",
-      "supportedScopes": ["project", "workspace"],
-      "roots": [
-        {
-          "scope": "project",
-          "origin": "project",
-          "rootPath": "<TARGET_DIR>/.pi",
-          "countRootOnly": false,
-          "expectedFiles": ["settings.json"],
-          "optionalPaths": ["skills", "prompts"],
-          "desiredExpectedFiles": ["prompts", "settings.json", "skills"],
-          "versionFiles": ["settings.json"]
-        },
-        {
-          "scope": "workspace",
-          "origin": "workspace",
-          "rootPath": "<TARGET_DIR>/.pi",
-          "countRootOnly": false,
-          "expectedFiles": ["settings.json"],
-          "optionalPaths": ["skills", "prompts"],
-          "desiredExpectedFiles": ["prompts", "settings.json", "skills"],
-          "versionFiles": ["settings.json"]
         }
       ]
     }

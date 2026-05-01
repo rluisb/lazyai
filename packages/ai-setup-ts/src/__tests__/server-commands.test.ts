@@ -173,14 +173,6 @@ describe('runHealthChecks', () => {
     expect(check?.message).toContain("does not contain 'orchestrator'")
   })
 
-  it('skips per-tool mcp check for codex (no project-local config)', async () => {
-    const catalog = buildCatalog()
-    seedCanonicalMcp(targetDir, catalog)
-    ensureDir(path.join(targetDir, '.ai', 'orchestration', 'chains'))
-    const report = await runHealthChecks(targetDir, 'orchestrator', catalog, ['codex'], 1000)
-    const check = report.checks.find((c) => c.name === 'codex mcp config')
-    expect(check?.status).toBe('skip')
-  })
 })
 
 describe('runHealthChecks stdio handshake (integration)', () => {

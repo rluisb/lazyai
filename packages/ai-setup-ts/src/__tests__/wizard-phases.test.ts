@@ -117,7 +117,7 @@ describe('wizard phases 1 and 3', () => {
 
     const multiselectMessages = vi.mocked(p.multiselect).mock.calls.map(([arg]) => arg.message)
     expect(multiselectMessages).toEqual([
-      'Which AI tools are you using? (previous: opencode, claude-code, gemini, copilot, codex, pi)',
+      'Which AI tools are you using? (previous: opencode, claude-code, copilot)',
       `Which skills should be installed? (previous: ${ALL_SKILLS.join(', ')})`,
       `Which agents should be installed? (previous: ${ALL_AGENTS.join(', ')})`,
       'Which MCP servers would you like to enable?',
@@ -184,17 +184,15 @@ describe('wizard phases 1 and 3', () => {
     ])
   })
 
-  it('Phase 1: scope tool filtering excludes global pi and keeps global copilot', () => {
+  it('Phase 1: scope tool filtering only offers supported tools', () => {
     expect(toolOptionsForScope('global').map(({ value }) => value)).toEqual([
       'opencode',
       'claude-code',
-      'gemini',
       'copilot',
-      'codex',
     ])
-    expect(toolOptionsForScope('project').map(({ value }) => value)).toContain('pi')
-    expect(toolOptionsForScope('workspace').map(({ value }) => value)).toContain('pi')
-    expect(filterToolsByScope(['opencode', 'copilot', 'pi'], 'global')).toEqual(['opencode', 'copilot'])
+    expect(toolOptionsForScope('project').map(({ value }) => value)).toEqual(['opencode', 'claude-code', 'copilot'])
+    expect(toolOptionsForScope('workspace').map(({ value }) => value)).toEqual(['opencode', 'claude-code', 'copilot'])
+    expect(filterToolsByScope(['opencode', 'copilot'], 'global')).toEqual(['opencode', 'copilot'])
   })
 
   it('Phase 1: installed CLI defaults come from catalog tools', () => {

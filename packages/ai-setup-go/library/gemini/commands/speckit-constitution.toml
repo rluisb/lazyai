@@ -1,7 +1,0 @@
-name = "speckit-constitution"
-description = "Create or update project governing principles and development guidelines"
-prompt = """
-Load and follow the `speckit-constitution` skill.
-
-The skill establishes project principles that guide all subsequent development. It creates or updates `.specify/memory/constitution.md` with governing rules, quality gates, and anti-overengineering policies.
-"""

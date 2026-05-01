@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { parseToml, loadConfig } from '../utils/toml.js'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { loadConfig, parseToml } from '../utils/toml.js'
 
 function makeTempDir(prefix: string): string {
   const dir = join(tmpdir(), `${prefix}-${Date.now()}`)

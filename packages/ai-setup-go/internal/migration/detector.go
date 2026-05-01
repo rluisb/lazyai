@@ -25,10 +25,6 @@ var DetectionPatterns = map[string][]string{
 		".claude",
 		"CLAUDE.md",
 	},
-	"gemini": {
-		".gemini",
-		"GEMINI.md",
-	},
 	"copilot": {
 		".github/copilot-instructions.md",
 	},
@@ -38,7 +34,6 @@ var DetectionPatterns = map[string][]string{
 var AdapterNames = map[string]string{
 	"opencode":    "OpenCode",
 	"claude-code": "Claude Code",
-	"gemini":      "Gemini CLI",
 	"copilot":     "GitHub Copilot",
 }
 
@@ -202,7 +197,7 @@ func calculatePriority(filePath, _ string) int {
 	lower := strings.ToLower(filePath)
 
 	// Root config files are highest priority.
-	rootConfigPatterns := []string{"agents.md", "claude.md", "gemini.md"}
+	rootConfigPatterns := []string{"agents.md", "claude.md"}
 	for _, p := range rootConfigPatterns {
 		if strings.EqualFold(filepath.Base(filePath), p) {
 			priority += 100
@@ -260,7 +255,7 @@ func calculateConfidence(files []DetectedFile) float64 {
 	// Boost if we have root config.
 	for _, f := range files {
 		base := strings.ToLower(filepath.Base(f.Path))
-		if base == "agents.md" || base == "claude.md" || base == "gemini.md" ||
+		if base == "agents.md" || base == "claude.md" ||
 			strings.Contains(base, "copilot-instructions") {
 			confidence += 0.1
 			break

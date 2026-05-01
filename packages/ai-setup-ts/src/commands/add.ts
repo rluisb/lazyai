@@ -16,7 +16,7 @@ export function registerAdd(program: Command): void {
   program
     .command('add')
     .description('Add a tool to existing setup')
-    .argument('<tool>', 'Tool to add (e.g. opencode, claude-code, gemini, copilot, codex)')
+    .argument('<tool>', 'Tool to add (e.g. opencode, claude-code, copilot)')
     .action(async (tool: string) => {
       const registry = new AdapterRegistry()
 

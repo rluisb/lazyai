@@ -1,6 +1,6 @@
-import { TemplateCompiler } from "../src/compiler/template-compiler.js";
-import type { FragmentContext } from "../src/compiler/fragment-resolver.js";
-import type { ToolId } from "../src/types.js";
+import { TemplateCompiler } from "../packages/ai-setup-ts/src/compiler/template-compiler.js";
+import type { FragmentContext } from "../packages/ai-setup-ts/src/compiler/fragment-resolver.js";
+import type { ToolId } from "../packages/ai-setup-ts/src/types.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -24,12 +24,12 @@ const context: FragmentContext = {
   }
 };
 
-console.log("🧪 Testing Multi-Tool Compilation\n");
+console.log("🧪 Testing Supported Tool Compilation\n");
 console.log(`Library: ${LIBRARY}`);
 console.log(`Output: ${TMP_OUTPUT}\n`);
 
 // Test each tool
-const tools: ToolId[] = ["claude-code", "opencode", "codex", "copilot", "gemini"];
+const tools: ToolId[] = ["claude-code", "opencode", "copilot"];
 
 for (const tool of tools) {
   try {

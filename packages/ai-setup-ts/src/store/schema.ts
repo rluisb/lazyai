@@ -15,7 +15,22 @@ export const CURRENT_SCHEMA_VERSION = 1
 export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
 export const presetLevelSchema = z.enum(['minimal', 'standard', 'full', 'custom'])
-export const toolIdSchema = z.enum(['opencode', 'claude-code', 'gemini', 'copilot', 'codex', 'pi'])
+const SUPPORTED_TOOL_IDS = ['opencode', 'claude-code', 'copilot'] as const
+const REMOVED_TOOL_IDS = ['gemini', 'codex', 'pi'] as const
+
+export const toolIdSchema = z
+  .string()
+  .superRefine((value, ctx): value is (typeof SUPPORTED_TOOL_IDS)[number] => {
+    if ((SUPPORTED_TOOL_IDS as readonly string[]).includes(value)) return true
+    const removedTool = (REMOVED_TOOL_IDS as readonly string[]).includes(value)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: removedTool
+        ? `Unsupported tool "${value}". Supported tools are: ${SUPPORTED_TOOL_IDS.join(', ')}`
+        : `Unknown tool "${value}". Supported tools are: ${SUPPORTED_TOOL_IDS.join(', ')}`,
+    })
+    return false
+  })
 export const agentIdSchema = z.enum(['builder', 'documenter', 'implementor', 'orchestrator', 'planner', 'red-team', 'reviewer', 'scout'])
 export const skillIdSchema = z.enum([
   'anti-speculation',
@@ -130,7 +145,7 @@ export const configSchema = z.object({
   housekeeping: housekeepingConfigSchema.optional(),
 })
 
-// Gemini slash command IDs (TOML files under <geminiRoot>/commands/)
+// Slash command IDs retained for selection compatibility.
 export const commandIdSchema = z.enum([
   'rpi',
   'review',
@@ -148,7 +163,7 @@ export const commandIdSchema = z.enum([
 // Copilot chat mode IDs
 export const chatModeIdSchema = z.enum(['architect', 'reviewer'])
 
-// OpenCode slash command IDs (distinct keyspace from Gemini CommandId)
+// OpenCode slash command IDs (distinct keyspace from generic CommandId)
 export const openCodeCommandIdSchema = z.enum([
   'review',
   'test',

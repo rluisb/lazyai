@@ -111,13 +111,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
       }
     }
 
-    if (tool === 'gemini') {
-      for (const name of ALL_SKILLS) {
-        addSkill(name, `.gemini/skills/${name}/SKILL.md`)
-      }
-      // Gemini has no templates/ concept — skip prompts
-    }
-
     if (tool === 'copilot') {
       for (const name of ALL_SKILLS) {
         const source = `skills/${name}.md`
@@ -151,7 +144,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
     if (
       data.config.tools.includes('opencode')
       || data.config.tools.includes('copilot')
-      || data.config.tools.includes('codex')
     ) {
       addContent('AGENTS.md', 'root/AGENTS.template.md', rootContent)
     }
@@ -164,17 +156,6 @@ function buildExpectedFiles(data: StoreData, targetDir: string): ExpectedFile[] 
         'CLAUDE.md',
         'root/CLAUDE.template.md',
         readFile(rootClaudeTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
-      )
-    }
-  }
-
-  if (data.config.tools.includes('gemini')) {
-    const rootGeminiTemplatePath = join(libraryDir, 'root/GEMINI.template.md')
-    if (fileExists(rootGeminiTemplatePath)) {
-      addContent(
-        'GEMINI.md',
-        'root/GEMINI.template.md',
-        readFile(rootGeminiTemplatePath).replace(/\[YOUR_PROJECT_NAME\]/g, data.config.projectName),
       )
     }
   }

@@ -1,7 +1,0 @@
-name = "speckit-checklist"
-description = "Generate quality checklists that validate requirements"
-prompt = """
-Load and follow the `speckit-checklist` skill.
-
-Generates custom quality checklists ("unit tests for English") that validate requirement completeness, clarity, and consistency before implementation begins.
-"""

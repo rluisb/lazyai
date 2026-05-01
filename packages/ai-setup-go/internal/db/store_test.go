@@ -91,19 +91,18 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			TargetDir:   "/tmp/test",
 		},
 		Selections: types.WizardSelections{
-			Templates:    []types.TemplateId{types.TemplateIdAdr},
-			Rules:        []types.RuleId{types.RuleIdCodeStyle},
-			Agents:       []types.AgentId{types.AgentIdBuilder},
-			Skills:       []types.SkillId{types.SkillIdPlan},
-			Prompts:      []types.PromptId{types.PromptIdCompact},
-			Commands:         []types.CommandId{types.CommandIdRpi},
+			Templates:        []types.TemplateId{types.TemplateIdAdr},
+			Rules:            []types.RuleId{types.RuleIdCodeStyle},
+			Agents:           []types.AgentId{types.AgentIdBuilder},
+			Skills:           []types.SkillId{types.SkillIdPlan},
+			Prompts:          []types.PromptId{types.PromptIdCompact},
 			ChatModes:        []types.ChatModeId{types.ChatModeIdArchitect},
 			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
 			OpenCodePlugins:  []string{"@opencode/git-tools"},
 			Infra:            []types.InfraId{types.InfraIdPreCommit},
-			Constitution: []string{"constraints"},
-			Features:     &types.FeatureFlags{QualityGates: true},
+			Constitution:     []string{"constraints"},
+			Features:         &types.FeatureFlags{QualityGates: true},
 			GitConventions: &types.GitConventions{
 				BranchPattern: "{type}/{ticket}-{description}",
 				CommitPattern: "{type}({scope}): {description}",
@@ -175,9 +174,6 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if got.Selections.Features == nil || !got.Selections.Features.QualityGates {
 		t.Error("Features.QualityGates not preserved")
-	}
-	if len(got.Selections.Commands) != 1 || got.Selections.Commands[0] != types.CommandIdRpi {
-		t.Errorf("Commands not preserved: got %v", got.Selections.Commands)
 	}
 	if len(got.Selections.ChatModes) != 1 || got.Selections.ChatModes[0] != types.ChatModeIdArchitect {
 		t.Errorf("ChatModes not preserved: got %v", got.Selections.ChatModes)

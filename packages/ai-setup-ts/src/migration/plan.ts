@@ -252,7 +252,6 @@ function adapterLabel(adapterId: string): string {
   const labels: Record<string, string> = {
     opencode: 'OpenCode',
     'claude-code': 'Claude Code',
-    gemini: 'Gemini CLI',
     copilot: 'GitHub Copilot',
   };
   return labels[adapterId] || adapterId;

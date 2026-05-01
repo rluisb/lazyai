@@ -1,6 +1,6 @@
 export type DefinitionSource = 'library' | 'project' | 'db' | 'user_project' | 'user_global'
 export type CatalogKind = 'agent' | 'domain' | 'mode' | 'chain' | 'team' | 'workflow'
-export type HostCli = 'claude-code' | 'codex' | 'opencode' | 'gemini' | 'copilot'
+export type HostCli = 'claude-code' | 'opencode' | 'copilot'
 export type DispatchMode = 'task-tool' | 'native-subagent' | 'sdk-session' | 'instruction-only'
 export type ApprovalPolicy = 'minimal' | 'normal' | 'strict'
 export type RunKind = 'chain' | 'team' | 'workflow'

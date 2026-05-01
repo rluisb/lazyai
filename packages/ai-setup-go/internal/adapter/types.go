@@ -35,8 +35,8 @@ type AdapterContext struct {
 	// DryRun reports what would be done without writing files.
 	DryRun bool
 	// DriveCLI, when true, asks adapters that support it to delegate
-	// scaffolding to the tool's own CLI (e.g. `gemini mcp add`) instead of
-	// direct-write. Falls back silently to direct-write when the binary is
+	// scaffolding to the tool's own CLI instead of direct-write.
+	// Falls back silently to direct-write when the binary is
 	// absent or the CLI call fails.
 	DriveCLI bool
 	// LocalSecrets, when true, routes Claude Code MCP/settings writes to the
@@ -56,7 +56,6 @@ type AdapterSelections struct {
 	Agents           []types.AgentId
 	Skills           []types.SkillId
 	Prompts          []types.PromptId
-	Commands         []types.CommandId
 	ChatModes        []types.ChatModeId
 	OpenCodeCommands []types.OpenCodeCommandId
 	OpenCodeModes    []types.OpenCodeModeId
@@ -93,7 +92,7 @@ type CompileContext struct {
 }
 
 // toAdapterContext builds a minimal AdapterContext suitable for calling
-// ResolveToolRoot / ResolveCodexRoots from a CompileContext.
+// ResolveToolRoot from a CompileContext.
 func (c CompileContext) toAdapterContext() *AdapterContext {
 	return &AdapterContext{
 		TargetDir:     c.TargetDir,

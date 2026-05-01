@@ -1,5 +1,5 @@
-import fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 import * as files from '../utils/files.js'
 import { stripFrontmatterAndInjectModel } from '../utils/frontmatter.js'

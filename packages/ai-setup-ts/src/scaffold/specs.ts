@@ -22,8 +22,6 @@ const SPECIFY_TEMPLATES = [
   'task-harness-template.md',
 ]
 
-const SPECIFY_MEMORY_FILES = ['constitution-template.md']
-
 const SPECIFY_SCRIPTS = ['create-new-feature.sh']
 
 /**

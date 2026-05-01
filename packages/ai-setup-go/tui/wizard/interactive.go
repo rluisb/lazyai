@@ -1,11 +1,8 @@
 package wizard
 
 import (
-	"fmt"
-
 	"charm.land/huh/v2"
 
-	"github.com/ricardoborges-teachable/ai-setup/internal/detect"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -14,7 +11,6 @@ type WizardState struct {
 	// Phase 1
 	Scope           string
 	Tools           []string
-	CodexConfirm    bool
 	Skills          []string
 	Agents          []string
 	McpPreset       string
@@ -32,7 +28,6 @@ type WizardState struct {
 	CommitPattern    string
 	CustomCommit     string
 	RequireTicket    bool
-	Commands         []string
 	ChatModes        []string
 	OpenCodeCommands []string
 	OpenCodeModes    []string
@@ -82,7 +77,6 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.CommitPattern = gitDefs.CommitPattern
 	s.CustomCommit = gitDefs.CommitPattern
 	s.RequireTicket = gitDefs.RequireTicket
-	s.Commands = commandIdsToStrings(types.ALL_COMMANDS[:])
 	s.ChatModes = chatModeIdsToStrings(types.ALL_CHATMODES[:])
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
@@ -95,7 +89,6 @@ func initWizardState(defaults *WizardResult) *WizardState {
 			if defaults.Phase2.GitConv.CommitPattern != "" { s.CommitPattern = defaults.Phase2.GitConv.CommitPattern }
 			s.RequireTicket = defaults.Phase2.GitConv.RequireTicket
 		}
-		if len(defaults.Phase2.Commands) > 0 { s.Commands = commandIdsToStrings(defaults.Phase2.Commands) }
 		if len(defaults.Phase2.ChatModes) > 0 { s.ChatModes = chatModeIdsToStrings(defaults.Phase2.ChatModes) }
 		if len(defaults.Phase2.OpenCodeCommands) > 0 { s.OpenCodeCommands = opencodeCommandIdsToStrings(defaults.Phase2.OpenCodeCommands) }
 		if len(defaults.Phase2.OpenCodeModes) > 0 { s.OpenCodeModes = opencodeModeIdsToStrings(defaults.Phase2.OpenCodeModes) }
@@ -141,15 +134,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				}, &state.Scope).
 				Value(&state.Tools),
 		),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title(fmt.Sprintf("Codex CLI is not installed.\n\n%s\n\nContinue anyway?", detect.CodexInstallHint())).
-				Affirmative("Continue").
-				Negative("Go back and fix").
-				Value(&state.CodexConfirm),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "codex") || detect.IsCodexInstalled()
-		}),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Skills").
@@ -254,17 +238,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
-				Title("Gemini Commands").
-				Description("Select Gemini custom slash commands to install. Deselect to skip.").
-				Options(
-					huh.NewOption("RPI workflow command (rpi)", string(types.CommandIdRpi)),
-					huh.NewOption("Review command (review)", string(types.CommandIdReview)),
-					huh.NewOption("Plan command (plan)", string(types.CommandIdPlan)),
-				).
-				Value(&state.Commands),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
 				Title("Copilot Chat Modes").
 				Description("Select Copilot chat modes to install. Deselect to skip.").
 				Options(
@@ -359,15 +332,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Result) {
 	// Phase 1
 	validTools := filterToolsByScope(stringsToToolIDs(state.Tools), types.SetupScope(state.Scope))
-	if containsString(state.Tools, "codex") && !detect.IsCodexInstalled() && !state.CodexConfirm {
-		filtered := make([]types.ToolId, 0)
-		for _, t := range validTools {
-			if t != types.ToolIdCodex {
-				filtered = append(filtered, t)
-			}
-		}
-		validTools = filtered
-	}
 	
 	p1 := buildPhase1Result(
 		types.SetupScope(state.Scope),
@@ -399,7 +363,6 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		branch,
 		commit,
 		state.RequireTicket,
-		stringsToCommandIds(state.Commands),
 		stringsToChatModeIds(state.ChatModes),
 		stringsToOpenCodeCommandIds(state.OpenCodeCommands),
 		stringsToOpenCodeModeIds(state.OpenCodeModes),

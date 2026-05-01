@@ -15,9 +15,9 @@ Default to repository conventions before introducing new patterns.
 ## Project Overview
 
 One-command AI development environment scaffold. Installs per-tool configuration
-(agents, skills, prompts, commands, chatmodes, MCP servers) for 5 AI CLI tools
-(Claude Code, OpenCode, Gemini, GitHub Copilot, Codex) across three scopes
-(project, workspace, global).
+(agents, skills, prompts, commands, chatmodes, MCP servers) for OpenCode,
+Claude Code, and GitHub Copilot across three scopes (project, workspace,
+global).
 
 ## Tech Stack
 
@@ -325,4 +325,3 @@ Example references:
 | Architecture decision made | @specs/adrs/NNN-*.md |
 | Bug revealed missing rule | @specs/rules/ + @specs/memory/ |
 | Refactor changed structure | Root CLAUDE.md + @specs/standards/ + @specs/KNOWLEDGE_MAP.md |
-

@@ -59,9 +59,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			Options(
 				huh.NewOption("OpenCode", "opencode"),
 				huh.NewOption("Claude Code", "claude-code"),
-				huh.NewOption("Gemini CLI", "gemini"),
 				huh.NewOption("GitHub Copilot", "copilot"),
-				huh.NewOption("Codex (OpenAI)", "codex"),
 			).
 			Value(&toolStrs)
 
@@ -167,22 +165,21 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 	libFS := library.GetLibraryFS()
 
 	ctx := &scaffold.ScaffoldContext{
-		TargetDir:      targetDir,
-		LibraryDir:     libDir,
-		LibraryFS:      libFS,
-		Tools:          storeData.Config.Tools,
-		CLITools:       storeData.Config.CLITools,
-		EnableServers:  storeData.Config.EnableServers,
-		ProjectName:    storeData.Config.ProjectName,
-		PlanningDir:    storeData.Config.PlanningDir,
-		SetupScope:     storeData.Config.SetupScope,
-		Features:       storeData.Selections.Features,
-		GitConventions: storeData.Selections.GitConventions,
-		Strategy:       types.ConflictStrategyAlign,
+		TargetDir:        targetDir,
+		LibraryDir:       libDir,
+		LibraryFS:        libFS,
+		Tools:            storeData.Config.Tools,
+		CLITools:         storeData.Config.CLITools,
+		EnableServers:    storeData.Config.EnableServers,
+		ProjectName:      storeData.Config.ProjectName,
+		PlanningDir:      storeData.Config.PlanningDir,
+		SetupScope:       storeData.Config.SetupScope,
+		Features:         storeData.Selections.Features,
+		GitConventions:   storeData.Selections.GitConventions,
+		Strategy:         types.ConflictStrategyAlign,
 		Agents:           storeData.Selections.Agents,
 		Skills:           storeData.Selections.Skills,
 		Prompts:          storeData.Selections.Prompts,
-		Commands:         storeData.Selections.Commands,
 		ChatModes:        storeData.Selections.ChatModes,
 		OpenCodeCommands: storeData.Selections.OpenCodeCommands,
 		OpenCodeModes:    storeData.Selections.OpenCodeModes,

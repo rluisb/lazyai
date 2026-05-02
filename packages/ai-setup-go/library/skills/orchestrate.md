@@ -48,6 +48,15 @@ This relay is prompt/static guidance only. Do not claim runtime feedback persist
 
 ## Recovery patterns
 
+### Safe Auto-Recovery Policy
+
+Use the Safe Auto-Recovery Policy before calling recovery tools. This guidance is static/prompt-only; runtime autonomous recovery is deferred and the orchestrator must not imply a runtime classifier, automatic edit loop, or changed retry semantics.
+
+- **Auto-allowed:** re-run deterministic checks, retry transient provider/tool failures within existing retry limits, regenerate malformed report JSON from the same inputs, or create a handoff when blocked.
+- **Human-gated:** code edits, dependency changes, destructive commands, migration changes, secrets/config changes, ambiguous failures, scope changes, or any action outside the approved task boundary.
+- **Required evidence:** report the failure cause/evidence, retry limit and current attempt count, idempotency/safety check, and why the selected pattern is safe before acting.
+- **Approval boundary:** if the failure is ambiguous or the action is not auto-allowed, pause for human confirmation before recovery.
+
 | Pattern | Trigger | Call |
 |---------|---------|------|
 | Retry | Transient failure, retries remain | `retry_step({ runId, kind: "chain", stepId, reason })` |
@@ -55,7 +64,7 @@ This relay is prompt/static guidance only. Do not claim runtime feedback persist
 | Escalate | Wrong approach / wrong agent | `escalate_step({ runId, kind: "chain", stepId, targetAgent, reason })` |
 | Handoff | Context exhausted or fundamental block | `handoff({ runId, kind: "chain", summary, includeArtifacts: true })` |
 
-After any failure, report to the user before acting: chain, step, agent, exact error, what succeeded so far, recommended pattern and why.
+After any failure, report to the user before acting: chain, step, agent, exact error, what succeeded so far, recommended pattern and why, failure cause/evidence, retry limit, and idempotency/safety check.
 
 ## When NOT to orchestrate
 

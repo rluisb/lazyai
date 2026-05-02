@@ -93,11 +93,21 @@ If approval is missing for a mutable action, stop and return a minimal approval 
 
 ## Failure Protocol
 
+### Safe Auto-Recovery Policy
+
+Recovery is policy-guided, not runtime automation. Runtime autonomous recovery is deferred; do not claim a runtime failure classifier, automatic edit loop, or changed retry semantics.
+
+- **Auto-allowed:** re-run deterministic checks, retry transient provider/tool failures within existing retry limits, regenerate malformed report JSON from the same inputs, or create a handoff when blocked.
+- **Human-gated:** code edits, dependency changes, destructive commands, migration changes, secrets/config changes, ambiguous failures, scope changes, or actions outside the approved task boundary.
+- **Required before acting:** identify the failure cause/evidence, retry limit and current attempt count, idempotency/safety check, selected recovery pattern, and why it is safe.
+- **Stop condition:** if the action is not auto-allowed, or safety/idempotency is unclear, ask the human to confirm the recovery path.
+
 Before any recovery action, report to the user:
 1. Chain name, step id, agent, skills in effect
 2. Exact error or blocking condition
 3. What completed successfully so far (artifacts, runId)
-4. Recommended recovery pattern (retry / fix-resume / escalate / handoff) and why
+4. Recommended recovery pattern (safe retry / fix-and-resume / escalate / handoff) and why
+5. Failure cause/evidence, retry limit, current attempt count, and idempotency/safety check
 
 Only after the user confirms — or when the recovery is clearly safe — call the recovery tool. Persist the lesson so future runs benefit.
 

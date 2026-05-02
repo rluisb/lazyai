@@ -225,7 +225,7 @@ func assertFeatureChainShape(t *testing.T, data []byte, adversarialDesign bool) 
 	if adversarialDesign {
 		expectedIDs = append(expectedIDs, "red-team-plan")
 	}
-	expectedIDs = append(expectedIDs, "plan-gate", "implement", "review", "fix", "document")
+	expectedIDs = append(expectedIDs, "plan-gate", "implement", "review", "fix", "chain-verify", "document")
 	if strings.Join(ids, ",") != strings.Join(expectedIDs, ",") {
 		t.Fatalf("expected current feature chain step order %v, got %v", expectedIDs, ids)
 	}
@@ -278,6 +278,42 @@ func assertFeatureChainShape(t *testing.T, data []byte, adversarialDesign bool) 
 		}
 	} else if redTeam != nil {
 		t.Fatal("expected base feature chain to omit red-team-plan")
+	}
+
+	review := stepByID["review"]
+	if review == nil {
+		t.Fatal("expected current feature chain to include a review step")
+	}
+	reviewTransitions, ok := review["transitions"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected review transitions object, got %T", review["transitions"])
+	}
+	if reviewTransitions["pass"] != "chain-verify" || reviewTransitions["minor_issues"] != "fix" || reviewTransitions["blocking"] != "fix" || reviewTransitions["design_issues"] != "plan" {
+		t.Fatalf("expected review pass->chain-verify with existing review remediation transitions, got %v", reviewTransitions)
+	}
+
+	chainVerify := stepByID["chain-verify"]
+	if chainVerify == nil {
+		t.Fatal("expected current feature chain to include a chain-verify step")
+	}
+	if chainVerify["agent"] != "reviewer" {
+		t.Fatalf("expected chain-verify to use reviewer agent, got %v", chainVerify["agent"])
+	}
+	chainVerifySkills, ok := chainVerify["skills"].([]any)
+	if !ok || len(chainVerifySkills) != 1 || chainVerifySkills[0] != "chain-verify" {
+		t.Fatalf("expected chain-verify step to reference only the chain-verify skill, got %v", chainVerify["skills"])
+	}
+	if _, ok := chainVerify["gate"]; ok {
+		t.Fatalf("expected chain-verify step to remain advisory without a gate, got %v", chainVerify["gate"])
+	}
+	chainVerifyTransitions, ok := chainVerify["transitions"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected chain-verify transitions object, got %T", chainVerify["transitions"])
+	}
+	for _, outcome := range []string{"success", "pass", "warn", "fail"} {
+		if chainVerifyTransitions[outcome] != "document" {
+			t.Fatalf("expected chain-verify %s transition to document without automatic loops, got %v", outcome, chainVerifyTransitions)
+		}
 	}
 
 	planGate := stepByID["plan-gate"]

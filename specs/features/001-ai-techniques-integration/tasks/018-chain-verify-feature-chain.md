@@ -2,7 +2,7 @@
 
 **Phase:** W2.B — Verification + completion  
 **User Story:** [US1] Verification + completion  
-**Status:** TODO — requires human approval after T017  
+**Status:** DONE — integration implemented after explicit human approval  
 **Depends on:** T017 and explicit approval to change the feature chain  
 **Parallel with:** none
 
@@ -43,11 +43,18 @@ If approved, insert `chain-verify` as a simple sequential feature-chain step aft
 
 ## Done When
 
-- [ ] Approval for default chain integration is documented.
-- [ ] Feature chain remains a sequential `steps` array.
-- [ ] `chain-verify` runs after implementation review and before document/done.
-- [ ] No runtime conditionals, templates, or parallel blocks are introduced.
-- [ ] Installed chain output is covered by tests.
+- [x] Approval for default chain integration is documented.
+- [x] Feature chain remains a sequential `steps` array.
+- [x] `chain-verify` runs after implementation review and before document/done.
+- [x] No runtime conditionals, templates, or parallel blocks are introduced.
+- [x] Installed chain output is covered by tests.
+
+## Evidence Produced
+
+- Human approval for T018 default chain integration was provided in the T018 implementation request after the approve/defer decision point.
+- `packages/ai-setup-go/library/orchestration/chains/feature.json` routes `review.pass` to a new sequential `chain-verify` step, then routes `success`, `pass`, `warn`, and `fail` to `document` without adding runtime conditionals, templates, parallel blocks, or automatic loops.
+- `packages/ai-setup-go/library/orchestration/chains/feature-adversarial.json` mirrors the same post-review `chain-verify` behavior for the explicit adversarial feature-chain source.
+- TS and Go scaffold/chain-shape tests assert source and installed chains remain explicit sequential `steps` arrays and that `chain-verify` references the `chain-verify` skill in the approved location.
 
 ## Risks
 

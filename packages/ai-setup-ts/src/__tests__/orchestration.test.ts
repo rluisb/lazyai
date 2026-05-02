@@ -164,6 +164,7 @@ function assertFeatureChainShape(chain: Record<string, unknown>, opts: { adversa
     'implement',
     'review',
     'fix',
+    'chain-verify',
     'document',
   ]
   expect(steps.map((step) => step.id)).toEqual(expectedStepIDs)
@@ -198,6 +199,27 @@ function assertFeatureChainShape(chain: Record<string, unknown>, opts: { adversa
     expect(redTeamStep).toBeUndefined()
   }
 
+  const reviewStep = steps.find((step) => step.id === 'review')
+  expect(reviewStep).toBeDefined()
+  expect(reviewStep?.transitions).toMatchObject({
+    pass: 'chain-verify',
+    minor_issues: 'fix',
+    blocking: 'fix',
+    design_issues: 'plan',
+  })
+
+  const chainVerifyStep = steps.find((step) => step.id === 'chain-verify')
+  expect(chainVerifyStep).toBeDefined()
+  expect(chainVerifyStep?.agent).toBe('reviewer')
+  expect(chainVerifyStep?.skills).toEqual(['chain-verify'])
+  expect(chainVerifyStep).not.toHaveProperty('gate')
+  expect(chainVerifyStep?.transitions).toMatchObject({
+    success: 'document',
+    pass: 'document',
+    warn: 'document',
+    fail: 'document',
+  })
+
   const stepsBeforeImplementation = steps.slice(0, steps.findIndex((step) => step.id === 'implement'))
   const approvalGatesBeforeImplementation = stepsBeforeImplementation.filter((step) => step.gate === 'user_approval')
   expect(approvalGatesBeforeImplementation.map((step) => step.id)).toEqual(['plan-gate'])
@@ -225,8 +247,9 @@ function minimalFeatureChain(adversarialDesign: boolean): Record<string, unknown
         : []),
       { id: 'plan-gate', agent: 'planner', skills: [], gate: 'user_approval', transitions: { approved: 'implement', rejected: 'plan' } },
       { id: 'implement', agent: 'builder', skills: ['implement'], transitions: { success: 'review' } },
-      { id: 'review', agent: 'reviewer', skills: ['extract-standards'], transitions: { pass: 'document' } },
+      { id: 'review', agent: 'reviewer', skills: ['extract-standards'], transitions: { pass: 'chain-verify', minor_issues: 'fix', blocking: 'fix', design_issues: 'plan' } },
       { id: 'fix', agent: 'builder', skills: ['iterate'], transitions: { success: 'review' } },
+      { id: 'chain-verify', agent: 'reviewer', skills: ['chain-verify'], transitions: { success: 'document', pass: 'document', warn: 'document', fail: 'document' } },
       { id: 'document', agent: 'documenter', skills: [], transitions: { success: 'done' } },
     ],
   }

@@ -3,6 +3,13 @@ import * as p from '@clack/prompts'
 import { Errors } from '../errors/index.js'
 import type { ConflictStrategy } from '../types.js'
 import { computeLineDiff, renderDiffPreview } from '../utils/diff.js'
+import {
+  resolveDiffViewerBinary,
+  runDiffReview,
+  shouldDelegateReview,
+  type ResolutionAction,
+  type ReviewRequest,
+} from '../utils/diffviewer-delegate.js'
 import { fileExists, readFile } from '../utils/files.js'
 
 export interface PlannedFile {
@@ -18,6 +25,24 @@ export interface Phase7Result {
 function cancelAndExit(): never {
   p.cancel('Setup cancelled.')
   throw Errors.userCancelled()
+}
+
+const DELEGATE_ACTION_TO_STRATEGY: Record<ResolutionAction, ConflictStrategy> = {
+  accept: 'backup-and-replace',
+  deny: 'skip',
+  skip: 'align',
+}
+
+function buildReviewRequest(conflictingFiles: PlannedFile[]): ReviewRequest {
+  return {
+    version: 1,
+    title: 'Review setup conflicts',
+    files: conflictingFiles.map(file => ({
+      path: file.destPath,
+      currentContent: readFile(file.destPath),
+      newContent: file.srcContent,
+    })),
+  }
 }
 
 export async function runPhase3(opts: {
@@ -71,6 +96,23 @@ export async function runPhase3(opts: {
 
   if (strategy !== 'align') {
     return { strategy, perFileOverrides }
+  }
+
+  const reviewRequest = buildReviewRequest(conflictingFiles)
+  if (shouldDelegateReview(reviewRequest.files) && resolveDiffViewerBinary()) {
+    const delegateResult = await runDiffReview(reviewRequest)
+
+    if (delegateResult.mode === 'delegated' && delegateResult.status === 'cancelled') {
+      cancelAndExit()
+    }
+
+    if (delegateResult.mode === 'delegated' && delegateResult.status === 'confirmed') {
+      for (const resolution of delegateResult.resolutions ?? []) {
+        perFileOverrides.set(resolution.path, DELEGATE_ACTION_TO_STRATEGY[resolution.action])
+      }
+
+      return { strategy, perFileOverrides }
+    }
   }
 
   for (const file of conflictingFiles) {

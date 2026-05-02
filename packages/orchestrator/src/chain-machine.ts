@@ -100,7 +100,7 @@ export function advanceChainState(input: MachineAdvanceInput): MachineAdvanceRes
     step.state = 'completed'
     step.completedAt = now
     step.lastOutcome = input.outcome
-    step.gate = buildPendingGate(compiledStep.gate, compiledStep.id)
+    step.gate = buildPendingGate(compiledStep.gate, compiledStep.id, state)
     markCompleted(state, step.stepId)
     state.state = 'gated'
     state.updatedAt = now
@@ -370,12 +370,194 @@ function toChainStepStatus(
   }
 }
 
-function buildPendingGate(type: NonNullable<CompiledStepPlan['gate']>, stepId: string): GateState {
+function buildPendingGate(type: NonNullable<CompiledStepPlan['gate']>, stepId: string, state?: ChainState): GateState {
+  const mergedReport = stepId === 'plan-gate' && state ? buildMergedGateReport(state) : null
+
   return {
     type,
-    prompt: `Awaiting ${type} for step "${stepId}".`,
+    prompt: mergedReport ? renderMergedGatePrompt(type, stepId, mergedReport) : `Awaiting ${type} for step "${stepId}".`,
     status: 'pending',
   }
+}
+
+type PlanQualityVerdict = 'pass' | 'warn' | 'fail'
+type RedTeamStatus = 'ok' | 'soft_fail' | 'skipped'
+
+interface ReportLocation {
+  file: string
+  section: string | null
+  lineStart: number | null
+  lineEnd: number | null
+}
+
+interface PlanQualityFinding {
+  rule: string
+  severity: 'info' | 'warn' | 'fail'
+  message: string
+  location: ReportLocation
+}
+
+interface PlanQualityReport {
+  schemaVersion: 'plan-quality-report/v1'
+  verdict: PlanQualityVerdict
+  findings: PlanQualityFinding[]
+  checkedAgainst: Record<string, unknown>
+}
+
+interface RedTeamFinding {
+  category: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  message: string
+  recommendation: string
+  location: ReportLocation
+}
+
+interface RedTeamPlanReport {
+  schemaVersion: 'red-team-plan-report/v1'
+  status: RedTeamStatus
+  findings: RedTeamFinding[]
+}
+
+interface MergedGateReport {
+  schemaVersion: 'plan-gate-report/v1'
+  summary: {
+    planVerdict: PlanQualityVerdict
+    redTeamStatus: RedTeamStatus
+    blockingCount: number
+    warningCount: number
+  }
+  planQuality: PlanQualityReport
+  adversarialReview: RedTeamPlanReport | null
+}
+
+function buildMergedGateReport(state: ChainState): MergedGateReport | null {
+  const planQuality = findPlanQualityReport(state)
+  if (!planQuality) return null
+
+  const adversarialReview = findRedTeamPlanReport(state)
+  const allFindings = [...planQuality.findings, ...(adversarialReview?.findings ?? [])]
+
+  return {
+    schemaVersion: 'plan-gate-report/v1',
+    summary: {
+      planVerdict: planQuality.verdict,
+      redTeamStatus: adversarialReview?.status ?? 'skipped',
+      blockingCount: allFindings.filter(isBlockingFinding).length,
+      warningCount: allFindings.filter(isWarningFinding).length,
+    },
+    planQuality,
+    adversarialReview,
+  }
+}
+
+function findPlanQualityReport(state: ChainState): PlanQualityReport | null {
+  for (const step of state.steps) {
+    const report = extractRecord(step.output, ['planQualityReport', 'PlanQualityReport', 'report']) ?? step.output
+    if (isPlanQualityReport(report)) return report
+  }
+  return null
+}
+
+function findRedTeamPlanReport(state: ChainState): RedTeamPlanReport | null {
+  for (const step of state.steps) {
+    const report = extractRecord(step.output, ['redTeamPlanReport', 'RedTeamPlanReport', 'adversarialReview', 'report']) ?? step.output
+    if (isRedTeamPlanReport(report)) return report
+  }
+  return null
+}
+
+function extractRecord(output: Record<string, unknown> | undefined, keys: string[]): Record<string, unknown> | null {
+  if (!output) return null
+  for (const key of keys) {
+    const value = output[key]
+    if (isRecord(value)) return value
+  }
+  return null
+}
+
+function isPlanQualityReport(value: unknown): value is PlanQualityReport {
+  if (!isRecord(value)) return false
+  return value.schemaVersion === 'plan-quality-report/v1' && isPlanQualityVerdict(value.verdict) && Array.isArray(value.findings)
+}
+
+function isRedTeamPlanReport(value: unknown): value is RedTeamPlanReport {
+  if (!isRecord(value)) return false
+  return value.schemaVersion === 'red-team-plan-report/v1' && isRedTeamStatus(value.status) && Array.isArray(value.findings)
+}
+
+function isPlanQualityVerdict(value: unknown): value is PlanQualityVerdict {
+  return value === 'pass' || value === 'warn' || value === 'fail'
+}
+
+function isRedTeamStatus(value: unknown): value is RedTeamStatus {
+  return value === 'ok' || value === 'soft_fail' || value === 'skipped'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isBlockingFinding(finding: PlanQualityFinding | RedTeamFinding): boolean {
+  return finding.severity === 'fail' || finding.severity === 'high' || finding.severity === 'critical'
+}
+
+function isWarningFinding(finding: PlanQualityFinding | RedTeamFinding): boolean {
+  return finding.severity === 'warn' || finding.severity === 'medium' || finding.severity === 'low'
+}
+
+function renderMergedGatePrompt(
+  type: NonNullable<CompiledStepPlan['gate']>,
+  stepId: string,
+  report: MergedGateReport,
+): string {
+  const lines = [
+    `Awaiting ${type} for step "${stepId}".`,
+    '',
+    '## Plan Gate Report',
+    `PlanQualityReport verdict: ${report.summary.planVerdict}`,
+    `RedTeamPlanReport status: ${report.summary.redTeamStatus}`,
+    `Blocking findings: ${report.summary.blockingCount}`,
+    `Warning findings: ${report.summary.warningCount}`,
+    '',
+    ...renderPlanQualityFindings(report.planQuality),
+    ...renderRedTeamFindings(report.adversarialReview),
+    '',
+    '```json',
+    JSON.stringify(report, null, 2),
+    '```',
+  ]
+
+  return lines.join('\n')
+}
+
+function renderPlanQualityFindings(report: PlanQualityReport): string[] {
+  if (report.findings.length === 0) return ['PlanQualityReport findings: none.', '']
+
+  return [
+    'PlanQualityReport findings:',
+    ...report.findings.map((finding) => `- ${finding.severity.toUpperCase()} ${finding.rule}: ${finding.message} (${formatLocation(finding.location)})`),
+    '',
+  ]
+}
+
+function renderRedTeamFindings(report: RedTeamPlanReport | null): string[] {
+  if (!report) return ['RedTeamPlanReport findings: skipped.', '']
+  if (report.findings.length === 0) return [`RedTeamPlanReport findings: ${report.status}; none.`, '']
+
+  return [
+    `RedTeamPlanReport findings (${report.status}):`,
+    ...report.findings.map(
+      (finding) =>
+        `- ${finding.severity.toUpperCase()} ${finding.category}: ${finding.message} Recommendation: ${finding.recommendation} (${formatLocation(finding.location)})`,
+    ),
+    '',
+  ]
+}
+
+function formatLocation(location: ReportLocation): string {
+  const lineRange = location.lineStart === null ? '' : location.lineEnd === null || location.lineEnd === location.lineStart ? `:${location.lineStart}` : `:${location.lineStart}-${location.lineEnd}`
+  const section = location.section ? ` § ${location.section}` : ''
+  return `${location.file}${lineRange}${section}`
 }
 
 function getMaxRetries(step: CompiledStepPlan): number {

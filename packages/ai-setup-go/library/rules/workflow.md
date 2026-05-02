@@ -41,6 +41,18 @@ Each workflow step runs until its exit criteria are met — not until a time lim
 - **Implement**: Done when all task tests pass and quality gates are green
 - **Review**: Done when all spec behaviors are verified and no scope violations exist
 
+TillDone applies only to the approved task. It preserves one task per session and does not authorize scope expansion, speculative cleanup, runtime workflow changes, or extra features. If satisfying the task requires work outside the accepted contract, stop and ask for approval.
+
+Before declaring a task done, the agent must check:
+
+1. **Requirements complete:** every task Done When item has evidence.
+2. **Verification evidence:** tests, quality gates, or justified checks are listed.
+3. **Unresolved risks/assumptions:** risks and assumptions are closed or explicitly reported.
+4. **Scope drift:** changed files and behavior remain inside the approved task.
+5. **Blocker/handoff:** unmet criteria are reported as a documented blocker/handoff, not as done.
+
+Use completion status precisely: `done` only when all criteria are met with evidence; `blocked` when completion requires an external decision or unavailable dependency; `not-done` when work remains inside the approved task.
+
 ## Human Gates
 
 The following transitions require explicit human approval:

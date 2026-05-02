@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "chain-verification-report/v1",
+  "verdict": "warn",
+  "checkedArtifacts": {
+    "spec": "specs/features/001-ai-techniques-integration/spec-wave2.md",
+    "plan": "specs/features/001-ai-techniques-integration/plan-wave2.md",
+    "tasks": "specs/features/001-ai-techniques-integration/tasks-wave2.md",
+    "taskFiles": ["specs/features/001-ai-techniques-integration/tasks/017-chain-verify-skill.md"],
+    "implementationEvidence": ["packages/ai-setup-go/library/skills/chain-verify.md"],
+    "tests": ["packages/ai-setup-ts/src/__tests__/chain-verification-report.test.ts"]
+  },
+  "traceability": [
+    {
+      "requirementId": "AC-D4-003",
+      "planRefs": ["specs/features/001-ai-techniques-integration/spec-wave2.md#d4--chain-of-verification"],
+      "taskRefs": ["specs/features/001-ai-techniques-integration/tasks/017-chain-verify-skill.md#test-first-order"],
+      "evidenceRefs": ["packages/ai-setup-ts/src/__tests__/fixtures/chain-verification-report/ambiguous-warn.json"],
+      "status": "partial"
+    }
+  ],
+  "findings": [
+    {
+      "rule": "requirement-trace",
+      "severity": "warn",
+      "message": "Ambiguous Markdown headings prevented confident requirement-to-task mapping; parser uncertainty is a warn finding, not a parser-driven fail.",
+      "recommendation": "Cite the ambiguous artifact section and ask for cleaner evidence or human confirmation instead of crashing or inventing missing coverage.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/tasks/017-chain-verify-skill.md",
+        "section": "Test-First Order",
+        "lineStart": 34,
+        "lineEnd": 40
+      }
+    },
+    {
+      "rule": "artifact-presence",
+      "severity": "warn",
+      "message": "Malformed artifact parsing made one optional implementation note ambiguous, so the report records the uncertainty without failing the verification pass.",
+      "recommendation": "Keep the optional artifact listed in checkedArtifacts when readable and add a warning that names the parsing ambiguity.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/spec-wave2.md",
+        "section": "ChainVerificationReport v1",
+        "lineStart": 159,
+        "lineEnd": 192
+      }
+    }
+  ]
+}

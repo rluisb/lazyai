@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "title": "Review AGENTS.md update",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "currentContent": "# Agent Rules\n\nFollow repository conventions.\n",
+      "newContent": "# Agent Rules\n\nFollow repository conventions.\nRun verification before reporting completion.\n"
+    }
+  ]
+}

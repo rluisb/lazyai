@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "title": "Review interactive diff changes",
+  "files": [
+    {
+      "path": "packages/ai-setup-ts/src/utils/diff.ts",
+      "currentContent": "export function renderDiffPreview(diff: string): void {\n  console.log(diff)\n}\n",
+      "newContent": "export function renderDiffPreview(diff: string): void {\n  process.stderr.write(diff)\n}\n"
+    },
+    {
+      "path": "packages/diffviewer/README.md",
+      "currentContent": "",
+      "newContent": "# Diffviewer\n\nInteractive terminal review for proposed file changes.\n"
+    },
+    {
+      "path": "AGENTS.md",
+      "currentContent": "# Agent Rules\n\nFollow repository conventions.\n",
+      "newContent": "# Agent Rules\n\nFollow repository conventions.\nRun verification before reporting completion.\n"
+    }
+  ]
+}

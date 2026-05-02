@@ -4,9 +4,10 @@
 Improve the UI/UX for the Read-Print-Iterate (RPI) and AI-Orchestrator workflows when presenting diffs to users. Currently, presenting large files or multiple file diffs simultaneously results in "infinite scrolls," making it difficult for the user to understand, review, and approve changes.
 
 ## Current State
-- **Go Implementation**: `packages/ai-setup-go/tui/diffviewer/viewer.go` provides a robust, interactive side-by-side diff viewer built with Bubble Tea for resolving template conflicts.
-- **TS Implementation**: `packages/ai-setup-ts/src/utils/diff.ts` and `renderDiffPreview` print diffs directly to the terminal stdout.
-- **Orchestration / RPI**: When an AI agent proposes changes across multiple files or large code blocks, the diffs are logged all at once. This leads to terminal flooding.
+- **Standalone Go Implementation**: `packages/diffviewer` provides the Bubble Tea-based side-by-side diff viewer library and `cmd/diffviewer` JSON stdin/stdout CLI.
+- **Go CLI Integration**: `packages/ai-setup-go/tui/wizard/diffreview.go` owns Phase 3 threshold-based delegation to the standalone `diffviewer` binary with inline fallback. The retired `packages/ai-setup-go/tui/diffviewer/viewer.go` package has been removed.
+- **TS CLI Integration**: `packages/ai-setup-ts/src/utils/diffviewer-delegate.ts` owns threshold-based delegation to the same binary with fallback results for inline handling.
+- **Quickstart**: Build, JSON contract, integration, out-of-scope notes, and verification results are documented below.
 
 ## Proposed UX
 Instead of dumping all diffs at once, the system will switch to a **Paginated / Step-by-Step Interactive Review** when reviewing changes:
@@ -71,3 +72,83 @@ Instead of dumping all diffs at once, the system will switch to a **Paginated / 
 - Publishing/prebuilding binaries for all platforms
 - Database/store schema changes
 - Changing non-conflict wizard phases
+
+## Quickstart
+
+### Build the `diffviewer` binary
+
+From the repository root:
+
+```bash
+cd packages/diffviewer && go build ./cmd/diffviewer
+```
+
+This builds the local `diffviewer` executable in `packages/diffviewer/`. Binary publishing, release packaging, cross-platform distribution, and checked-in compiled binaries are out of scope.
+
+### JSON stdin/stdout contract
+
+`diffviewer` reads one JSON v1 request from stdin. The interactive TUI runs on the terminal, then stdout receives one JSON v1 response.
+
+Request shape:
+
+```json
+{
+  "version": 1,
+  "title": "Review generated setup changes",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "currentContent": "# Existing\nKeep this line\n",
+      "newContent": "# Existing\nReplace this line\n"
+    }
+  ]
+}
+```
+
+Example invocation:
+
+```bash
+printf '%s\n' '{"version":1,"title":"Review generated setup changes","files":[{"path":"AGENTS.md","currentContent":"# Existing\nKeep this line\n","newContent":"# Existing\nReplace this line\n"}]}' | ./diffviewer
+```
+
+Expected stdout after the user confirms decisions in the TUI:
+
+```json
+{
+  "version": 1,
+  "status": "confirmed",
+  "resolutions": [
+    { "path": "AGENTS.md", "action": "accept" }
+  ]
+}
+```
+
+Cancellation or validation errors return `status: "cancelled"`; validation errors also include a non-empty `message` and exit non-zero.
+
+### CLI integration behavior
+
+Both CLIs use threshold-based delegation so small reviews remain fast and large reviews avoid terminal flooding.
+
+- **Go CLI (`packages/ai-setup-go/tui/wizard/diffreview.go`)**
+  - Uses `NewDiffReviewClient()` in Phase 3 conflict review.
+  - Delegates when there is more than one conflicting file or any file has at least 20 changed lines.
+  - Requires a terminal and a resolvable `diffviewer` binary; otherwise it falls back to the inline per-file prompt.
+  - Maps `accept` to backup-and-replace, `deny` to skip/keep existing, and `skip` to leave the file aligned for later handling.
+- **TS CLI (`packages/ai-setup-ts/src/utils/diffviewer-delegate.ts`)**
+  - Delegates under the same threshold: multiple files or a single file with at least 20 changed lines.
+  - Resolves the binary from `AI_SETUP_DIFFVIEWER_BINARY`, local package candidates, or `PATH`.
+  - Returns `mode: "fallback"` when the binary is unavailable, fails, or emits an invalid response so callers can continue with the inline path.
+
+### Verification results
+
+Run from `/Users/ricardo/projects/teachable/ai-setup/.worktrees/interactive-diff-review` on 2026-05-02.
+
+| Command | Result | Output |
+|---|---|---|
+| `cd packages/ai-setup-go && go test ./...` | Pass | `ok`/`[no test files]` for all packages; `cmd` completed in `82.849s`; most packages cached. |
+| `rg "tui/diffviewer" packages/ai-setup-go` | Pass | No matches found. |
+| `cd packages/diffviewer && go test ./...` | Pass | `ok github.com/ricardoborges-teachable/ai-setup/packages/diffviewer (cached)` and `? .../cmd/diffviewer [no test files]`. |
+| `cd packages/diffviewer && go build ./cmd/diffviewer` | Pass | No output; produced local `packages/diffviewer/diffviewer` build artifact, then removed it to avoid leaving a checked-in binary candidate. |
+| `cd packages/ai-setup-go && go test ./tui/wizard/...` | Pass | `ok github.com/ricardoborges-teachable/ai-setup/tui/wizard (cached)`. |
+| `pnpm --filter @ai-setup/cli typecheck` | Pass | `tsc --noEmit` completed with no errors. |
+| `pnpm --filter @ai-setup/cli test` | Pass | Vitest summary: `Test Files 46 passed (46)`, `Tests 515 passed | 1 skipped (516)`, duration `3.85s`. |

@@ -1,12 +1,76 @@
 package scaffold
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
+
+func TestFeatureChainSourceShapeIsSequentialAndGated(t *testing.T) {
+	data := readSourceFeatureChain(t)
+	assertCurrentFeatureChainShape(t, data)
+}
+
+func TestScaffoldOrchestration_InstallsFeatureChainShapeFromLibrary(t *testing.T) {
+	targetDir := t.TempDir()
+	libFS := createMinimalLibraryFS()
+	data := readSourceFeatureChain(t)
+	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: data}
+	fileRecords := []types.TrackedFile{}
+
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}); err != nil {
+		t.Fatalf("ScaffoldOrchestration failed: %v", err)
+	}
+
+	installed, err := os.ReadFile(filepath.Join(targetDir, ".ai", "orchestration", "chains", "feature.json"))
+	if err != nil {
+		t.Fatalf("read installed feature chain: %v", err)
+	}
+	assertCurrentFeatureChainShape(t, installed)
+	if string(installed) != string(data) {
+		t.Fatal("expected scaffolded feature chain to match the source chain byte-for-byte")
+	}
+}
+
+func TestScaffoldOrchestration_CopiesChainDefinitionsWithoutTemplateRendering(t *testing.T) {
+	targetDir := t.TempDir()
+	libFS := createMinimalLibraryFS()
+	chainWithTemplateDirectives := []byte(`{
+  "kind": "chain",
+  "name": "feature",
+  "entry": "plan-quality",
+  "steps": [
+    {"id":"plan-quality","agent":"planner","skills":["plan"],"description":"quality","transitions":{"success":"red-team-plan"}},
+    {{#if features.adversarialDesign}}
+    {"id":"red-team-plan","agent":"reviewer","skills":["red-team-plan"],"description":"red team","transitions":{"success":"plan-gate"}},
+    {{/if}}
+    {"id":"plan-gate","agent":"planner","skills":[],"description":"gate","gate":"user_approval","transitions":{"approved":"implement","rejected":"plan-quality"}}
+  ]
+}`)
+	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: chainWithTemplateDirectives}
+	fileRecords := []types.TrackedFile{}
+
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}); err != nil {
+		t.Fatalf("ScaffoldOrchestration failed: %v", err)
+	}
+
+	installed, err := os.ReadFile(filepath.Join(targetDir, ".ai", "orchestration", "chains", "feature.json"))
+	if err != nil {
+		t.Fatalf("read installed feature chain: %v", err)
+	}
+
+	if string(installed) != string(chainWithTemplateDirectives) {
+		t.Fatal("expected orchestration scaffold to copy chain definitions without rendering feature templates")
+	}
+	if !strings.Contains(string(installed), "{{#if features.adversarialDesign}}") {
+		t.Fatal("expected unsupported template directive to remain literal in installed chain")
+	}
+}
 
 func TestScaffoldOrchestration_AddsExtensionOrchestrationContent(t *testing.T) {
 	targetDir := t.TempDir()
@@ -63,6 +127,74 @@ func TestScaffoldOrchestration_AddsExtensionOrchestrationContent(t *testing.T) {
 	}
 	if !hasTrackedFile(fileRecords, ".ai/orchestration/workflows/deploy.json") {
 		t.Fatal("expected extension workflow to be tracked")
+	}
+}
+
+func readSourceFeatureChain(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "library", "orchestration", "chains", "feature.json"))
+	if err != nil {
+		t.Fatalf("read source feature chain: %v", err)
+	}
+	return data
+}
+
+func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
+	t.Helper()
+
+	var body map[string]any
+	if err := json.Unmarshal(data, &body); err != nil {
+		t.Fatalf("feature chain must be valid JSON: %v", err)
+	}
+	if body["kind"] != "chain" {
+		t.Fatalf("expected feature chain kind to be chain, got %v", body["kind"])
+	}
+	if body["name"] != "feature" {
+		t.Fatalf("expected feature chain name to be feature, got %v", body["name"])
+	}
+	if _, ok := body["parallel"]; ok {
+		t.Fatal("feature chain must remain sequential and must not define a parallel block")
+	}
+
+	steps, ok := body["steps"].([]any)
+	if !ok || len(steps) == 0 {
+		t.Fatal("feature chain must define a non-empty sequential steps array")
+	}
+
+	ids := make([]string, 0, len(steps))
+	var plan map[string]any
+	for _, rawStep := range steps {
+		step, ok := rawStep.(map[string]any)
+		if !ok {
+			t.Fatalf("feature chain step must be an object, got %T", rawStep)
+		}
+		id, ok := step["id"].(string)
+		if !ok || id == "" {
+			t.Fatalf("feature chain step must have a string id, got %v", step["id"])
+		}
+		ids = append(ids, id)
+		if id == "plan" {
+			plan = step
+		}
+	}
+
+	expectedIDs := []string{"research", "plan", "implement", "review", "fix", "document"}
+	if strings.Join(ids, ",") != strings.Join(expectedIDs, ",") {
+		t.Fatalf("expected current feature chain step order %v, got %v", expectedIDs, ids)
+	}
+	if plan == nil {
+		t.Fatal("expected current feature chain to include a plan step")
+	}
+	if plan["gate"] != "user_approval" {
+		t.Fatalf("expected current plan step to own user_approval gate, got %v", plan["gate"])
+	}
+
+	transitions, ok := plan["transitions"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected plan transitions object, got %T", plan["transitions"])
+	}
+	if transitions["approved"] != "implement" || transitions["rejected"] != "research" {
+		t.Fatalf("expected explicit plan gate transitions approved->implement and rejected->research, got %v", transitions)
 	}
 }
 

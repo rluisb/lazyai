@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ai-setup-go
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Set version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Prepare dist
+        run: mkdir -p dist
+
+      - name: Build (darwin arm64)
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-arm64 .
+
+      - name: Build (darwin amd64)
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-amd64 .
+
+      - name: Build (linux amd64)
+        run: GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-amd64 .
+
+      - name: Build (linux arm64)
+        run: GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-arm64 .
+
+      - name: Build (windows amd64)
+        run: GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-windows-amd64.exe .
+
+      - name: Generate checksums
+        run: cd dist && shasum -a 256 * > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ env.VERSION }}
+          files: |
+            packages/ai-setup-go/dist/ai-setup-*
+            packages/ai-setup-go/dist/checksums.txt
+          generate_release_notes: true
+          draft: false

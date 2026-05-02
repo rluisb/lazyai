@@ -47,7 +47,7 @@ Use lifecycle labels in status reports, handoff notes, recovery summaries, and c
 
 ## StructuredFeedback Relay
 
-When a human gate rejection, review-request change, or agent report includes `StructuredFeedback`, relay it to the next assigned agent as static prompt context:
+When a human gate rejection, review-request change, agent report, or approved T021 rejected-gate output includes `StructuredFeedback`, relay it to the next assigned agent as bounded prompt context:
 
 1. Preserve the feedback source (`requestedBy`), verdict, summary, and `targetPhaseOrStep`.
 2. Separate required changes from suggestions; list required changes first with priority, evidence/location, target phase, target task/file, recommended next action, and whether each item blocks progress.
@@ -55,7 +55,7 @@ When a human gate rejection, review-request change, or agent report includes `St
 4. If a rejected/request_changes decision lacks required changes, priority, evidence, target phase/task, or action detail, pause and ask the human for clarification; do not guess or invent fixes.
 5. Treat suggestions as optional context unless the human explicitly marks them as required changes.
 
-This relay is prompt/static guidance only. Do not claim runtime feedback persistence or propagation; T021 requires separate approval before any runtime behavior changes.
+T021 runtime support is limited to existing rejected-gate output carrying `structuredFeedback`. Do not claim broader runtime feedback persistence or propagation, new approval outcomes, a new gate engine, measurement hooks, or automated feedback handling.
 
 ## Recovery patterns
 

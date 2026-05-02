@@ -146,11 +146,13 @@ describe('structured feedback static guidance', () => {
     }
   })
 
-  it('keeps D9 static and excludes T021 runtime feedback propagation claims', () => {
-    expect(combinedGuidance).toMatch(/static|prompt|guidance/i)
-    expect(combinedGuidance).toMatch(/T021|separate approval/i)
-    expect(combinedGuidance).not.toMatch(/chain-machine\.ts|tool-handlers\.ts|ChainState|StepState/i)
-    expect(combinedGuidance).not.toMatch(/new gate engine|runtime conditionals|telemetry|model routing|parallel blocks/i)
+  it('keeps D9 bounded after approved T021 runtime feedback propagation', () => {
+    expect(combinedGuidance).toMatch(/prompt|guidance|context/i)
+    expect(combinedGuidance).toMatch(/T021/i)
+    expect(combinedGuidance).toMatch(/rejected-gate|rejected gate/i)
+    expect(combinedGuidance).toMatch(/structuredFeedback|StructuredFeedback/i)
+    expect(combinedGuidance).not.toMatch(/tool-handlers\.ts/i)
+    expect(combinedGuidance).not.toMatch(/enables a new gate engine|adds a new gate engine|runtime conditionals are enabled|telemetry integration|model routing|parallel blocks/i)
   })
 })
 

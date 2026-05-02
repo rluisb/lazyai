@@ -9,7 +9,7 @@
 
 When human gate feedback, review-request changes, or rejection notes are available, express and consume them as `StructuredFeedback` so the next agent can identify what to fix, where to look, and whether progress is blocked.
 
-This is static prompt/library guidance only. It does not persist feedback, propagate feedback between steps, alter approval outcomes, or add a new gate system. Any runtime support belongs to T021 and requires separate approval.
+This is prompt/library guidance first. Approved Wave 2 runtime support is bounded to existing rejected-gate output that includes `structuredFeedback`; it does not alter approval outcomes or add a new gate system. Outside that approved T021 path, treat feedback as static prompt context.
 
 ## Rationale
 
@@ -80,4 +80,4 @@ If `verdict` is `request_changes` or `rejected` but `requiredChanges` is empty, 
 
 - Iterate and orchestrate guidance must consume `StructuredFeedback` when present.
 - Rejection feedback without required-change detail triggers clarification, not invented fixes.
-- This rule is prompt/static guidance only until a separately approved runtime task changes feedback handling.
+- Runtime handling is limited to the approved T021 rejected-gate `output.structuredFeedback` path; no new gate engine, outcome taxonomy, measurement hooks, or broad propagation is implied.

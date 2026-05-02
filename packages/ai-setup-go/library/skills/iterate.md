@@ -27,7 +27,7 @@ When feedback includes a `StructuredFeedback` object, consume it as static promp
 4. Keep suggestions optional unless the human explicitly turns them into required changes.
 5. If request_changes/rejected feedback omits required changes, priority, evidence, target phase, target task, or action detail, ask for clarification; do not guess.
 
-This is prompt/static guidance only. Do not claim runtime feedback propagation; T021 requires separate approval.
+If approved T021 runtime feedback is present as rejected-gate `structuredFeedback`, consume it with the same rules above. Do not claim broader runtime propagation, new gate outcomes, measurement hooks, or automated feedback handling.
 
 ## Completion Enforcement Checklist
 

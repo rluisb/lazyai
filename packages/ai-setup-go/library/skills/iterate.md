@@ -17,6 +17,18 @@ phase: implement
 6. If still failing: repeat from step 1 (max 5 iterations)
 7. If still failing after 5 iterations: STOP and escalate
 
+## StructuredFeedback Consumption
+
+When feedback includes a `StructuredFeedback` object, consume it as static prompt guidance for the approved task only:
+
+1. Triage `requiredChanges` before `suggestions`; address blocking and high `priority` items first.
+2. For each required change, restate the source (`requestedBy`), `targetPhaseOrStep` or target task/file, `evidence`/location, and recommended next action before editing.
+3. Treat `blocksProgress: true` as a stop condition for reporting success until the required change is fixed or a blocker is documented.
+4. Keep suggestions optional unless the human explicitly turns them into required changes.
+5. If request_changes/rejected feedback omits required changes, priority, evidence, target phase, target task, or action detail, ask for clarification; do not guess.
+
+This is prompt/static guidance only. Do not claim runtime feedback propagation; T021 requires separate approval.
+
 ## Completion Enforcement Checklist
 
 Iteration is complete only when the approved feedback/task contract is satisfied. Continue the fix→verify loop within the max 5 iterations and approved task boundary until every task Done When item has evidence, or stop with a documented blocker.

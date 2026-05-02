@@ -34,6 +34,18 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
    - Repeat until the returned state is `done`.
 5. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
 
+## StructuredFeedback Relay
+
+When a human gate rejection, review-request change, or agent report includes `StructuredFeedback`, relay it to the next assigned agent as static prompt context:
+
+1. Preserve the feedback source (`requestedBy`), verdict, summary, and `targetPhaseOrStep`.
+2. Separate required changes from suggestions; list required changes first with priority, evidence/location, target phase, target task/file, recommended next action, and whether each item blocks progress.
+3. If feedback is free-form but clearly actionable, synthesize a bounded `StructuredFeedback` summary for the handoff message without changing runtime state or approval semantics.
+4. If a rejected/request_changes decision lacks required changes, priority, evidence, target phase/task, or action detail, pause and ask the human for clarification; do not guess or invent fixes.
+5. Treat suggestions as optional context unless the human explicitly marks them as required changes.
+
+This relay is prompt/static guidance only. Do not claim runtime feedback persistence or propagation; T021 requires separate approval before any runtime behavior changes.
+
 ## Recovery patterns
 
 | Pattern | Trigger | Call |

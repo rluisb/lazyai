@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "structured-feedback/v1",
+  "verdict": "comment",
+  "summary": "Non-blocking reviewer note for the next documentation pass.",
+  "requiredChanges": [],
+  "suggestions": [
+    {
+      "description": "Consider adding a short example if humans repeatedly submit ambiguous feedback.",
+      "priority": "low",
+      "target": "structured-feedback rule"
+    }
+  ],
+  "requestedBy": "reviewer",
+  "targetPhaseOrStep": null
+}

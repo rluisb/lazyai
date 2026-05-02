@@ -812,6 +812,7 @@ export async function runWizard(opts: {
             fileRecords,
             strategy,
             perFileOverrides,
+            features,
           })
           tracker.trackSuccess('scaffold:orchestration')
         }

@@ -76,6 +76,7 @@ var featureOptions = []huh.Option[string]{
 	huh.NewOption("ADR Enforcement", "adrEnforcement"),
 	huh.NewOption("Agent Coordination", "agentHarness"),
 	huh.NewOption("Pivot Handling", "pivotHandling"),
+	huh.NewOption("Adversarial Design Review", "adversarialDesign"),
 }
 
 // RunPhase2 runs the features and conventions phase.
@@ -687,6 +688,9 @@ func featureSelectionFromFlags(flags *types.FeatureFlags) []string {
 	if flags.PivotHandling {
 		selected = append(selected, "pivotHandling")
 	}
+	if flags.AdversarialDesign {
+		selected = append(selected, "adversarialDesign")
+	}
 	return selected
 }
 
@@ -814,6 +818,8 @@ func buildFeaturesFromSelection(selected []string) *types.FeatureFlags {
 			f.BugResolution = true
 		case "pivotHandling":
 			f.PivotHandling = true
+		case "adversarialDesign":
+			f.AdversarialDesign = true
 		}
 	}
 	return f

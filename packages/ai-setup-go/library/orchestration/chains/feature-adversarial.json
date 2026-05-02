@@ -1,7 +1,7 @@
 {
   "kind": "chain",
   "name": "feature",
-  "description": "New feature delivery from research through review and documentation",
+  "description": "New feature delivery from research through adversarial planning review, implementation, and documentation",
   "version": "1.0.0",
   "entry": "research",
   "domain_skill_injection": "all_steps",
@@ -35,17 +35,28 @@
       "skills": ["plan"],
       "description": "Run the inline plan quality checklist and emit a PlanQualityReport before approval.",
       "transitions": {
+        "success": "red-team-plan",
+        "pass": "red-team-plan",
+        "warn": "red-team-plan",
+        "fail": "red-team-plan"
+      }
+    },
+    {
+      "id": "red-team-plan",
+      "agent": "red-team",
+      "skills": ["red-team-plan"],
+      "description": "Run read-only adversarial plan critique and emit a RedTeamPlanReport before approval.",
+      "transitions": {
         "success": "plan-gate",
-        "pass": "plan-gate",
-        "warn": "plan-gate",
-        "fail": "plan-gate"
+        "soft_fail": "plan-gate",
+        "failure": "plan-gate"
       }
     },
     {
       "id": "plan-gate",
       "agent": "planner",
       "skills": [],
-      "description": "Present PlanQualityReport verdict and findings for user approval before implementation.",
+      "description": "Present PlanQualityReport and RedTeamPlanReport findings for user approval before implementation.",
       "gate": "user_approval",
       "transitions": {
         "approved": "implement",

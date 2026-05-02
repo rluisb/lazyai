@@ -45,6 +45,9 @@ func TestResolvePreset(t *testing.T) {
 		if f.AgentHarness != false {
 			t.Error("AgentHarness should be false for minimal")
 		}
+		if f.AdversarialDesign != false {
+			t.Error("AdversarialDesign should be false for minimal")
+		}
 	})
 
 	t.Run("standard returns correct flags", func(t *testing.T) {
@@ -68,6 +71,9 @@ func TestResolvePreset(t *testing.T) {
 		if f.AgentHarness != false {
 			t.Error("AgentHarness should be false for standard")
 		}
+		if f.AdversarialDesign != true {
+			t.Error("AdversarialDesign should be true for standard")
+		}
 	})
 
 	t.Run("full returns all true", func(t *testing.T) {
@@ -78,7 +84,7 @@ func TestResolvePreset(t *testing.T) {
 		}
 		if !f.ContextEngineering || !f.RPIWorkflow || !f.ChainOfThought ||
 			!f.TreeOfThoughts || !f.ADREnforcement || !f.QualityGates ||
-			!f.AgentHarness || !f.BugResolution || !f.PivotHandling {
+			!f.AgentHarness || !f.BugResolution || !f.PivotHandling || !f.AdversarialDesign {
 			t.Errorf("Full preset should have all flags true: %+v", f)
 		}
 	})

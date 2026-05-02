@@ -72,6 +72,7 @@ func TestBuildPhase2Result(t *testing.T) {
 		ADREnforcement:     false,
 		AgentHarness:       true,
 		PivotHandling:      false,
+		AdversarialDesign:  true,
 	}
 
 	result := buildPhase2Result(
@@ -329,11 +330,24 @@ func TestFeatureSelectionFromFlags(t *testing.T) {
 		BugResolution:      true,
 		ContextEngineering: true,
 		PivotHandling:      true,
+		AdversarialDesign:  true,
 	}
 
 	got := featureSelectionFromFlags(flags)
-	want := []string{"qualityGates", "rpiWorkflow", "chainOfThought", "bugResolution", "contextEngineering", "pivotHandling"}
+	want := []string{"qualityGates", "rpiWorkflow", "chainOfThought", "bugResolution", "contextEngineering", "pivotHandling", "adversarialDesign"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("featureSelectionFromFlags() = %#v, want %#v", got, want)
+	}
+}
+
+func TestBuildFeaturesFromSelectionCanEnableAdversarialDesign(t *testing.T) {
+	t.Parallel()
+
+	features := buildFeaturesFromSelection([]string{"qualityGates", "adversarialDesign"})
+	if !features.QualityGates {
+		t.Fatal("QualityGates = false, want true")
+	}
+	if !features.AdversarialDesign {
+		t.Fatal("AdversarialDesign = false, want true")
 	}
 }

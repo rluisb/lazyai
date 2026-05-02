@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "red-team-plan-report/v1",
+  "status": "soft_fail",
+  "findings": [
+    {
+      "category": "operational",
+      "severity": "medium",
+      "message": "Red-team provider/API outage or unavailable red-team role prevented adversarial design review.",
+      "recommendation": "Surface this warning in plan-gate and proceed to the human approval gate instead of halting the chain.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "D17 — Adversarial Self-Play During Design",
+        "lineStart": null,
+        "lineEnd": null
+      }
+    }
+  ]
+}

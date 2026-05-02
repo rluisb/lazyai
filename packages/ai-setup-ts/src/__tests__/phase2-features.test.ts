@@ -408,4 +408,21 @@ describe('phase2 features merge behavior', () => {
       adversarialDesign: false,
     })
   })
+
+  it('interactive custom preset can enable adversarial design', async () => {
+    vi.mocked(p.text).mockResolvedValueOnce('.planning')
+    vi.mocked(p.multiselect).mockResolvedValueOnce(['qualityGates', 'adversarialDesign'])
+    vi.mocked(p.select)
+      .mockResolvedValueOnce('custom')
+      .mockResolvedValueOnce('{type}/{ticket}-{description}')
+      .mockResolvedValueOnce('{type}({scope}): {description}')
+    vi.mocked(p.confirm).mockResolvedValueOnce(false)
+
+    const result = unwrapPhase2(await runPhase2Features({
+      interactive: true,
+      setupScope: 'project',
+    }))
+
+    expect(result.features.adversarialDesign).toBe(true)
+  })
 })

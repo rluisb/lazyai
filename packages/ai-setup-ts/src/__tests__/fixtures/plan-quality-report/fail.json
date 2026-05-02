@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "plan-quality-report/v1",
+  "verdict": "fail",
+  "findings": [
+    {
+      "rule": "R1",
+      "severity": "fail",
+      "message": "AC-D6-001 and FR-008 lack confident coverage in allowed plan.md phase, item-detail, or downstream-contract sections; R1 checks plan.md only and does not inspect tasks.md because tasks.md does not exist before task generation.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "D6 — Plan Validation",
+        "lineStart": 256,
+        "lineEnd": 267
+      }
+    },
+    {
+      "rule": "R2",
+      "severity": "fail",
+      "message": "A planned phase is missing an observable phase exit criterion.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "Phases & Milestones",
+        "lineStart": 200,
+        "lineEnd": 205
+      }
+    },
+    {
+      "rule": "R3",
+      "severity": "fail",
+      "message": "A risk row lacks either mitigation detail or an explicit owner.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "Risks & Mitigations",
+        "lineStart": 169,
+        "lineEnd": 182
+      }
+    },
+    {
+      "rule": "R4",
+      "severity": "fail",
+      "message": "A Wave 1 item does not describe rollback coverage.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "Wave 1 Item Detail",
+        "lineStart": 212,
+        "lineEnd": 290
+      }
+    }
+  ],
+  "checkedAgainst": {
+    "spec": "specs/features/001-ai-techniques-integration/spec.md",
+    "plan": "specs/features/001-ai-techniques-integration/plan.md",
+    "research": "specs/features/001-ai-techniques-integration/research.md",
+    "tasks": null
+  }
+}

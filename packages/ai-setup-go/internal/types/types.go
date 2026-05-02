@@ -509,6 +509,7 @@ type FeatureFlags struct {
 	AgentHarness       bool `json:"agentHarness"`
 	BugResolution      bool `json:"bugResolution"`
 	PivotHandling      bool `json:"pivotHandling"`
+	AdversarialDesign  bool `json:"adversarialDesign"`
 }
 
 // GitConventions defines branch and commit patterns for the project.
@@ -552,20 +553,30 @@ type RepoInfo struct {
 
 // Config holds the core configuration for an ai-setup installation.
 type Config struct {
-	SetupScope       SetupScope          `json:"setupScope"`
-	SetupType        SetupScope          `json:"setupType,omitempty"`
-	Tools            []ToolId            `json:"tools"`
-	CLITools         []string            `json:"cliTools,omitempty"`
-	EnableServers    []string            `json:"enableServers,omitempty"`
-	ProjectName      string              `json:"projectName"`
-	WorkspaceName    string              `json:"workspaceName,omitempty"`
-	WorkspaceRoot    string              `json:"workspaceRoot,omitempty"`
-	TargetDir        string              `json:"targetDir"`
-	PlanningDir      string              `json:"planningDir,omitempty"`
-	PlanningRepoPath string              `json:"planningRepoPath,omitempty"`
-	Repos            []RepoInfo          `json:"repos,omitempty"`
-	GlobalRef        string              `json:"globalRef,omitempty"`
-	Housekeeping     *HousekeepingConfig `json:"housekeeping,omitempty"`
+	SetupScope        SetupScope          `json:"setupScope"`
+	SetupType         SetupScope          `json:"setupType,omitempty"`
+	Tools             []ToolId            `json:"tools"`
+	CLITools          []string            `json:"cliTools,omitempty"`
+	EnableServers     []string            `json:"enableServers,omitempty"`
+	ProjectName       string              `json:"projectName"`
+	WorkspaceName     string              `json:"workspaceName,omitempty"`
+	WorkspaceRoot     string              `json:"workspaceRoot,omitempty"`
+	TargetDir         string              `json:"targetDir"`
+	PlanningDir       string              `json:"planningDir,omitempty"`
+	PlanningRepoPath  string              `json:"planningRepoPath,omitempty"`
+	Repos             []RepoInfo          `json:"repos,omitempty"`
+	GlobalRef         string              `json:"globalRef,omitempty"`
+	Housekeeping      *HousekeepingConfig `json:"housekeeping,omitempty"`
+	ProjectOverview   string              `json:"projectOverview,omitempty"`
+	NamingConventions string              `json:"namingConventions,omitempty"`
+	ErrorHandling     string              `json:"errorHandling,omitempty"`
+	ApiConventions    string              `json:"apiConventions,omitempty"`
+	ImportOrder       string              `json:"importOrder,omitempty"`
+	ProtectedBranch   string              `json:"protectedBranch,omitempty"`
+	TestCommand       string              `json:"testCommand,omitempty"`
+	LintCommand       string              `json:"lintCommand,omitempty"`
+	BuildCommand      string              `json:"buildCommand,omitempty"`
+	CoverageThreshold int                 `json:"coverageThreshold,omitempty"`
 }
 
 // WizardSelections stores the choices made during the setup wizard.

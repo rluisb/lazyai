@@ -7,6 +7,7 @@ package scaffold
 import (
 	"io/fs"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/compiler"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -81,6 +82,8 @@ type ScaffoldContext struct {
 	PlanningRepoPath string
 	// LibraryFS is the filesystem for reading library data (embedded or disk).
 	LibraryFS fs.FS
+	// StoreData optionally carries persisted config values used by compiled roots.
+	StoreData *types.StoreData
 	// Optional context overrides for compiled root.
 	PrimaryLanguage     string
 	Framework           string
@@ -89,6 +92,21 @@ type ScaffoldContext struct {
 	ProjectDescription  string // optional; substituted into AGENTS.md [YOUR_PROJECT_DESCRIPTION]
 	Organization        string // optional; substituted into AGENTS.md [YOUR_ORG]
 	Team                string // optional; substituted into AGENTS.md [YOUR_TEAM]
+	ProjectOverview     string
+	Database            string
+	ORM                 string
+	TestFramework       string
+	PackageManager      string
+	NamingConventions   string
+	ErrorHandling       string
+	APIConventions      string
+	ImportOrder         string
+	ProtectedBranch     string
+	TestCommand         string
+	LintCommand         string
+	BuildCommand        string
+	CoverageThreshold   int
+	CodebaseMap         []compiler.CodebaseMapEntry
 }
 
 // ScaffoldResult holds the outcome of a scaffold run.

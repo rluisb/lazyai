@@ -15,6 +15,16 @@ export interface Phase2Result {
   features: FeatureFlags
   gitConventions: GitConventions
   preset: PresetLevel
+  projectOverview?: string
+  namingConventions?: string
+  errorHandling?: string
+  apiConventions?: string
+  importOrder?: string
+  protectedBranch?: string
+  testCommand?: string
+  lintCommand?: string
+  buildCommand?: string
+  coverageThreshold: number
 }
 
 const FEATURE_KEYS: Array<keyof FeatureFlags> = [
@@ -40,6 +50,7 @@ const DEFAULT_FEATURES: FeatureFlags = {
   agentHarness: true,
   bugResolution: true,
   pivotHandling: true,
+  adversarialDesign: false,
 }
 
 // Default git conventions - conventional commits style
@@ -68,6 +79,10 @@ const COMMIT_PATTERN_OPTIONS = [
   { value: 'custom', label: 'Custom Pattern', hint: 'Define your own pattern' },
 ]
 
+function normalizeCoverageThreshold(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 100 ? value : 80
+}
+
 function buildFeaturesFromSelection(selectedFeatures: string[]): FeatureFlags {
   return {
     contextEngineering: selectedFeatures.includes('contextEngineering'),
@@ -79,6 +94,7 @@ function buildFeaturesFromSelection(selectedFeatures: string[]): FeatureFlags {
     agentHarness: selectedFeatures.includes('agentHarness'),
     bugResolution: selectedFeatures.includes('bugResolution'),
     pivotHandling: selectedFeatures.includes('pivotHandling'),
+    adversarialDesign: false,
   }
 }
 
@@ -114,6 +130,16 @@ export async function runPhase2Features(opts: {
     planningDir?: string
     features?: Partial<FeatureFlags>
     gitConventions?: Partial<GitConventions>
+    projectOverview?: string
+    namingConventions?: string
+    errorHandling?: string
+    apiConventions?: string
+    importOrder?: string
+    protectedBranch?: string
+    testCommand?: string
+    lintCommand?: string
+    buildCommand?: string
+    coverageThreshold?: number
   }
   cliOverrides?: {
     planningDir?: string
@@ -122,6 +148,16 @@ export async function runPhase2Features(opts: {
     disableFeatures?: string[]
     branchPattern?: string
     commitPattern?: string
+    projectOverview?: string
+    namingConventions?: string
+    errorHandling?: string
+    apiConventions?: string
+    importOrder?: string
+    protectedBranch?: string
+    testCommand?: string
+    lintCommand?: string
+    buildCommand?: string
+    coverageThreshold?: number
   }
 }): Promise<Phase2Result | typeof GO_BACK> {
   // Non-interactive mode: use cliOverrides or defaults
@@ -187,7 +223,32 @@ export async function runPhase2Features(opts: {
       gitConventions.commitPattern = opts.cliOverrides.commitPattern
     }
 
-    return { planningDir, features, gitConventions, preset }
+    const projectOverview = opts.cliOverrides?.projectOverview ?? opts.prior?.projectOverview
+    const namingConventions = opts.cliOverrides?.namingConventions ?? opts.prior?.namingConventions
+    const errorHandling = opts.cliOverrides?.errorHandling ?? opts.prior?.errorHandling
+    const apiConventions = opts.cliOverrides?.apiConventions ?? opts.prior?.apiConventions
+    const importOrder = opts.cliOverrides?.importOrder ?? opts.prior?.importOrder
+    const protectedBranch = opts.cliOverrides?.protectedBranch ?? opts.prior?.protectedBranch
+    const testCommand = opts.cliOverrides?.testCommand ?? opts.prior?.testCommand
+    const lintCommand = opts.cliOverrides?.lintCommand ?? opts.prior?.lintCommand
+    const buildCommand = opts.cliOverrides?.buildCommand ?? opts.prior?.buildCommand
+
+    return {
+      planningDir,
+      features,
+      gitConventions,
+      preset,
+      ...(projectOverview !== undefined ? { projectOverview } : {}),
+      ...(namingConventions !== undefined ? { namingConventions } : {}),
+      ...(errorHandling !== undefined ? { errorHandling } : {}),
+      ...(apiConventions !== undefined ? { apiConventions } : {}),
+      ...(importOrder !== undefined ? { importOrder } : {}),
+      ...(protectedBranch !== undefined ? { protectedBranch } : {}),
+      ...(testCommand !== undefined ? { testCommand } : {}),
+      ...(lintCommand !== undefined ? { lintCommand } : {}),
+      ...(buildCommand !== undefined ? { buildCommand } : {}),
+      coverageThreshold: normalizeCoverageThreshold(opts.cliOverrides?.coverageThreshold ?? opts.prior?.coverageThreshold),
+    }
   }
 
   // Interactive mode
@@ -405,5 +466,5 @@ export async function runPhase2Features(opts: {
     ticketPattern: DEFAULT_GIT_CONVENTIONS.ticketPattern,
   }
 
-  return { planningDir, features, gitConventions, preset }
+  return { planningDir, features, gitConventions, preset, coverageThreshold: 80 }
 }

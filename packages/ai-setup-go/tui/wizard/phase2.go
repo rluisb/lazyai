@@ -2,6 +2,7 @@ package wizard
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"charm.land/huh/v2"
@@ -29,12 +30,22 @@ func (s phase2StepInfo) Title() string {
 
 // Phase2Result holds the feature selection results from the second wizard phase.
 type Phase2Result struct {
-	Preset           types.PresetLevel
-	Features         *types.FeatureFlags
-	GitConv          *types.GitConventions
-	ChatModes        []types.ChatModeId        // populated only when Preset == Custom
-	OpenCodeCommands []types.OpenCodeCommandId // populated only when Preset == Custom
-	OpenCodeModes    []types.OpenCodeModeId    // populated only when Preset == Custom
+	Preset            types.PresetLevel
+	Features          *types.FeatureFlags
+	GitConv           *types.GitConventions
+	ChatModes         []types.ChatModeId        // populated only when Preset == Custom
+	OpenCodeCommands  []types.OpenCodeCommandId // populated only when Preset == Custom
+	OpenCodeModes     []types.OpenCodeModeId    // populated only when Preset == Custom
+	ProjectOverview   string
+	NamingConventions string
+	ErrorHandling     string
+	APIConventions    string
+	ImportOrder       string
+	ProtectedBranch   string
+	TestCommand       string
+	LintCommand       string
+	BuildCommand      string
+	CoverageThreshold int
 }
 
 var branchPatternOptions = []huh.Option[string]{
@@ -96,7 +107,9 @@ func runPhase2NonInteractive(scope types.SetupScope, defaults *Phase2Result) (*P
 		}
 	}
 
-	return buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket, nil, nil, nil), PhaseContinue, nil
+	result := buildPhase2Result(scope, presetValue, features, branchPattern, commitPattern, requireTicket, nil, nil, nil)
+	applyPhase2ProfileDefaults(result, defaults)
+	return result, PhaseContinue, nil
 }
 
 func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phase2Result, PhaseAction, error) {
@@ -216,14 +229,24 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 }
 
 type phase2InteractiveState struct {
-	Preset           types.PresetLevel
-	Features         *types.FeatureFlags
-	BranchPattern    string
-	CommitPattern    string
-	RequireTicket    bool
-	ChatModes        []types.ChatModeId
-	OpenCodeCommands []types.OpenCodeCommandId
-	OpenCodeModes    []types.OpenCodeModeId
+	Preset            types.PresetLevel
+	Features          *types.FeatureFlags
+	BranchPattern     string
+	CommitPattern     string
+	RequireTicket     bool
+	ChatModes         []types.ChatModeId
+	OpenCodeCommands  []types.OpenCodeCommandId
+	OpenCodeModes     []types.OpenCodeModeId
+	ProjectOverview   string
+	NamingConventions string
+	ErrorHandling     string
+	APIConventions    string
+	ImportOrder       string
+	ProtectedBranch   string
+	TestCommand       string
+	LintCommand       string
+	BuildCommand      string
+	CoverageThreshold int
 }
 
 func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool, chatmodes []types.ChatModeId, opencodeCommands []types.OpenCodeCommandId, opencodeModes []types.OpenCodeModeId) *Phase2Result {
@@ -270,10 +293,51 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 			RequireTicket: requireTicket,
 			TicketPattern: gitDefaults.TicketPattern,
 		},
-		ChatModes:        resolvedChatModes,
-		OpenCodeCommands: resolvedOpenCodeCommands,
-		OpenCodeModes:    resolvedOpenCodeModes,
+		ChatModes:         resolvedChatModes,
+		OpenCodeCommands:  resolvedOpenCodeCommands,
+		OpenCodeModes:     resolvedOpenCodeModes,
+		CoverageThreshold: defaultCoverageThreshold(),
 	}
+}
+
+func applyPhase2ProfileDefaults(result, defaults *Phase2Result) {
+	if result == nil {
+		return
+	}
+	if defaults == nil {
+		result.CoverageThreshold = normalizeCoverageThreshold(result.CoverageThreshold)
+		return
+	}
+
+	result.ProjectOverview = defaults.ProjectOverview
+	result.NamingConventions = defaults.NamingConventions
+	result.ErrorHandling = defaults.ErrorHandling
+	result.APIConventions = defaults.APIConventions
+	result.ImportOrder = defaults.ImportOrder
+	result.ProtectedBranch = defaults.ProtectedBranch
+	result.TestCommand = defaults.TestCommand
+	result.LintCommand = defaults.LintCommand
+	result.BuildCommand = defaults.BuildCommand
+	result.CoverageThreshold = normalizeCoverageThreshold(defaults.CoverageThreshold)
+}
+
+func defaultCoverageThreshold() int {
+	return 80
+}
+
+func normalizeCoverageThreshold(value int) int {
+	if value >= 1 && value <= 100 {
+		return value
+	}
+	return defaultCoverageThreshold()
+}
+
+func parseCoverageThreshold(value string) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return defaultCoverageThreshold()
+	}
+	return normalizeCoverageThreshold(parsed)
 }
 
 func askPreset(current types.PresetLevel, info phase2StepInfo) (types.PresetLevel, PhaseAction, error) {

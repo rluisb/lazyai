@@ -124,6 +124,16 @@ interface WizardState {
   features: FeatureFlags
   gitConventions: GitConventions
   preset: PresetLevel
+  projectOverview?: string
+  namingConventions?: string
+  errorHandling?: string
+  apiConventions?: string
+  importOrder?: string
+  protectedBranch?: string
+  testCommand?: string
+  lintCommand?: string
+  buildCommand?: string
+  coverageThreshold: number
 }
 
 /**
@@ -149,6 +159,16 @@ async function runPhase12Loop(opts: {
     team?: string
     features?: Partial<FeatureFlags>
     gitConventions?: Partial<GitConventions>
+    projectOverview?: string
+    namingConventions?: string
+    errorHandling?: string
+    apiConventions?: string
+    importOrder?: string
+    protectedBranch?: string
+    testCommand?: string
+    lintCommand?: string
+    buildCommand?: string
+    coverageThreshold?: number
   }
   cliOverrides: {
     scope?: SetupScope
@@ -170,6 +190,16 @@ async function runPhase12Loop(opts: {
     driveCLI?: boolean
     localSecrets?: boolean
     housekeeping?: StoreData['config']['housekeeping']
+    projectOverview?: string
+    namingConventions?: string
+    errorHandling?: string
+    apiConventions?: string
+    importOrder?: string
+    protectedBranch?: string
+    testCommand?: string
+    lintCommand?: string
+    buildCommand?: string
+    coverageThreshold?: number
   }
   targetDir: string
 }): Promise<WizardState> {
@@ -199,6 +229,7 @@ async function runPhase12Loop(opts: {
       agentHarness: true,
       bugResolution: true,
       pivotHandling: true,
+      adversarialDesign: false,
     }
   let accGitConventions: GitConventions = opts.prior.gitConventions as GitConventions | undefined ?? {
       branchPattern: '{type}/{ticket}-{description}',
@@ -208,6 +239,16 @@ async function runPhase12Loop(opts: {
       ticketPattern: '[A-Z]+-[0-9]+',
     }
   let accPreset: PresetLevel = 'standard'
+  let accProjectOverview: string | undefined = opts.prior.projectOverview
+  let accNamingConventions: string | undefined = opts.prior.namingConventions
+  let accErrorHandling: string | undefined = opts.prior.errorHandling
+  let accApiConventions: string | undefined = opts.prior.apiConventions
+  let accImportOrder: string | undefined = opts.prior.importOrder
+  let accProtectedBranch: string | undefined = opts.prior.protectedBranch
+  let accTestCommand: string | undefined = opts.prior.testCommand
+  let accLintCommand: string | undefined = opts.prior.lintCommand
+  let accBuildCommand: string | undefined = opts.prior.buildCommand
+  let accCoverageThreshold: number = opts.prior.coverageThreshold ?? 80
 
   let currentPhase = 1
 
@@ -276,10 +317,30 @@ async function runPhase12Loop(opts: {
         planningDir?: string
         features?: Partial<FeatureFlags>
         gitConventions?: Partial<GitConventions>
+        projectOverview?: string
+        namingConventions?: string
+        errorHandling?: string
+        apiConventions?: string
+        importOrder?: string
+        protectedBranch?: string
+        testCommand?: string
+        lintCommand?: string
+        buildCommand?: string
+        coverageThreshold?: number
       } = {
         planningDir: accPlanningDir,
         ...(accFeatures ? { features: accFeatures } : {}),
         ...(accGitConventions ? { gitConventions: accGitConventions } : {}),
+        ...(accProjectOverview != null ? { projectOverview: accProjectOverview } : {}),
+        ...(accNamingConventions != null ? { namingConventions: accNamingConventions } : {}),
+        ...(accErrorHandling != null ? { errorHandling: accErrorHandling } : {}),
+        ...(accApiConventions != null ? { apiConventions: accApiConventions } : {}),
+        ...(accImportOrder != null ? { importOrder: accImportOrder } : {}),
+        ...(accProtectedBranch != null ? { protectedBranch: accProtectedBranch } : {}),
+        ...(accTestCommand != null ? { testCommand: accTestCommand } : {}),
+        ...(accLintCommand != null ? { lintCommand: accLintCommand } : {}),
+        ...(accBuildCommand != null ? { buildCommand: accBuildCommand } : {}),
+        coverageThreshold: accCoverageThreshold,
       }
 
       const phase2Result = await runPhase2Features({
@@ -293,6 +354,16 @@ async function runPhase12Loop(opts: {
           ...(opts.cliOverrides.disableFeatures != null ? { disableFeatures: opts.cliOverrides.disableFeatures } : {}),
           ...(opts.cliOverrides.branchPattern != null ? { branchPattern: opts.cliOverrides.branchPattern } : {}),
           ...(opts.cliOverrides.commitPattern != null ? { commitPattern: opts.cliOverrides.commitPattern } : {}),
+          ...(opts.cliOverrides.projectOverview != null ? { projectOverview: opts.cliOverrides.projectOverview } : {}),
+          ...(opts.cliOverrides.namingConventions != null ? { namingConventions: opts.cliOverrides.namingConventions } : {}),
+          ...(opts.cliOverrides.errorHandling != null ? { errorHandling: opts.cliOverrides.errorHandling } : {}),
+          ...(opts.cliOverrides.apiConventions != null ? { apiConventions: opts.cliOverrides.apiConventions } : {}),
+          ...(opts.cliOverrides.importOrder != null ? { importOrder: opts.cliOverrides.importOrder } : {}),
+          ...(opts.cliOverrides.protectedBranch != null ? { protectedBranch: opts.cliOverrides.protectedBranch } : {}),
+          ...(opts.cliOverrides.testCommand != null ? { testCommand: opts.cliOverrides.testCommand } : {}),
+          ...(opts.cliOverrides.lintCommand != null ? { lintCommand: opts.cliOverrides.lintCommand } : {}),
+          ...(opts.cliOverrides.buildCommand != null ? { buildCommand: opts.cliOverrides.buildCommand } : {}),
+          ...(opts.cliOverrides.coverageThreshold != null ? { coverageThreshold: opts.cliOverrides.coverageThreshold } : {}),
         },
       })
 
@@ -306,6 +377,16 @@ async function runPhase12Loop(opts: {
       accFeatures = phase2Result.features
       accGitConventions = phase2Result.gitConventions
       accPreset = phase2Result.preset
+      accProjectOverview = phase2Result.projectOverview
+      accNamingConventions = phase2Result.namingConventions
+      accErrorHandling = phase2Result.errorHandling
+      accApiConventions = phase2Result.apiConventions
+      accImportOrder = phase2Result.importOrder
+      accProtectedBranch = phase2Result.protectedBranch
+      accTestCommand = phase2Result.testCommand
+      accLintCommand = phase2Result.lintCommand
+      accBuildCommand = phase2Result.buildCommand
+      accCoverageThreshold = phase2Result.coverageThreshold
 
       currentPhase = 3 // Done with Phase 1-2
     }
@@ -329,6 +410,16 @@ async function runPhase12Loop(opts: {
     features: accFeatures,
     gitConventions: accGitConventions,
     preset: accPreset,
+    ...(accProjectOverview != null ? { projectOverview: accProjectOverview } : {}),
+    ...(accNamingConventions != null ? { namingConventions: accNamingConventions } : {}),
+    ...(accErrorHandling != null ? { errorHandling: accErrorHandling } : {}),
+    ...(accApiConventions != null ? { apiConventions: accApiConventions } : {}),
+    ...(accImportOrder != null ? { importOrder: accImportOrder } : {}),
+    ...(accProtectedBranch != null ? { protectedBranch: accProtectedBranch } : {}),
+    ...(accTestCommand != null ? { testCommand: accTestCommand } : {}),
+    ...(accLintCommand != null ? { lintCommand: accLintCommand } : {}),
+    ...(accBuildCommand != null ? { buildCommand: accBuildCommand } : {}),
+    coverageThreshold: accCoverageThreshold,
   }
 }
 
@@ -358,6 +449,16 @@ export async function runWizard(opts: {
     driveCLI?: boolean
     localSecrets?: boolean
     housekeeping?: StoreData['config']['housekeeping']
+    projectOverview?: string
+    namingConventions?: string
+    errorHandling?: string
+    apiConventions?: string
+    importOrder?: string
+    protectedBranch?: string
+    testCommand?: string
+    lintCommand?: string
+    buildCommand?: string
+    coverageThreshold?: number
   }
   targetDir: string
 }): Promise<void> {
@@ -393,6 +494,16 @@ export async function runWizard(opts: {
       team?: string
       features?: Partial<FeatureFlags>
       gitConventions?: Partial<GitConventions>
+      projectOverview?: string
+      namingConventions?: string
+      errorHandling?: string
+      apiConventions?: string
+      importOrder?: string
+      protectedBranch?: string
+      testCommand?: string
+      lintCommand?: string
+      buildCommand?: string
+      coverageThreshold?: number
     } = manifest
       ? {
           ...restSelections,
@@ -407,6 +518,16 @@ export async function runWizard(opts: {
           ...(manifest.planningDir != null ? { planningDir: manifest.planningDir } : {}),
           ...(manifest.features != null ? { features: manifest.features } : {}),
           ...(manifest.gitConventions != null ? { gitConventions: manifest.gitConventions } : {}),
+          ...(manifest.projectOverview != null ? { projectOverview: manifest.projectOverview } : {}),
+          ...(manifest.namingConventions != null ? { namingConventions: manifest.namingConventions } : {}),
+          ...(manifest.errorHandling != null ? { errorHandling: manifest.errorHandling } : {}),
+          ...(manifest.apiConventions != null ? { apiConventions: manifest.apiConventions } : {}),
+          ...(manifest.importOrder != null ? { importOrder: manifest.importOrder } : {}),
+          ...(manifest.protectedBranch != null ? { protectedBranch: manifest.protectedBranch } : {}),
+          ...(manifest.testCommand != null ? { testCommand: manifest.testCommand } : {}),
+          ...(manifest.lintCommand != null ? { lintCommand: manifest.lintCommand } : {}),
+          ...(manifest.buildCommand != null ? { buildCommand: manifest.buildCommand } : {}),
+          ...(manifest.coverageThreshold != null ? { coverageThreshold: manifest.coverageThreshold } : {}),
         }
       : {}
 
@@ -441,6 +562,16 @@ export async function runWizard(opts: {
         features,
         gitConventions,
         preset,
+        projectOverview,
+        namingConventions,
+        errorHandling,
+        apiConventions,
+        importOrder,
+        protectedBranch,
+        testCommand,
+        lintCommand,
+        buildCommand,
+        coverageThreshold,
       } = state
 
       const userHomeDir = opts.homeDir ?? homedir()
@@ -565,6 +696,16 @@ export async function runWizard(opts: {
         ...(driveCLI ? { driveCLI } : {}),
         ...(localSecrets ? { localSecrets } : {}),
         ...(opts.cliOverrides.housekeeping ? { housekeeping: opts.cliOverrides.housekeeping } : {}),
+        ...(projectOverview != null ? { projectOverview } : {}),
+        ...(namingConventions != null ? { namingConventions } : {}),
+        ...(errorHandling != null ? { errorHandling } : {}),
+        ...(apiConventions != null ? { apiConventions } : {}),
+        ...(importOrder != null ? { importOrder } : {}),
+        ...(protectedBranch != null ? { protectedBranch } : {}),
+        ...(testCommand != null ? { testCommand } : {}),
+        ...(lintCommand != null ? { lintCommand } : {}),
+        ...(buildCommand != null ? { buildCommand } : {}),
+        coverageThreshold,
         selections,
         interactive: opts.interactive,
         force: opts.force,
@@ -691,6 +832,7 @@ export async function runWizard(opts: {
           fileRecords,
           strategy,
           perFileOverrides,
+          coverageThreshold,
         })
         tracker.trackSuccess('scaffold:templates-rules')
 
@@ -714,6 +856,16 @@ export async function runWizard(opts: {
           setupScope,
           features,
           gitConventions,
+          ...(projectOverview != null ? { projectOverview } : {}),
+          ...(namingConventions != null ? { namingConventions } : {}),
+          ...(errorHandling != null ? { errorHandling } : {}),
+          ...(apiConventions != null ? { apiConventions } : {}),
+          ...(importOrder != null ? { importOrder } : {}),
+          ...(protectedBranch != null ? { protectedBranch } : {}),
+          ...(testCommand != null ? { testCommand } : {}),
+          ...(lintCommand != null ? { lintCommand } : {}),
+          ...(buildCommand != null ? { buildCommand } : {}),
+          coverageThreshold,
           fileRecords,
           strategy,
           perFileOverrides,
@@ -856,6 +1008,16 @@ export async function runWizard(opts: {
           ...(driveCLI ? { driveCLI } : {}),
           ...(localSecrets ? { localSecrets } : {}),
           ...(opts.cliOverrides.housekeeping ? { housekeeping: opts.cliOverrides.housekeeping } : {}),
+          ...(projectOverview != null ? { projectOverview } : {}),
+          ...(namingConventions != null ? { namingConventions } : {}),
+          ...(errorHandling != null ? { errorHandling } : {}),
+          ...(apiConventions != null ? { apiConventions } : {}),
+          ...(importOrder != null ? { importOrder } : {}),
+          ...(protectedBranch != null ? { protectedBranch } : {}),
+          ...(testCommand != null ? { testCommand } : {}),
+          ...(lintCommand != null ? { lintCommand } : {}),
+          ...(buildCommand != null ? { buildCommand } : {}),
+          coverageThreshold,
         },
         selections: {
           ...selections,

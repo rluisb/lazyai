@@ -11,10 +11,11 @@ export interface ScaffoldTemplatesRulesOptions {
   fileRecords: FileRecord[]
   strategy: ConflictStrategy
   perFileOverrides: Map<string, ConflictStrategy>
+  coverageThreshold?: number
 }
 
 export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions): Promise<void> {
-  const { targetDir, libraryDir, templates, rules, fileRecords, strategy, perFileOverrides } = opts
+  const { targetDir, libraryDir, templates, rules, fileRecords, strategy, perFileOverrides, coverageThreshold } = opts
   const specsDir = path.join(targetDir, 'specs')
 
   // Copy selected templates
@@ -25,7 +26,7 @@ export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions
     for (const templateId of templates) {
       const src = path.join(libraryDir, 'templates', `${templateId}.md`)
       const dest = path.join(templatesDir, `${templateId}.md`)
-      await copyLibraryFile(src, dest, fileRecords, targetDir, libraryDir, strategy, perFileOverrides)
+      await copyLibraryFile(src, dest, fileRecords, targetDir, libraryDir, strategy, perFileOverrides, coverageThreshold)
     }
   }
 
@@ -37,7 +38,7 @@ export async function scaffoldTemplatesRules(opts: ScaffoldTemplatesRulesOptions
     for (const ruleId of rules) {
       const src = path.join(libraryDir, 'rules', `${ruleId}.md`)
       const dest = path.join(rulesDir, `${ruleId}.md`)
-      await copyLibraryFile(src, dest, fileRecords, targetDir, libraryDir, strategy, perFileOverrides)
+      await copyLibraryFile(src, dest, fileRecords, targetDir, libraryDir, strategy, perFileOverrides, coverageThreshold)
     }
   }
 
@@ -60,7 +61,8 @@ async function copyLibraryFile(
   targetDir: string,
   libraryDir: string,
   strategy: ConflictStrategy,
-  perFileOverrides: Map<string, ConflictStrategy>
+  perFileOverrides: Map<string, ConflictStrategy>,
+  coverageThreshold?: number,
 ): Promise<void> {
   if (!files.fileExists(src)) return
 
@@ -72,13 +74,19 @@ async function copyLibraryFile(
     return
   }
 
-  files.copyFile(src, dest)
+  files.writeFile(dest, applyTemplateRuleSubstitutions(files.readFile(src), coverageThreshold))
   records.push({
     path: relPath,
     hash: files.fileHash(dest),
     source: path.relative(libraryDir, src),
     owner: 'library',
   })
+}
+
+function applyTemplateRuleSubstitutions(content: string, coverageThreshold?: number): string {
+  const value = coverageThreshold ?? 80
+  const threshold = Number.isInteger(value) && value >= 1 && value <= 100 ? value : 80
+  return content.replaceAll('{{COVERAGE_THRESHOLD}}', String(threshold))
 }
 
 async function copyLibraryDir(

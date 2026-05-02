@@ -186,6 +186,16 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		LocalSecrets:        config.CLILocalSecrets,
 		Organization:        firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
 		Team:                firstNonEmpty(result.Phase1.Team, config.CLITeam),
+		ProjectOverview:     result.Phase2.ProjectOverview,
+		NamingConventions:   result.Phase2.NamingConventions,
+		ErrorHandling:       result.Phase2.ErrorHandling,
+		APIConventions:      result.Phase2.APIConventions,
+		ImportOrder:         result.Phase2.ImportOrder,
+		ProtectedBranch:     result.Phase2.ProtectedBranch,
+		TestCommand:         result.Phase2.TestCommand,
+		LintCommand:         result.Phase2.LintCommand,
+		BuildCommand:        result.Phase2.BuildCommand,
+		CoverageThreshold:   normalizeCoverageThreshold(result.Phase2.CoverageThreshold),
 		Agents:              agents,
 		Skills:              skills,
 		Prompts:             prompts,
@@ -244,6 +254,16 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Config.PlanningDir = ctx.PlanningDir
 	storeData.Config.Repos = ctx.Repos
 	storeData.Config.Housekeeping = ctx.Housekeeping
+	storeData.Config.ProjectOverview = ctx.ProjectOverview
+	storeData.Config.NamingConventions = ctx.NamingConventions
+	storeData.Config.ErrorHandling = ctx.ErrorHandling
+	storeData.Config.ApiConventions = ctx.APIConventions
+	storeData.Config.ImportOrder = ctx.ImportOrder
+	storeData.Config.ProtectedBranch = ctx.ProtectedBranch
+	storeData.Config.TestCommand = ctx.TestCommand
+	storeData.Config.LintCommand = ctx.LintCommand
+	storeData.Config.BuildCommand = ctx.BuildCommand
+	storeData.Config.CoverageThreshold = normalizeCoverageThreshold(ctx.CoverageThreshold)
 
 	// Selections.
 	storeData.Selections.Templates = ctx.Templates
@@ -301,4 +321,11 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func normalizeCoverageThreshold(value int) int {
+	if value >= 1 && value <= 100 {
+		return value
+	}
+	return 80
 }

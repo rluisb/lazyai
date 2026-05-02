@@ -145,16 +145,23 @@ func (s *Store) ReadConfig() (*types.Config, error) {
 	var projectName, workspaceName, targetDir string
 	var planningDir, planningRepoPath, reposJSON, globalRef string
 	var workspaceRoot, housekeepingJSON string
+	var projectOverview, namingConventions, errorHandling, apiConventions string
+	var importOrder, protectedBranch, testCommand, lintCommand, buildCommand string
+	var coverageThreshold int
 
 	err := s.db.QueryRow(`
 		SELECT scope, setup_type, tools, cli_tools, enable_servers, project_name, workspace_name,
 		       target_dir, planning_dir, planning_repo_path, repos, global_ref,
-		       workspace_root, housekeeping
+		       workspace_root, housekeeping, projectOverview, namingConventions, errorHandling,
+		       apiConventions, importOrder, protectedBranch, testCommand, lintCommand,
+		       buildCommand, coverageThreshold
 		FROM config WHERE id = 1`,
 	).Scan(&scope, &setupType, &toolsJSON, &cliToolsJSON, &enableServersJSON,
 		&projectName, &workspaceName, &targetDir,
 		&planningDir, &planningRepoPath, &reposJSON, &globalRef,
-		&workspaceRoot, &housekeepingJSON)
+		&workspaceRoot, &housekeepingJSON, &projectOverview, &namingConventions,
+		&errorHandling, &apiConventions, &importOrder, &protectedBranch,
+		&testCommand, &lintCommand, &buildCommand, &coverageThreshold)
 	if err != nil {
 		return nil, fmt.Errorf("query config: %w", err)
 	}
@@ -195,20 +202,30 @@ func (s *Store) ReadConfig() (*types.Config, error) {
 	}
 
 	return &types.Config{
-		SetupScope:       types.SetupScope(scope),
-		SetupType:        types.SetupScope(setupType),
-		Tools:            tools,
-		CLITools:         cliTools,
-		EnableServers:    enableServers,
-		ProjectName:      projectName,
-		WorkspaceName:    workspaceName,
-		WorkspaceRoot:    workspaceRoot,
-		TargetDir:        targetDir,
-		PlanningDir:      planningDir,
-		PlanningRepoPath: planningRepoPath,
-		Repos:            repos,
-		GlobalRef:        globalRef,
-		Housekeeping:     &housekeeping,
+		SetupScope:        types.SetupScope(scope),
+		SetupType:         types.SetupScope(setupType),
+		Tools:             tools,
+		CLITools:          cliTools,
+		EnableServers:     enableServers,
+		ProjectName:       projectName,
+		WorkspaceName:     workspaceName,
+		WorkspaceRoot:     workspaceRoot,
+		TargetDir:         targetDir,
+		PlanningDir:       planningDir,
+		PlanningRepoPath:  planningRepoPath,
+		Repos:             repos,
+		GlobalRef:         globalRef,
+		Housekeeping:      &housekeeping,
+		ProjectOverview:   projectOverview,
+		NamingConventions: namingConventions,
+		ErrorHandling:     errorHandling,
+		ApiConventions:    apiConventions,
+		ImportOrder:       importOrder,
+		ProtectedBranch:   protectedBranch,
+		TestCommand:       testCommand,
+		LintCommand:       lintCommand,
+		BuildCommand:      buildCommand,
+		CoverageThreshold: normalizeCoverageThreshold(coverageThreshold),
 	}, nil
 }
 
@@ -244,18 +261,30 @@ func writeConfig(exec sqlExecutor, c *types.Config) error {
 	if setupType == "" {
 		setupType = c.SetupScope
 	}
+	coverageThreshold := normalizeCoverageThreshold(c.CoverageThreshold)
 
 	_, err = exec.Exec(`
 		INSERT OR REPLACE INTO config
 			(id, scope, setup_type, tools, cli_tools, enable_servers, project_name, workspace_name,
 			 target_dir, planning_dir, planning_repo_path, repos, global_ref,
-			 workspace_root, housekeeping)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 workspace_root, housekeeping, projectOverview, namingConventions, errorHandling,
+			 apiConventions, importOrder, protectedBranch, testCommand, lintCommand,
+			 buildCommand, coverageThreshold)
+		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.SetupScope, setupType, string(toolsJSON), string(cliToolsJSON), string(enableServersJSON),
 		c.ProjectName, c.WorkspaceName, c.TargetDir,
 		c.PlanningDir, c.PlanningRepoPath, string(reposJSON), c.GlobalRef,
-		c.WorkspaceRoot, string(housekeepingJSON))
+		c.WorkspaceRoot, string(housekeepingJSON), c.ProjectOverview, c.NamingConventions,
+		c.ErrorHandling, c.ApiConventions, c.ImportOrder, c.ProtectedBranch,
+		c.TestCommand, c.LintCommand, c.BuildCommand, coverageThreshold)
 	return err
+}
+
+func normalizeCoverageThreshold(value int) int {
+	if value >= 1 && value <= 100 {
+		return value
+	}
+	return 80
 }
 
 // ---------------------------------------------------------------------------

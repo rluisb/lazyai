@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -16,6 +16,13 @@ const libraryDir = findMonorepoLibraryDir()
 describe('scaffoldSpecs', () => {
   let tempDir: string
   let fileRecords: FileRecord[]
+  const starterStandards = [
+    'agent-security.md',
+    'context-loading.md',
+    'error-handling.md',
+    'orchestration-patterns.md',
+    'test-patterns.md',
+  ]
 
   beforeEach(() => {
     tempDir = mkdtempSync(path.join(tmpdir(), 'scaffold-specs-'))
@@ -77,6 +84,94 @@ describe('scaffoldSpecs', () => {
     expect(existsSync(path.join(tempDir, 'specs', 'bugfixes', 'AGENTS.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
+
+  it('copies all starter standards into an empty target', async () => {
+    await scaffoldSpecs({
+      targetDir: tempDir,
+      libraryDir,
+      specsDirs: [],
+      specsAgents: [],
+      fileRecords,
+      strategy: 'backup-and-replace' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    for (const standard of starterStandards) {
+      const standardPath = path.join(tempDir, 'specs', 'standards', 'starter', standard)
+      expect(existsSync(standardPath)).toBe(true)
+      expect(fileRecords.some((record) => record.path === `specs/standards/starter/${standard}`)).toBe(true)
+    }
+  })
+
+  it('copies missing starter standards when starter dir has only metadata files', async () => {
+    const starterDir = path.join(tempDir, 'specs', 'standards', 'starter')
+    mkdirSync(starterDir, { recursive: true })
+    writeFileSync(path.join(starterDir, '.gitkeep'), 'keep\n')
+    writeFileSync(path.join(starterDir, 'README.md'), '# Local standards\n')
+
+    await scaffoldSpecs({
+      targetDir: tempDir,
+      libraryDir,
+      specsDirs: [],
+      specsAgents: [],
+      fileRecords,
+      strategy: 'backup-and-replace' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    for (const standard of starterStandards) {
+      expect(existsSync(path.join(starterDir, standard))).toBe(true)
+    }
+  })
+
+  it('preserves a user-authored starter standard byte-for-byte', async () => {
+    const starterDir = path.join(tempDir, 'specs', 'standards', 'starter')
+    mkdirSync(starterDir, { recursive: true })
+    const userFile = path.join(starterDir, 'error-handling.md')
+    const userContent = '# My local error handling standard\n\nDo not replace me.\n'
+    writeFileSync(userFile, userContent)
+
+    await scaffoldSpecs({
+      targetDir: tempDir,
+      libraryDir,
+      specsDirs: [],
+      specsAgents: [],
+      fileRecords,
+      strategy: 'backup-and-replace' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    expect(readFileSync(userFile, 'utf-8')).toBe(userContent)
+    for (const standard of starterStandards) {
+      expect(existsSync(path.join(starterDir, standard))).toBe(true)
+    }
+    expect(fileRecords.some((record) => record.path === 'specs/standards/starter/error-handling.md')).toBe(false)
+  })
+
+  it('W1.A seeds exactly five starter standards without overwriting same-path user files', async () => {
+    // AC-N11-001, AC-N11-003, AC-N11-004, AC-N11-005: standards seed copy
+    // remains file-level idempotent and leaves one concrete standard to cite.
+    const starterDir = path.join(tempDir, 'specs', 'standards', 'starter')
+    mkdirSync(starterDir, { recursive: true })
+    const userFile = path.join(starterDir, 'error-handling.md')
+    const userContent = '# User error handling standard\n\nDo not replace this file.\n'
+    writeFileSync(userFile, userContent)
+
+    await scaffoldSpecs({
+      targetDir: tempDir,
+      libraryDir,
+      specsDirs: [],
+      specsAgents: [],
+      fileRecords,
+      strategy: 'backup-and-replace' as ConflictStrategy,
+      perFileOverrides: new Map(),
+    })
+
+    const markdownFiles = fsLikeListMarkdown(starterDir)
+    expect(markdownFiles.sort()).toEqual([...starterStandards].sort())
+    expect(readFileSync(userFile, 'utf-8')).toBe(userContent)
+    expect(fileRecords.some((record) => record.path === 'specs/standards/starter/error-handling.md')).toBe(false)
+  })
 })
 
 describe('scaffoldTemplatesRules', () => {
@@ -126,7 +221,32 @@ describe('scaffoldTemplatesRules', () => {
     expect(existsSync(path.join(tempDir, 'specs', 'rules', 'review.md'))).toBe(false)
     expect(fileRecords.length).toBeGreaterThan(0)
   })
+
+  it('W1.A substitutes coverage threshold in selected testing rule', async () => {
+    // AC-N4-002, AC-N4-003: a selected testing rule receives the same concrete
+    // coverage threshold as AGENTS.md instead of leaking the template marker.
+    await scaffoldTemplatesRules({
+      targetDir: tempDir,
+      libraryDir,
+      templates: [],
+      rules: ['testing'],
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+      coverageThreshold: 88,
+    })
+
+    const content = readFileSync(path.join(tempDir, 'specs', 'rules', 'testing.md'), 'utf-8')
+    expect(content).toContain('- Minimum coverage threshold: `88`%')
+    expect(content).not.toContain('{{COVERAGE_THRESHOLD}}')
+  })
 })
+
+function fsLikeListMarkdown(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry: { isDirectory: () => boolean; name: string }) => !entry.isDirectory() && entry.name.endsWith('.md'))
+    .map((entry: { name: string }) => entry.name)
+}
 
 describe('scaffoldInfra', () => {
   let tempDir: string

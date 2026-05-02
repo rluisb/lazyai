@@ -24,6 +24,16 @@ export interface ManifestWithFeatures extends AiSetupConfig {
   planningDir?: string
   features?: FeatureFlags
   gitConventions?: GitConventions
+  projectOverview?: string
+  namingConventions?: string
+  errorHandling?: string
+  apiConventions?: string
+  importOrder?: string
+  protectedBranch?: string
+  testCommand?: string
+  lintCommand?: string
+  buildCommand?: string
+  coverageThreshold?: number
   enableServers?: string[]
   driveCLI?: boolean
   localSecrets?: boolean
@@ -62,6 +72,16 @@ export async function readManifest(targetDir: string): Promise<ManifestWithFeatu
       ...(data.config.planningDir != null ? { planningDir: data.config.planningDir } : {}),
       ...(data.selections.features != null ? { features: data.selections.features } : {}),
       ...(data.selections.gitConventions != null ? { gitConventions: data.selections.gitConventions } : {}),
+      ...(data.config.projectOverview != null ? { projectOverview: data.config.projectOverview } : {}),
+      ...(data.config.namingConventions != null ? { namingConventions: data.config.namingConventions } : {}),
+      ...(data.config.errorHandling != null ? { errorHandling: data.config.errorHandling } : {}),
+      ...(data.config.apiConventions != null ? { apiConventions: data.config.apiConventions } : {}),
+      ...(data.config.importOrder != null ? { importOrder: data.config.importOrder } : {}),
+      ...(data.config.protectedBranch != null ? { protectedBranch: data.config.protectedBranch } : {}),
+      ...(data.config.testCommand != null ? { testCommand: data.config.testCommand } : {}),
+      ...(data.config.lintCommand != null ? { lintCommand: data.config.lintCommand } : {}),
+      ...(data.config.buildCommand != null ? { buildCommand: data.config.buildCommand } : {}),
+      ...(data.config.coverageThreshold != null ? { coverageThreshold: data.config.coverageThreshold } : {}),
     }
   } catch {
     return null

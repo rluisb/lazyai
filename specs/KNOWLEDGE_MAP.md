@@ -4,7 +4,7 @@
 
 | # | Name | Status | Branch / PR |
 |---|------|--------|-------------|
-| 001 | Store and errors | ✅ Complete | merged |
+| 001 | AI techniques integration (W1.A) | ✅ Complete | merged |
 | 002 | Simplification and restructure | ✅ Complete | merged |
 | 003 | Post-install automation and integrations | ✅ Complete | merged |
 | 004 | Go migration | ✅ Complete | merged |
@@ -97,3 +97,16 @@
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)
 - [x] ~~Ship ai-setup as a Claude plugin manifest (deferred from spec 012; plugin schema version + capabilities)~~ — spec 016 (`ai-setup build-plugin` generator)
+
+## Feature 001 W1.A — Completed Scope
+
+| Item | Status | Notes |
+|------|--------|-------|
+| N8 Constitution Population | ✅ Done | |
+| N4 Coverage Thresholds | ✅ Done | |
+| N11 Standards-as-Code | ✅ Done | |
+| Go targeted W1.A packages | ✅ Green | |
+| TS typecheck (W1.A) | ✅ Green | |
+| TS targeted W1.A tests | ✅ Green | 5 files / 76 tests |
+| `git diff --check` | ✅ Clean | |
+| S1 security fix (red-team re-review) | ✅ Approved | |

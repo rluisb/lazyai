@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
+import { buildTargetedAgentsUpdatePatch, scaffoldCompiledRoot } from '../scaffold/compiled-root.js'
 import type { ConflictStrategy, FileRecord } from '../types.js'
 import { ensureDir, fileExists, readFile, writeFile } from '../utils/files.js'
 import { findMonorepoLibraryDir } from './test-helpers.js'
@@ -95,6 +95,7 @@ describe('scaffoldCompiledRoot', () => {
         agentHarness: true,
         bugResolution: true,
         pivotHandling: true,
+        adversarialDesign: false,
       },
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
@@ -141,6 +142,7 @@ describe('scaffoldCompiledRoot', () => {
         agentHarness: true,
         bugResolution: true,
         pivotHandling: true,
+        adversarialDesign: false,
       },
       fileRecords,
       strategy: 'skip' as ConflictStrategy,
@@ -376,5 +378,284 @@ describe('scaffoldCompiledRoot', () => {
         }
       }
     }
+  })
+
+  it('patches hand-edited AGENTS.md with targeted replacements only', () => {
+    const existing = [
+      '# Hand Edited Agents',
+      '',
+      '## Custom Runbook',
+      'Do not remove this paragraph.',
+      '',
+      '## Conventions',
+      '',
+      '### Naming',
+      '- [YOUR_NAMING_CONVENTION]',
+      '',
+      '### Imports',
+      '- [YOUR_IMPORT_ORDER]',
+      '',
+      '## Project Overview',
+      '',
+      '[YOUR_PROJECT_OVERVIEW]',
+      '',
+      '**Stack:**',
+      '- Language: [YOUR_LANGUAGE]',
+      '- Framework: [YOUR_FRAMEWORK]',
+      '- Testing: [YOUR_TEST_FRAMEWORK]',
+      '- Package manager: [YOUR_PACKAGE_MANAGER]',
+      '',
+      '## Do NOT',
+      '',
+      '- Never push directly to `[YOUR_PROTECTED_BRANCH]`',
+      '- Keep this user-authored rule.',
+      '',
+      '## Testing',
+      '',
+      '- Minimum coverage: `[YOUR_COVERAGE_THRESHOLD]`%',
+      '',
+    ].join('\n')
+
+    const { content, patch } = buildTargetedAgentsUpdatePatch('AGENTS.md', existing, {
+      projectName: 'creator-checkout',
+      planningDir: 'specs',
+      constitution: {
+        projectOverview: 'Acme checkout orchestrates creator payments.',
+        stack: {
+          language: 'TypeScript',
+          framework: 'Next.js',
+          testing: 'Vitest',
+          packageManager: 'yarn',
+        },
+        conventions: {
+          naming: 'camelCase for values and PascalCase for React components',
+          importOrder: 'External packages, internal aliases, relative imports',
+        },
+        protectedBranch: 'main',
+        coverageThreshold: 87,
+      },
+    })
+
+    expect(content).toContain('## Custom Runbook\nDo not remove this paragraph.')
+    expect(content).toContain('- Keep this user-authored rule.')
+    expect(content).not.toContain('## Decision Tree')
+    expect(content).toContain('Acme checkout orchestrates creator payments.')
+    expect(content).toContain('- Language: TypeScript')
+    expect(content).toContain('- Framework: Next.js')
+    expect(content).toContain('- Testing: Vitest')
+    expect(content).toContain('- Package manager: yarn')
+    expect(content).toContain('- camelCase for values and PascalCase for React components')
+    expect(content).toContain('- External packages, internal aliases, relative imports')
+    expect(content).toContain('- Never push directly to `main`')
+    expect(content).toContain('- Minimum coverage: `87`%')
+    expect(patch.file).toBe('AGENTS.md')
+    expect(patch.preservedUnrecognizedContent).toBe(true)
+    expect(patch.replacements.length).toBeGreaterThanOrEqual(8)
+  })
+
+  it('emits TargetedUpdatePatch JSON shape', () => {
+    const { content, patch } = buildTargetedAgentsUpdatePatch(
+      'AGENTS.md',
+      '## Project Overview\n\n[YOUR_PROJECT_OVERVIEW]\n',
+      {
+        projectName: 'shape-test',
+        planningDir: 'specs',
+        constitution: { projectOverview: 'Updated overview' },
+      },
+    )
+
+    expect(content).toContain('Updated overview')
+    const parsed = JSON.parse(JSON.stringify(patch))
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        file: 'AGENTS.md',
+        replacements: expect.any(Array),
+        warnings: expect.any(Array),
+        preservedUnrecognizedContent: true,
+      }),
+    )
+    expect(parsed.replacements[0]).toEqual(
+      expect.objectContaining({
+        field: 'PROJECT_OVERVIEW',
+        oldText: '[YOUR_PROJECT_OVERVIEW]',
+        newText: 'Updated overview',
+        location: expect.objectContaining({
+          section: 'Project Overview',
+          lineStart: expect.any(Number),
+          lineEnd: expect.any(Number),
+        }),
+      }),
+    )
+  })
+
+  it('does not reprocess placeholders introduced by a targeted replacement value', () => {
+    const existing = '## Project Overview\n\n[YOUR_PROJECT_OVERVIEW]\n[YOUR_PROJECT_OVERVIEW]\n'
+    const { content, patch } = buildTargetedAgentsUpdatePatch('AGENTS.md', existing, {
+      projectName: 'recursive-placeholder-test',
+      planningDir: 'specs',
+      constitution: { projectOverview: 'Project [YOUR_PROJECT_OVERVIEW]' },
+    })
+
+    expect(content).toBe('## Project Overview\n\nProject [YOUR_PROJECT_OVERVIEW]\nProject [YOUR_PROJECT_OVERVIEW]\n')
+    expect(patch.replacements).toHaveLength(2)
+    expect(content).not.toContain('Project Project')
+  })
+
+  it('warns and leaves unsafe parsed slots unchanged', () => {
+    const existing = '## Project Overview\n\nA human-authored overview.\n\n**Stack:**\n- Language: Ruby maintained by platform\n'
+    const { content, patch } = buildTargetedAgentsUpdatePatch('AGENTS.md', existing, {
+      projectName: 'unsafe-test',
+      planningDir: 'specs',
+      constitution: {
+        projectOverview: 'Generated overview',
+        stack: { language: 'Go' },
+      },
+    })
+
+    expect(content).toBe(existing)
+    expect(patch.replacements).toHaveLength(0)
+    expect(patch.warnings.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('W1.A answered profile renders AGENTS.md without collected fallback markers', async () => {
+    // AC-N8-001, AC-N8-004, AC-N8-005, AC-N4-002 parity evidence for the
+    // TS root surface: answered profile fields render, ignored dirs stay out
+    // of the codebase map, and human-owned responsibility cells remain.
+    for (const dir of ['src', 'node_modules', 'dist', '.git', 'vendor']) {
+      fs.mkdirSync(path.join(targetDir, dir), { recursive: true })
+    }
+
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: ['opencode'],
+      projectName: 'creator-checkout',
+      planningDir: 'specs',
+      projectOverview: 'Creator Checkout processes creator payments.',
+      primaryLanguage: 'TypeScript',
+      framework: 'Next.js',
+      constitution: {
+        stack: {
+          database: 'PostgreSQL',
+          orm: 'Prisma',
+          testing: 'Vitest',
+          packageManager: 'yarn',
+        },
+        conventions: {
+          naming: 'camelCase values; PascalCase React components',
+          errorHandling: 'Return typed Result values at service boundaries',
+          apiResponses: 'JSON envelopes include data or error',
+          importOrder: 'External packages, internal aliases, relative imports',
+        },
+      },
+      protectedBranch: 'main',
+      testCommand: 'yarn test',
+      lintCommand: 'yarn lint',
+      buildCommand: 'yarn build',
+      coverageThreshold: 91,
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+      setupScope: 'project',
+    })
+
+    const content = readFile(path.join(targetDir, 'AGENTS.md'))
+    for (const expected of [
+      'Creator Checkout processes creator payments.',
+      '- Language: TypeScript',
+      '- Framework: Next.js',
+      '- Database: PostgreSQL',
+      '- ORM/Query: Prisma',
+      '- Testing: Vitest',
+      '- Package manager: yarn',
+      '- camelCase values; PascalCase React components',
+      '- Return typed Result values at service boundaries',
+      '- JSON envelopes include data or error',
+      '- External packages, internal aliases, relative imports',
+      '- Never push directly to `main`',
+      '- Minimum coverage: `91`%',
+      '| src | [WHAT_IT_DOES] |',
+    ]) {
+      expect(content).toContain(expected)
+    }
+    for (const marker of [
+      '[YOUR_PROJECT_OVERVIEW]',
+      '[YOUR_LANGUAGE]',
+      '[YOUR_FRAMEWORK]',
+      '[YOUR_DATABASE]',
+      '[YOUR_ORM]',
+      '[YOUR_TEST_FRAMEWORK]',
+      '[YOUR_PACKAGE_MANAGER]',
+      '[YOUR_NAMING_CONVENTION]',
+      '[YOUR_ERROR_PATTERN]',
+      '[YOUR_API_CONVENTION]',
+      '[YOUR_IMPORT_ORDER]',
+      '[YOUR_PROTECTED_BRANCH]',
+    ]) {
+      expect(content).not.toContain(marker)
+    }
+    for (const ignored of ['node_modules', 'dist', '.git', 'vendor']) {
+      expect(content).not.toContain(`| ${ignored} |`)
+    }
+  })
+
+  it('W1.A skipped profile preserves documented fallback markers', async () => {
+    // AC-N8-002, AC-N4-003 parity evidence: skipped/non-interactive profile
+    // values preserve literal fallbacks and coverage resolves to 80.
+    await scaffoldCompiledRoot({
+      targetDir,
+      libraryDir,
+      tools: ['opencode'],
+      projectName: 'skipped-profile',
+      planningDir: 'specs',
+      fileRecords,
+      strategy: 'skip' as ConflictStrategy,
+      perFileOverrides: new Map(),
+      setupScope: 'project',
+    })
+
+    const content = readFile(path.join(targetDir, 'AGENTS.md'))
+    for (const fallback of [
+      '[YOUR_PROJECT_OVERVIEW]',
+      '[YOUR_LANGUAGE]',
+      '[YOUR_FRAMEWORK]',
+      '[YOUR_DATABASE]',
+      '[YOUR_ORM]',
+      '[YOUR_TEST_FRAMEWORK]',
+      '[YOUR_PACKAGE_MANAGER]',
+      '[YOUR_NAMING_CONVENTION]',
+      '[YOUR_ERROR_PATTERN]',
+      '[YOUR_API_CONVENTION]',
+      '[YOUR_IMPORT_ORDER]',
+      '[YOUR_PROTECTED_BRANCH]',
+      '<!-- fill-in: test command -->',
+      '<!-- fill-in: build command -->',
+      '- Minimum coverage: `80`%',
+    ]) {
+      expect(content).toContain(fallback)
+    }
+    expect(content).not.toContain('null')
+    expect(content).not.toContain('undefined')
+  })
+
+  it('W1.A targeted update preserves custom AGENTS.md sections byte-for-byte', () => {
+    // AC-N8-003 parity evidence for TargetedUpdatePatch behavior.
+    const customBlock = [
+      '## Custom Operations Runbook',
+      '',
+      '  Keep indentation, spacing, and punctuation exactly.',
+      '- User-owned checklist item',
+      '',
+    ].join('\n')
+    const existing = ['# Existing Agents', '', customBlock, '## Project Overview', '', '[YOUR_PROJECT_OVERVIEW]', ''].join('\n')
+
+    const { content } = buildTargetedAgentsUpdatePatch('AGENTS.md', existing, {
+      projectName: 'targeted-update',
+      planningDir: 'specs',
+      constitution: { projectOverview: 'Generated overview' },
+    })
+
+    expect(content).toContain(customBlock)
+    expect(content).toContain('Generated overview')
   })
 })

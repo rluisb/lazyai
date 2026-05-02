@@ -14,6 +14,7 @@ export const PRESET_FEATURES: Record<Exclude<PresetLevel, 'custom'>, FeatureFlag
     agentHarness: false,
     bugResolution: false,
     pivotHandling: false,
+    adversarialDesign: false,
   },
   standard: {
     contextEngineering: false,
@@ -25,6 +26,7 @@ export const PRESET_FEATURES: Record<Exclude<PresetLevel, 'custom'>, FeatureFlag
     agentHarness: false,
     bugResolution: true,
     pivotHandling: false,
+    adversarialDesign: true,
   },
   full: {
     contextEngineering: true,
@@ -36,6 +38,7 @@ export const PRESET_FEATURES: Record<Exclude<PresetLevel, 'custom'>, FeatureFlag
     agentHarness: true,
     bugResolution: true,
     pivotHandling: true,
+    adversarialDesign: true,
   },
 }
 

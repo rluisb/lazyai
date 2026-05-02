@@ -42,6 +42,11 @@ var migrations = []struct {
 		Up:      migrationUp006,
 		Down:    migrationDown006,
 	},
+	{
+		Version: 7,
+		Up:      migrationUp007,
+		Down:    migrationDown007,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -274,3 +279,29 @@ ALTER TABLE tracked_files DROP COLUMN kind;
 const migrationUp006 = "ALTER TABLE config ADD COLUMN setup_type TEXT NOT NULL DEFAULT '';"
 
 const migrationDown006 = "ALTER TABLE config DROP COLUMN setup_type;"
+
+const migrationUp007 = `
+ALTER TABLE config ADD COLUMN projectOverview TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN namingConventions TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN errorHandling TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN apiConventions TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN importOrder TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN protectedBranch TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN testCommand TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN lintCommand TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN buildCommand TEXT NOT NULL DEFAULT '';
+ALTER TABLE config ADD COLUMN coverageThreshold INTEGER NOT NULL DEFAULT 80 CHECK(coverageThreshold >= 1 AND coverageThreshold <= 100);
+`
+
+const migrationDown007 = `
+ALTER TABLE config DROP COLUMN coverageThreshold;
+ALTER TABLE config DROP COLUMN buildCommand;
+ALTER TABLE config DROP COLUMN lintCommand;
+ALTER TABLE config DROP COLUMN testCommand;
+ALTER TABLE config DROP COLUMN protectedBranch;
+ALTER TABLE config DROP COLUMN importOrder;
+ALTER TABLE config DROP COLUMN apiConventions;
+ALTER TABLE config DROP COLUMN errorHandling;
+ALTER TABLE config DROP COLUMN namingConventions;
+ALTER TABLE config DROP COLUMN projectOverview;
+`

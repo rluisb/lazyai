@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/ricardoborges-teachable/ai-setup/internal/compiler"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -157,6 +159,440 @@ func TestScaffoldCompiledRootCopilotUsesRootTemplate(t *testing.T) {
 	if !strings.Contains(string(got), "Copilot root template") {
 		t.Fatalf("copilot instructions did not use root template: %q", string(got))
 	}
+}
+
+func TestBuildTargetedAgentsUpdatePatchPreservesHandEditedContent(t *testing.T) {
+	coverageThreshold := 87
+	existing := strings.Join([]string{
+		"# Hand Edited Agents",
+		"",
+		"## Custom Runbook",
+		"Do not remove this paragraph.",
+		"",
+		"## Conventions",
+		"",
+		"### Naming",
+		"- [YOUR_NAMING_CONVENTION]",
+		"",
+		"### Imports",
+		"- [YOUR_IMPORT_ORDER]",
+		"",
+		"## Project Overview",
+		"",
+		"[YOUR_PROJECT_OVERVIEW]",
+		"",
+		"**Stack:**",
+		"- Language: [YOUR_LANGUAGE]",
+		"- Framework: [YOUR_FRAMEWORK]",
+		"- Testing: [YOUR_TEST_FRAMEWORK]",
+		"- Package manager: [YOUR_PACKAGE_MANAGER]",
+		"",
+		"## Do NOT",
+		"",
+		"- Never push directly to `[YOUR_PROTECTED_BRANCH]`",
+		"- Keep this user-authored rule.",
+		"",
+		"## Testing",
+		"",
+		"- Minimum coverage: `[YOUR_COVERAGE_THRESHOLD]`%",
+		"",
+	}, "\n")
+
+	updated, patch := BuildTargetedAgentsUpdatePatch("AGENTS.md", existing, compiler.FragmentContext{
+		Constitution: &compiler.ConstitutionContext{
+			ProjectOverview: "Acme checkout orchestrates creator payments.",
+			Stack: compiler.ConstitutionStack{
+				Language:       "TypeScript",
+				Framework:      "Next.js",
+				Testing:        "Vitest",
+				PackageManager: "yarn",
+			},
+			Conventions: compiler.ConstitutionConventions{
+				Naming:      "camelCase for values and PascalCase for React components",
+				ImportOrder: "External packages, internal aliases, relative imports",
+			},
+			ProtectedBranch:   "main",
+			CoverageThreshold: &coverageThreshold,
+		},
+	})
+
+	mustContain(t, updated, "## Custom Runbook\nDo not remove this paragraph.")
+	mustContain(t, updated, "- Keep this user-authored rule.")
+	if strings.Contains(updated, "## Decision Tree") {
+		t.Fatalf("targeted update full-re-emitted AGENTS.md instead of preserving existing structure:\n%s", updated)
+	}
+	for _, want := range []string{
+		"Acme checkout orchestrates creator payments.",
+		"- Language: TypeScript",
+		"- Framework: Next.js",
+		"- Testing: Vitest",
+		"- Package manager: yarn",
+		"- camelCase for values and PascalCase for React components",
+		"- External packages, internal aliases, relative imports",
+		"- Never push directly to `main`",
+		"- Minimum coverage: `87`%",
+	} {
+		mustContain(t, updated, want)
+	}
+	if !patch.PreservedUnrecognizedContent {
+		t.Fatal("patch should report preservedUnrecognizedContent=true")
+	}
+	if patch.File != "AGENTS.md" {
+		t.Fatalf("patch file = %q, want AGENTS.md", patch.File)
+	}
+	if len(patch.Replacements) < 8 {
+		t.Fatalf("expected targeted replacements, got %#v", patch.Replacements)
+	}
+}
+
+func TestTargetedUpdatePatchJSONShape(t *testing.T) {
+	updated, patch := BuildTargetedAgentsUpdatePatch("AGENTS.md", "## Project Overview\n\n[YOUR_PROJECT_OVERVIEW]\n", compiler.FragmentContext{
+		Constitution: &compiler.ConstitutionContext{ProjectOverview: "Updated overview"},
+	})
+	if !strings.Contains(updated, "Updated overview") {
+		t.Fatalf("expected updated text, got %q", updated)
+	}
+
+	data, err := json.Marshal(patch)
+	if err != nil {
+		t.Fatalf("marshal patch: %v", err)
+	}
+	var shape map[string]any
+	if err := json.Unmarshal(data, &shape); err != nil {
+		t.Fatalf("unmarshal patch: %v", err)
+	}
+	for _, key := range []string{"file", "replacements", "warnings", "preservedUnrecognizedContent"} {
+		if _, ok := shape[key]; !ok {
+			t.Fatalf("patch JSON missing key %q: %s", key, data)
+		}
+	}
+	replacements := shape["replacements"].([]any)
+	if len(replacements) != 1 {
+		t.Fatalf("expected one replacement, got %s", data)
+	}
+	replacement := replacements[0].(map[string]any)
+	for _, key := range []string{"field", "oldText", "newText", "location"} {
+		if _, ok := replacement[key]; !ok {
+			t.Fatalf("replacement JSON missing key %q: %s", key, data)
+		}
+	}
+	location := replacement["location"].(map[string]any)
+	for _, key := range []string{"section", "lineStart", "lineEnd"} {
+		if _, ok := location[key]; !ok {
+			t.Fatalf("location JSON missing key %q: %s", key, data)
+		}
+	}
+}
+
+func TestBuildTargetedAgentsUpdatePatchTargetedReplacementDoesNotReprocessInsertedPlaceholders(t *testing.T) {
+	existing := "## Project Overview\n\n[YOUR_PROJECT_OVERVIEW]\n[YOUR_PROJECT_OVERVIEW]\n"
+	updated, patch := BuildTargetedAgentsUpdatePatch("AGENTS.md", existing, compiler.FragmentContext{
+		Constitution: &compiler.ConstitutionContext{ProjectOverview: "Project [YOUR_PROJECT_OVERVIEW]"},
+	})
+
+	want := "## Project Overview\n\nProject [YOUR_PROJECT_OVERVIEW]\nProject [YOUR_PROJECT_OVERVIEW]\n"
+	if updated != want {
+		t.Fatalf("targeted replacement should replace each original placeholder exactly once\nwant:%q\n got:%q", want, updated)
+	}
+	if len(patch.Replacements) != 2 {
+		t.Fatalf("replacement count = %d, want 2: %#v", len(patch.Replacements), patch.Replacements)
+	}
+	if strings.Contains(updated, "Project Project") {
+		t.Fatalf("replacement reprocessed inserted placeholder text: %q", updated)
+	}
+}
+
+func TestBuildTargetedAgentsUpdatePatchWarnsAndLeavesUnsafeSlots(t *testing.T) {
+	existing := "## Project Overview\n\nA human-authored overview.\n\n**Stack:**\n- Language: Ruby maintained by platform\n"
+	updated, patch := BuildTargetedAgentsUpdatePatch("AGENTS.md", existing, compiler.FragmentContext{
+		Constitution: &compiler.ConstitutionContext{
+			ProjectOverview: "Generated overview",
+			Stack:           compiler.ConstitutionStack{Language: "Go"},
+		},
+	})
+
+	if updated != existing {
+		t.Fatalf("unsafe parse should leave content unchanged\nwant:%q\n got:%q", existing, updated)
+	}
+	if len(patch.Replacements) != 0 {
+		t.Fatalf("unsafe parse should not report replacements: %#v", patch.Replacements)
+	}
+	if len(patch.Warnings) < 2 {
+		t.Fatalf("expected warnings for unsafe overview and language slots, got %#v", patch.Warnings)
+	}
+}
+
+func TestScaffoldCompiledRootPatchesExistingAgentsWithoutFullReemit(t *testing.T) {
+	targetDir := t.TempDir()
+	agentsPath := filepath.Join(targetDir, "AGENTS.md")
+	existing := "# Existing\n\n## Custom Section\nKeep me.\n\n## Project Overview\n\n[YOUR_PROJECT_OVERVIEW]\n"
+	if err := os.WriteFile(agentsPath, []byte(existing), 0o644); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+	records := []types.TrackedFile{}
+
+	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:        targetDir,
+		LibraryFS:        rootTestFS(),
+		Tools:            []types.ToolId{types.ToolIdOpenCode},
+		ProjectName:      "test-project",
+		ProjectOverview:  "Updated overview",
+		FileRecords:      &records,
+		Strategy:         types.ConflictStrategyAlign,
+		PerFileOverrides: map[string]types.ConflictStrategy{},
+		SetupScope:       types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("ScaffoldCompiledRoot: %v", err)
+	}
+
+	got, err := os.ReadFile(agentsPath)
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	content := string(got)
+	mustContain(t, content, "## Custom Section\nKeep me.")
+	mustContain(t, content, "Updated overview")
+	if strings.Contains(content, "# AGENTS") {
+		t.Fatalf("existing AGENTS.md was full-re-emitted:\n%s", content)
+	}
+}
+
+func TestTestingRuleTemplateIncludesCoverageThresholdSubstitution(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "library", "rules", "testing.md"))
+	if err != nil {
+		t.Fatalf("read testing rule template: %v", err)
+	}
+	mustContain(t, string(data), "{{COVERAGE_THRESHOLD}}")
+}
+
+func TestW1AFieldParitySnapshot(t *testing.T) {
+	coverageThreshold := 87
+	ctx := compiler.FragmentContext{
+		ProjectName: "creator-checkout",
+		Constitution: &compiler.ConstitutionContext{
+			ProjectOverview: "Creator Checkout processes creator payments.",
+			Stack: compiler.ConstitutionStack{
+				Language:       "TypeScript",
+				Framework:      "Next.js",
+				Database:       "PostgreSQL",
+				ORM:            "Prisma",
+				Testing:        "Vitest",
+				PackageManager: "yarn",
+			},
+			Conventions: compiler.ConstitutionConventions{
+				Naming:        "camelCase values; PascalCase React components",
+				ErrorHandling: "Return typed Result values at service boundaries",
+				APIResponses:  "JSON envelopes include data or error",
+				ImportOrder:   "External, internal aliases, relative imports",
+			},
+			Commands: compiler.ConstitutionCommands{
+				Test:  "yarn test",
+				Lint:  "yarn lint",
+				Build: "yarn build",
+			},
+			ProtectedBranch:   "main",
+			CoverageThreshold: &coverageThreshold,
+			CodebaseMap: []compiler.CodebaseMapEntry{
+				{Path: "src"},
+				{Path: "packages/api", Responsibility: "API package"},
+			},
+		},
+	}
+	template := strings.Join([]string{
+		"{{PROJECT_NAME}}",
+		"{{PROJECT_OVERVIEW}}",
+		"{{LANGUAGE}}|{{FRAMEWORK}}|{{DATABASE}}|{{ORM}}|{{TEST_FRAMEWORK}}|{{PACKAGE_MANAGER}}",
+		"{{NAMING_CONVENTIONS}}|{{ERROR_HANDLING}}|{{API_CONVENTIONS}}|{{IMPORT_ORDER}}",
+		"{{TEST_COMMAND}}|{{LINT_COMMAND}}|{{BUILD_COMMAND}}|{{PROTECTED_BRANCH}}|{{COVERAGE_THRESHOLD}}",
+		"{{CODEBASE_MAP}}",
+	}, "\n")
+
+	got := compiler.NewFragmentResolver("").Resolve(template, ctx)
+	want := strings.Join([]string{
+		"creator-checkout",
+		"Creator Checkout processes creator payments.",
+		"TypeScript|Next.js|PostgreSQL|Prisma|Vitest|yarn",
+		"camelCase values; PascalCase React components|Return typed Result values at service boundaries|JSON envelopes include data or error|External, internal aliases, relative imports",
+		"yarn test|yarn lint|yarn build|main|87",
+		"| src | [WHAT_IT_DOES] |",
+		"| packages/api | API package |",
+	}, "\n")
+	if got != want {
+		t.Fatalf("W1.A field snapshot mismatch\nwant:\n%s\n\ngot:\n%s", want, got)
+	}
+}
+
+func TestW1ACompiledRootAnsweredProfileHasNoCollectedFallbackMarkers(t *testing.T) {
+	// AC-N8-001, AC-N8-004, AC-N8-005, AC-N4-002: answered W1.A
+	// profile fields render into AGENTS.md, generated codebase rows keep
+	// human-owned responsibility placeholders, and collected fallback markers
+	// disappear from the shared Go/TS root surface.
+	targetDir := t.TempDir()
+	for _, dir := range []string{"src", "node_modules", "dist", ".git", "vendor"} {
+		if err := os.MkdirAll(filepath.Join(targetDir, dir), 0o755); err != nil {
+			t.Fatalf("create target dir %s: %v", dir, err)
+		}
+	}
+	coverageThreshold := 91
+	records := []types.TrackedFile{}
+
+	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:         targetDir,
+		LibraryFS:         os.DirFS(filepath.Join("..", "..", "library")),
+		Tools:             []types.ToolId{types.ToolIdOpenCode},
+		ProjectName:       "creator-checkout",
+		PlanningDir:       "specs",
+		ProjectOverview:   "Creator Checkout processes creator payments.",
+		PrimaryLanguage:   "TypeScript",
+		Framework:         "Next.js",
+		Database:          "PostgreSQL",
+		ORM:               "Prisma",
+		TestFramework:     "Vitest",
+		PackageManager:    "yarn",
+		NamingConventions: "camelCase values; PascalCase React components",
+		ErrorHandling:     "Return typed Result values at service boundaries",
+		APIConventions:    "JSON envelopes include data or error",
+		ImportOrder:       "External packages, internal aliases, relative imports",
+		ProtectedBranch:   "main",
+		TestCommand:       "yarn test",
+		LintCommand:       "yarn lint",
+		BuildCommand:      "yarn build",
+		CoverageThreshold: coverageThreshold,
+		FileRecords:       &records,
+		Strategy:          types.ConflictStrategySkip,
+		PerFileOverrides:  map[string]types.ConflictStrategy{},
+		SetupScope:        types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("ScaffoldCompiledRoot: %v", err)
+	}
+
+	contentBytes, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	content := string(contentBytes)
+	for _, want := range []string{
+		"Creator Checkout processes creator payments.",
+		"- Language: TypeScript",
+		"- Framework: Next.js",
+		"- Database: PostgreSQL",
+		"- ORM/Query: Prisma",
+		"- Testing: Vitest",
+		"- Package manager: yarn",
+		"- camelCase values; PascalCase React components",
+		"- Return typed Result values at service boundaries",
+		"- JSON envelopes include data or error",
+		"- External packages, internal aliases, relative imports",
+		"- Never push directly to `main`",
+		"- Minimum coverage: `91`%",
+		"| src | [WHAT_IT_DOES] |",
+	} {
+		mustContain(t, content, want)
+	}
+	for _, marker := range []string{
+		"[YOUR_PROJECT_OVERVIEW]",
+		"[YOUR_LANGUAGE]",
+		"[YOUR_FRAMEWORK]",
+		"[YOUR_DATABASE]",
+		"[YOUR_ORM]",
+		"[YOUR_TEST_FRAMEWORK]",
+		"[YOUR_PACKAGE_MANAGER]",
+		"[YOUR_NAMING_CONVENTION]",
+		"[YOUR_ERROR_PATTERN]",
+		"[YOUR_API_CONVENTION]",
+		"[YOUR_IMPORT_ORDER]",
+		"[YOUR_PROTECTED_BRANCH]",
+	} {
+		if strings.Contains(content, marker) {
+			t.Fatalf("collected fallback marker %s remained in AGENTS.md:\n%s", marker, content)
+		}
+	}
+	for _, ignored := range []string{"node_modules", "dist", ".git", "vendor"} {
+		if strings.Contains(content, "| "+ignored+" |") {
+			t.Fatalf("ignored codebase map path %q rendered in AGENTS.md:\n%s", ignored, content)
+		}
+	}
+}
+
+func TestW1ACompiledRootSkippedProfilePreservesDocumentedFallbacks(t *testing.T) {
+	// AC-N8-002, AC-N4-003: skipped/non-interactive fields preserve the
+	// documented literal fallbacks while coverage resolves to the safe default.
+	targetDir := t.TempDir()
+	records := []types.TrackedFile{}
+
+	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:        targetDir,
+		LibraryFS:        os.DirFS(filepath.Join("..", "..", "library")),
+		Tools:            []types.ToolId{types.ToolIdOpenCode},
+		ProjectName:      "skipped-profile",
+		PlanningDir:      "specs",
+		FileRecords:      &records,
+		Strategy:         types.ConflictStrategySkip,
+		PerFileOverrides: map[string]types.ConflictStrategy{},
+		SetupScope:       types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("ScaffoldCompiledRoot: %v", err)
+	}
+
+	contentBytes, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	content := string(contentBytes)
+	for _, fallback := range []string{
+		"[YOUR_PROJECT_OVERVIEW]",
+		"[YOUR_LANGUAGE]",
+		"[YOUR_FRAMEWORK]",
+		"[YOUR_DATABASE]",
+		"[YOUR_ORM]",
+		"[YOUR_TEST_FRAMEWORK]",
+		"[YOUR_PACKAGE_MANAGER]",
+		"[YOUR_NAMING_CONVENTION]",
+		"[YOUR_ERROR_PATTERN]",
+		"[YOUR_API_CONVENTION]",
+		"[YOUR_IMPORT_ORDER]",
+		"[YOUR_PROTECTED_BRANCH]",
+		"<!-- fill-in: test command -->",
+		"<!-- fill-in: build command -->",
+		"- Minimum coverage: `80`%",
+	} {
+		mustContain(t, content, fallback)
+	}
+	for _, bad := range []string{"null", "undefined"} {
+		if strings.Contains(content, bad) {
+			t.Fatalf("skipped profile rendered %q in AGENTS.md:\n%s", bad, content)
+		}
+	}
+}
+
+func TestW1ATargetedUpdatePreservesCustomSectionsByteForByte(t *testing.T) {
+	// AC-N8-003: update may patch recognized placeholders, but custom
+	// AGENTS.md sections must survive byte-for-byte.
+	customBlock := strings.Join([]string{
+		"## Custom Operations Runbook",
+		"",
+		"  Keep indentation, spacing, and punctuation exactly.",
+		"- User-owned checklist item",
+		"",
+	}, "\n")
+	existing := strings.Join([]string{
+		"# Existing Agents",
+		"",
+		customBlock,
+		"## Project Overview",
+		"",
+		"[YOUR_PROJECT_OVERVIEW]",
+		"",
+	}, "\n")
+
+	updated, _ := BuildTargetedAgentsUpdatePatch("AGENTS.md", existing, compiler.FragmentContext{
+		Constitution: &compiler.ConstitutionContext{ProjectOverview: "Generated overview"},
+	})
+
+	if !strings.Contains(updated, customBlock) {
+		t.Fatalf("custom AGENTS.md block was not preserved byte-for-byte\nwant block:%q\nupdated:%q", customBlock, updated)
+	}
+	mustContain(t, updated, "Generated overview")
 }
 
 func rootTestFS() fstest.MapFS {

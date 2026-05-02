@@ -116,6 +116,7 @@ export function migrateV0toV1(data: Record<string, unknown>, targetDir: string =
       tools: config.tools as StoreData['config']['tools'],
       projectName: config.projectName,
       targetDir,
+      coverageThreshold: 80,
     },
     selections,
     files: legacyFiles.map((file) => ({

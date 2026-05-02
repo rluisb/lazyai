@@ -50,7 +50,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 5: Templates and rules.
-	if err := ScaffoldTemplatesRules(ctx.TargetDir, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldTemplatesRules(ctx.TargetDir, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.CoverageThreshold); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("templates-rules: %w", err))
 	}
 
@@ -73,6 +73,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		Strategy:            ctx.Strategy,
 		PerFileOverrides:    ctx.PerFileOverrides,
 		SetupScope:          ctx.SetupScope,
+		StoreData:           ctx.StoreData,
 		PrimaryLanguage:     ctx.PrimaryLanguage,
 		Framework:           ctx.Framework,
 		WorkspaceType:       ctx.WorkspaceType,
@@ -80,6 +81,21 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		ProjectDescription:  ctx.ProjectDescription,
 		Organization:        ctx.Organization,
 		Team:                ctx.Team,
+		ProjectOverview:     ctx.ProjectOverview,
+		Database:            ctx.Database,
+		ORM:                 ctx.ORM,
+		TestFramework:       ctx.TestFramework,
+		PackageManager:      ctx.PackageManager,
+		NamingConventions:   ctx.NamingConventions,
+		ErrorHandling:       ctx.ErrorHandling,
+		APIConventions:      ctx.APIConventions,
+		ImportOrder:         ctx.ImportOrder,
+		ProtectedBranch:     ctx.ProtectedBranch,
+		TestCommand:         ctx.TestCommand,
+		LintCommand:         ctx.LintCommand,
+		BuildCommand:        ctx.BuildCommand,
+		CoverageThreshold:   ctx.CoverageThreshold,
+		CodebaseMap:         ctx.CodebaseMap,
 		Repos:               ctx.Repos,
 	}); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("compiled-root: %w", err))

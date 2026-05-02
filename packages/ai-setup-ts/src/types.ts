@@ -29,6 +29,16 @@ export interface SetupConfig {
   globalRef?: string
   driveCLI?: boolean
   localSecrets?: boolean
+  projectOverview?: string
+  namingConventions?: string
+  errorHandling?: string
+  apiConventions?: string
+  importOrder?: string
+  protectedBranch?: string
+  testCommand?: string
+  lintCommand?: string
+  buildCommand?: string
+  coverageThreshold?: number
   force?: boolean | undefined
   dryRun?: boolean
 }

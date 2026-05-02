@@ -3,6 +3,7 @@ package scaffold
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -96,8 +97,28 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"rules/code-style.md": &fstest.MapFile{
 			Data: []byte("# Code Style Rules\n\nProject: {{PROJECT_NAME}}"),
 		},
+		"rules/testing.md": &fstest.MapFile{
+			Data: []byte("# Testing Rule\n\n- Minimum coverage threshold: `{{COVERAGE_THRESHOLD}}`%\n"),
+		},
 		"rules/typescript.md": &fstest.MapFile{
 			Data: []byte("---\npaths:\n  - \"src/**/*.ts\"\n---\n\n# TypeScript Rules\n\n- Use strict TypeScript\n- Prefer interfaces over types for objects\n"),
+		},
+
+		// Starter standards.
+		"standards/starter/agent-security.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Agent Security\n---\n\n# Agent Security\n"),
+		},
+		"standards/starter/context-loading.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Context Loading\n---\n\n# Context Loading\n"),
+		},
+		"standards/starter/error-handling.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Error Handling\n---\n\n# Error Handling\n"),
+		},
+		"standards/starter/orchestration-patterns.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Orchestration Patterns\n---\n\n# Orchestration Patterns\n"),
+		},
+		"standards/starter/test-patterns.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Test Patterns\n---\n\n# Test Patterns\n"),
 		},
 
 		// Infra
@@ -322,7 +343,88 @@ func TestScaffoldAll_AbsorbStrategyPreservesExistingRootFile(t *testing.T) {
 	}
 }
 
-func TestScaffoldAll_BackupOnlyStrategyReplacesAndBacksUpExistingRootFile(t *testing.T) {
+func TestW1AScaffoldAllSubstitutesCoverageInAgentsAndSelectedTestingRule(t *testing.T) {
+	// AC-N4-002, AC-N4-003: accepted/defaulted coverage is emitted in both
+	// AGENTS.md and a selected specs/rules/testing.md file during integration.
+	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
+	ctx.LibraryFS = os.DirFS(filepath.Join("..", "..", "library"))
+	ctx.CoverageThreshold = 88
+	ctx.Rules = []types.RuleId{types.RuleIdTesting}
+
+	if _, err := ScaffoldAll(ctx); err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	agents, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	if !strings.Contains(string(agents), "- Minimum coverage: `88`%") {
+		t.Fatalf("AGENTS.md did not include substituted coverage threshold:\n%s", string(agents))
+	}
+
+	testingRulePath := filepath.Join(targetDir, "specs", "rules", "testing.md")
+	testingRule, err := os.ReadFile(testingRulePath)
+	if err != nil {
+		t.Fatalf("read selected testing rule: %v", err)
+	}
+	if !strings.Contains(string(testingRule), "- Minimum coverage threshold: `88`%") {
+		t.Fatalf("testing rule did not include substituted coverage threshold:\n%s", string(testingRule))
+	}
+	if strings.Contains(string(testingRule), "{{COVERAGE_THRESHOLD}}") {
+		t.Fatalf("testing rule kept unresolved coverage placeholder:\n%s", string(testingRule))
+	}
+}
+
+func TestW1AScaffoldAllSeedsExactlyFiveStarterStandardsWithoutOverwritingUserFiles(t *testing.T) {
+	// AC-N11-001, AC-N11-003, AC-N11-004, AC-N11-005: full scaffold seeds the
+	// five starter standards file-by-file and treats same-path files as user-owned.
+	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
+	starterDir := filepath.Join(targetDir, "specs", "standards", "starter")
+	if err := os.MkdirAll(starterDir, 0o755); err != nil {
+		t.Fatalf("create starter dir: %v", err)
+	}
+	const userContent = "# User error handling standard\n\nDo not replace this file.\n"
+	if err := os.WriteFile(filepath.Join(starterDir, "error-handling.md"), []byte(userContent), 0o644); err != nil {
+		t.Fatalf("seed user starter standard: %v", err)
+	}
+
+	result, err := ScaffoldAll(ctx)
+	if err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	entries, err := os.ReadDir(starterDir)
+	if err != nil {
+		t.Fatalf("read starter standards dir: %v", err)
+	}
+	var markdownFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".md" {
+			markdownFiles = append(markdownFiles, entry.Name())
+		}
+	}
+	if len(markdownFiles) != len(expectedStarterStandards) {
+		t.Fatalf("starter standard count = %d (%v), want exactly %d", len(markdownFiles), markdownFiles, len(expectedStarterStandards))
+	}
+	for _, standard := range expectedStarterStandards {
+		if _, err := os.Stat(filepath.Join(starterDir, standard)); err != nil {
+			t.Fatalf("missing starter standard %s: %v", standard, err)
+		}
+	}
+	got, err := os.ReadFile(filepath.Join(starterDir, "error-handling.md"))
+	if err != nil {
+		t.Fatalf("read user starter standard: %v", err)
+	}
+	if string(got) != userContent {
+		t.Fatalf("user starter standard overwritten\nwant:%q\n got:%q", userContent, string(got))
+	}
+	if hasTrackedPath(result.Files, filepath.ToSlash(filepath.Join("specs", "standards", "starter", "error-handling.md"))) {
+		t.Fatal("pre-existing user starter standard should not be tracked as a copied library file")
+	}
+}
+
+func TestScaffoldAll_AlignStrategyPreservesUnrecognizedExistingRootFile(t *testing.T) {
 	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode})
 	ctx.Strategy = types.ConflictStrategyAlign
 
@@ -340,8 +442,8 @@ func TestScaffoldAll_BackupOnlyStrategyReplacesAndBacksUpExistingRootFile(t *tes
 	if err != nil {
 		t.Fatalf("read AGENTS.md: %v", err)
 	}
-	if string(got) == existingContent {
-		t.Fatal("AGENTS.md was not replaced under backup-only/align behavior")
+	if string(got) != existingContent {
+		t.Fatalf("AGENTS.md content = %q, want targeted update to preserve unrecognized content %q", string(got), existingContent)
 	}
 
 	backupPath := filepath.Join(targetDir, ".ai-setup-backup", "AGENTS.md")

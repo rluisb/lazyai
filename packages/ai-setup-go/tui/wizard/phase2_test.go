@@ -125,6 +125,73 @@ func TestBuildPhase2ResultGitConventionDefaults(t *testing.T) {
 	if !reflect.DeepEqual(result.GitConv, &wantGit) {
 		t.Fatalf("GitConv = %#v, want %#v", result.GitConv, &wantGit)
 	}
+	if result.CoverageThreshold != 80 {
+		t.Fatalf("CoverageThreshold = %d, want 80", result.CoverageThreshold)
+	}
+}
+
+func TestRunPhase2NonInteractivePreservesProjectProfileDefaults(t *testing.T) {
+	t.Parallel()
+
+	defaults := &Phase2Result{
+		Preset:            types.PresetLevelStandard,
+		ProjectOverview:   "Builds AI setup scaffolds",
+		NamingConventions: "Use camelCase",
+		ErrorHandling:     "Return wrapped errors",
+		APIConventions:    "JSON responses",
+		ImportOrder:       "stdlib, third-party, internal",
+		ProtectedBranch:   "main",
+		TestCommand:       "go test ./...",
+		LintCommand:       "go vet ./...",
+		BuildCommand:      "go build ./...",
+		CoverageThreshold: 95,
+	}
+
+	result, action, err := RunPhase2(types.SetupScopeProject, defaults, true)
+	if err != nil {
+		t.Fatalf("RunPhase2: %v", err)
+	}
+	if action != PhaseContinue {
+		t.Fatalf("action = %v, want %v", action, PhaseContinue)
+	}
+
+	if result.ProjectOverview != defaults.ProjectOverview || result.NamingConventions != defaults.NamingConventions || result.ErrorHandling != defaults.ErrorHandling || result.APIConventions != defaults.APIConventions {
+		t.Fatalf("profile fields not preserved: %#v", result)
+	}
+	if result.ImportOrder != defaults.ImportOrder || result.ProtectedBranch != defaults.ProtectedBranch {
+		t.Fatalf("convention fields not preserved: %#v", result)
+	}
+	if result.TestCommand != defaults.TestCommand || result.LintCommand != defaults.LintCommand || result.BuildCommand != defaults.BuildCommand {
+		t.Fatalf("command fields not preserved: %#v", result)
+	}
+	if result.CoverageThreshold != 95 {
+		t.Fatalf("CoverageThreshold = %d, want 95", result.CoverageThreshold)
+	}
+}
+
+func TestRunPhase2NonInteractiveCoverageDefaultsAndBounds(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		in   int
+		want int
+	}{
+		{name: "skipped defaults to 80", in: 0, want: 80},
+		{name: "below range resets to 80", in: -1, want: 80},
+		{name: "above range resets to 80", in: 101, want: 80},
+		{name: "valid is preserved", in: 72, want: 72},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, _, err := RunPhase2(types.SetupScopeProject, &Phase2Result{CoverageThreshold: tc.in}, true)
+			if err != nil {
+				t.Fatalf("RunPhase2: %v", err)
+			}
+			if result.CoverageThreshold != tc.want {
+				t.Fatalf("CoverageThreshold = %d, want %d", result.CoverageThreshold, tc.want)
+			}
+		})
+	}
 }
 
 func TestPreviousPhase2Step(t *testing.T) {

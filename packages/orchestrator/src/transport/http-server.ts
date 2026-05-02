@@ -18,6 +18,13 @@ export interface HttpServerOptions extends ToolHandlerOptions {
   autoShutdown?: boolean
   /** Grace period in ms before auto-shutdown. Default: 5000. */
   gracePeriodMs?: number
+  /** Idle TTL for an MCP session before it's GC'd. Sessions are touched on every
+   *  request; bridges killed with SIGKILL never close gracefully, and without
+   *  this their server-side transports leak until the daemon shuts down.
+   *  Default: 600_000 (10 min). Set to 0 to disable. */
+  sessionIdleTtlMs?: number
+  /** How often to scan for idle sessions. Default: 60_000 (1 min). */
+  sessionGcIntervalMs?: number
 }
 
 export interface HttpServerContext {
@@ -46,7 +53,11 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
   // new entry; subsequent requests (GET SSE or POST with mcp-session-id) route to
   // the existing session. This is required because StreamableHTTPServerTransport
   // is not designed to handle concurrent clients on a single instance.
-  const sessions = new Map<string, StreamableHTTPServerTransport>()
+  interface SessionEntry {
+    transport: StreamableHTTPServerTransport
+    lastActivity: number
+  }
+  const sessions = new Map<string, SessionEntry>()
 
   async function routeRequest(req: http.IncomingMessage, res: http.ServerResponse, parsedBody: unknown): Promise<void> {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
@@ -58,14 +69,15 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
         res.end(JSON.stringify({ error: 'Session not found' }))
         return
       }
-      await existing.handleRequest(req, res, parsedBody)
+      existing.lastActivity = Date.now()
+      await existing.transport.handleRequest(req, res, parsedBody)
       return
     }
 
     // No session ID → new initialize request; create a dedicated transport+server pair
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
-      onsessioninitialized: (id) => { sessions.set(id, transport) },
+      onsessioninitialized: (id) => { sessions.set(id, { transport, lastActivity: Date.now() }) },
       onsessionclosed: (id) => { sessions.delete(id) },
     })
 
@@ -76,6 +88,7 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
 
   let tracker: ClientTracker | undefined
   let shutdownSignaled = false
+  let gcTimer: ReturnType<typeof setInterval> | null = null
 
   const httpServer = http.createServer(async (req, res) => {
     const url = req.url ?? '/'
@@ -143,12 +156,29 @@ export async function startHttpServer(options: HttpServerOptions): Promise<HttpS
       const msg = err instanceof Error ? err.message : String(err)
       log.error('http-server.auto-handoff-failed', { error: msg })
     }
-    await Promise.all([...sessions.values()].map((t) => t.close().catch(() => { /* best-effort */ })))
+    if (gcTimer) { clearInterval(gcTimer); gcTimer = null }
+    await Promise.all([...sessions.values()].map((s) => s.transport.close().catch(() => { /* best-effort */ })))
     sessions.clear()
     await new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()))
     })
     log.info('http-server.stopped')
+  }
+
+  const idleTtl = options.sessionIdleTtlMs ?? 600_000
+  const gcInterval = options.sessionGcIntervalMs ?? 60_000
+  if (idleTtl > 0) {
+    gcTimer = setInterval(() => {
+      const now = Date.now()
+      for (const [id, entry] of sessions) {
+        if (now - entry.lastActivity > idleTtl) {
+          log.info('http-server.session-idle-gc', { sessionId: id, idleMs: now - entry.lastActivity })
+          sessions.delete(id)
+          entry.transport.close().catch(() => { /* best-effort */ })
+        }
+      }
+    }, gcInterval)
+    gcTimer.unref?.()
   }
 
   if (options.autoShutdown) {

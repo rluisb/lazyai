@@ -1,53 +1,32 @@
 {
-    "mcpServers": {
-        "memory": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-memory"
-            ]
-        },
-        "filesystem": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-filesystem",
-                "."
-            ]
-        },
-        "ripgrep": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "mcp-ripgrep"
-            ]
-        },
-        "memoria": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@byronwade/memoria"
-            ]
-        },
-        "codegraph": {
-            "command": "codegraph",
-            "args": [
-                "serve",
-                "--mcp"
-            ]
-        },
-        "qmd": {
-            "command": "qmd",
-            "args": [
-                "mcp"
-            ]
-        },
-        "orchestrator": {
-            "type": "stdio",
-            "command": "ai-setup-orchestrator",
-            "args": [
-                "connect"
-            ]
-        }
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    "ripgrep": {
+      "command": "npx",
+      "args": ["-y", "mcp-ripgrep"]
+    },
+    "memoria": {
+      "command": "npx",
+      "args": ["-y", "@byronwade/memoria"]
+    },
+    "codegraph": {
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
+    },
+    "qmd": {
+      "command": "qmd",
+      "args": ["mcp"]
+    },
+    "orchestrator": {
+      "command": "ai-setup-orchestrator",
+      "args": ["connect"]
     }
+  }
 }

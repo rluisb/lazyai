@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('node:child_process', () => ({
   execSync: vi.fn(),
+  spawn: vi.fn(),
 }))
 
 // Mock @clack/prompts before importing phases
@@ -21,9 +22,20 @@ vi.mock('@clack/prompts', () => ({
   isCancel: vi.fn(() => false),
 }))
 
+vi.mock('../utils/diffviewer-delegate.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/diffviewer-delegate.js')>()
+
+  return {
+    ...actual,
+    resolveDiffViewerBinary: vi.fn(),
+    runDiffReview: vi.fn(),
+  }
+})
+
 import { execSync } from 'node:child_process'
 import * as p from '@clack/prompts'
 import { ALL_AGENTS, ALL_SKILLS } from '../types.js'
+import { resolveDiffViewerBinary, runDiffReview } from '../utils/diffviewer-delegate.js'
 import { GO_BACK } from '../utils/ui.js'
 import {
   defaultMcpServersForPreset,
@@ -47,10 +59,17 @@ function makeTempDir(prefix: string): string {
   return mkdtempSync(path.join(tmpdir(), prefix))
 }
 
+function numberedLines(prefix: string, count: number): string {
+  return Array.from({ length: count }, (_, index) => `${prefix} ${index + 1}`).join('\n')
+}
+
 describe('wizard phases 1 and 3', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(p.isCancel).mockReturnValue(false)
+    vi.mocked(resolveDiffViewerBinary).mockReset()
+    vi.mocked(resolveDiffViewerBinary).mockReturnValue(null)
+    vi.mocked(runDiffReview).mockReset()
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error('not found')
     })
@@ -347,5 +366,146 @@ describe('wizard phases 1 and 3', () => {
 
     expect(result.strategy).toBe('skip')
     expect(result.perFileOverrides.size).toBe(0)
+  })
+
+  it('Phase 3: above-threshold confirmed diffviewer path returns per-file overrides', async () => {
+    const targetDir = makeTempDir('ai-setup-phase3-delegated-')
+    const acceptPath = path.join(targetDir, 'accept.md')
+    const denyPath = path.join(targetDir, 'deny.md')
+    const skipPath = path.join(targetDir, 'skip.md')
+
+    try {
+      writeFileSync(acceptPath, numberedLines('old accept', 20))
+      writeFileSync(denyPath, numberedLines('old deny', 20))
+      writeFileSync(skipPath, numberedLines('old skip', 20))
+      vi.mocked(p.select).mockResolvedValueOnce('align')
+      vi.mocked(resolveDiffViewerBinary).mockReturnValue('/mock/diffviewer')
+      vi.mocked(runDiffReview).mockResolvedValueOnce({
+        mode: 'delegated',
+        status: 'confirmed',
+        resolutions: [
+          { path: acceptPath, action: 'accept' },
+          { path: denyPath, action: 'deny' },
+          { path: skipPath, action: 'skip' },
+        ],
+      })
+
+      const result = await runPhase3({
+        interactive: true,
+        targetDir,
+        plannedFiles: [
+          { destPath: acceptPath, srcContent: numberedLines('new accept', 20) },
+          { destPath: denyPath, srcContent: numberedLines('new deny', 20) },
+          { destPath: skipPath, srcContent: numberedLines('new skip', 20) },
+        ],
+      })
+
+      expect(result.strategy).toBe('align')
+      expect(Object.fromEntries(result.perFileOverrides)).toEqual({
+        [acceptPath]: 'backup-and-replace',
+        [denyPath]: 'skip',
+        [skipPath]: 'align',
+      })
+      expect(runDiffReview).toHaveBeenCalledWith({
+        version: 1,
+        title: 'Review setup conflicts',
+        files: [
+          { path: acceptPath, currentContent: numberedLines('old accept', 20), newContent: numberedLines('new accept', 20) },
+          { path: denyPath, currentContent: numberedLines('old deny', 20), newContent: numberedLines('new deny', 20) },
+          { path: skipPath, currentContent: numberedLines('old skip', 20), newContent: numberedLines('new skip', 20) },
+        ],
+      })
+      expect(p.select).toHaveBeenCalledTimes(1)
+    } finally {
+      rmSync(targetDir, { recursive: true, force: true })
+    }
+  })
+
+  it('Phase 3: above-threshold cancelled diffviewer path propagates cancellation', async () => {
+    const targetDir = makeTempDir('ai-setup-phase3-cancelled-')
+    const filePath = path.join(targetDir, 'large.md')
+
+    try {
+      writeFileSync(filePath, numberedLines('old', 20))
+      vi.mocked(p.select).mockResolvedValueOnce('align')
+      vi.mocked(resolveDiffViewerBinary).mockReturnValue('/mock/diffviewer')
+      vi.mocked(runDiffReview).mockResolvedValueOnce({
+        mode: 'delegated',
+        status: 'cancelled',
+        resolutions: [],
+      })
+
+      await expect(runPhase3({
+        interactive: true,
+        targetDir,
+        plannedFiles: [{ destPath: filePath, srcContent: numberedLines('new', 20) }],
+      })).rejects.toThrow('Operation cancelled by user')
+
+      expect(p.cancel).toHaveBeenCalledWith('Setup cancelled.')
+      expect(p.select).toHaveBeenCalledTimes(1)
+    } finally {
+      rmSync(targetDir, { recursive: true, force: true })
+    }
+  })
+
+  it('Phase 3: above-threshold missing diffviewer binary falls back to inline per-file selection', async () => {
+    const targetDir = makeTempDir('ai-setup-phase3-missing-binary-')
+    const filePath = path.join(targetDir, 'large.md')
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+
+    try {
+      writeFileSync(filePath, numberedLines('old', 20))
+      vi.mocked(p.select)
+        .mockResolvedValueOnce('align')
+        .mockResolvedValueOnce('backup-and-replace')
+      vi.mocked(resolveDiffViewerBinary).mockReturnValue(null)
+
+      const result = await runPhase3({
+        interactive: true,
+        targetDir,
+        plannedFiles: [{ destPath: filePath, srcContent: numberedLines('new', 20) }],
+      })
+
+      expect(result.strategy).toBe('align')
+      expect(Object.fromEntries(result.perFileOverrides)).toEqual({
+        [filePath]: 'backup-and-replace',
+      })
+      expect(runDiffReview).not.toHaveBeenCalled()
+      expect(p.select).toHaveBeenCalledTimes(2)
+    } finally {
+      logSpy.mockRestore()
+      rmSync(targetDir, { recursive: true, force: true })
+    }
+  })
+
+  it('Phase 3: below-threshold align path uses clack selection for each file', async () => {
+    const targetDir = makeTempDir('ai-setup-phase3-inline-')
+    const filePath = path.join(targetDir, 'small.md')
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+
+    try {
+      writeFileSync(filePath, 'old line')
+      vi.mocked(p.select)
+        .mockResolvedValueOnce('align')
+        .mockResolvedValueOnce('skip')
+
+      const result = await runPhase3({
+        interactive: true,
+        targetDir,
+        plannedFiles: [{ destPath: filePath, srcContent: 'new line' }],
+      })
+
+      expect(result.strategy).toBe('align')
+      expect(Object.fromEntries(result.perFileOverrides)).toEqual({
+        [filePath]: 'skip',
+      })
+      expect(resolveDiffViewerBinary).not.toHaveBeenCalled()
+      expect(runDiffReview).not.toHaveBeenCalled()
+      expect(p.select).toHaveBeenCalledTimes(2)
+      expect(vi.mocked(p.select).mock.calls[1]?.[0].message).toBe(`Conflict strategy for ${filePath}?`)
+    } finally {
+      logSpy.mockRestore()
+      rmSync(targetDir, { recursive: true, force: true })
+    }
   })
 })

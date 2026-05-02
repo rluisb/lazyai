@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://teachable.com/schemas/diffviewer-v1.schema.json",
+  "title": "Diffviewer JSON v1 Contract",
+  "description": "JSON IPC contract for the diffviewer CLI. The CLI reads a ReviewRequest from stdin and writes a ReviewResponse to stdout. TUI output must go to stderr or the controlling TTY so stdout remains JSON-only.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ReviewRequest"
+    },
+    {
+      "$ref": "#/$defs/ReviewResponse"
+    }
+  ],
+  "$defs": {
+    "ReviewRequest": {
+      "type": "object",
+      "title": "ReviewRequest",
+      "description": "Request payload supplied to diffviewer stdin for interactive review.",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "files"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1,
+          "description": "Contract version. Must be 1 for diffviewer JSON v1."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional human-readable review title displayed by the TUI."
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Files to review, in presentation order.",
+          "items": {
+            "$ref": "#/$defs/ReviewFile"
+          }
+        }
+      }
+    },
+    "ReviewFile": {
+      "type": "object",
+      "title": "ReviewFile",
+      "description": "A single file diff input. Diffviewer compares currentContent against newContent.",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "currentContent",
+        "newContent"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative file path being reviewed."
+        },
+        "currentContent": {
+          "type": "string",
+          "description": "Existing file content before the proposed change."
+        },
+        "newContent": {
+          "type": "string",
+          "description": "Proposed file content after the change."
+        }
+      }
+    },
+    "ReviewResponse": {
+      "type": "object",
+      "title": "ReviewResponse",
+      "description": "Response payload emitted by diffviewer stdout after the user completes or cancels review.",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "status",
+        "resolutions"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1,
+          "description": "Contract version. Must be 1 for diffviewer JSON v1."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "confirmed",
+            "cancelled"
+          ],
+          "description": "confirmed means the final review summary was approved; cancelled means the review was aborted or not confirmed."
+        },
+        "resolutions": {
+          "type": "array",
+          "description": "Per-file user decisions. For confirmed responses, action maps as: accept -> backup-and-replace, deny -> skip, skip -> align/manual-review.",
+          "items": {
+            "$ref": "#/$defs/ReviewResolution"
+          }
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional human-readable completion, cancellation, or diagnostic message."
+        }
+      }
+    },
+    "ReviewResolution": {
+      "type": "object",
+      "title": "ReviewResolution",
+      "description": "Decision for a reviewed file.",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "action"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative path matching a requested file."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "deny",
+            "skip"
+          ],
+          "description": "User-selected action. Mapping: accept -> backup-and-replace, deny -> skip, skip -> align/manual-review."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "status": "confirmed",
+  "resolutions": [
+    {
+      "path": "packages/ai-setup-ts/src/utils/diff.ts",
+      "action": "accept"
+    },
+    {
+      "path": "packages/diffviewer/README.md",
+      "action": "skip"
+    },
+    {
+      "path": "AGENTS.md",
+      "action": "deny"
+    }
+  ],
+  "message": "Review confirmed. Apply accepted changes, skip denied changes, and leave skipped files for manual review."
+}

@@ -1,6 +1,8 @@
 package wizard
 
 import (
+	"strconv"
+
 	"charm.land/huh/v2"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
@@ -21,16 +23,26 @@ type WizardState struct {
 	Team         string
 
 	// Phase 2
-	Preset           string
-	Features         []string
-	BranchPattern    string
-	CustomBranch     string
-	CommitPattern    string
-	CustomCommit     string
-	RequireTicket    bool
-	ChatModes        []string
-	OpenCodeCommands []string
-	OpenCodeModes    []string
+	Preset            string
+	Features          []string
+	BranchPattern     string
+	CustomBranch      string
+	CommitPattern     string
+	CustomCommit      string
+	RequireTicket     bool
+	ChatModes         []string
+	OpenCodeCommands  []string
+	OpenCodeModes     []string
+	ProjectOverview   string
+	NamingConventions string
+	ErrorHandling     string
+	APIConventions    string
+	ImportOrder       string
+	ProtectedBranch   string
+	TestCommand       string
+	LintCommand       string
+	BuildCommand      string
+	CoverageThreshold string
 
 	// Phase 5
 	MemoryPath        string
@@ -96,6 +108,7 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.ChatModes = chatModeIdsToStrings(types.ALL_CHATMODES[:])
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
+	s.CoverageThreshold = "80"
 
 	if defaults != nil && defaults.Phase2 != nil {
 		if defaults.Phase2.Preset != "" {
@@ -122,6 +135,16 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		if len(defaults.Phase2.OpenCodeModes) > 0 {
 			s.OpenCodeModes = opencodeModeIdsToStrings(defaults.Phase2.OpenCodeModes)
 		}
+		s.ProjectOverview = defaults.Phase2.ProjectOverview
+		s.NamingConventions = defaults.Phase2.NamingConventions
+		s.ErrorHandling = defaults.Phase2.ErrorHandling
+		s.APIConventions = defaults.Phase2.APIConventions
+		s.ImportOrder = defaults.Phase2.ImportOrder
+		s.ProtectedBranch = defaults.Phase2.ProtectedBranch
+		s.TestCommand = defaults.Phase2.TestCommand
+		s.LintCommand = defaults.Phase2.LintCommand
+		s.BuildCommand = defaults.Phase2.BuildCommand
+		s.CoverageThreshold = strconv.Itoa(normalizeCoverageThreshold(defaults.Phase2.CoverageThreshold))
 	}
 
 	// Set Phase 5 Defaults
@@ -277,6 +300,48 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Value(&state.RequireTicket),
 		),
 		huh.NewGroup(
+			huh.NewInput().
+				Title("Project Overview").
+				Description("Optional. Leave blank to preserve [YOUR_PROJECT_OVERVIEW].").
+				Value(&state.ProjectOverview),
+			huh.NewInput().
+				Title("Naming Conventions").
+				Description("Optional. Leave blank to preserve [YOUR_NAMING_CONVENTION].").
+				Value(&state.NamingConventions),
+			huh.NewInput().
+				Title("Error Handling").
+				Description("Optional. Leave blank to preserve [YOUR_ERROR_PATTERN].").
+				Value(&state.ErrorHandling),
+			huh.NewInput().
+				Title("API Conventions").
+				Description("Optional. Leave blank to preserve [YOUR_API_CONVENTION].").
+				Value(&state.APIConventions),
+			huh.NewInput().
+				Title("Import Order").
+				Description("Optional. Leave blank to preserve [YOUR_IMPORT_ORDER].").
+				Value(&state.ImportOrder),
+			huh.NewInput().
+				Title("Protected Branch").
+				Description("Optional. Leave blank to preserve [YOUR_PROTECTED_BRANCH].").
+				Value(&state.ProtectedBranch),
+			huh.NewInput().
+				Title("Test Command").
+				Description("Optional. Leave blank to preserve command fallback.").
+				Value(&state.TestCommand),
+			huh.NewInput().
+				Title("Lint Command").
+				Description("Optional. Leave blank to preserve command fallback.").
+				Value(&state.LintCommand),
+			huh.NewInput().
+				Title("Build Command").
+				Description("Optional. Leave blank to preserve command fallback.").
+				Value(&state.BuildCommand),
+			huh.NewInput().
+				Title("Coverage Threshold").
+				Description("Default 80. Values outside 1-100 reset to 80.").
+				Value(&state.CoverageThreshold),
+		).Title("Project Profile"),
+		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Copilot Chat Modes").
 				Description("Select Copilot chat modes to install. Deselect to skip.").
@@ -407,6 +472,16 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		stringsToOpenCodeCommandIds(state.OpenCodeCommands),
 		stringsToOpenCodeModeIds(state.OpenCodeModes),
 	)
+	p2.ProjectOverview = state.ProjectOverview
+	p2.NamingConventions = state.NamingConventions
+	p2.ErrorHandling = state.ErrorHandling
+	p2.APIConventions = state.APIConventions
+	p2.ImportOrder = state.ImportOrder
+	p2.ProtectedBranch = state.ProtectedBranch
+	p2.TestCommand = state.TestCommand
+	p2.LintCommand = state.LintCommand
+	p2.BuildCommand = state.BuildCommand
+	p2.CoverageThreshold = parseCoverageThreshold(state.CoverageThreshold)
 
 	// Phase 5
 	p5 := buildPhase5Result(

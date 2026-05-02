@@ -21,15 +21,15 @@ Default to repository conventions before introducing new patterns.
 
 <!-- One paragraph. What this project does, who uses it, why it exists. -->
 
-[YOUR_PROJECT_OVERVIEW]
+{{PROJECT_OVERVIEW}}
 
 **Stack:**
-- Language: [YOUR_LANGUAGE]
-- Framework: [YOUR_FRAMEWORK]
-- Database: [YOUR_DATABASE]
-- ORM/Query: [YOUR_ORM]
-- Testing: [YOUR_TEST_FRAMEWORK]
-- Package manager: [YOUR_PACKAGE_MANAGER]
+- Language: {{LANGUAGE}}
+- Framework: {{FRAMEWORK}}
+- Database: {{DATABASE}}
+- ORM/Query: {{ORM}}
+- Testing: {{TEST_FRAMEWORK}}
+- Package manager: {{PACKAGE_MANAGER}}
 
 ---
 
@@ -37,11 +37,7 @@ Default to repository conventions before introducing new patterns.
 
 | Path | Responsibility |
 |------|---------------|
-| [YOUR_PATH_1] | [WHAT_IT_DOES] |
-| [YOUR_PATH_2] | [WHAT_IT_DOES] |
-| [YOUR_PATH_3] | [WHAT_IT_DOES] |
-| [YOUR_SHARED_PATH] | Shared utilities — check all importers before editing |
-| [YOUR_INFRA_PATH] | Infrastructure — read-only for AI agents |
+{{CODEBASE_MAP}}
 
 ---
 
@@ -113,16 +109,16 @@ Default to repository conventions before introducing new patterns.
 ## Conventions
 
 ### Naming
-- [YOUR_NAMING_CONVENTION]
+- {{NAMING_CONVENTIONS}}
 
 ### Error Handling
-- [YOUR_ERROR_PATTERN]
+- {{ERROR_HANDLING}}
 
 ### API Responses
-- [YOUR_API_CONVENTION]
+- {{API_CONVENTIONS}}
 
 ### Imports
-- [YOUR_IMPORT_ORDER]
+- {{IMPORT_ORDER}}
 
 ---
 
@@ -134,7 +130,7 @@ Default to repository conventions before introducing new patterns.
 - Never bypass `[YOUR_STRICT_MODE]`
 - Never change `[YOUR_SHARED_PATH]` without checking all importers first
 - Never run destructive database commands without explicit instruction
-- Never push directly to `[YOUR_PROTECTED_BRANCH]`
+- Never push directly to `{{PROTECTED_BRANCH}}`
 
 ---
 
@@ -276,19 +272,19 @@ When a task requires a different expertise (e.g., security review during impleme
 
 - All new code requires tests
 - Test location: `[YOUR_TEST_PATH]`
-- Run: `[YOUR_TEST_COMMAND]`
-- Minimum coverage: `[YOUR_COVERAGE_THRESHOLD]`%
+- Run: `{{TEST_COMMAND}}`
+- Minimum coverage: `{{COVERAGE_THRESHOLD}}`%
 
 ---
 
 ## Key Commands
 
 ```bash
-[YOUR_INSTALL_COMMAND]     # Install dependencies
-[YOUR_TEST_COMMAND]        # Run tests
-[YOUR_LINT_COMMAND]        # Run linter
-[YOUR_DEV_COMMAND]         # Start dev server
-[YOUR_BUILD_COMMAND]       # Build
+{{INSTALL_COMMAND}}     # Install dependencies
+{{TEST_COMMAND}}        # Run tests
+{{LINT_COMMAND}}        # Run linter
+{{DEV_COMMAND}}         # Start dev server
+{{BUILD_COMMAND}}       # Build
 ```
 
 ---

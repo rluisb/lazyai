@@ -28,6 +28,14 @@ var specifyTemplates = []string{
 	"ledger-template.md",
 }
 
+var starterStandardFiles = []string{
+	"agent-security.md",
+	"context-loading.md",
+	"error-handling.md",
+	"orchestration-patterns.md",
+	"test-patterns.md",
+}
+
 // HasSpecKitStructure returns true if a .specify/ directory already exists.
 func HasSpecKitStructure(targetDir string) bool {
 	return files.IsDirectory(filepath.Join(targetDir, ".specify"))
@@ -66,17 +74,12 @@ func DetectExistingSpecs(targetDir string) (hasSpecs bool, highest int) {
 // ScaffoldSpecs creates the speckit-compatible .specify/ and specs/ directory structure.
 //
 // Behavior:
-// - If .specify/ already exists: skip directory scaffolding but still copy templates
-//   (constitution ran first and created .specify/, so the directory check alone would
-//   suppress the template copy on the initial run)
-// - If specs/###-slug/ directories exist: skip spec directory creation
-// - Greenfield: create specs/.gitkeep + full .specify/ with templates, memory, scripts
+//   - If .specify/ already exists: skip directory scaffolding but still copy templates
+//     (constitution ran first and created .specify/, so the directory check alone would
+//     suppress the template copy on the initial run)
+//   - If specs/###-slug/ directories exist: skip spec directory creation
+//   - Greenfield: create specs/.gitkeep + full .specify/ with templates, memory, scripts
 func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, specsDirs []string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
-	_ = libFS
-	_ = fileRecords
-	_ = strategy
-	_ = perFileOverrides
-
 	hasSpecify := HasSpecKitStructure(targetDir)
 	hasSpecs, _ := DetectExistingSpecs(targetDir)
 
@@ -149,6 +152,15 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 		}
 	}
 
+	// Seed starter standards file-by-file. Metadata files such as .gitkeep or
+	// README.md must not suppress missing standards, and existing user-authored
+	// files at the same paths are always preserved regardless of conflict strategy.
+	if libFS != nil {
+		if err := copyStarterStandards(targetDir, libFS, fileRecords); err != nil {
+			return err
+		}
+	}
+
 	// 3. Legacy: create selected specs directories only when .specify/ is NOT
 	// present (old-style scaffold). In speckit mode, specs grow via /speckit.specify.
 	if !hasSpecify {
@@ -166,6 +178,40 @@ func ScaffoldSpecs(targetDir string, setupScope types.SetupScope, libFS fs.FS, s
 				}
 				_ = files.EnsureDir(filepath.Join(specsDir, "memory", "handoffs"))
 			}
+		}
+	}
+
+	return nil
+}
+
+func copyStarterStandards(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile) error {
+	starterDir := filepath.Join(targetDir, "specs", "standards", "starter")
+
+	for _, standard := range starterStandardFiles {
+		src := "standards/starter/" + standard
+		data, err := fs.ReadFile(libFS, src)
+		if err != nil {
+			continue // standard not in this build's library — skip
+		}
+
+		dest := filepath.Join(starterDir, standard)
+		if files.FileExists(dest) {
+			continue
+		}
+
+		if err := files.WriteFile(dest, data, 0o644); err != nil {
+			return err
+		}
+
+		if fileRecords != nil {
+			hash, _ := files.FileHash(dest)
+			relPath, _ := filepath.Rel(targetDir, dest)
+			*fileRecords = append(*fileRecords, types.TrackedFile{
+				Path:   filepath.ToSlash(relPath),
+				Hash:   hash,
+				Source: "standards:" + src,
+				Owner:  types.FileOwnerLibrary,
+			})
 		}
 	}
 

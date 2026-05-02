@@ -39,6 +39,16 @@ func init() {
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
 	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in AGENTS.md)")
 	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in AGENTS.md)")
+	initCmd.Flags().String("project-overview", "", "Project overview for generated AGENTS.md")
+	initCmd.Flags().String("naming-conventions", "", "Naming conventions for generated AGENTS.md")
+	initCmd.Flags().String("error-handling", "", "Error handling conventions for generated AGENTS.md")
+	initCmd.Flags().String("api-conventions", "", "API response conventions for generated AGENTS.md")
+	initCmd.Flags().String("import-order", "", "Import ordering conventions for generated AGENTS.md")
+	initCmd.Flags().String("protected-branch", "", "Protected branch name for generated AGENTS.md")
+	initCmd.Flags().String("test-command", "", "Test command for generated AGENTS.md")
+	initCmd.Flags().String("lint-command", "", "Lint command for generated AGENTS.md")
+	initCmd.Flags().String("build-command", "", "Build command for generated AGENTS.md")
+	initCmd.Flags().Int("coverage-threshold", 0, "Coverage threshold percentage (1-100; default 80)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
 	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
@@ -74,6 +84,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
+	projectOverview, _ := cmd.Flags().GetString("project-overview")
+	namingConventions, _ := cmd.Flags().GetString("naming-conventions")
+	errorHandling, _ := cmd.Flags().GetString("error-handling")
+	apiConventions, _ := cmd.Flags().GetString("api-conventions")
+	importOrder, _ := cmd.Flags().GetString("import-order")
+	protectedBranch, _ := cmd.Flags().GetString("protected-branch")
+	testCommand, _ := cmd.Flags().GetString("test-command")
+	lintCommand, _ := cmd.Flags().GetString("lint-command")
+	buildCommand, _ := cmd.Flags().GetString("build-command")
+	coverageThreshold, _ := cmd.Flags().GetInt("coverage-threshold")
 	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
 	existingSetupPolicyStr, _ := cmd.Flags().GetString("existing-setup-policy")
 	existingSetupPolicy, err := parseExistingSetupPolicy(existingSetupPolicyStr)
@@ -103,6 +123,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLILocalSecrets:        localSecrets,
 		CLIOrg:                 orgName,
 		CLITeam:                teamName,
+		CLIProjectOverview:     projectOverview,
+		CLINamingConventions:   namingConventions,
+		CLIErrorHandling:       errorHandling,
+		CLIApiConventions:      apiConventions,
+		CLIImportOrder:         importOrder,
+		CLIProtectedBranch:     protectedBranch,
+		CLITestCommand:         testCommand,
+		CLILintCommand:         lintCommand,
+		CLIBuildCommand:        buildCommand,
+		CLICoverageThreshold:   coverageThreshold,
 		CLIEnableServers:       enableServersStr,
 		HomeDir:                homeDir,
 		TargetDir:              targetDir,
@@ -292,9 +322,19 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	}
 
 	phase2 := &wizard.Phase2Result{
-		Preset:   presetLevel,
-		Features: &features,
-		GitConv:  &gitConvs,
+		Preset:            presetLevel,
+		Features:          &features,
+		GitConv:           &gitConvs,
+		ProjectOverview:   config.CLIProjectOverview,
+		NamingConventions: config.CLINamingConventions,
+		ErrorHandling:     config.CLIErrorHandling,
+		APIConventions:    config.CLIApiConventions,
+		ImportOrder:       config.CLIImportOrder,
+		ProtectedBranch:   config.CLIProtectedBranch,
+		TestCommand:       config.CLITestCommand,
+		LintCommand:       config.CLILintCommand,
+		BuildCommand:      config.CLIBuildCommand,
+		CoverageThreshold: config.CLICoverageThreshold,
 	}
 
 	// Build WizardResult with pre-computed phases.

@@ -25,6 +25,14 @@ const SPECIFY_TEMPLATES = [
 
 const SPECIFY_SCRIPTS = ['create-new-feature.sh']
 
+const STARTER_STANDARD_FILES = [
+  'agent-security.md',
+  'context-loading.md',
+  'error-handling.md',
+  'orchestration-patterns.md',
+  'test-patterns.md',
+]
+
 /**
  * Detects whether an existing spec-kit structure is present.
  * Returns true if .specify/ directory exists.
@@ -120,6 +128,11 @@ export async function scaffoldSpecs(opts: ScaffoldSpecsOptions): Promise<void> {
     }
   }
 
+  // Seed starter standards file-by-file. Metadata files such as .gitkeep or
+  // README.md must not suppress missing standards, and existing user-authored
+  // files at the same paths are always preserved regardless of conflict strategy.
+  copyStarterStandards(libraryDir, targetDir, fileRecords)
+
   // Legacy: create selected specs directories (only if existing spec-kit structure AND user selected them)
   if (specsDirs.length > 0) {
     for (const dir of specsDirs) {
@@ -142,6 +155,26 @@ export async function scaffoldSpecs(opts: ScaffoldSpecsOptions): Promise<void> {
     const dest = path.join(specsDir, dir, 'AGENTS.md')
 
     await copyLibraryFile(src, dest, fileRecords, targetDir, strategy, perFileOverrides)
+  }
+}
+
+function copyStarterStandards(libraryDir: string, targetDir: string, records: FileRecord[]): void {
+  const starterDir = path.join(targetDir, 'specs', 'standards', 'starter')
+
+  for (const standard of STARTER_STANDARD_FILES) {
+    const sourcePath = path.join(libraryDir, 'standards', 'starter', standard)
+    if (!fileExists(sourcePath)) continue
+
+    const destPath = path.join(starterDir, standard)
+    if (fileExists(destPath)) continue
+
+    copyFile(sourcePath, destPath)
+    records.push({
+      path: path.relative(targetDir, destPath).replaceAll('\\', '/'),
+      hash: fileHash(destPath),
+      source: `standards:standards/starter/${standard}`,
+      owner: 'library',
+    })
   }
 }
 

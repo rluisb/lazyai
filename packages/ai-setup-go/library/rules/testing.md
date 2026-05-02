@@ -19,6 +19,7 @@ Test-first development catches defects earlier, drives better design, and provid
 - New code: 100% of specified behaviors covered
 - Bug fixes: regression test required for every fix
 - Refactors: existing tests must continue to pass
+- Minimum coverage threshold: `{{COVERAGE_THRESHOLD}}`%
 
 ### Test Quality Standards
 - Tests should verify behavior, not implementation details

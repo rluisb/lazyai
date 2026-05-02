@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +31,51 @@ type FragmentContext struct {
 	InstallCommand      string
 	ProjectDescription  string
 	Features            *FeatureFlags
+	Constitution        *ConstitutionContext
+	Fallbacks           map[string]string
+}
+
+// ConstitutionContext holds optional W1.A constitution/profile values used by
+// root templates. Empty fields intentionally render explicit fallback markers.
+type ConstitutionContext struct {
+	ProjectOverview   string
+	Stack             ConstitutionStack
+	Conventions       ConstitutionConventions
+	Commands          ConstitutionCommands
+	ProtectedBranch   string
+	CoverageThreshold *int
+	CodebaseMap       []CodebaseMapEntry
+}
+
+// ConstitutionStack holds optional project stack values.
+type ConstitutionStack struct {
+	Language       string
+	Framework      string
+	Database       string
+	ORM            string
+	Testing        string
+	PackageManager string
+}
+
+// ConstitutionConventions holds optional project convention values.
+type ConstitutionConventions struct {
+	Naming        string
+	ErrorHandling string
+	APIResponses  string
+	ImportOrder   string
+}
+
+// ConstitutionCommands holds optional command values.
+type ConstitutionCommands struct {
+	Test  string
+	Lint  string
+	Build string
+}
+
+// CodebaseMapEntry is a single generated Codebase Map row.
+type CodebaseMapEntry struct {
+	Path           string
+	Responsibility string
 }
 
 // FeatureFlags controls which features are compiled into the output.
@@ -38,25 +84,50 @@ type FeatureFlags struct {
 	ContextEngineering *bool
 	RPIWorkflow        *bool
 	ChainOfThought     *bool
-	TreeOfThoughts      *bool
+	TreeOfThoughts     *bool
 	ADREnforcement     *bool
 	QualityGates       *bool
 	AgentHarness       *bool
 	BugResolution      *bool
 	PivotHandling      *bool
 	GitConventions     *bool
+	AdversarialDesign  *bool
 
 	// Legacy snake_case aliases
 	ContextEngineering_ *bool
 	RPIWorkflow_        *bool
 	ChainOfThought_     *bool
 	TreeOfThoughts_     *bool
-	ADREnforcement_    *bool
-	QualityGates_      *bool
-	AgentHarness_      *bool
-	BugResolution_    *bool
-	PivotHandling_     *bool
-	GitConventions_   *bool
+	ADREnforcement_     *bool
+	QualityGates_       *bool
+	AgentHarness_       *bool
+	BugResolution_      *bool
+	PivotHandling_      *bool
+	GitConventions_     *bool
+	AdversarialDesign_  *bool
+}
+
+var defaultTemplateFallbacks = map[string]string{
+	"PROJECT_NAME":       "[YOUR_PROJECT_NAME]",
+	"PROJECT_OVERVIEW":   "[YOUR_PROJECT_OVERVIEW]",
+	"LANGUAGE":           "[YOUR_LANGUAGE]",
+	"FRAMEWORK":          "[YOUR_FRAMEWORK]",
+	"DATABASE":           "[YOUR_DATABASE]",
+	"ORM":                "[YOUR_ORM]",
+	"TEST_FRAMEWORK":     "[YOUR_TEST_FRAMEWORK]",
+	"PACKAGE_MANAGER":    "[YOUR_PACKAGE_MANAGER]",
+	"NAMING_CONVENTIONS": "[YOUR_NAMING_CONVENTION]",
+	"ERROR_HANDLING":     "[YOUR_ERROR_PATTERN]",
+	"API_CONVENTIONS":    "[YOUR_API_CONVENTION]",
+	"IMPORT_ORDER":       "[YOUR_IMPORT_ORDER]",
+	"PROTECTED_BRANCH":   "[YOUR_PROTECTED_BRANCH]",
+	"TEST_COMMAND":       "<!-- fill-in: test command -->",
+	"LINT_COMMAND":       "[YOUR_LINT_COMMAND]",
+	"BUILD_COMMAND":      "<!-- fill-in: build command -->",
+	"DEV_COMMAND":        "<!-- fill-in: dev command -->",
+	"INSTALL_COMMAND":    "[YOUR_INSTALL_COMMAND]",
+	"COVERAGE_THRESHOLD": "80",
+	"CODEBASE_MAP":       "| [YOUR_PATH_1] | [WHAT_IT_DOES] |\n| [YOUR_PATH_2] | [WHAT_IT_DOES] |\n| [YOUR_PATH_3] | [WHAT_IT_DOES] |\n| [YOUR_SHARED_PATH] | Shared utilities — check all importers before editing |\n| [YOUR_INFRA_PATH] | Infrastructure — read-only for AI agents |",
 }
 
 // FragmentResolver resolves XML fragments and variable interpolation in templates.
@@ -147,6 +218,8 @@ func (r *FragmentResolver) getFeatureFlag(name string, f *FeatureFlags) bool {
 		return boolPtr(f.PivotHandling) || boolPtr(f.PivotHandling_)
 	case "gitConventions", "git_conventions":
 		return boolPtr(f.GitConventions) || boolPtr(f.GitConventions_)
+	case "adversarialDesign", "adversarial_design":
+		return boolPtr(f.AdversarialDesign) || boolPtr(f.AdversarialDesign_)
 	default:
 		return false
 	}
@@ -198,23 +271,35 @@ func (r *FragmentResolver) loadFragment(fragmentPath string) string {
 var variableRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
 func (r *FragmentResolver) resolveVariables(content string, ctx FragmentContext) string {
+	codebaseMap := renderCodebaseMap(ctx.Constitution)
 	variables := map[string]string{
 		"PROJECT_NAME":         ctx.ProjectName,
 		"PLANNING_DIR":         ctx.PlanningDir,
 		"PRIMARY_LANGUAGE":     defaultStr(ctx.PrimaryLanguage, "TypeScript"),
-		"FRAMEWORK":            ctx.Framework,
+		"FRAMEWORK":            firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.Framework }), ctx.Framework),
 		"WORKSPACE_TYPE":       defaultStr(ctx.WorkspaceType, "project"),
 		"TOOL_DESCRIPTION":     ctx.ToolDescription,
 		"TOOL_NOTES":           ctx.ToolNotes,
 		"PROJECT_INSTRUCTIONS": ctx.ProjectInstructions,
-		"TEST_FRAMEWORK":       ctx.TestFramework,
-		"PACKAGE_MANAGER":      ctx.PackageManager,
-		"TEST_COMMAND":         ctx.TestCommand,
-		"LINT_COMMAND":         ctx.LintCommand,
-		"BUILD_COMMAND":        ctx.BuildCommand,
+		"TEST_FRAMEWORK":       firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.Testing }), ctx.TestFramework),
+		"PACKAGE_MANAGER":      firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.PackageManager }), ctx.PackageManager),
+		"TEST_COMMAND":         firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Commands.Test }), ctx.TestCommand),
+		"LINT_COMMAND":         firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Commands.Lint }), ctx.LintCommand),
+		"BUILD_COMMAND":        firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Commands.Build }), ctx.BuildCommand),
 		"DEV_COMMAND":          ctx.DevCommand,
 		"INSTALL_COMMAND":      ctx.InstallCommand,
 		"PROJECT_DESCRIPTION":  ctx.ProjectDescription,
+		"PROJECT_OVERVIEW":     constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.ProjectOverview }),
+		"LANGUAGE":             firstNonEmpty(constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.Language }), ctx.PrimaryLanguage),
+		"DATABASE":             constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.Database }),
+		"ORM":                  constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Stack.ORM }),
+		"NAMING_CONVENTIONS":   constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Conventions.Naming }),
+		"ERROR_HANDLING":       constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Conventions.ErrorHandling }),
+		"API_CONVENTIONS":      constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Conventions.APIResponses }),
+		"IMPORT_ORDER":         constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.Conventions.ImportOrder }),
+		"PROTECTED_BRANCH":     constitutionString(ctx.Constitution, func(c *ConstitutionContext) string { return c.ProtectedBranch }),
+		"COVERAGE_THRESHOLD":   coverageThreshold(ctx.Constitution),
+		"CODEBASE_MAP":         codebaseMap,
 	}
 
 	return variableRe.ReplaceAllStringFunc(content, func(match string) string {
@@ -223,11 +308,89 @@ func (r *FragmentResolver) resolveVariables(content string, ctx FragmentContext)
 			return match
 		}
 		varName := submatch[1]
-		if val, ok := variables[varName]; ok && val != "" {
-			return val
+		if val, ok := variables[varName]; ok {
+			if val != "" {
+				return val
+			}
+			if fallback, ok := fallbackFor(varName, ctx.Fallbacks); ok {
+				return fallback
+			}
+		}
+		if fallback, ok := fallbackFor(varName, ctx.Fallbacks); ok {
+			return fallback
 		}
 		return match // Leave unresolved variables as-is.
 	})
+}
+
+func constitutionString(c *ConstitutionContext, getter func(*ConstitutionContext) string) string {
+	if c == nil {
+		return ""
+	}
+	return strings.TrimSpace(getter(c))
+}
+
+func coverageThreshold(c *ConstitutionContext) string {
+	if c == nil || c.CoverageThreshold == nil {
+		return ""
+	}
+	return strconv.Itoa(*c.CoverageThreshold)
+}
+
+func fallbackFor(varName string, overrides map[string]string) (string, bool) {
+	if overrides != nil {
+		if fallback, ok := overrides[varName]; ok {
+			return fallback, true
+		}
+	}
+	fallback, ok := defaultTemplateFallbacks[varName]
+	return fallback, ok
+}
+
+func renderCodebaseMap(c *ConstitutionContext) string {
+	if c == nil || len(c.CodebaseMap) == 0 {
+		return ""
+	}
+
+	var rows []string
+	for _, entry := range c.CodebaseMap {
+		path := strings.TrimSpace(filepath.ToSlash(entry.Path))
+		if path == "" || isIgnoredCodebasePath(path) {
+			continue
+		}
+
+		responsibility := strings.TrimSpace(entry.Responsibility)
+		if responsibility == "" {
+			responsibility = "[WHAT_IT_DOES]"
+		}
+		rows = append(rows, fmt.Sprintf("| %s | %s |", path, responsibility))
+	}
+
+	return strings.Join(rows, "\n")
+}
+
+func isIgnoredCodebasePath(path string) bool {
+	ignored := map[string]bool{
+		"node_modules": true,
+		"dist":         true,
+		".git":         true,
+		"vendor":       true,
+	}
+	for _, part := range strings.Split(path, "/") {
+		if ignored[part] {
+			return true
+		}
+	}
+	return false
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func defaultStr(val, def string) string {

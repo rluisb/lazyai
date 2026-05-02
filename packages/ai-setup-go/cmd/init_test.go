@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
@@ -60,6 +61,87 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	}
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist")
+	}
+}
+
+func TestInitNonInteractivePersistsProjectProfileAndCoverage(t *testing.T) {
+	dir := t.TempDir()
+	ensureTestLibraryFS(t)
+	withWorkingDir(t, dir)
+
+	config := &wizard.WizardConfig{
+		Interactive:          false,
+		HomeDir:              testRepoRoot(t),
+		TargetDir:            dir,
+		CLIScope:             types.SetupScopeProject,
+		CLITools:             []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:            types.PresetLevelMinimal,
+		CLIProjectOverview:   "CLI overview",
+		CLINamingConventions: "Use camelCase",
+		CLIErrorHandling:     "Return wrapped errors",
+		CLIApiConventions:    "JSON APIs",
+		CLIImportOrder:       "stdlib, third-party, internal",
+		CLIProtectedBranch:   "trunk",
+		CLITestCommand:       "go test ./...",
+		CLILintCommand:       "go vet ./...",
+		CLIBuildCommand:      "go build ./...",
+		CLICoverageThreshold: 92,
+	}
+
+	captureOutput(t, func() {
+		if err := runInitNonInteractive(config); err != nil {
+			t.Fatalf("runInitNonInteractive: %v", err)
+		}
+	})
+
+	storeData := readSeededStoreData(t, dir)
+	if storeData.Config.ProjectOverview != "CLI overview" || storeData.Config.NamingConventions != "Use camelCase" || storeData.Config.ErrorHandling != "Return wrapped errors" || storeData.Config.ApiConventions != "JSON APIs" {
+		t.Fatalf("profile config not persisted: %#v", storeData.Config)
+	}
+	if storeData.Config.ImportOrder != "stdlib, third-party, internal" || storeData.Config.ProtectedBranch != "trunk" {
+		t.Fatalf("convention config not persisted: %#v", storeData.Config)
+	}
+	if storeData.Config.TestCommand != "go test ./..." || storeData.Config.LintCommand != "go vet ./..." || storeData.Config.BuildCommand != "go build ./..." {
+		t.Fatalf("command config not persisted: %#v", storeData.Config)
+	}
+	if storeData.Config.CoverageThreshold != 92 {
+		t.Fatalf("CoverageThreshold = %d, want 92", storeData.Config.CoverageThreshold)
+	}
+
+	agents, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	content := string(agents)
+	for _, want := range []string{"CLI overview", "Use camelCase", "Return wrapped errors", "JSON APIs", "stdlib, third-party, internal", "trunk", "go test ./...", "go vet ./...", "go build ./...", "92"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("AGENTS.md missing %q\n%s", want, content)
+		}
+	}
+}
+
+func TestBuildScaffoldContextDefaultsSkippedCoverageTo80(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeProject,
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:   types.PresetLevelMinimal,
+		CLIName:     "profile-test",
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: config.CLIName},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.CoverageThreshold != 80 {
+		t.Fatalf("CoverageThreshold = %d, want 80", ctx.CoverageThreshold)
 	}
 }
 

@@ -85,10 +85,20 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			LastUpdatedAt: now,
 		},
 		Config: types.Config{
-			SetupScope:  types.SetupScopeProject,
-			Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-			ProjectName: "test-project",
-			TargetDir:   "/tmp/test",
+			SetupScope:        types.SetupScopeProject,
+			Tools:             []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
+			ProjectName:       "test-project",
+			TargetDir:         "/tmp/test",
+			ProjectOverview:   "Project summary",
+			NamingConventions: "Use camelCase",
+			ErrorHandling:     "Return wrapped errors",
+			ApiConventions:    "JSON APIs",
+			ImportOrder:       "stdlib, third-party, internal",
+			ProtectedBranch:   "main",
+			TestCommand:       "go test ./...",
+			LintCommand:       "go vet ./...",
+			BuildCommand:      "go build ./...",
+			CoverageThreshold: 88,
 		},
 		Selections: types.WizardSelections{
 			Templates:        []types.TemplateId{types.TemplateIdAdr},
@@ -156,6 +166,18 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 	}
 	if len(got.Config.Tools) != 2 {
 		t.Errorf("Tools length = %d, want 2", len(got.Config.Tools))
+	}
+	if got.Config.ProjectOverview != original.Config.ProjectOverview || got.Config.NamingConventions != original.Config.NamingConventions || got.Config.ErrorHandling != original.Config.ErrorHandling || got.Config.ApiConventions != original.Config.ApiConventions {
+		t.Errorf("profile fields not preserved: got %#v", got.Config)
+	}
+	if got.Config.ImportOrder != original.Config.ImportOrder || got.Config.ProtectedBranch != original.Config.ProtectedBranch {
+		t.Errorf("convention fields not preserved: got %#v", got.Config)
+	}
+	if got.Config.TestCommand != original.Config.TestCommand || got.Config.LintCommand != original.Config.LintCommand || got.Config.BuildCommand != original.Config.BuildCommand {
+		t.Errorf("command fields not preserved: got %#v", got.Config)
+	}
+	if got.Config.CoverageThreshold != original.Config.CoverageThreshold {
+		t.Errorf("CoverageThreshold = %d, want %d", got.Config.CoverageThreshold, original.Config.CoverageThreshold)
 	}
 	if len(got.Files) != 1 {
 		t.Errorf("Files length = %d, want 1", len(got.Files))

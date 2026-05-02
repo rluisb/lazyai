@@ -82,6 +82,19 @@ type WizardConfig struct {
 	// AGENTS.md. Empty values become <!-- fill-in --> markers.
 	CLIOrg  string
 	CLITeam string
+
+	// Project profile CLI overrides. Empty strings are safe and preserve
+	// compiler fallback markers for skipped optional fields.
+	CLIProjectOverview   string
+	CLINamingConventions string
+	CLIErrorHandling     string
+	CLIApiConventions    string
+	CLIImportOrder       string
+	CLIProtectedBranch   string
+	CLITestCommand       string
+	CLILintCommand       string
+	CLIBuildCommand      string
+	CLICoverageThreshold int
 }
 
 // WizardResult aggregates the results from all five phases.

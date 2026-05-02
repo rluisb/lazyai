@@ -10,7 +10,7 @@ const pkg = (() => {
   }
 })()
 
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 export const setupScopeSchema = z.enum(['global', 'workspace', 'project'])
 export const setupTypeSchema = z.enum(['project', 'workspace'])
@@ -96,6 +96,7 @@ export const featureFlagsSchema = z.object({
   agentHarness: z.boolean().default(true),
   bugResolution: z.boolean().default(true),
   pivotHandling: z.boolean().default(true),
+  adversarialDesign: z.boolean().default(false),
 })
 
 // Git conventions for branch/commit patterns
@@ -143,6 +144,16 @@ export const configSchema = z.object({
   driveCLI: z.boolean().optional(),
   localSecrets: z.boolean().optional(),
   housekeeping: housekeepingConfigSchema.optional(),
+  projectOverview: z.string().optional(),
+  namingConventions: z.string().optional(),
+  errorHandling: z.string().optional(),
+  apiConventions: z.string().optional(),
+  importOrder: z.string().optional(),
+  protectedBranch: z.string().optional(),
+  testCommand: z.string().optional(),
+  lintCommand: z.string().optional(),
+  buildCommand: z.string().optional(),
+  coverageThreshold: z.number().min(1).max(100).default(80),
 })
 
 // Slash command IDs retained for selection compatibility.
@@ -265,6 +276,16 @@ export function defaultStore(): StoreData {
       tools: [],
       projectName: '',
       targetDir: '',
+      projectOverview: '',
+      namingConventions: '',
+      errorHandling: '',
+      apiConventions: '',
+      importOrder: '',
+      protectedBranch: '',
+      testCommand: '',
+      lintCommand: '',
+      buildCommand: '',
+      coverageThreshold: 80,
     },
     selections: {
       templates: [],
@@ -279,6 +300,18 @@ export function defaultStore(): StoreData {
       opencodePlugins: [],
       infra: [],
       constitution: [],
+      features: {
+        contextEngineering: true,
+        rpiWorkflow: true,
+        chainOfThought: true,
+        treeOfThoughts: true,
+        adrEnforcement: true,
+        qualityGates: true,
+        agentHarness: true,
+        bugResolution: true,
+        pivotHandling: true,
+        adversarialDesign: false,
+      },
       preset: 'standard',
     },
     files: [],

@@ -38,6 +38,7 @@ const DEFAULT_FEATURES = {
   agentHarness: true,
   bugResolution: true,
   pivotHandling: true,
+  adversarialDesign: false,
 }
 
 describe('phase2 features merge behavior', () => {
@@ -51,6 +52,51 @@ describe('phase2 features merge behavior', () => {
 
     expect(result.planningDir).toBe('.planning')
     expect(result.features).toEqual(DEFAULT_FEATURES)
+    expect(result.coverageThreshold).toBe(80)
+  })
+
+  it('preserves supplied project profile and coverage values in non-interactive mode', async () => {
+    const result = unwrapPhase2(await runPhase2Features({
+      interactive: false,
+      cliOverrides: {
+        projectOverview: 'Builds AI setup scaffolds',
+        namingConventions: 'Use camelCase',
+        errorHandling: 'Return wrapped errors',
+        apiConventions: 'JSON APIs',
+        importOrder: 'stdlib, third-party, internal',
+        protectedBranch: 'trunk',
+        testCommand: 'npm test',
+        lintCommand: 'npm run lint',
+        buildCommand: 'npm run build',
+        coverageThreshold: 92,
+      },
+    }))
+
+    expect(result).toMatchObject({
+      projectOverview: 'Builds AI setup scaffolds',
+      namingConventions: 'Use camelCase',
+      errorHandling: 'Return wrapped errors',
+      apiConventions: 'JSON APIs',
+      importOrder: 'stdlib, third-party, internal',
+      protectedBranch: 'trunk',
+      testCommand: 'npm test',
+      lintCommand: 'npm run lint',
+      buildCommand: 'npm run build',
+      coverageThreshold: 92,
+    })
+  })
+
+  it('uses prior project profile fields and resets out-of-range coverage to 80', async () => {
+    const result = unwrapPhase2(await runPhase2Features({
+      interactive: false,
+      prior: {
+        projectOverview: 'Prior overview',
+        coverageThreshold: 101,
+      },
+    }))
+
+    expect(result.projectOverview).toBe('Prior overview')
+    expect(result.coverageThreshold).toBe(80)
   })
 
   it('uses prior planningDir in non-interactive mode', async () => {
@@ -359,6 +405,7 @@ describe('phase2 features merge behavior', () => {
       agentHarness: false,
       bugResolution: false,
       pivotHandling: true,
+      adversarialDesign: false,
     })
   })
 })

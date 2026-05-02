@@ -4,6 +4,8 @@ import (
 	"io/fs"
 	"log"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
@@ -15,14 +17,12 @@ import (
 // When .specify/ exists (speckit mode), templates go into .specify/templates/
 // instead (handled by ScaffoldSpecs) — suppress the specs/ copies to avoid
 // duplicate template locations.
-func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.TemplateId, rules []types.RuleId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.TemplateId, rules []types.RuleId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy, coverageThreshold int) error {
 	// In speckit mode (.specify/ exists), all specs content lives under
-	// .specify/ — suppress specs/{templates,rules,prompts} to avoid duplicates.
+	// .specify/ — suppress duplicate templates while still honoring selected
+	// rules such as specs/rules/testing.md.
 	if HasSpecKitStructure(targetDir) {
 		templates = nil
-		rules = nil
-		// Prompts go in tool-specific dirs (adapter-installed), not flat specs/.
-		return nil
 	}
 
 	specsDir := filepath.Join(targetDir, "specs")
@@ -37,7 +37,7 @@ func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.Tem
 		for _, templateId := range templates {
 			srcRelPath := "templates/" + string(templateId) + ".md"
 			dest := filepath.Join(templatesDir, string(templateId)+".md")
-			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides, coverageThreshold); err != nil {
 				return err
 			}
 		}
@@ -53,7 +53,7 @@ func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.Tem
 		for _, ruleId := range rules {
 			srcRelPath := "rules/" + string(ruleId) + ".md"
 			dest := filepath.Join(rulesDir, string(ruleId)+".md")
-			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyLibraryFileFromFS(libFS, srcRelPath, dest, targetDir, fileRecords, strategy, perFileOverrides, coverageThreshold); err != nil {
 				return err
 			}
 		}
@@ -66,7 +66,7 @@ func ScaffoldTemplatesRules(targetDir string, libFS fs.FS, templates []types.Tem
 }
 
 // copyLibraryFileFromFS copies a single file from the library FS with conflict resolution and tracking.
-func copyLibraryFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func copyLibraryFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy, coverageThreshold int) error {
 	if !files.ExistsFS(libFS, srcRelPath) {
 		return nil
 	}
@@ -91,6 +91,7 @@ func copyLibraryFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, file
 		return nil
 	}
 
+	data = applyTemplateRuleSubstitutions(data, coverageThreshold)
 	if err := files.WriteFile(dest, data, 0o644); err != nil {
 		return err
 	}
@@ -131,10 +132,19 @@ func copyLibraryDirFromFS(libFS fs.FS, srcRelDir, dest, targetDir string, fileRe
 			continue
 		}
 
-		if err := copyLibraryFileFromFS(libFS, srcPath, destPath, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
+		if err := copyLibraryFileFromFS(libFS, srcPath, destPath, targetDir, fileRecords, strategy, perFileOverrides, 80); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func applyTemplateRuleSubstitutions(data []byte, coverageThreshold int) []byte {
+	threshold := coverageThreshold
+	if threshold < 1 || threshold > 100 {
+		threshold = 80
+	}
+	content := strings.ReplaceAll(string(data), "{{COVERAGE_THRESHOLD}}", strconv.Itoa(threshold))
+	return []byte(content)
 }

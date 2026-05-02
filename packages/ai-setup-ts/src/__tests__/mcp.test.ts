@@ -239,6 +239,47 @@ describe('MCP scaffold and compile', () => {
     expect(copilot.servers.stdioDisabled).toBeUndefined()
   })
 
+  it('compileMcp sorts copilot VS Code prompt inputs by placeholder ID', async () => {
+    const placeholder = (id: string) => '$' + `{${id}}`
+    ensureDir(path.join(targetDir, '.ai'))
+    writeFile(
+      path.join(targetDir, '.ai', 'mcp.json'),
+      JSON.stringify(
+        {
+          servers: {
+            zeta: {
+              command: 'npx',
+              env: { Z_TOKEN: placeholder('Z_TOKEN') },
+            },
+            alpha: {
+              command: 'npx',
+              env: {
+                M_TOKEN: placeholder('M_TOKEN'),
+                A_TOKEN: placeholder('A_TOKEN'),
+                API_KEY: placeholder('API_KEY'),
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    )
+
+    await compileMcp({
+      canonicalDir: targetDir,
+      toolTargetDir: targetDir,
+      toolId: 'copilot',
+      fileRecords,
+      setupScope: 'project',
+      homeDir: targetDir,
+    })
+
+    const copilot = JSON.parse(readFile(path.join(targetDir, '.vscode', 'mcp.json')))
+    const ids = copilot.inputs.map((input: { id: string }) => input.id)
+    expect(ids).toEqual(['API_KEY', 'A_TOKEN', 'M_TOKEN', 'Z_TOKEN'])
+  })
+
   it('compileMcp generates .mcp.json for claude-code', async () => {
     vi.spyOn(mcpCompilerInternals, 'execFileSync').mockImplementation((file, args) => {
       if (file === 'claude' && Array.isArray(args) && args[0] === '--version') {

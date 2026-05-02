@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { rulesForPreset, specsDirsForPreset, templatesForPreset } from '../presets.js'
+import { resolvePreset, rulesForPreset, specsDirsForPreset, templatesForPreset } from '../presets.js'
 
 describe('preset scaffold mappings', () => {
+  it('sets adversarialDesign defaults by preset', () => {
+    expect(resolvePreset('minimal')?.adversarialDesign).toBe(false)
+    expect(resolvePreset('standard')?.adversarialDesign).toBe(true)
+    expect(resolvePreset('full')?.adversarialDesign).toBe(true)
+  })
+
   it('returns the agreed specs directories for each preset', () => {
     expect(specsDirsForPreset('minimal')).toEqual(['standards', 'memory'])
     expect(specsDirsForPreset('standard')).toEqual([

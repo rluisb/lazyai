@@ -36,7 +36,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 3: Orchestration definitions.
-	if err := ScaffoldOrchestration(ctx.TargetDir, libFS, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldOrchestration(ctx.TargetDir, libFS, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.Features); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("orchestration: %w", err))
 	}
 

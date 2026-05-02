@@ -13,7 +13,12 @@ import (
 
 func TestFeatureChainSourceShapeIsSequentialAndGated(t *testing.T) {
 	data := readSourceFeatureChain(t)
-	assertCurrentFeatureChainShape(t, data)
+	assertFeatureChainShape(t, data, false)
+}
+
+func TestAdversarialFeatureChainSourceShapeIsSequentialAndGated(t *testing.T) {
+	data := readSourceAdversarialFeatureChain(t)
+	assertFeatureChainShape(t, data, true)
 }
 
 func TestScaffoldOrchestration_InstallsFeatureChainShapeFromLibrary(t *testing.T) {
@@ -23,7 +28,7 @@ func TestScaffoldOrchestration_InstallsFeatureChainShapeFromLibrary(t *testing.T
 	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: data}
 	fileRecords := []types.TrackedFile{}
 
-	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}); err != nil {
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}, &types.FeatureFlags{AdversarialDesign: false}); err != nil {
 		t.Fatalf("ScaffoldOrchestration failed: %v", err)
 	}
 
@@ -31,31 +36,20 @@ func TestScaffoldOrchestration_InstallsFeatureChainShapeFromLibrary(t *testing.T
 	if err != nil {
 		t.Fatalf("read installed feature chain: %v", err)
 	}
-	assertCurrentFeatureChainShape(t, installed)
+	assertFeatureChainShape(t, installed, false)
 	if string(installed) != string(data) {
 		t.Fatal("expected scaffolded feature chain to match the source chain byte-for-byte")
 	}
 }
 
-func TestScaffoldOrchestration_CopiesChainDefinitionsWithoutTemplateRendering(t *testing.T) {
+func TestScaffoldOrchestration_InstallsAdversarialFeatureChainWhenEnabled(t *testing.T) {
 	targetDir := t.TempDir()
 	libFS := createMinimalLibraryFS()
-	chainWithTemplateDirectives := []byte(`{
-  "kind": "chain",
-  "name": "feature",
-  "entry": "plan-quality",
-  "steps": [
-    {"id":"plan-quality","agent":"planner","skills":["plan"],"description":"quality","transitions":{"success":"red-team-plan"}},
-    {{#if features.adversarialDesign}}
-    {"id":"red-team-plan","agent":"reviewer","skills":["red-team-plan"],"description":"red team","transitions":{"success":"plan-gate"}},
-    {{/if}}
-    {"id":"plan-gate","agent":"planner","skills":[],"description":"gate","gate":"user_approval","transitions":{"approved":"implement","rejected":"plan-quality"}}
-  ]
-}`)
-	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: chainWithTemplateDirectives}
+	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: readSourceFeatureChain(t)}
+	libFS["orchestration/chains/feature-adversarial.json"] = &fstest.MapFile{Data: readSourceAdversarialFeatureChain(t)}
 	fileRecords := []types.TrackedFile{}
 
-	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}); err != nil {
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}, &types.FeatureFlags{AdversarialDesign: true}); err != nil {
 		t.Fatalf("ScaffoldOrchestration failed: %v", err)
 	}
 
@@ -64,11 +58,30 @@ func TestScaffoldOrchestration_CopiesChainDefinitionsWithoutTemplateRendering(t 
 		t.Fatalf("read installed feature chain: %v", err)
 	}
 
-	if string(installed) != string(chainWithTemplateDirectives) {
-		t.Fatal("expected orchestration scaffold to copy chain definitions without rendering feature templates")
+	assertFeatureChainShape(t, installed, true)
+	if _, err := os.Stat(filepath.Join(targetDir, ".ai", "orchestration", "chains", "feature-adversarial.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected adversarial source to install as feature.json only, stat error: %v", err)
 	}
-	if !strings.Contains(string(installed), "{{#if features.adversarialDesign}}") {
-		t.Fatal("expected unsupported template directive to remain literal in installed chain")
+}
+
+func TestScaffoldOrchestration_InstallsBaseFeatureChainWhenDisabled(t *testing.T) {
+	targetDir := t.TempDir()
+	libFS := createMinimalLibraryFS()
+	libFS["orchestration/chains/feature.json"] = &fstest.MapFile{Data: readSourceFeatureChain(t)}
+	libFS["orchestration/chains/feature-adversarial.json"] = &fstest.MapFile{Data: readSourceAdversarialFeatureChain(t)}
+	fileRecords := []types.TrackedFile{}
+
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}, &types.FeatureFlags{AdversarialDesign: false}); err != nil {
+		t.Fatalf("ScaffoldOrchestration failed: %v", err)
+	}
+
+	installed, err := os.ReadFile(filepath.Join(targetDir, ".ai", "orchestration", "chains", "feature.json"))
+	if err != nil {
+		t.Fatalf("read installed feature chain: %v", err)
+	}
+	assertFeatureChainShape(t, installed, false)
+	if _, err := os.Stat(filepath.Join(targetDir, ".ai", "orchestration", "chains", "feature-adversarial.json")); !os.IsNotExist(err) {
+		t.Fatalf("expected adversarial source not to be installed separately, stat error: %v", err)
 	}
 }
 
@@ -110,7 +123,7 @@ func TestScaffoldOrchestration_AddsExtensionOrchestrationContent(t *testing.T) {
 		t.Fatalf("write extension config: %v", err)
 	}
 
-	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}); err != nil {
+	if err := ScaffoldOrchestration(targetDir, libFS, &fileRecords, types.ConflictStrategySkip, map[string]types.ConflictStrategy{}, nil); err != nil {
 		t.Fatalf("ScaffoldOrchestration failed: %v", err)
 	}
 
@@ -139,13 +152,22 @@ func readSourceFeatureChain(t *testing.T) []byte {
 	return data
 }
 
-func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
+func readSourceAdversarialFeatureChain(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "library", "orchestration", "chains", "feature-adversarial.json"))
+	if err != nil {
+		t.Fatalf("read source adversarial feature chain: %v", err)
+	}
+	return data
+}
+
+func assertFeatureChainShape(t *testing.T, data []byte, adversarialDesign bool) {
 	t.Helper()
 
 	raw := string(data)
-	for _, forbidden := range []string{"red-team-plan", "{{#if", "{{/if}}"} {
+	for _, forbidden := range []string{"{{#if", "{{/if}}", "optionalByFeature", "condition"} {
 		if strings.Contains(raw, forbidden) {
-			t.Fatalf("feature chain must not contain %q in the D6-only base chain", forbidden)
+			t.Fatalf("feature chain must not contain unsupported marker %q", forbidden)
 		}
 	}
 
@@ -199,7 +221,11 @@ func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
 		}
 	}
 
-	expectedIDs := []string{"research", "plan", "plan-quality", "plan-gate", "implement", "review", "fix", "document"}
+	expectedIDs := []string{"research", "plan", "plan-quality"}
+	if adversarialDesign {
+		expectedIDs = append(expectedIDs, "red-team-plan")
+	}
+	expectedIDs = append(expectedIDs, "plan-gate", "implement", "review", "fix", "document")
 	if strings.Join(ids, ",") != strings.Join(expectedIDs, ",") {
 		t.Fatalf("expected current feature chain step order %v, got %v", expectedIDs, ids)
 	}
@@ -226,10 +252,32 @@ func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
 	if !ok {
 		t.Fatalf("expected plan-quality transitions object, got %T", planQuality["transitions"])
 	}
+	planQualityTarget := "plan-gate"
+	if adversarialDesign {
+		planQualityTarget = "red-team-plan"
+	}
 	for _, outcome := range []string{"success", "pass", "warn", "fail"} {
-		if qualityTransitions[outcome] != "plan-gate" {
-			t.Fatalf("expected plan-quality %s transition to plan-gate with no automatic loop, got %v", outcome, qualityTransitions)
+		if qualityTransitions[outcome] != planQualityTarget {
+			t.Fatalf("expected plan-quality %s transition to %s with no automatic loop, got %v", outcome, planQualityTarget, qualityTransitions)
 		}
+	}
+
+	redTeam := stepByID["red-team-plan"]
+	if adversarialDesign {
+		if redTeam == nil {
+			t.Fatal("expected adversarial feature chain to include red-team-plan")
+		}
+		redTeamTransitions, ok := redTeam["transitions"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected red-team-plan transitions object, got %T", redTeam["transitions"])
+		}
+		for _, outcome := range []string{"success", "soft_fail", "failure"} {
+			if redTeamTransitions[outcome] != "plan-gate" {
+				t.Fatalf("expected red-team-plan %s transition to plan-gate, got %v", outcome, redTeamTransitions)
+			}
+		}
+	} else if redTeam != nil {
+		t.Fatal("expected base feature chain to omit red-team-plan")
 	}
 
 	planGate := stepByID["plan-gate"]

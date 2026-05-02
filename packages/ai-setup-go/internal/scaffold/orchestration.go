@@ -16,7 +16,7 @@ import (
 // ScaffoldOrchestration installs orchestration definitions (chains, teams,
 // workflows, skills) to .ai/orchestration/.
 // Ported from src/scaffold/orchestration.ts.
-func ScaffoldOrchestration(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldOrchestration(targetDir string, libFS fs.FS, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy, features *types.FeatureFlags) error {
 	if !files.ExistsFS(libFS, "orchestration") {
 		return nil
 	}
@@ -26,7 +26,7 @@ func ScaffoldOrchestration(targetDir string, libFS fs.FS, fileRecords *[]types.T
 		return err
 	}
 
-	if err := copyOrchestrationTreeFS(libFS, "orchestration", targetRoot, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
+	if err := copyOrchestrationTreeFS(libFS, "orchestration", targetRoot, targetDir, fileRecords, strategy, perFileOverrides, features); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func ScaffoldOrchestration(targetDir string, libFS fs.FS, fileRecords *[]types.T
 }
 
 // copyOrchestrationTreeFS recursively copies files from the library FS to the target directory.
-func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy, features *types.FeatureFlags) error {
 	entries, err := files.ReadDirFS(libFS, sourceRelDir)
 	if err != nil {
 		return nil // directory doesn't exist in FS, skip
@@ -61,13 +61,16 @@ func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, target
 
 	for _, entry := range entries {
 		sourceRelPath := sourceRelDir + "/" + entry.Name()
+		if sourceRelPath == "orchestration/chains/feature-adversarial.json" {
+			continue
+		}
 		targetPath := filepath.Join(currentTargetDir, entry.Name())
 
 		if entry.IsDir() {
 			if err := files.EnsureDir(targetPath); err != nil {
 				return err
 			}
-			if err := copyOrchestrationTreeFS(libFS, sourceRelPath, targetPath, targetDir, fileRecords, strategy, perFileOverrides); err != nil {
+			if err := copyOrchestrationTreeFS(libFS, sourceRelPath, targetPath, targetDir, fileRecords, strategy, perFileOverrides, features); err != nil {
 				return err
 			}
 			continue
@@ -88,9 +91,10 @@ func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, target
 		}
 
 		// Read from library FS and write to target.
-		data, err := files.ReadFS(libFS, sourceRelPath)
+		readRelPath := selectedLibraryOrchestrationSource(libFS, sourceRelPath, features)
+		data, err := files.ReadFS(libFS, readRelPath)
 		if err != nil {
-			log.Printf("Warning: could not read %s: %v", sourceRelPath, err)
+			log.Printf("Warning: could not read %s: %v", readRelPath, err)
 			continue
 		}
 
@@ -102,12 +106,24 @@ func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, target
 		*fileRecords = append(*fileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   hash,
-			Source: sourceRelPath,
+			Source: readRelPath,
 			Owner:  types.FileOwnerLibrary,
 		})
 	}
 
 	return nil
+}
+
+func selectedLibraryOrchestrationSource(libFS fs.FS, sourceRelPath string, features *types.FeatureFlags) string {
+	if sourceRelPath != "orchestration/chains/feature.json" || features == nil || !features.AdversarialDesign {
+		return sourceRelPath
+	}
+
+	adversarialRelPath := "orchestration/chains/feature-adversarial.json"
+	if files.ExistsFS(libFS, adversarialRelPath) {
+		return adversarialRelPath
+	}
+	return sourceRelPath
 }
 
 func copyOrchestrationTreeDir(sourceDir, currentTargetDir, targetDir, recordSourceRoot string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {

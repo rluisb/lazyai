@@ -20,6 +20,7 @@ var PresetFeatures = map[types.PresetLevel]types.FeatureFlags{
 		AgentHarness:       false,
 		BugResolution:      false,
 		PivotHandling:      false,
+		AdversarialDesign:  false,
 	},
 	types.PresetLevelStandard: {
 		ContextEngineering: false,
@@ -31,6 +32,7 @@ var PresetFeatures = map[types.PresetLevel]types.FeatureFlags{
 		AgentHarness:       false,
 		BugResolution:      true,
 		PivotHandling:      false,
+		AdversarialDesign:  true,
 	},
 	types.PresetLevelFull: {
 		ContextEngineering: true,
@@ -42,6 +44,7 @@ var PresetFeatures = map[types.PresetLevel]types.FeatureFlags{
 		AgentHarness:       true,
 		BugResolution:      true,
 		PivotHandling:      true,
+		AdversarialDesign:  true,
 	},
 }
 

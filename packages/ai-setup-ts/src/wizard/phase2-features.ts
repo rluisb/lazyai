@@ -37,6 +37,7 @@ const FEATURE_KEYS: Array<keyof FeatureFlags> = [
   'agentHarness',
   'bugResolution',
   'pivotHandling',
+  'adversarialDesign',
 ]
 
 // All features ON by default - users can disable what they don't need
@@ -94,7 +95,7 @@ function buildFeaturesFromSelection(selectedFeatures: string[]): FeatureFlags {
     agentHarness: selectedFeatures.includes('agentHarness'),
     bugResolution: selectedFeatures.includes('bugResolution'),
     pivotHandling: selectedFeatures.includes('pivotHandling'),
-    adversarialDesign: false,
+    adversarialDesign: selectedFeatures.includes('adversarialDesign'),
   }
 }
 
@@ -337,6 +338,7 @@ export async function runPhase2Features(opts: {
     { value: 'adrEnforcement', label: 'ADR Enforcement', hint: 'Architecture Decision Records for significant changes' },
     { value: 'agentHarness', label: 'Agent Coordination', hint: 'Multi-agent handoff and escalation rules' },
     { value: 'pivotHandling', label: 'Pivot Handling', hint: 'What to do when plans change mid-implementation' },
+    { value: 'adversarialDesign', label: 'Adversarial Design Review', hint: 'Run red-team plan critique before implementation approval' },
   ]
 
   // Pre-select: all enabled by default

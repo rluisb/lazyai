@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "structured-feedback/v1",
+  "verdict": "rejected",
+  "summary": "Blocking rejection mislabeled as low priority.",
+  "requiredChanges": [
+    {
+      "id": "FB-002",
+      "description": "Fix the blocked acceptance criterion.",
+      "priority": "low",
+      "target": "review step",
+      "evidence": "Reviewer marked the item as blocking.",
+      "location": null,
+      "recommendedNextAction": "Fix the required change before continuing.",
+      "blocksProgress": true
+    }
+  ],
+  "suggestions": [],
+  "requestedBy": "reviewer",
+  "targetPhaseOrStep": "review"
+}

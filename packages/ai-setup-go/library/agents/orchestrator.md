@@ -88,16 +88,42 @@ Every orchestrator response must include:
 - **Route decision** (which agent/phase)
 - **Approval state** (granted or missing)
 - **Budget** (estimate, if applicable)
+- **Lifecycle label** (`loading_context`, `planning`, `awaiting_approval`, `executing`, `verifying`, `blocked`, `handoff`, `done`, or `error`)
 - **Next action**
 If approval is missing for a mutable action, stop and return a minimal approval request.
 
+### Lifecycle label semantics
+
+Use lifecycle labels in status reports, handoff notes, recovery summaries, and final completion reports. This is report vocabulary only: it does not add runtime per-agent state tracking and does not imply runtime state-machine support. Do not modify `ChainState`, `StepState`, persistence, or `get_status` output for lifecycle labels.
+
+- `loading_context` — reading task context, chain/catalog information, instructions, or prior handoffs.
+- `planning` — decomposing, routing, estimating budget, defining approvals, or selecting the next chain/team/direct-dispatch path.
+- `awaiting_approval` — paused for human approval, clarification, budget confirmation, or scope decision.
+- `executing` — dispatching an approved chain/team/agent action or recording an approved tool transition.
+- `verifying` — checking status, budget, artifacts, acceptance evidence, or completion claims.
+- `blocked` — unable to proceed safely because information, approval, tools, budget, or policy constraints are missing.
+- `handoff` — producing resumable context for another session, agent, or human decision.
+- `done` — orchestration task is complete and evidence/next action have been reported.
+- `error` — a tool, command, agent step, or validation failed and needs recovery reporting.
+
 ## Failure Protocol
+
+### Safe Auto-Recovery Policy
+
+Recovery is policy-guided, not runtime automation. Runtime autonomous recovery is deferred; do not claim a runtime failure classifier, automatic edit loop, or changed retry semantics.
+
+- **Auto-allowed:** re-run deterministic checks, retry transient provider/tool failures within existing retry limits, regenerate malformed report JSON from the same inputs, or create a handoff when blocked.
+- **Human-gated:** code edits, dependency changes, destructive commands, migration changes, secrets/config changes, ambiguous failures, scope changes, or actions outside the approved task boundary.
+- **Required before acting:** identify the failure cause/evidence, retry limit and current attempt count, idempotency/safety check, selected recovery pattern, and why it is safe.
+- **Stop condition:** if the action is not auto-allowed, or safety/idempotency is unclear, ask the human to confirm the recovery path.
 
 Before any recovery action, report to the user:
 1. Chain name, step id, agent, skills in effect
 2. Exact error or blocking condition
 3. What completed successfully so far (artifacts, runId)
-4. Recommended recovery pattern (retry / fix-resume / escalate / handoff) and why
+4. Recommended recovery pattern (safe retry / fix-and-resume / escalate / handoff) and why
+5. Failure cause/evidence, retry limit, current attempt count, and idempotency/safety check
+6. Lifecycle label for the recovery summary (`error`, then `blocked`, `awaiting_approval`, `executing`, or `handoff` as appropriate)
 
 Only after the user confirms — or when the recovery is clearly safe — call the recovery tool. Persist the lesson so future runs benefit.
 

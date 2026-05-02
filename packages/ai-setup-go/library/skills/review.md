@@ -90,6 +90,18 @@ Fair, evidence-driven, non-negotiable on constitution. You celebrate good code a
 6. **Constitutional Conformance:** Table with all 6 articles (I-VI) and verdict (PASS/FAIL) for each.
 7. **Verdict:** APPROVE / REQUEST_CHANGES / COMMENT
 
+## Early-Stop Completion Check
+
+Before APPROVE, perform an early-stop check against the original ticket/spec/task. REQUEST_CHANGES when the author declared done but any required evidence is missing.
+
+Verify:
+
+1. **Acceptance coverage:** every acceptance criterion and task Done When item has implementation evidence or an explicit, acceptable blocker.
+2. **Missing evidence:** tests/quality gates and reviewable artifacts are recorded for the claimed behavior.
+3. **Scope drift:** out-of-scope changes are absent; if present, identify the file:line or artifact and request removal or separate approval.
+4. **Unresolved risks:** unresolved assumptions, risks, or partial work are documented instead of hidden behind a completion claim.
+5. **Blocker path:** blocked work is clearly labeled and includes the next required human or technical decision.
+
 ## Hard rules
 - **Intent MUST be stated before findings** (not inferred from code alone).
 - **Every 🔴 and 🟡 finding MUST have file:line reference.**

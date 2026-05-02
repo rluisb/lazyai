@@ -261,6 +261,38 @@ const redTeamSoftFailReport = {
   ],
 }
 
+const structuredGateFeedback = {
+  schemaVersion: 'structured-feedback/v1',
+  verdict: 'request_changes',
+  summary: 'Plan needs clearer verification evidence before implementation.',
+  requiredChanges: [
+    {
+      id: 'FB-001',
+      description: 'Add explicit test evidence for the runtime feedback path.',
+      priority: 'blocking',
+      target: 'plan',
+      evidence: 'Human plan-gate rejection requested a concrete verification section.',
+      location: {
+        file: 'specs/features/001-ai-techniques-integration/plan-wave2.md',
+        section: 'Decision 3 — D9 structured feedback',
+        lineStart: 50,
+        lineEnd: 56,
+      },
+      recommendedNextAction: 'Revise the plan step with the missing verification evidence.',
+      blocksProgress: true,
+    },
+  ],
+  suggestions: [
+    {
+      description: 'Keep optional suggestions out of the blocking criteria.',
+      priority: 'low',
+      target: 'plan',
+    },
+  ],
+  requestedBy: 'human',
+  targetPhaseOrStep: 'plan',
+}
+
 function makeW1BFeaturePlan(adversarialDesign: boolean): ExecutionPlan {
   const planQualityTarget = adversarialDesign ? 'red-team-plan' : 'plan-gate'
   return makePlanWithSteps([
@@ -484,6 +516,78 @@ describe('chain-machine', () => {
     })
     expect(rejected.state).toBe('running')
     expect(rejected.nextStep?.stepId).toBe('plan')
+  })
+
+  it('persists structured feedback from a rejected gate without changing rejected routing semantics', () => {
+    const plan = makeW1BFeaturePlan(false)
+    const gated = runW1BToGate({ adversarialDesign: false })
+
+    const rejected = advanceChainState({
+      state: gated.stateSnapshot,
+      plan,
+      stepId: 'plan-gate',
+      outcome: 'rejected',
+      output: {
+        summary: 'Human requested changes at plan gate.',
+        structuredFeedback: structuredGateFeedback,
+      },
+    })
+
+    const gateStep = rejected.stateSnapshot.steps.find((step) => step.stepId === 'plan-gate')
+
+    expect(rejected.state).toBe('running')
+    expect(rejected.nextStep?.stepId).toBe('plan')
+    expect(rejected.stateSnapshot.currentStepId).toBe('plan')
+    expect(gateStep?.gate).toMatchObject({ status: 'rejected' })
+    expect(gateStep?.output).toMatchObject({
+      summary: 'Human requested changes at plan gate.',
+      structuredFeedback: structuredGateFeedback,
+    })
+    expect(gateStep?.outputValid).toBe(true)
+  })
+
+  it('keeps approved gate semantics unchanged when structured feedback is supplied', () => {
+    const plan = makeW1BFeaturePlan(false)
+    const gated = runW1BToGate({ adversarialDesign: false })
+
+    const approved = advanceChainState({
+      state: gated.stateSnapshot,
+      plan,
+      stepId: 'plan-gate',
+      outcome: 'approved',
+      output: {
+        summary: 'Human approved with a non-blocking comment.',
+        structuredFeedback: {
+          ...structuredGateFeedback,
+          verdict: 'approved',
+          requiredChanges: [],
+          targetPhaseOrStep: 'implement',
+        },
+      },
+    })
+
+    expect(approved.state).toBe('running')
+    expect(approved.nextStep?.stepId).toBe('implement')
+    expect(approved.stateSnapshot.currentStepId).toBe('implement')
+  })
+
+  it('keeps gate decisions backward compatible when no feedback output is provided', () => {
+    const plan = makeW1BFeaturePlan(false)
+    const gated = runW1BToGate({ adversarialDesign: false })
+
+    const rejected = advanceChainState({
+      state: gated.stateSnapshot,
+      plan,
+      stepId: 'plan-gate',
+      outcome: 'rejected',
+    })
+
+    const gateStep = rejected.stateSnapshot.steps.find((step) => step.stepId === 'plan-gate')
+
+    expect(rejected.state).toBe('running')
+    expect(rejected.nextStep?.stepId).toBe('plan')
+    expect(gateStep?.gate).toMatchObject({ status: 'rejected' })
+    expect(gateStep?.output).toMatchObject({ summary: 'approval packet ready' })
   })
 
   it.each(['success', 'pass', 'warn', 'fail'])('routes plan-quality %s outcomes to the plan gate without auto-looping', (outcome) => {

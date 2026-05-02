@@ -34,7 +34,39 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
    - Repeat until the returned state is `done`.
 5. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
 
+## Lifecycle reporting vocabulary
+
+Use lifecycle labels in status reports, handoff notes, recovery summaries, and completion reports so humans and downstream agents can interpret progress consistently. This is report vocabulary only: it does not add runtime per-agent state tracking and does not imply runtime state-machine support. Do not change `ChainState`, `StepState`, persistence, or `get_status` behavior for these labels.
+
+**Lifecycle label values:** `loading_context`, `planning`, `awaiting_approval`, `executing`, `verifying`, `blocked`, `handoff`, `done`, `error`.
+
+- **Status reports:** write `Lifecycle label: <label>` plus current step, evidence collected, blocker/approval state, and next action.
+- **Handoff:** use `Lifecycle label: handoff` and include objective, current chain/step, files/artifacts, verification evidence, blockers, and next safe action.
+- **Recovery summaries:** use `Lifecycle label: error` for the failure, then `blocked`, `awaiting_approval`, `executing`, or `handoff` for the selected recovery path.
+- **Completion:** use `Lifecycle label: done` only after the approved task or chain step has evidence for its acceptance criteria; otherwise report `blocked` or `awaiting_approval`.
+
+## StructuredFeedback Relay
+
+When a human gate rejection, review-request change, agent report, or approved T021 rejected-gate output includes `StructuredFeedback`, relay it to the next assigned agent as bounded prompt context:
+
+1. Preserve the feedback source (`requestedBy`), verdict, summary, and `targetPhaseOrStep`.
+2. Separate required changes from suggestions; list required changes first with priority, evidence/location, target phase, target task/file, recommended next action, and whether each item blocks progress.
+3. If feedback is free-form but clearly actionable, synthesize a bounded `StructuredFeedback` summary for the handoff message without changing runtime state or approval semantics.
+4. If a rejected/request_changes decision lacks required changes, priority, evidence, target phase/task, or action detail, pause and ask the human for clarification; do not guess or invent fixes.
+5. Treat suggestions as optional context unless the human explicitly marks them as required changes.
+
+T021 runtime support is limited to existing rejected-gate output carrying `structuredFeedback`. Do not claim broader runtime feedback persistence or propagation, new approval outcomes, a new gate engine, measurement hooks, or automated feedback handling.
+
 ## Recovery patterns
+
+### Safe Auto-Recovery Policy
+
+Use the Safe Auto-Recovery Policy before calling recovery tools. This guidance is static/prompt-only; runtime autonomous recovery is deferred and the orchestrator must not imply a runtime classifier, automatic edit loop, or changed retry semantics.
+
+- **Auto-allowed:** re-run deterministic checks, retry transient provider/tool failures within existing retry limits, regenerate malformed report JSON from the same inputs, or create a handoff when blocked.
+- **Human-gated:** code edits, dependency changes, destructive commands, migration changes, secrets/config changes, ambiguous failures, scope changes, or any action outside the approved task boundary.
+- **Required evidence:** report the failure cause/evidence, retry limit and current attempt count, idempotency/safety check, and why the selected pattern is safe before acting.
+- **Approval boundary:** if the failure is ambiguous or the action is not auto-allowed, pause for human confirmation before recovery.
 
 | Pattern | Trigger | Call |
 |---------|---------|------|
@@ -43,7 +75,7 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
 | Escalate | Wrong approach / wrong agent | `escalate_step({ runId, kind: "chain", stepId, targetAgent, reason })` |
 | Handoff | Context exhausted or fundamental block | `handoff({ runId, kind: "chain", summary, includeArtifacts: true })` |
 
-After any failure, report to the user before acting: chain, step, agent, exact error, what succeeded so far, recommended pattern and why.
+After any failure, report to the user before acting: chain, step, agent, exact error, what succeeded so far, recommended pattern and why, failure cause/evidence, retry limit, and idempotency/safety check.
 
 ## When NOT to orchestrate
 

@@ -71,7 +71,7 @@
       "skills": ["extract-standards"],
       "description": "Review the implementation for correctness, quality, and standards alignment.",
       "transitions": {
-        "pass": "document",
+        "pass": "chain-verify",
         "minor_issues": "fix",
         "blocking": "fix",
         "design_issues": "plan"
@@ -88,6 +88,18 @@
           "retry": 1,
           "then": "handoff"
         }
+      }
+    },
+    {
+      "id": "chain-verify",
+      "agent": "reviewer",
+      "skills": ["chain-verify"],
+      "description": "Verify spec, plan, task, implementation, review, and test evidence before documentation.",
+      "transitions": {
+        "success": "document",
+        "pass": "document",
+        "warn": "document",
+        "fail": "document"
       }
     },
     {

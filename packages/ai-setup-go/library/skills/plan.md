@@ -10,11 +10,32 @@ phase: plan
 
 ## Workflow
 1. Read research — confirm understanding of scope and findings
-2. Define acceptance criteria — what does "done" look like?
-3. Break into phases — group related changes, order by dependency
-4. Define tasks — one task per file, each with "Done When" criteria
-5. Identify risks — what could go wrong, how to mitigate
-6. Produce plan — write plan.md and task files
+2. Capture the Knowledge Surface — facts, constraints, assumptions, unknowns, and evidence sources before commitments
+3. Capture the Environment Snapshot — repo/tooling signals needed for realistic execution planning
+4. Define acceptance criteria — what does "done" look like?
+5. Break into phases — group related changes, order by dependency
+6. Define tasks — one task per file, each with "Done When" criteria
+7. Identify risks — what could go wrong, how to mitigate
+8. Produce plan — write plan.md and task files
+
+## Environment Snapshot
+
+Include this section for non-trivial plans when execution depends on repo, runtime, tooling, or delivery constraints. Keep entries short and mark assumptions explicitly as verified or unverified.
+
+```markdown
+## Environment Snapshot
+- **Toolchain:** language/runtime versions, framework versions, and required CLIs.
+- **Package manager:** detected manager, lockfile/install state, and dependency workflow.
+- **Available tools:** test runners, linters, build commands, local services, and MCP/tools available to the agent.
+- **CI/check latency:** expected runtime for targeted checks and full gates; note slow or flaky checks.
+- **Platform constraints:** OS, shell, filesystem, architecture, browser/device, or container constraints.
+- **Budget/token constraints:** session budget, context limits, cost ceilings, and when to compact or split work.
+- **Network/secrets constraints:** offline mode, credentials availability, secret handling, and external access limits.
+- **Verified assumptions:** `[verified]` assumptions with evidence source paths, commands, or human decisions.
+- **Unverified assumptions:** `[unverified]` assumptions plus the validation needed before relying on them.
+```
+
+If an environment fact is missing and could change the plan, record it as unknown instead of guessing.
 
 ## Plan Quality Check
 

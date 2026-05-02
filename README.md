@@ -24,6 +24,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
 - [Feature Presets](#feature-presets)
 - [MCP Integration](#mcp-integration)
 - [Migration](#migration)
+   - [Upgrading ai-setup](#upgrading-ai-setup)
 - [Update & Conflict Behavior](#update--conflict-behavior)
 - [Development](#development)
 - [License](#license)
@@ -1602,6 +1603,77 @@ ai-setup import ../legacy-project --yes
 ai-setup migrate ../legacy-project --no-canonical
 ```
 
+## Upgrading ai-setup
+
+### How `update-self` works
+
+`ai-setup update-self` downloads the latest ai-setup binary from GitHub Releases and replaces the running binary. This is the recommended way to upgrade.
+
+```bash
+# Check if a newer version is available
+ai-setup update-self --check
+
+# Preview the update without applying it
+ai-setup update-self --dry-run
+
+# Upgrade to the latest version
+ai-setup update-self
+
+# Force upgrade even if already on latest
+ai-setup update-self --force
+```
+
+The command:
+- Fetches the latest release tag from GitHub
+- Compares against the current version
+- Downloads the matching platform binary
+- Verifies the SHA-256 checksum against `checksums.txt`
+- Atomically replaces the running binary
+
+If you're using `npx`, the latest version is downloaded automatically on each invocation — no manual upgrade needed.
+
+### Full upgrade workflow
+
+After upgrading the binary, refresh your managed files to pick up library changes:
+
+```bash
+# Step 1: Upgrade the CLI itself
+ai-setup update-self
+
+# Step 2: Preview file changes from the updated library
+ai-setup update --check
+
+# Step 3: See which skills are drifted
+ai-setup doctor --skills-check
+
+# Step 4: Apply the updates (creates backups for any overwritten files)
+ai-setup update
+
+# Step 5: Verify everything is healthy
+ai-setup doctor
+```
+
+### Upgrading from TypeScript CLI (v0.2.x) to Go binary (v0.3.0+)
+
+Starting with v0.3.0, the `@ai-setup/cli` npm package is a thin bootstrap that downloads and runs the Go binary. When you next run `npx @ricardoborges-teachable/ai-setup`:
+
+1. The bootstrap detects your platform and downloads the latest Go binary
+2. Your existing `.ai-setup.json` configuration is automatically imported into the new `.ai-setup.db` SQLite store
+3. No manual migration steps are required
+
+If you have local changes to managed files, back them up first:
+
+```bash
+ai-setup update --check   # preview changes
+ai-setup update --force   # apply with auto-backup
+```
+
+### Store migration (JSON → SQLite)
+
+When the Go binary detects an existing `.ai-setup.json` without a `.ai-setup.db`, it automatically imports the configuration. This happens on any command (`init`, `update`, `doctor`, `status`). No user action is needed.
+
+Both stores share the same schema, so the migration is lossless. The `.ai-setup.json` file is left in place for backward compatibility.
+
 ---
 
 ## Update & Conflict Behavior
@@ -1652,8 +1724,8 @@ Symlinked files are tracked in `.ai-setup.json` with `kind: "symlink"` and `link
 
 ### Requirements
 
-- Node.js `>=20.12.0`
-- npm
+- Go 1.26+ (for building the binary)
+- Node.js `>=20.12.0` (for running the npm bootstrap)
 
 ### Clone and run locally
 

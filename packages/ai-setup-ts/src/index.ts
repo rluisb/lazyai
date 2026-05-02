@@ -1,4 +1,3 @@
-import { run } from './cli.js'
-import { handleError } from './errors/index.js'
+import { bootstrap } from './bootstrap.js';
 
-run().catch(handleError)
+bootstrap();

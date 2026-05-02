@@ -1,9 +1,0 @@
-{
-  "schemaVersion": "structured-feedback/v1",
-  "verdict": "request_changes",
-  "summary": "Rejected without enough actionable detail.",
-  "requiredChanges": [],
-  "suggestions": [],
-  "requestedBy": "human",
-  "targetPhaseOrStep": "review"
-}

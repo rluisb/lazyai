@@ -1,14 +1,8 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
-  target: 'node18',
-  outDir: 'dist',
   clean: true,
-  sourcemap: true,
-  minify: false,
-  shims: true,
-  dts: false,
-  external: ['glob'],
-})
+  target: 'node20',
+});

@@ -4,10 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
 	"github.com/ricardoborges-teachable/ai-setup/internal/globalpaths"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
-	"github.com/ricardoborges-teachable/ai-setup/tui/diffviewer"
 )
 
 // InstallPlan describes what files to install, directories to create,
@@ -73,49 +71,4 @@ func ComputePlan(config *WizardConfig) (*InstallPlan, error) {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// buildConflictViews converts conflict.Conflict slices into diffviewer.ConflictView
-// slices suitable for the diff viewer.
-func buildConflictViews(conflicts []conflict.Conflict) []diffviewer.ConflictView {
-	views := make([]diffviewer.ConflictView, 0, len(conflicts))
-	for _, c := range conflicts {
-		currentLines := splitLines(string(c.CurrentContent))
-		newLines := splitLines(string(c.NewContent))
-
-		views = append(views, diffviewer.ConflictView{
-			FilePath:     c.Path,
-			CurrentLines: currentLines,
-			NewLines:     newLines,
-		})
-	}
-	return views
-}
-
-// splitLines splits content into lines, preserving empty strings for trailing newlines.
-func splitLines(s string) []string {
-	if s == "" {
-		return []string{}
-	}
-	result := []string{}
-	for _, line := range splitString(s) {
-		result = append(result, line)
-	}
-	return result
-}
-
-// splitString splits a string by newlines.
-func splitString(s string) []string {
-	var lines []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			lines = append(lines, s[start:i])
-			start = i + 1
-		}
-	}
-	if start < len(s) {
-		lines = append(lines, s[start:])
-	}
-	return lines
 }

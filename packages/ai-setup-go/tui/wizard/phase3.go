@@ -7,13 +7,12 @@ import (
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
-	"github.com/ricardoborges-teachable/ai-setup/tui/diffviewer"
 )
 
 // ConflictResolution records the user's decision for a single conflict.
 type ConflictResolution struct {
 	Path   string
-	Action diffviewer.ResolutionAction
+	Action ReviewAction
 }
 
 // Phase3Result holds the outcome of conflict resolution.
@@ -35,7 +34,7 @@ func RunPhase3(conflicts []conflict.Conflict, nonInteractive bool) (*Phase3Resul
 	if nonInteractive {
 		return runPhase3NonInteractive(conflicts)
 	}
-	return runPhase3Interactive(conflicts)
+	return runPhase3Interactive(conflicts, NewDiffReviewClient())
 }
 
 func runPhase3NonInteractive(conflicts []conflict.Conflict) (*Phase3Result, PhaseAction, error) {
@@ -48,7 +47,7 @@ func runPhase3NonInteractive(conflicts []conflict.Conflict) (*Phase3Result, Phas
 	}, PhaseContinue, nil
 }
 
-func runPhase3Interactive(conflicts []conflict.Conflict) (*Phase3Result, PhaseAction, error) {
+func runPhase3Interactive(conflicts []conflict.Conflict, reviewer DiffReviewClient) (*Phase3Result, PhaseAction, error) {
 	if len(conflicts) == 0 {
 		return &Phase3Result{
 			Strategy:         types.ConflictStrategySkip,
@@ -81,31 +80,20 @@ func runPhase3Interactive(conflicts []conflict.Conflict) (*Phase3Result, PhaseAc
 	// If "align", show the interactive diff viewer for each conflict.
 	if result.Strategy == types.ConflictStrategyAlign {
 		resolutions := make([]ConflictResolution, 0, len(conflicts))
+		if reviewer == nil {
+			reviewer = InlineDiffReviewer{}
+		}
 
-		// Build diff viewer data and launch it.
-		views := buildConflictViews(conflicts)
-		if len(views) > 0 {
-			diffResolutions, err := diffviewer.NewDiffViewer(views).Run()
-			if err != nil {
-				// User cancelled the diff viewer — fall back to skip.
-				return nil, PhaseCancel, err
-			}
-			for _, res := range diffResolutions {
-				ca := types.ConflictStrategySkip
-				switch res.Action {
-				case diffviewer.ActionAccept:
-					ca = types.ConflictStrategyBackupAndReplace
-				case diffviewer.ActionDeny:
-					ca = types.ConflictStrategySkip
-				case diffviewer.ActionSkip:
-					ca = types.ConflictStrategyAlign
-				}
-				resolutions = append(resolutions, ConflictResolution{
-					Path:   res.Path,
-					Action: res.Action,
-				})
-				result.PerFileOverrides[res.Path] = ca
-			}
+		diffResolutions, err := reviewer.RunReview(conflicts)
+		if err != nil {
+			return nil, PhaseCancel, err
+		}
+		for _, res := range diffResolutions {
+			resolutions = append(resolutions, ConflictResolution{
+				Path:   res.Path,
+				Action: res.Action,
+			})
+			result.PerFileOverrides[res.Path] = ConflictStrategyForReviewAction(res.Action)
 		}
 
 		result.Resolutions = resolutions

@@ -34,6 +34,17 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
    - Repeat until the returned state is `done`.
 5. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
 
+## Lifecycle reporting vocabulary
+
+Use lifecycle labels in status reports, handoff notes, recovery summaries, and completion reports so humans and downstream agents can interpret progress consistently. This is report vocabulary only: it does not add runtime per-agent state tracking and does not imply runtime state-machine support. Do not change `ChainState`, `StepState`, persistence, or `get_status` behavior for these labels.
+
+**Lifecycle label values:** `loading_context`, `planning`, `awaiting_approval`, `executing`, `verifying`, `blocked`, `handoff`, `done`, `error`.
+
+- **Status reports:** write `Lifecycle label: <label>` plus current step, evidence collected, blocker/approval state, and next action.
+- **Handoff:** use `Lifecycle label: handoff` and include objective, current chain/step, files/artifacts, verification evidence, blockers, and next safe action.
+- **Recovery summaries:** use `Lifecycle label: error` for the failure, then `blocked`, `awaiting_approval`, `executing`, or `handoff` for the selected recovery path.
+- **Completion:** use `Lifecycle label: done` only after the approved task or chain step has evidence for its acceptance criteria; otherwise report `blocked` or `awaiting_approval`.
+
 ## StructuredFeedback Relay
 
 When a human gate rejection, review-request change, or agent report includes `StructuredFeedback`, relay it to the next assigned agent as static prompt context:

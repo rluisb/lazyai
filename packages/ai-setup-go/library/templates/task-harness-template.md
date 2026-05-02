@@ -6,6 +6,7 @@
 **Spec FRs covered:** FR-###, FR-###
 **Plan reference:** [`plan.md#section`](./../plan.md#section)
 **Status:** ☐ TODO · 🔄 IN PROGRESS · ✅ DONE · ⛔ BLOCKED
+**Lifecycle label:** `loading_context` / `planning` / `awaiting_approval` / `executing` / `verifying` / `blocked` / `handoff` / `done` / `error`
 **Depends on:** T###, T###
 **Parallel with:** T### *(only if `[P]` in tasks.md)*
 
@@ -141,6 +142,20 @@ On completion, update workspace memory.
 *(Optional — fill only if the task deviated from plan.)*
 
 - **Pivot:** [date] — [what changed and why]. ADR: [link if architecture-affecting].
+
+### Lifecycle reporting
+
+Use the **Lifecycle label** as status reports, handoff evidence, recovery summaries, and final completion evidence are updated:
+
+- `loading_context` while reading this harness and required context.
+- `planning` while defining touch map, risks, assumptions, and verification matrix.
+- `awaiting_approval` when a human decision is required before continuing.
+- `executing` while performing approved task actions.
+- `verifying` while running checks and collecting evidence.
+- `blocked` when safe progress is impossible without new information, tools, or approval.
+- `handoff` when preparing resumable context for another agent/session.
+- `done` only when the verdict evidence satisfies every acceptance criterion.
+- `error` when a command, test, tool, or validation failure is being reported.
 
 ---
 

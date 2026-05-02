@@ -37,6 +37,8 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 }
 
+var getContractLibraryFS = library.GetLibraryFS
+
 // fileExists returns true if the given path exists.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
@@ -61,7 +63,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	// severity always block; warnings block only when --strict-contracts is
 	// passed.
 	if validateContracts {
-		libFS := library.GetLibraryFS()
+		libFS := getContractLibraryFS()
 		contracts, err := compiler.LoadSkillContracts(libFS)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: contract load failed: %v\n", err)

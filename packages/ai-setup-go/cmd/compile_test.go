@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
@@ -64,6 +66,56 @@ func TestCompileWithUnsupportedToolFailsFastBeforeConfigValidation(t *testing.T)
 	}
 	if strings.Contains(combined, "MCP config") {
 		t.Fatalf("output = %q, did not expect MCP config validation output", combined)
+	}
+}
+
+func TestCompileValidatesContractsBeforeMCPConfig(t *testing.T) {
+	dir := t.TempDir()
+	testFS := fstest.MapFS{
+		"agents/alpha.md": &fstest.MapFile{Data: []byte("---\nname: reviewer\n---\n")},
+		"agents/beta.md":  &fstest.MapFile{Data: []byte("---\nname: reviewer\n---\n")},
+	}
+	oldGetContractLibraryFS := getContractLibraryFS
+	getContractLibraryFS = func() fs.FS { return testFS }
+	t.Cleanup(func() { getContractLibraryFS = oldGetContractLibraryFS })
+
+	cmd := newCompileCommand(dir, "", false)
+	_, stderr := captureOutput(t, func() {
+		err := runCompile(cmd, nil)
+		if err == nil || err.Error() != "contract validation failed; pass --validate-contracts=false to override" {
+			t.Fatalf("runCompile error = %v, want contract validation failure", err)
+		}
+	})
+
+	if !strings.Contains(stderr, "contract errors: 1") || !strings.Contains(stderr, "[duplicate-name]") {
+		t.Fatalf("stderr = %q, want duplicate-name contract error", stderr)
+	}
+	if strings.Contains(stderr, "MCP config") {
+		t.Fatalf("stderr = %q, did not expect MCP config validation after contract failure", stderr)
+	}
+}
+
+func TestCompileCanDisableContractValidation(t *testing.T) {
+	dir := t.TempDir()
+	testFS := fstest.MapFS{
+		"agents/alpha.md": &fstest.MapFile{Data: []byte("---\nname: reviewer\n---\n")},
+		"agents/beta.md":  &fstest.MapFile{Data: []byte("---\nname: reviewer\n---\n")},
+	}
+	oldGetContractLibraryFS := getContractLibraryFS
+	getContractLibraryFS = func() fs.FS { return testFS }
+	t.Cleanup(func() { getContractLibraryFS = oldGetContractLibraryFS })
+
+	cmd := newCompileCommand(dir, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	_, stderr := captureOutput(t, func() {
+		err := runCompile(cmd, nil)
+		if err == nil || err.Error() != "no MCP config found at .ai/mcp.json. Run 'ai-setup init' first" {
+			t.Fatalf("runCompile error = %v, want missing-config error", err)
+		}
+	})
+
+	if strings.Contains(stderr, "contract") {
+		t.Fatalf("stderr = %q, did not expect contract validation output", stderr)
 	}
 }
 

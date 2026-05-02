@@ -85,6 +85,7 @@ func TestToCopilotVSCodeMcp_InputsSortedByID(t *testing.T) {
 			Command: "npx",
 			Env: map[string]string{
 				"Z_TOKEN": "${Z_TOKEN}",
+				"API_KEY": "${API_KEY}",
 			},
 		},
 		"beta": {
@@ -102,13 +103,66 @@ func TestToCopilotVSCodeMcp_InputsSortedByID(t *testing.T) {
 		t.Fatalf("expected inputs slice, got %T", got["inputs"])
 	}
 
-	wantIDs := []string{"A_TOKEN", "M_TOKEN", "Z_TOKEN"}
+	wantIDs := []string{"API_KEY", "A_TOKEN", "M_TOKEN", "Z_TOKEN"}
 	if len(inputs) != len(wantIDs) {
 		t.Fatalf("expected %d inputs, got %d: %v", len(wantIDs), len(inputs), inputs)
 	}
 	for i, wantID := range wantIDs {
 		if inputs[i]["id"] != wantID {
 			t.Fatalf("inputs[%d].id = %v, want %s (inputs=%v)", i, inputs[i]["id"], wantID, inputs)
+		}
+	}
+}
+
+func TestCompileCopilotVSCodeMcp_WritesInputsSortedByID(t *testing.T) {
+	targetDir := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("PATH", t.TempDir())
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{
+  "servers": {
+    "zeta": { "command": "npx", "env": { "Z_TOKEN": "${Z_TOKEN}" } },
+    "alpha": { "command": "npx", "env": { "M_TOKEN": "${M_TOKEN}", "A_TOKEN": "${A_TOKEN}", "API_KEY": "${API_KEY}" } }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdCopilot, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    home,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected only .vscode/mcp.json record when Copilot CLI probe fails, got %d", len(records))
+	}
+
+	data, err := os.ReadFile(filepath.Join(targetDir, ".vscode", "mcp.json"))
+	if err != nil {
+		t.Fatalf("read .vscode/mcp.json: %v", err)
+	}
+	var parsed struct {
+		Inputs []struct {
+			ID string `json:"id"`
+		} `json:"inputs"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("parse .vscode/mcp.json: %v", err)
+	}
+
+	wantIDs := []string{"API_KEY", "A_TOKEN", "M_TOKEN", "Z_TOKEN"}
+	if len(parsed.Inputs) != len(wantIDs) {
+		t.Fatalf("expected %d inputs, got %d: %+v", len(wantIDs), len(parsed.Inputs), parsed.Inputs)
+	}
+	for i, wantID := range wantIDs {
+		if parsed.Inputs[i].ID != wantID {
+			t.Fatalf("inputs[%d].id = %q, want %q (inputs=%+v)", i, parsed.Inputs[i].ID, wantID, parsed.Inputs)
 		}
 	}
 }

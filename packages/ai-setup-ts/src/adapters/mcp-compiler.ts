@@ -159,7 +159,7 @@ function toCopilotServerEntries(servers: Record<string, McpServer>): {
 
 function toCopilotPromptInputs(placeholderIds: Set<string>): CopilotPromptInput[] {
   return [...placeholderIds]
-    .sort((a, b) => a.localeCompare(b))
+    .sort()
     .map((id) => ({
       type: 'promptString',
       id,

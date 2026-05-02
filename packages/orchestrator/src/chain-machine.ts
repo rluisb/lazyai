@@ -67,7 +67,7 @@ export function advanceChainState(input: MachineAdvanceInput): MachineAdvanceRes
   const compiledStep = requireCompiledStep(input.plan, input.stepId)
 
   if (state.state === 'gated' && step.gate?.status === 'pending') {
-    return applyGateDecision(state, input.plan, compiledStep, step, input.outcome, now)
+    return applyGateDecision(state, input.plan, compiledStep, step, input.outcome, now, input.output)
   }
 
   if (step.state !== 'running' && step.state !== 'escalated' && step.state !== 'retrying') {
@@ -262,6 +262,7 @@ function applyGateDecision(
   step: StepState,
   outcome: string,
   now: string,
+  output?: Record<string, unknown>,
 ): MachineAdvanceResult {
   if (!step.gate) {
     throw new Error(`Step "${step.stepId}" is not waiting on a gate.`)
@@ -273,6 +274,10 @@ function applyGateDecision(
 
   step.gate.status = outcome
   step.gate.decidedAt = now
+  if (outcome === 'rejected' && output?.structuredFeedback !== undefined) {
+    step.output = output
+    step.outputValid = true
+  }
   const transition = compiledStep.transitions[outcome]
   if (!transition || typeof transition !== 'string') {
     throw new Error(`Gate outcome "${outcome}" is not valid for step "${step.stepId}".`)

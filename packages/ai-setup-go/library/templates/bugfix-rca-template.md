@@ -56,14 +56,33 @@ The bug exists where reality (Actual) deviates from the contract (Expected). Sta
 
 **Root cause:** [specific technical statement]
 
-### Why It Happened
+---
+
+## Causal Method
+
+Use either **5-Whys** or a short **causal chain** for non-trivial bugs, recurring failures, or RCA of plan/review failures being handled as defects. Keep the chain evidence-backed and stop at a process/standard/test gap where possible, not only the nearest code symptom.
+
+### Cause Classification
+
+| Cause type | Finding | Evidence | Confidence |
+|---|---|---|---|
+| Proximate cause | [immediate trigger that made the bug visible] | [repro, logs, failing test, code path] | High / Medium / Low |
+| Contributing factors | [conditions that made the bug possible or more likely] | [source path, history, missing case, environment] | High / Medium / Low |
+| Root cause | [deepest supported cause; prefer process/standard/test gap where possible] | [evidence tying gap to behavior] | High / Medium / Low |
+| Missing guardrail/test/standard | [what would have caught or prevented this] | [absent test, unclear standard, missing validation] | High / Medium / Low |
+
+### Why It Happened — 5-Whys / Causal Chain
 
 <!-- 5-why or short causal chain. How did we get here?
-     Stop when you reach a process/standard gap, not just a code gap. -->
+      Stop when you reach a process/standard gap, not just a code gap. -->
 
 - Why 1: [immediate cause]
 - Why 2: [deeper cause]
 - Why 3: [root of the root — process/standard gap if applicable]
+
+### Counterfactual check
+
+If the selected root cause were removed or guarded by the proposed test/standard, would the observed failure still occur? [Yes / No / Unknown — explain with evidence. If Yes or Unknown, keep investigating or lower confidence.]
 
 ---
 
@@ -126,6 +145,9 @@ The bug exists where reality (Actual) deviates from the contract (Expected). Sta
 ## Conformance Check
 
 - [ ] Fix addresses root cause (not just symptom)
+- [ ] Causal method distinguishes proximate cause, contributing factors, root cause, and missing guardrail/test/standard
+- [ ] Evidence and confidence recorded for the selected cause
+- [ ] Counterfactual check supports the selected cause, or uncertainty is documented
 - [ ] Blast radius reviewed — no collateral damage
 - [ ] Regression test added
 - [ ] No new dependencies without justification

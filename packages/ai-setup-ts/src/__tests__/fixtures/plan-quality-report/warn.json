@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "plan-quality-report/v1",
+  "verdict": "warn",
+  "findings": [
+    {
+      "rule": "R1",
+      "severity": "warn",
+      "message": "Ambiguous Markdown table boundaries in plan.md prevented confident AC/FR mapping; parser uncertainty is a warning, not a fail.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "D6 — Plan Validation",
+        "lineStart": 256,
+        "lineEnd": 267
+      }
+    },
+    {
+      "rule": "R2",
+      "severity": "warn",
+      "message": "Malformed Markdown around a phase row made exit-criterion parsing uncertain; structural ambiguity is reported as warn.",
+      "location": {
+        "file": "specs/features/001-ai-techniques-integration/plan.md",
+        "section": "Phases & Milestones",
+        "lineStart": 200,
+        "lineEnd": 205
+      }
+    }
+  ],
+  "checkedAgainst": {
+    "spec": "specs/features/001-ai-techniques-integration/spec.md",
+    "plan": "specs/features/001-ai-techniques-integration/plan.md",
+    "research": "specs/features/001-ai-techniques-integration/research.md",
+    "tasks": null
+  }
+}

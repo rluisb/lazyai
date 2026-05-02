@@ -25,6 +25,19 @@ function makeRequest(): ReviewRequest {
   }
 }
 
+function makeLargeRequest(): ReviewRequest {
+  return {
+    version: 1,
+    files: [
+      {
+        path: 'large.md',
+        currentContent: Array.from({ length: 20 }, (_, i) => `old ${i}`).join('\n'),
+        newContent: Array.from({ length: 20 }, (_, i) => `new ${i}`).join('\n'),
+      },
+    ],
+  }
+}
+
 function mockSpawnResponse(stdout: string, code = 0) {
   let stdinPayload = ''
   const child = new EventEmitter() as EventEmitter & {
@@ -54,19 +67,20 @@ describe('diffviewer delegation', () => {
     vi.clearAllMocks()
   })
 
-  it('does not delegate for one file with fewer than 20 changed lines', () => {
+  it('does not delegate for one file under 20 changed lines', () => {
     expect(
       shouldDelegateReview([
         {
           path: 'one.md',
           currentContent: 'line 1\nline 2',
           newContent: 'line 1\nchanged line 2',
+          changedLines: 19,
         },
       ]),
     ).toBe(false)
   })
 
-  it('delegates for multiple files or one file with at least 20 changed lines', () => {
+  it('delegates for multi-file or at least 20 changed lines', () => {
     expect(
       shouldDelegateReview([
         { path: 'one.md', currentContent: 'old', newContent: 'new' },
@@ -78,24 +92,27 @@ describe('diffviewer delegation', () => {
       shouldDelegateReview([
         {
           path: 'large.md',
-          currentContent: Array.from({ length: 20 }, (_, i) => `old ${i}`).join('\n'),
-          newContent: Array.from({ length: 20 }, (_, i) => `new ${i}`).join('\n'),
+          currentContent: 'old',
+          newContent: 'new',
+          changedLines: 20,
         },
       ]),
     ).toBe(true)
   })
 
-  it('falls back when the binary is not found', async () => {
+  it('returns fallback without spawning so callers can use inline selection when the binary is missing', async () => {
     const delegate = new DiffViewerDelegate({ resolveBinary: () => null })
+    const request = makeLargeRequest()
 
-    await expect(delegate.runDiffReview(makeRequest())).resolves.toEqual({
+    expect(delegate.shouldDelegateReview(request.files)).toBe(true)
+    await expect(delegate.runDiffReview(request)).resolves.toEqual({
       mode: 'fallback',
       error: 'diffviewer binary not found',
     })
     expect(spawn).not.toHaveBeenCalled()
   })
 
-  it('returns delegated cancelled status for a valid cancelled response', async () => {
+  it('maps a delegated cancelled response', async () => {
     const spawned = mockSpawnResponse(JSON.stringify({ version: 1, status: 'cancelled', resolutions: [] }))
     const delegate = new DiffViewerDelegate({ resolveBinary: () => '/mock/diffviewer' })
 
@@ -106,6 +123,22 @@ describe('diffviewer delegation', () => {
     })
     expect(spawn).toHaveBeenCalledWith('/mock/diffviewer', [], { stdio: ['pipe', 'pipe', 'pipe'] })
     expect(JSON.parse(spawned.getStdinPayload())).toEqual(makeRequest())
+  })
+
+  it('maps a delegated confirmed response with per-file override actions', async () => {
+    const resolutions = [
+      { path: 'accept.md', action: 'accept' },
+      { path: 'deny.md', action: 'deny' },
+      { path: 'skip.md', action: 'skip' },
+    ] as const
+    mockSpawnResponse(JSON.stringify({ version: 1, status: 'confirmed', resolutions }))
+    const delegate = new DiffViewerDelegate({ resolveBinary: () => '/mock/diffviewer' })
+
+    await expect(delegate.runDiffReview(makeRequest())).resolves.toEqual({
+      mode: 'delegated',
+      status: 'confirmed',
+      resolutions,
+    })
   })
 
   it('falls back when the response is malformed', async () => {

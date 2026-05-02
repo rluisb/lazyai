@@ -21,6 +21,22 @@ Then implement.
 
 ---
 
+## Knowledge Surface
+
+Use before committing to a non-trivial plan, spike, bug investigation, or architecture path. Keep it concise and bounded: at most 3-5 bullets per line item, and cite an evidence source or mark the item unknown.
+
+<knowledge-surface>
+1. **Facts** — confirmed project/task facts with source paths, commands, or human input.
+2. **Constraints** — scope, safety, quality gate, data, tenant, runtime, or approval constraints.
+3. **Assumptions** — label each as `[verified]` with evidence or `[unverified]` with the validation needed.
+4. **Unknowns** — open questions that could change the plan, plus the next evidence to seek.
+5. **Evidence sources** — files, specs, tests, command output, tickets, or human decisions used.
+</knowledge-surface>
+
+Do not use Generated Knowledge as background filler. If evidence is missing, mark the point unknown or ask/research before relying on it.
+
+---
+
 ## Technique catalog — when to use which
 
 | Technique | When to use | What it produces |

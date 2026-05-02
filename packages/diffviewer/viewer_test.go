@@ -1,7 +1,11 @@
 package diffviewer
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -134,6 +138,126 @@ func TestDiffViewerHunkNavigationKeysStayWithinBoundaries(t *testing.T) {
 	}
 }
 
+func TestDiffViewerTransitionsToSummaryAfterAllFilesDecided(t *testing.T) {
+	t.Parallel()
+
+	viewer := NewDiffViewer([]ConflictView{
+		{FilePath: "file-0.md"},
+		{FilePath: "file-1.md"},
+	})
+
+	pressKey(viewer, "a")
+	pressKey(viewer, "d")
+
+	if viewer.state != summary {
+		t.Fatalf("expected summary state after all files are decided, got %q", viewer.state)
+	}
+
+	view := viewer.View().Content
+	for _, want := range []string{"file-0.md", string(ActionAccept), "file-1.md", string(ActionDeny)} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("expected summary view to contain %q, got:\n%s", want, view)
+		}
+	}
+}
+
+func TestDiffViewerConfirmFromSummarySetsConfirmedState(t *testing.T) {
+	t.Parallel()
+
+	viewer := newSummaryViewer()
+	cmd := pressKey(viewer, "y")
+
+	if viewer.state != confirmed {
+		t.Fatalf("expected confirmed state, got %q", viewer.state)
+	}
+	if cmd == nil {
+		t.Fatal("expected confirm from summary to quit")
+	}
+}
+
+func TestDiffViewerCancelFromSummarySetsCancelledState(t *testing.T) {
+	t.Parallel()
+
+	viewer := newSummaryViewer()
+	cmd := pressKey(viewer, "q")
+
+	if viewer.state != cancelled {
+		t.Fatalf("expected cancelled state, got %q", viewer.state)
+	}
+	if cmd == nil {
+		t.Fatal("expected cancel from summary to quit")
+	}
+}
+
+func TestDiffViewerRunReturnsConfirmedResponseForConfirmedState(t *testing.T) {
+	t.Parallel()
+
+	viewer := newSummaryViewer()
+	pressKey(viewer, "y")
+
+	resp, err := viewer.Run()
+	if err != nil {
+		t.Fatalf("expected confirmed response, got error: %v", err)
+	}
+	if resp.Status != ReviewStatusConfirmed {
+		t.Fatalf("expected confirmed status, got %q", resp.Status)
+	}
+	if len(resp.Resolutions) != len(viewer.conflicts) {
+		t.Fatalf("expected confirmed response with %d resolutions, got %d", len(viewer.conflicts), len(resp.Resolutions))
+	}
+}
+
+func TestDiffViewerRunReturnsCancelledResponseForCancelledState(t *testing.T) {
+	t.Parallel()
+
+	viewer := newSummaryViewer()
+	pressKey(viewer, "q")
+
+	resp, err := viewer.Run()
+	if err != nil {
+		t.Fatalf("expected cancelled response, got error: %v", err)
+	}
+	if resp.Status != ReviewStatusCancelled {
+		t.Fatalf("expected cancelled status, got %q", resp.Status)
+	}
+	if len(resp.Resolutions) != 0 {
+		t.Fatalf("expected cancelled response with no resolutions, got %d", len(resp.Resolutions))
+	}
+}
+
+func TestDiffViewerPreviousFromSummaryReopensLastFile(t *testing.T) {
+	t.Parallel()
+
+	viewer := newSummaryViewer()
+	pressKey(viewer, "p")
+
+	if viewer.state != reviewingFile {
+		t.Fatalf("expected reviewingFile state, got %q", viewer.state)
+	}
+	if got, want := viewer.currentIndex, len(viewer.conflicts)-1; got != want {
+		t.Fatalf("expected current index %d, got %d", want, got)
+	}
+}
+
+func TestDiffViewerDoesNotIntroduceFileWrites(t *testing.T) {
+	t.Parallel()
+
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test filename")
+	}
+	viewerSource, err := os.ReadFile(filepath.Join(filepath.Dir(filename), "viewer.go"))
+	if err != nil {
+		t.Fatalf("read viewer source: %v", err)
+	}
+
+	for _, forbidden := range []string{"os.WriteFile", "os.Create", "os.OpenFile", "ioutil.WriteFile"} {
+		if strings.Contains(string(viewerSource), forbidden) {
+			t.Fatalf("viewer.go must not introduce file writes; found %q", forbidden)
+		}
+	}
+}
+
 func newThreeHunkViewer(t *testing.T) *DiffViewer {
 	t.Helper()
 
@@ -150,6 +274,16 @@ func newThreeHunkViewer(t *testing.T) *DiffViewer {
 		t.Fatalf("test setup expected hunk starts %v, got %v", wantHunkStarts, viewer.hunkStarts)
 	}
 
+	return viewer
+}
+
+func newSummaryViewer() *DiffViewer {
+	viewer := NewDiffViewer([]ConflictView{
+		{FilePath: "file-0.md"},
+		{FilePath: "file-1.md"},
+	})
+	pressKey(viewer, "a")
+	pressKey(viewer, "s")
 	return viewer
 }
 
@@ -175,6 +309,7 @@ func threeHunkDiffLines() []DiffLine {
 	}
 }
 
-func pressKey(viewer *DiffViewer, key string) {
-	viewer.Update(tea.KeyPressMsg(tea.Key{Text: key, Code: []rune(key)[0]}))
+func pressKey(viewer *DiffViewer, key string) tea.Cmd {
+	_, cmd := viewer.Update(tea.KeyPressMsg(tea.Key{Text: key, Code: []rune(key)[0]}))
+	return cmd
 }

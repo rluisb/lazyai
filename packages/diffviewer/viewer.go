@@ -20,10 +20,20 @@ type ConflictView struct {
 	DiffLines    []DiffLine
 }
 
+type diffViewerState string
+
+const (
+	reviewingFile diffViewerState = "reviewingFile"
+	summary       diffViewerState = "summary"
+	cancelled     diffViewerState = "cancelled"
+	confirmed     diffViewerState = "confirmed"
+)
+
 // DiffViewer is a Bubble Tea model for side-by-side conflict resolution.
 type DiffViewer struct {
 	conflicts    []ConflictView
 	decisions    map[int]Resolution
+	state        diffViewerState
 	currentIndex int
 	hunkIndex    int
 	hunkStarts   []int
@@ -32,7 +42,6 @@ type DiffViewer struct {
 	width        int
 	height       int
 	showHelp     bool
-	quitting     bool
 }
 
 // diffKeyMap defines the keybindings for the diff viewer.
@@ -48,6 +57,9 @@ type diffKeyMap struct {
 	Prev     key.Binding
 	NextHunk key.Binding
 	PrevHunk key.Binding
+	Confirm  key.Binding
+	Cancel   key.Binding
+	Edit     key.Binding
 	Help     key.Binding
 	Quit     key.Binding
 }
@@ -97,6 +109,18 @@ var diffKeys = diffKeyMap{
 		key.WithKeys("["),
 		key.WithHelp("[", "previous hunk"),
 	),
+	Confirm: key.NewBinding(
+		key.WithKeys("enter", "y"),
+		key.WithHelp("enter/y", "confirm summary"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("esc", "q", "n", "ctrl+c"),
+		key.WithHelp("esc/q/n", "cancel review"),
+	),
+	Edit: key.NewBinding(
+		key.WithKeys("p", "backspace"),
+		key.WithHelp("p/backspace", "edit last file"),
+	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "toggle help"),
@@ -121,10 +145,10 @@ func NewDiffViewer(conflicts []ConflictView) *DiffViewer {
 	viewer := &DiffViewer{
 		conflicts:    conflicts,
 		decisions:    make(map[int]Resolution, len(conflicts)),
+		state:        reviewingFile,
 		currentIndex: 0,
 		hunkIndex:    0,
 		showHelp:     false,
-		quitting:     false,
 	}
 	viewer.updateHunkStarts()
 	return viewer
@@ -145,9 +169,16 @@ func (d *DiffViewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return d, nil
 
 	case tea.KeyPressMsg:
+		if d.state == summary {
+			return d, d.updateSummary(msg)
+		}
+		if d.state == cancelled || d.state == confirmed {
+			return d, nil
+		}
+
 		switch {
 		case key.Matches(msg, diffKeys.Quit):
-			d.quitting = true
+			d.state = cancelled
 			return d, tea.Quit
 
 		case key.Matches(msg, diffKeys.Help):
@@ -214,8 +245,18 @@ func (d *DiffViewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the diff viewer.
 func (d *DiffViewer) View() tea.View {
-	if d.quitting {
-		view := tea.NewView("Goodbye!\n")
+	if d.state == cancelled {
+		view := tea.NewView("Review cancelled.\n")
+		view.AltScreen = true
+		return view
+	}
+	if d.state == confirmed {
+		view := tea.NewView("Review confirmed.\n")
+		view.AltScreen = true
+		return view
+	}
+	if d.state == summary {
+		view := tea.NewView(d.renderFinalSummary())
 		view.AltScreen = true
 		return view
 	}
@@ -291,8 +332,15 @@ func (d *DiffViewer) View() tea.View {
 	return view
 }
 
-// Run starts the interactive diff viewer and returns resolutions.
-func (d *DiffViewer) Run() ([]Resolution, error) {
+// Run starts the interactive diff viewer and returns the review response.
+func (d *DiffViewer) Run() (ReviewResponse, error) {
+	if d.state == confirmed {
+		return d.reviewResponse(ReviewStatusConfirmed), nil
+	}
+	if d.state == cancelled {
+		return d.reviewResponse(ReviewStatusCancelled), nil
+	}
+
 	// Set initial dimensions.
 	d.width = 80
 	d.height = 24
@@ -301,14 +349,17 @@ func (d *DiffViewer) Run() ([]Resolution, error) {
 	p := tea.NewProgram(d)
 	_, err := p.Run()
 	if err != nil {
-		return nil, fmt.Errorf("diff viewer: %w", err)
+		return ReviewResponse{}, fmt.Errorf("diff viewer: %w", err)
 	}
 
-	if d.quitting {
-		return nil, fmt.Errorf("user cancelled")
+	switch d.state {
+	case confirmed:
+		return d.reviewResponse(ReviewStatusConfirmed), nil
+	case cancelled:
+		return d.reviewResponse(ReviewStatusCancelled), nil
+	default:
+		return d.reviewResponse(ReviewStatusCancelled), nil
 	}
-
-	return d.orderedResolutions(), nil
 }
 
 // resolveCurrent records the resolution for the current conflict.
@@ -336,17 +387,69 @@ func (d *DiffViewer) orderedResolutions() []Resolution {
 	return resolutions
 }
 
-// advanceOrQuit moves to the next conflict or quits if all are resolved.
+// advanceOrQuit moves to the next undecided conflict or summary if all are resolved.
 func (d *DiffViewer) advanceOrQuit() tea.Cmd {
-	if d.currentIndex < len(d.conflicts)-1 {
-		d.currentIndex++
-		d.hunkIndex = 0
-		d.syncViewports()
+	if d.allFilesDecided() {
+		d.state = summary
 		return nil
 	}
-	// All conflicts resolved.
-	d.quitting = true
-	return tea.Quit
+
+	for i := d.currentIndex + 1; i < len(d.conflicts); i++ {
+		if _, ok := d.decisions[i]; !ok {
+			d.moveToFile(i)
+			return nil
+		}
+	}
+	for i := range d.conflicts {
+		if _, ok := d.decisions[i]; !ok {
+			d.moveToFile(i)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (d *DiffViewer) updateSummary(msg tea.KeyPressMsg) tea.Cmd {
+	switch {
+	case key.Matches(msg, diffKeys.Confirm):
+		d.state = confirmed
+		return tea.Quit
+	case key.Matches(msg, diffKeys.Cancel):
+		d.state = cancelled
+		return tea.Quit
+	case key.Matches(msg, diffKeys.Edit):
+		d.state = reviewingFile
+		if len(d.conflicts) > 0 {
+			d.moveToFile(len(d.conflicts) - 1)
+		}
+		return nil
+	}
+	return nil
+}
+
+func (d *DiffViewer) allFilesDecided() bool {
+	return len(d.conflicts) > 0 && len(d.decisions) == len(d.conflicts)
+}
+
+func (d *DiffViewer) moveToFile(index int) {
+	if index < 0 || index >= len(d.conflicts) {
+		return
+	}
+	d.currentIndex = index
+	d.hunkIndex = 0
+	d.syncViewports()
+}
+
+func (d *DiffViewer) reviewResponse(status ReviewStatus) ReviewResponse {
+	resolutions := []Resolution{}
+	if status == ReviewStatusConfirmed {
+		resolutions = d.orderedResolutions()
+	}
+	return ReviewResponse{
+		Version:     reviewContractVersion,
+		Status:      status,
+		Resolutions: resolutions,
+	}
 }
 
 // syncViewports updates the viewport contents for the current conflict.
@@ -486,6 +589,31 @@ func (d *DiffViewer) renderSummary() string {
 	resolved := len(d.decisions)
 	remaining := total - d.currentIndex
 	return fmt.Sprintf("Conflicts: %d | Resolved: %d | Remaining: %d", total, resolved, remaining)
+}
+
+func (d *DiffViewer) renderFinalSummary() string {
+	var sb strings.Builder
+	sb.WriteString(Title("Review summary"))
+	sb.WriteString("\n\n")
+	for i, conflict := range d.conflicts {
+		resolution, ok := d.decisions[i]
+		action := "undecided"
+		if ok {
+			action = string(resolution.Action)
+		}
+		sb.WriteString(fmt.Sprintf("%s %s — %s\n", KeyBadge(fmt.Sprintf("%d.", i+1)), conflict.FilePath, ValueText(action)))
+	}
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf(
+		"%s %s  %s %s  %s %s",
+		KeyBadge("[enter/y]"),
+		ValueText("Confirm"),
+		KeyBadge("[esc/q/n]"),
+		ValueText("Cancel"),
+		KeyBadge("[p/backspace]"),
+		ValueText("Previous"),
+	))
+	return sb.String()
 }
 
 // renderHelp shows keybinding help.

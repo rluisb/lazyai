@@ -4,6 +4,7 @@ package diffviewer
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -346,7 +347,7 @@ func (d *DiffViewer) Run() (ReviewResponse, error) {
 	d.height = 24
 	d.syncViewports()
 
-	p := tea.NewProgram(d)
+	p := tea.NewProgram(d, tea.WithOutput(os.Stderr))
 	_, err := p.Run()
 	if err != nil {
 		return ReviewResponse{}, fmt.Errorf("diff viewer: %w", err)

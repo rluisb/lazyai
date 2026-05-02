@@ -24,11 +24,32 @@
       "id": "plan",
       "agent": "planner",
       "skills": ["plan"],
-      "description": "Create a phased implementation plan and stop for user approval before changes begin.",
+      "description": "Create a phased implementation plan before quality review and approval.",
+      "transitions": {
+        "success": "plan-quality"
+      }
+    },
+    {
+      "id": "plan-quality",
+      "agent": "planner",
+      "skills": ["plan"],
+      "description": "Run the inline plan quality checklist and emit a PlanQualityReport before approval.",
+      "transitions": {
+        "success": "plan-gate",
+        "pass": "plan-gate",
+        "warn": "plan-gate",
+        "fail": "plan-gate"
+      }
+    },
+    {
+      "id": "plan-gate",
+      "agent": "planner",
+      "skills": [],
+      "description": "Present PlanQualityReport verdict and findings for user approval before implementation.",
       "gate": "user_approval",
       "transitions": {
         "approved": "implement",
-        "rejected": "research"
+        "rejected": "plan"
       }
     },
     {

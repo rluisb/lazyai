@@ -124,10 +124,46 @@ function assertCurrentFeatureChainShape(chain: Record<string, unknown>) {
   expect(Array.isArray(chain.steps)).toBe(true)
 
   const steps = chain.steps as Array<Record<string, unknown>>
-  expect(steps.map((step) => step.id)).toEqual(['research', 'plan', 'implement', 'review', 'fix', 'document'])
+  expect(JSON.stringify(chain)).not.toContain('red-team-plan')
+  expect(JSON.stringify(chain)).not.toContain('{{#if')
+  expect(JSON.stringify(chain)).not.toContain('{{/if}}')
+  expect(steps.map((step) => step.id)).toEqual([
+    'research',
+    'plan',
+    'plan-quality',
+    'plan-gate',
+    'implement',
+    'review',
+    'fix',
+    'document',
+  ])
+  for (const step of steps) {
+    expect(step).not.toHaveProperty('condition')
+    expect(step).not.toHaveProperty('optionalByFeature')
+    expect(step).not.toHaveProperty('parallel')
+  }
 
   const planStep = steps.find((step) => step.id === 'plan')
   expect(planStep).toBeDefined()
-  expect(planStep?.gate).toBe('user_approval')
-  expect(planStep?.transitions).toMatchObject({ approved: 'implement', rejected: 'research' })
+  expect(planStep).not.toHaveProperty('gate')
+  expect(planStep?.transitions).toMatchObject({ success: 'plan-quality' })
+
+  const planQualityStep = steps.find((step) => step.id === 'plan-quality')
+  expect(planQualityStep).toBeDefined()
+  expect(planQualityStep?.transitions).toMatchObject({
+    success: 'plan-gate',
+    pass: 'plan-gate',
+    warn: 'plan-gate',
+    fail: 'plan-gate',
+  })
+  expect((planQualityStep?.transitions as Record<string, unknown>).fail).not.toBe('plan')
+
+  const stepsBeforeImplementation = steps.slice(0, steps.findIndex((step) => step.id === 'implement'))
+  const approvalGatesBeforeImplementation = stepsBeforeImplementation.filter((step) => step.gate === 'user_approval')
+  expect(approvalGatesBeforeImplementation.map((step) => step.id)).toEqual(['plan-gate'])
+
+  const planGateStep = steps.find((step) => step.id === 'plan-gate')
+  expect(planGateStep).toBeDefined()
+  expect(planGateStep?.gate).toBe('user_approval')
+  expect(planGateStep?.transitions).toMatchObject({ approved: 'implement', rejected: 'plan' })
 }

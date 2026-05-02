@@ -173,11 +173,18 @@ describe('chain-machine', () => {
   it('stops at a sequential user approval gate and resumes through approved or rejected outcomes', () => {
     const plan = makePlanWithSteps([
       makeCompiledStep({
+        id: 'plan',
+        agent: 'planner',
+        skills: ['plan'],
+        stepType: 'plan',
+        transitions: { success: 'plan-quality' },
+      }),
+      makeCompiledStep({
         id: 'plan-quality',
         agent: 'planner',
         skills: ['plan'],
         stepType: 'plan',
-        transitions: { success: 'plan-gate' },
+        transitions: { success: 'plan-gate', pass: 'plan-gate', warn: 'plan-gate', fail: 'plan-gate' },
       }),
       makeCompiledStep({
         id: 'plan-gate',
@@ -185,7 +192,7 @@ describe('chain-machine', () => {
         skills: [],
         stepType: 'plan',
         gate: 'user_approval',
-        transitions: { approved: 'implement', rejected: 'plan-quality' },
+        transitions: { approved: 'implement', rejected: 'plan' },
       }),
       makeCompiledStep({
         id: 'implement',
@@ -199,8 +206,18 @@ describe('chain-machine', () => {
     const state = createChainState(plan)
     state.budget = createBudgetState(plan.budgetPolicy)
 
-    const afterQuality = advanceChainState({
+    const afterPlan = advanceChainState({
       state,
+      plan,
+      stepId: 'plan',
+      outcome: 'success',
+      output: { summary: 'plan emitted' },
+    })
+    expect(afterPlan.state).toBe('running')
+    expect(afterPlan.nextStep?.stepId).toBe('plan-quality')
+
+    const afterQuality = advanceChainState({
+      state: afterPlan.stateSnapshot,
       plan,
       stepId: 'plan-quality',
       outcome: 'success',
@@ -236,7 +253,57 @@ describe('chain-machine', () => {
       outcome: 'rejected',
     })
     expect(rejected.state).toBe('running')
-    expect(rejected.nextStep?.stepId).toBe('plan-quality')
+    expect(rejected.nextStep?.stepId).toBe('plan')
+  })
+
+  it.each(['success', 'pass', 'warn', 'fail'])('routes plan-quality %s outcomes to the plan gate without auto-looping', (outcome) => {
+    const plan = makePlanWithSteps([
+      makeCompiledStep({
+        id: 'plan',
+        agent: 'planner',
+        skills: ['plan'],
+        stepType: 'plan',
+        transitions: { success: 'plan-quality' },
+      }),
+      makeCompiledStep({
+        id: 'plan-quality',
+        agent: 'planner',
+        skills: ['plan'],
+        stepType: 'plan',
+        transitions: { success: 'plan-gate', pass: 'plan-gate', warn: 'plan-gate', fail: 'plan-gate' },
+      }),
+      makeCompiledStep({
+        id: 'plan-gate',
+        agent: 'planner',
+        skills: [],
+        stepType: 'plan',
+        gate: 'user_approval',
+        transitions: { approved: 'implement', rejected: 'plan' },
+      }),
+      makeCompiledStep({
+        id: 'implement',
+        agent: 'builder',
+        skills: ['implement'],
+        stepType: 'implement',
+        transitions: { success: 'done' },
+      }),
+    ], 'plan-quality')
+
+    const state = createChainState(plan)
+    state.budget = createBudgetState(plan.budgetPolicy)
+
+    const result = advanceChainState({
+      state,
+      plan,
+      stepId: 'plan-quality',
+      outcome,
+      output: { summary: `${outcome} quality report emitted` },
+    })
+
+    expect(result.state).toBe('running')
+    expect(result.nextStep?.stepId).toBe('plan-gate')
+    expect(result.nextStep?.stepId).not.toBe('plan')
+    expect(result.nextStep?.stepId).not.toBe('implement')
   })
 
   it('does not skip steps using unsupported runtime condition metadata', () => {

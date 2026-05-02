@@ -142,6 +142,13 @@ func readSourceFeatureChain(t *testing.T) []byte {
 func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
 	t.Helper()
 
+	raw := string(data)
+	for _, forbidden := range []string{"red-team-plan", "{{#if", "{{/if}}"} {
+		if strings.Contains(raw, forbidden) {
+			t.Fatalf("feature chain must not contain %q in the D6-only base chain", forbidden)
+		}
+	}
+
 	var body map[string]any
 	if err := json.Unmarshal(data, &body); err != nil {
 		t.Fatalf("feature chain must be valid JSON: %v", err)
@@ -162,39 +169,85 @@ func assertCurrentFeatureChainShape(t *testing.T, data []byte) {
 	}
 
 	ids := make([]string, 0, len(steps))
+	stepByID := map[string]map[string]any{}
 	var plan map[string]any
+	var approvalGatesBeforeImplement []string
 	for _, rawStep := range steps {
 		step, ok := rawStep.(map[string]any)
 		if !ok {
 			t.Fatalf("feature chain step must be an object, got %T", rawStep)
+		}
+		for _, forbiddenKey := range []string{"condition", "optionalByFeature", "parallel"} {
+			if _, ok := step[forbiddenKey]; ok {
+				t.Fatalf("feature chain step %v must not define unsupported %q metadata", step["id"], forbiddenKey)
+			}
 		}
 		id, ok := step["id"].(string)
 		if !ok || id == "" {
 			t.Fatalf("feature chain step must have a string id, got %v", step["id"])
 		}
 		ids = append(ids, id)
+		stepByID[id] = step
+		if id != "implement" && step["gate"] == "user_approval" {
+			approvalGatesBeforeImplement = append(approvalGatesBeforeImplement, id)
+		}
+		if id == "implement" {
+			approvalGatesBeforeImplement = append(approvalGatesBeforeImplement, "__implement_boundary__")
+		}
 		if id == "plan" {
 			plan = step
 		}
 	}
 
-	expectedIDs := []string{"research", "plan", "implement", "review", "fix", "document"}
+	expectedIDs := []string{"research", "plan", "plan-quality", "plan-gate", "implement", "review", "fix", "document"}
 	if strings.Join(ids, ",") != strings.Join(expectedIDs, ",") {
 		t.Fatalf("expected current feature chain step order %v, got %v", expectedIDs, ids)
 	}
 	if plan == nil {
 		t.Fatal("expected current feature chain to include a plan step")
 	}
-	if plan["gate"] != "user_approval" {
-		t.Fatalf("expected current plan step to own user_approval gate, got %v", plan["gate"])
+	if _, ok := plan["gate"]; ok {
+		t.Fatalf("expected plan step not to own user_approval gate, got %v", plan["gate"])
 	}
 
 	transitions, ok := plan["transitions"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected plan transitions object, got %T", plan["transitions"])
 	}
-	if transitions["approved"] != "implement" || transitions["rejected"] != "research" {
-		t.Fatalf("expected explicit plan gate transitions approved->implement and rejected->research, got %v", transitions)
+	if transitions["success"] != "plan-quality" {
+		t.Fatalf("expected plan success transition to plan-quality, got %v", transitions)
+	}
+
+	planQuality := stepByID["plan-quality"]
+	if planQuality == nil {
+		t.Fatal("expected current feature chain to include a plan-quality step")
+	}
+	qualityTransitions, ok := planQuality["transitions"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected plan-quality transitions object, got %T", planQuality["transitions"])
+	}
+	for _, outcome := range []string{"success", "pass", "warn", "fail"} {
+		if qualityTransitions[outcome] != "plan-gate" {
+			t.Fatalf("expected plan-quality %s transition to plan-gate with no automatic loop, got %v", outcome, qualityTransitions)
+		}
+	}
+
+	planGate := stepByID["plan-gate"]
+	if planGate == nil {
+		t.Fatal("expected current feature chain to include a plan-gate step")
+	}
+	if planGate["gate"] != "user_approval" {
+		t.Fatalf("expected plan-gate step to own user_approval gate, got %v", planGate["gate"])
+	}
+	gateTransitions, ok := planGate["transitions"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected plan-gate transitions object, got %T", planGate["transitions"])
+	}
+	if gateTransitions["approved"] != "implement" || gateTransitions["rejected"] != "plan" {
+		t.Fatalf("expected explicit plan-gate transitions approved->implement and rejected->plan, got %v", gateTransitions)
+	}
+	if strings.Join(approvalGatesBeforeImplement, ",") != "plan-gate,__implement_boundary__" {
+		t.Fatalf("expected plan-gate to be the only approval gate before implementation, got %v", approvalGatesBeforeImplement)
 	}
 }
 

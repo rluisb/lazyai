@@ -15,6 +15,7 @@ func DetectPackageManager(targetDir string) string {
 		{file: "yarn.lock", name: "yarn"},
 		{file: "package-lock.json", name: "npm"},
 		{file: "go.sum", name: "go modules"},
+		{file: "go.mod", name: "go modules"},
 		{file: "Cargo.lock", name: "cargo"},
 		{file: "Gemfile.lock", name: "bundler"},
 		{file: "poetry.lock", name: "poetry"},

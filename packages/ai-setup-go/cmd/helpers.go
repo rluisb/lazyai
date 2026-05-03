@@ -216,8 +216,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		ctx.PlanningRepoPath, _ = os.UserHomeDir()
 	}
 
-	// Run deterministic Scout to populate mechanical placeholders.
-	if config.TargetDir != "" {
+	// Run deterministic Scout to populate mechanical placeholders when enabled.
+	if shouldUseReversa(result, config) && config.TargetDir != "" {
 		surface, err := reversa.RunScout(config.TargetDir)
 		if err == nil && surface != nil {
 			// Fill in what Scout detected.
@@ -295,6 +295,16 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	}
 
 	return ctx, nil
+}
+
+func shouldUseReversa(result *wizard.WizardResult, config *wizard.WizardConfig) bool {
+	if config != nil && config.CLIUseReversa != nil {
+		return *config.CLIUseReversa
+	}
+	if result != nil && result.Phase2 != nil && result.Phase2.UseReversa != nil {
+		return *result.Phase2.UseReversa
+	}
+	return true
 }
 
 func conflictStrategyForSetupPolicy(policy types.SetupPolicy) types.ConflictStrategy {

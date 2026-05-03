@@ -68,6 +68,7 @@ type WizardConfig struct {
 	CLIEnableCodegraph     bool
 	CLICodegraphDataPath   string
 	CLIExistingSetupPolicy types.SetupPolicy
+	CLIUseReversa          *bool
 
 	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
 	// scaffolding to the tool's own CLI instead of direct-write.
@@ -158,6 +159,9 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 		}
 	} else {
 		state := initWizardState(defaults)
+		if config.CLIUseReversa != nil {
+			state.AnalyzeExistingCode = *config.CLIUseReversa
+		}
 		form := buildInteractiveForm(state).WithAccessible(!config.Interactive)
 
 		if err := form.Run(); err != nil {

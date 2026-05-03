@@ -23,26 +23,27 @@ type WizardState struct {
 	Team         string
 
 	// Phase 2
-	Preset            string
-	Features          []string
-	BranchPattern     string
-	CustomBranch      string
-	CommitPattern     string
-	CustomCommit      string
-	RequireTicket     bool
-	ChatModes         []string
-	OpenCodeCommands  []string
-	OpenCodeModes     []string
-	ProjectOverview   string
-	NamingConventions string
-	ErrorHandling     string
-	APIConventions    string
-	ImportOrder       string
-	ProtectedBranch   string
-	TestCommand       string
-	LintCommand       string
-	BuildCommand      string
-	CoverageThreshold string
+	Preset              string
+	Features            []string
+	BranchPattern       string
+	CustomBranch        string
+	CommitPattern       string
+	CustomCommit        string
+	RequireTicket       bool
+	ChatModes           []string
+	OpenCodeCommands    []string
+	OpenCodeModes       []string
+	ProjectOverview     string
+	NamingConventions   string
+	ErrorHandling       string
+	APIConventions      string
+	ImportOrder         string
+	ProtectedBranch     string
+	TestCommand         string
+	LintCommand         string
+	BuildCommand        string
+	CoverageThreshold   string
+	AnalyzeExistingCode bool
 
 	// Phase 5
 	MemoryPath        string
@@ -109,6 +110,7 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
 	s.CoverageThreshold = "80"
+	s.AnalyzeExistingCode = true
 
 	if defaults != nil && defaults.Phase2 != nil {
 		if defaults.Phase2.Preset != "" {
@@ -145,6 +147,9 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		s.LintCommand = defaults.Phase2.LintCommand
 		s.BuildCommand = defaults.Phase2.BuildCommand
 		s.CoverageThreshold = strconv.Itoa(normalizeCoverageThreshold(defaults.Phase2.CoverageThreshold))
+		if defaults.Phase2.UseReversa != nil {
+			s.AnalyzeExistingCode = *defaults.Phase2.UseReversa
+		}
 	}
 
 	// Set Phase 5 Defaults
@@ -300,6 +305,10 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Value(&state.RequireTicket),
 		),
 		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Analyze existing code to auto-populate project details?").
+				Description("Runs deterministic Scout/Reversa analysis against this project before scaffolding.").
+				Value(&state.AnalyzeExistingCode),
 			huh.NewInput().
 				Title("Project Overview").
 				Description("Optional. Leave blank to preserve [YOUR_PROJECT_OVERVIEW].").
@@ -482,6 +491,7 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	p2.LintCommand = state.LintCommand
 	p2.BuildCommand = state.BuildCommand
 	p2.CoverageThreshold = parseCoverageThreshold(state.CoverageThreshold)
+	p2.UseReversa = boolPtr(state.AnalyzeExistingCode)
 
 	// Phase 5
 	p5 := buildPhase5Result(

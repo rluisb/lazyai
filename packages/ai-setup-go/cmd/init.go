@@ -58,6 +58,8 @@ func init() {
 	initCmd.Flags().String("qmd-index-path", "", "Project-local qmd index path")
 	initCmd.Flags().Bool("enable-codegraph", false, "Enable codegraph analysis")
 	initCmd.Flags().String("codegraph-data-path", "", "Project-local codegraph data path")
+	initCmd.Flags().Bool("reversa", false, "Analyze existing code with Scout/Reversa to auto-populate project details")
+	initCmd.Flags().Bool("no-reversa", false, "Skip Scout/Reversa analysis and leave project details explicit/manual")
 	rootCmd.AddCommand(initCmd)
 }
 
@@ -96,6 +98,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 	coverageThreshold, _ := cmd.Flags().GetInt("coverage-threshold")
 	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
 	existingSetupPolicyStr, _ := cmd.Flags().GetString("existing-setup-policy")
+	useReversa, err := resolveReversaFlagChoice(cmd)
+	if err != nil {
+		return err
+	}
 	existingSetupPolicy, err := parseExistingSetupPolicy(existingSetupPolicyStr)
 	if err != nil {
 		return err
@@ -151,6 +157,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLIEnableCodegraph:     enableCodegraph,
 		CLICodegraphDataPath:   codegraphDataPath,
 		CLIExistingSetupPolicy: existingSetupPolicy,
+		CLIUseReversa:          useReversa,
 	}
 
 	if nonInteractive {
@@ -170,6 +177,26 @@ func parseExistingSetupPolicy(value string) (types.SetupPolicy, error) {
 		return "", fmt.Errorf("invalid --existing-setup-policy %q (expected absorb, adapt, or backup-only)", value)
 	}
 	return policy, nil
+}
+
+func resolveReversaFlagChoice(cmd *cobra.Command) (*bool, error) {
+	flags := cmd.Flags()
+	reversaChanged := flags.Changed("reversa")
+	noReversaChanged := flags.Changed("no-reversa")
+	if reversaChanged && noReversaChanged {
+		return nil, fmt.Errorf("--reversa and --no-reversa cannot be used together")
+	}
+
+	if reversaChanged {
+		value, _ := flags.GetBool("reversa")
+		return &value, nil
+	}
+	if noReversaChanged {
+		value, _ := flags.GetBool("no-reversa")
+		enabled := !value
+		return &enabled, nil
+	}
+	return nil, nil
 }
 
 func runInitInteractive(config *wizard.WizardConfig) error {
@@ -335,6 +362,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		LintCommand:       config.CLILintCommand,
 		BuildCommand:      config.CLIBuildCommand,
 		CoverageThreshold: config.CLICoverageThreshold,
+		UseReversa:        config.CLIUseReversa,
 	}
 
 	// Build WizardResult with pre-computed phases.

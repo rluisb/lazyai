@@ -9,6 +9,7 @@ import (
 	"github.com/ricardoborges-teachable/ai-setup/internal/db"
 	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
+	reversa "github.com/ricardoborges-teachable/ai-setup/internal/reversa/scout"
 	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
@@ -215,7 +216,95 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		ctx.PlanningRepoPath, _ = os.UserHomeDir()
 	}
 
+	// Run deterministic Scout to populate mechanical placeholders when enabled.
+	if shouldUseReversa(result, config) && config.TargetDir != "" {
+		surface, err := reversa.RunScout(config.TargetDir)
+		if err == nil && surface != nil {
+			// Fill in what Scout detected.
+			if surface.PrimaryLanguage != "" {
+				ctx.PrimaryLanguage = surface.PrimaryLanguage
+			}
+			if len(surface.Frameworks) > 0 {
+				ctx.Framework = surface.Frameworks[0].Name
+			}
+			if surface.PackageManager != "" {
+				ctx.PackageManager = surface.PackageManager
+			}
+			if surface.TestFramework != "" {
+				ctx.TestFramework = surface.TestFramework
+			}
+			if len(surface.DatabaseHints) > 0 {
+				db := reversa.InferDatabase(surface.DatabaseHints)
+				if db != "" {
+					ctx.Database = db
+				}
+				orm := reversa.InferORM(surface.DatabaseHints)
+				if orm != "" {
+					ctx.ORM = orm
+				}
+				mPath := reversa.InferMigrationsPath(surface.DatabaseHints)
+				if mPath != "" {
+					ctx.MigrationsPath = mPath
+				}
+			}
+			if len(surface.Modules) > 0 || len(surface.EntryPoints) > 0 {
+				ctx.CodebaseMap = reversa.BuildCodebaseMapEntries(surface.Modules, surface.EntryPoints)
+			}
+			// Infer commands from language + package manager.
+			if ctx.InstallCommand == "" {
+				ic := reversa.InferInstallCommandFromSurface(surface)
+				if ic != "" {
+					ctx.InstallCommand = ic
+				}
+			}
+			if ctx.LintCommand == "" {
+				lc := reversa.InferLintCommandFromSurface(surface)
+				if lc != "" {
+					ctx.LintCommand = lc
+				}
+			}
+			if ctx.TestCommand == "" {
+				// Derive from Scout only if the wizard didn't set it.
+				tc := reversa.InferTestCommandFromSurface(surface)
+				if tc != "" {
+					ctx.TestCommand = tc
+				}
+			}
+			if ctx.TestPath == "" {
+				tp := reversa.InferTestPathFromSurface(surface)
+				if tp != "" {
+					ctx.TestPath = tp
+				}
+			}
+			if ctx.StrictMode == "" {
+				sm := reversa.InferStrictMode(config.TargetDir)
+				if sm != "" {
+					ctx.StrictMode = sm
+				}
+			}
+			if ctx.ProtectedBranch == "" {
+				branch := reversa.InferProtectedBranch(config.TargetDir)
+				if branch != "" {
+					ctx.ProtectedBranchGit = branch
+					ctx.ProtectedBranch = branch
+				}
+			}
+			// Store surface data for downstream use.
+			ctx.SurfaceData = surface
+		}
+	}
+
 	return ctx, nil
+}
+
+func shouldUseReversa(result *wizard.WizardResult, config *wizard.WizardConfig) bool {
+	if config != nil && config.CLIUseReversa != nil {
+		return *config.CLIUseReversa
+	}
+	if result != nil && result.Phase2 != nil && result.Phase2.UseReversa != nil {
+		return *result.Phase2.UseReversa
+	}
+	return true
 }
 
 func conflictStrategyForSetupPolicy(policy types.SetupPolicy) types.ConflictStrategy {
@@ -301,6 +390,8 @@ func housekeepingFromResult(result *wizard.WizardResult) *types.HousekeepingConf
 		QmdIndexPath:      result.Phase5.QmdIndexPath,
 		EnableCodegraph:   result.Phase5.EnableCodegraph,
 		CodegraphDataPath: result.Phase5.CodegraphDataPath,
+		EnableGraphify:    result.Phase5.EnableGraphify,
+		GraphifyDataPath:  result.Phase5.GraphifyDataPath,
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 
 	"github.com/ricardoborges-teachable/ai-setup/internal/compiler"
+	reversa "github.com/ricardoborges-teachable/ai-setup/internal/reversa/scout"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 )
 
@@ -84,6 +85,14 @@ type ScaffoldContext struct {
 	LibraryFS fs.FS
 	// StoreData optionally carries persisted config values used by compiled roots.
 	StoreData *types.StoreData
+	// SurfaceData optionally carries deterministic Scout analysis results.
+	SurfaceData *reversa.SurfaceData
+	// Inferred fields from Scout (populated by buildScaffoldContext when Scout runs).
+	MigrationsPath     string
+	TestPath           string
+	StrictMode        string
+	InstallCommand    string
+	ProtectedBranchGit string // git-detected default branch, used if no wizard override
 	// Optional context overrides for compiled root.
 	PrimaryLanguage     string
 	Framework           string

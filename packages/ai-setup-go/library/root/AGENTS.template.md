@@ -293,6 +293,45 @@ When a task requires a different expertise (e.g., security review during impleme
 
 <!-- Run these at the start of EVERY session. Non-negotiable. -->
 
+### ⚠️ CHECK 0 — Placeholder Status (MANDATORY — BEFORE ANY OTHER WORK)
+
+Before ANY other work, you MUST:
+
+1. Read `.ai/populate-needed` in the project root.
+   - If this file does NOT exist: proceed silently to Check 1. Do not mention placeholders, populate, or anything related to this check.
+   - If it EXISTS and `skipped` is `false`: continue to step 2.
+   - If it EXISTS and `skipped` is `true`: proceed silently to Check 1.
+
+2. Present this exact message to the user (substitute `{{placeholder_count}}` and `{{generated_at}}` from the JSON file):
+
+```
+⚠️  I found {{placeholder_count}} unfilled placeholders in AGENTS.md
+   (generated {{generated_at}}). These are project-specific details like
+   architecture notes, coding conventions, and testing strategy that
+   require reading the actual codebase.
+
+   Populate now?
+
+   1. Yes — Index the codebase and fill all placeholders (~2–3 min,
+      read-only until you approve each write)
+   2. Not now — Ask me again next session
+   3. Skip permanently — Delete the signal file, never ask again
+
+   Type 1, 2, or 3.
+```
+
+3. WAIT for the user's response before doing ANYTHING else.
+
+4. Based on user choice:
+   - **1 (Yes):** Run `/populate`. On successful completion, `.ai/populate-needed` is deleted automatically. Future sessions proceed silently.
+   - **2 (Not now):** Proceed silently to Check 1. Do not argue with the user. The check will trigger again next session.
+   - **3 (Skip):** Delete `.ai/populate-needed`. Proceed silently to Check 1. Do not mention populate again unless the user explicitly types `/populate`.
+
+5. If the signal file was generated more than 30 days ago AND `last_populated` is set:
+   - Add this to the message: "Last populated on {{last_populated}}. The codebase may have changed significantly."
+   - After options 1–3, add: "4. Update — Re-index and refresh all values"
+   - If user chooses 4, run `/populate` with the same behavior as option 1.
+
 Before doing any work:
 1. **Canonical instruction check:** AGENTS.md is authoritative. If CLAUDE.md exists, treat it as a compatibility reference only; do not require it to mirror AGENTS.md.
 2. **Handoff check:** Read the latest file in `specs/memory/handoffs/` (if present) before planning.

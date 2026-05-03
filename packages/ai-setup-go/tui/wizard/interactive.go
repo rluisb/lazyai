@@ -23,26 +23,27 @@ type WizardState struct {
 	Team         string
 
 	// Phase 2
-	Preset            string
-	Features          []string
-	BranchPattern     string
-	CustomBranch      string
-	CommitPattern     string
-	CustomCommit      string
-	RequireTicket     bool
-	ChatModes         []string
-	OpenCodeCommands  []string
-	OpenCodeModes     []string
-	ProjectOverview   string
-	NamingConventions string
-	ErrorHandling     string
-	APIConventions    string
-	ImportOrder       string
-	ProtectedBranch   string
-	TestCommand       string
-	LintCommand       string
-	BuildCommand      string
-	CoverageThreshold string
+	Preset              string
+	Features            []string
+	BranchPattern       string
+	CustomBranch        string
+	CommitPattern       string
+	CustomCommit        string
+	RequireTicket       bool
+	ChatModes           []string
+	OpenCodeCommands    []string
+	OpenCodeModes       []string
+	ProjectOverview     string
+	NamingConventions   string
+	ErrorHandling       string
+	APIConventions      string
+	ImportOrder         string
+	ProtectedBranch     string
+	TestCommand         string
+	LintCommand         string
+	BuildCommand        string
+	CoverageThreshold   string
+	AnalyzeExistingCode bool
 
 	// Phase 5
 	MemoryPath        string
@@ -52,6 +53,8 @@ type WizardState struct {
 	QmdIndexPath      string
 	EnableCodegraph   bool
 	CodegraphDataPath string
+	EnableGraphify    bool
+	GraphifyDataPath  string
 	OpenCodePlugins   []string
 }
 
@@ -109,6 +112,7 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
 	s.CoverageThreshold = "80"
+	s.AnalyzeExistingCode = true
 
 	if defaults != nil && defaults.Phase2 != nil {
 		if defaults.Phase2.Preset != "" {
@@ -145,12 +149,16 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		s.LintCommand = defaults.Phase2.LintCommand
 		s.BuildCommand = defaults.Phase2.BuildCommand
 		s.CoverageThreshold = strconv.Itoa(normalizeCoverageThreshold(defaults.Phase2.CoverageThreshold))
+		if defaults.Phase2.UseReversa != nil {
+			s.AnalyzeExistingCode = *defaults.Phase2.UseReversa
+		}
 	}
 
 	// Set Phase 5 Defaults
 	s.MemoryPath = "specs/memory"
 	s.QmdIndexPath = ".qmd-index"
 	s.CodegraphDataPath = ".codegraph"
+	s.GraphifyDataPath = "graphify-out"
 
 	if defaults != nil && defaults.Phase5 != nil {
 		if defaults.Phase5.MemoryPath != "" {
@@ -167,6 +175,10 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		s.EnableCodegraph = defaults.Phase5.EnableCodegraph
 		if defaults.Phase5.CodegraphDataPath != "" {
 			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
+		}
+		s.EnableGraphify = defaults.Phase5.EnableGraphify
+		if defaults.Phase5.GraphifyDataPath != "" {
+			s.GraphifyDataPath = defaults.Phase5.GraphifyDataPath
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
@@ -300,6 +312,10 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Value(&state.RequireTicket),
 		),
 		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Analyze existing code to auto-populate project details?").
+				Description("Runs deterministic Scout/Reversa analysis against this project before scaffolding.").
+				Value(&state.AnalyzeExistingCode),
 			huh.NewInput().
 				Title("Project Overview").
 				Description("Optional. Leave blank to preserve [YOUR_PROJECT_OVERVIEW].").
@@ -417,6 +433,18 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Value(&state.CodegraphDataPath),
 		).WithHideFunc(func() bool { return !state.EnableCodegraph }),
 		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Enable Graphify").
+				Description("Read-only graph inspection allowed; graph rebuilds remain approval-gated.").
+				Value(&state.EnableGraphify),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Graphify Data Path").
+				Placeholder("graphify-out").
+				Value(&state.GraphifyDataPath),
+		).WithHideFunc(func() bool { return !state.EnableGraphify }),
+		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Plugins").
 				Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
@@ -482,6 +510,7 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	p2.LintCommand = state.LintCommand
 	p2.BuildCommand = state.BuildCommand
 	p2.CoverageThreshold = parseCoverageThreshold(state.CoverageThreshold)
+	p2.UseReversa = boolPtr(state.AnalyzeExistingCode)
 
 	// Phase 5
 	p5 := buildPhase5Result(
@@ -492,6 +521,8 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		state.QmdIndexPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
+		state.EnableGraphify,
+		state.GraphifyDataPath,
 		state.OpenCodePlugins,
 	)
 

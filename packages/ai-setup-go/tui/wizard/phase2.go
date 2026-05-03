@@ -46,6 +46,10 @@ type Phase2Result struct {
 	LintCommand       string
 	BuildCommand      string
 	CoverageThreshold int
+	// UseReversa controls whether deterministic Scout/Reversa analysis may
+	// auto-populate mechanical project details. Nil preserves the legacy default
+	// of enabled for callers that construct Phase2Result directly.
+	UseReversa *bool
 }
 
 var branchPatternOptions = []huh.Option[string]{
@@ -120,6 +124,7 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 		BranchPattern: defaultPhase2BranchPattern(defaults),
 		CommitPattern: defaultPhase2CommitPattern(defaults),
 		RequireTicket: defaultPhase2RequireTicket(defaults),
+		UseReversa:    defaultUseReversa(defaults),
 	}
 
 	currentStep := 1
@@ -226,7 +231,9 @@ func runPhase2Interactive(scope types.SetupScope, defaults *Phase2Result) (*Phas
 		}
 	}
 
-	return buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket, state.ChatModes, state.OpenCodeCommands, state.OpenCodeModes), PhaseContinue, nil
+	result := buildPhase2Result(scope, state.Preset, state.Features, state.BranchPattern, state.CommitPattern, state.RequireTicket, state.ChatModes, state.OpenCodeCommands, state.OpenCodeModes)
+	result.UseReversa = boolPtr(state.UseReversa)
+	return result, PhaseContinue, nil
 }
 
 type phase2InteractiveState struct {
@@ -248,6 +255,7 @@ type phase2InteractiveState struct {
 	LintCommand       string
 	BuildCommand      string
 	CoverageThreshold int
+	UseReversa        bool
 }
 
 func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, features *types.FeatureFlags, branch, commit string, requireTicket bool, chatmodes []types.ChatModeId, opencodeCommands []types.OpenCodeCommandId, opencodeModes []types.OpenCodeModeId) *Phase2Result {
@@ -298,6 +306,7 @@ func buildPhase2Result(scope types.SetupScope, presetValue types.PresetLevel, fe
 		OpenCodeCommands:  resolvedOpenCodeCommands,
 		OpenCodeModes:     resolvedOpenCodeModes,
 		CoverageThreshold: defaultCoverageThreshold(),
+		UseReversa:        boolPtr(defaultUseReversa(nil)),
 	}
 }
 
@@ -307,6 +316,9 @@ func applyPhase2ProfileDefaults(result, defaults *Phase2Result) {
 	}
 	if defaults == nil {
 		result.CoverageThreshold = normalizeCoverageThreshold(result.CoverageThreshold)
+		if result.UseReversa == nil {
+			result.UseReversa = boolPtr(defaultUseReversa(nil))
+		}
 		return
 	}
 
@@ -320,6 +332,22 @@ func applyPhase2ProfileDefaults(result, defaults *Phase2Result) {
 	result.LintCommand = defaults.LintCommand
 	result.BuildCommand = defaults.BuildCommand
 	result.CoverageThreshold = normalizeCoverageThreshold(defaults.CoverageThreshold)
+	if defaults.UseReversa != nil {
+		result.UseReversa = boolPtr(*defaults.UseReversa)
+	} else if result.UseReversa == nil {
+		result.UseReversa = boolPtr(defaultUseReversa(nil))
+	}
+}
+
+func defaultUseReversa(defaults *Phase2Result) bool {
+	if defaults != nil && defaults.UseReversa != nil {
+		return *defaults.UseReversa
+	}
+	return true
+}
+
+func boolPtr(value bool) *bool {
+	return &value
 }
 
 func defaultCoverageThreshold() int {

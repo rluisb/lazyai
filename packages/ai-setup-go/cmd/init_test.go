@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
 )
@@ -145,6 +147,108 @@ func TestBuildScaffoldContextDefaultsSkippedCoverageTo80(t *testing.T) {
 	}
 }
 
+func TestBuildScaffoldContextNoReversaSkipsScoutPopulation(t *testing.T) {
+	dir := t.TempDir()
+	writeGoProjectForReversaTest(t, dir)
+	useReversa := false
+	config := &wizard.WizardConfig{
+		Interactive:   false,
+		HomeDir:       testRepoRoot(t),
+		TargetDir:     dir,
+		CLIScope:      types.SetupScopeProject,
+		CLITools:      []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:     types.PresetLevelMinimal,
+		CLIUseReversa: &useReversa,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "reversa-off"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset, UseReversa: &useReversa},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.SurfaceData != nil || ctx.PrimaryLanguage != "" || ctx.PackageManager != "" {
+		t.Fatalf("Scout populated context despite UseReversa=false: language=%q packageManager=%q surface=%#v", ctx.PrimaryLanguage, ctx.PackageManager, ctx.SurfaceData)
+	}
+}
+
+func TestBuildScaffoldContextReversaPopulatesScoutValues(t *testing.T) {
+	dir := t.TempDir()
+	writeGoProjectForReversaTest(t, dir)
+	useReversa := true
+	config := &wizard.WizardConfig{
+		Interactive:   false,
+		HomeDir:       testRepoRoot(t),
+		TargetDir:     dir,
+		CLIScope:      types.SetupScopeProject,
+		CLITools:      []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:     types.PresetLevelMinimal,
+		CLIUseReversa: &useReversa,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "reversa-on"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset, UseReversa: &useReversa},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.SurfaceData == nil {
+		t.Fatal("expected Scout surface data to be populated")
+	}
+	if ctx.PrimaryLanguage != "Go" {
+		t.Fatalf("PrimaryLanguage = %q, want Go", ctx.PrimaryLanguage)
+	}
+	if ctx.PackageManager != "go modules" {
+		t.Fatalf("PackageManager = %q, want go modules", ctx.PackageManager)
+	}
+}
+
+func TestBuildScaffoldContextDefaultsReversaEnabled(t *testing.T) {
+	dir := t.TempDir()
+	writeGoProjectForReversaTest(t, dir)
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeProject,
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:   types.PresetLevelMinimal,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "reversa-default"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.PrimaryLanguage != "Go" {
+		t.Fatalf("PrimaryLanguage = %q, want Go", ctx.PrimaryLanguage)
+	}
+}
+
+func TestRunInitRejectsConflictingReversaFlags(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().Bool("reversa", false, "")
+	cmd.Flags().Bool("no-reversa", false, "")
+	if err := cmd.Flags().Set("reversa", "true"); err != nil {
+		t.Fatalf("set reversa: %v", err)
+	}
+	if err := cmd.Flags().Set("no-reversa", "true"); err != nil {
+		t.Fatalf("set no-reversa: %v", err)
+	}
+
+	err := runInit(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "--reversa and --no-reversa cannot be used together") {
+		t.Fatalf("runInit conflicting flags error = %v", err)
+	}
+}
+
 func TestInitNonInteractiveDryRunWritesNoFiles(t *testing.T) {
 	dir := t.TempDir()
 	ensureTestLibraryFS(t)
@@ -170,6 +274,16 @@ func TestInitNonInteractiveDryRunWritesNoFiles(t *testing.T) {
 		if fileExists(filepath.Join(dir, rel)) {
 			t.Fatalf("dry-run created %s", rel)
 		}
+	}
+}
+
+func writeGoProjectForReversaTest(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/reversa-test\n\ngo 1.22\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatalf("write main.go: %v", err)
 	}
 }
 

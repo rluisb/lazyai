@@ -111,9 +111,9 @@
     },
     "orchestrator": {
       "description": "Optional orchestration control plane for chains, teams, and workflows",
-      "command": "npx",
-      "args": ["-y", "@ai-setup/orchestrator"],
-      "tools": ["list_catalog", "compose_agent", "start_chain", "advance_chain", "get_status", "get_budget", "retry_step", "escalate_step", "handoff"],
+      "command": "ai-setup-orchestrator",
+      "args": ["connect"],
+      "tools": ["list_catalog", "compose_agent", "start_chain", "advance_chain", "build_team", "assign_team_task", "complete_team_task", "start_workflow", "advance_workflow", "get_status", "get_budget", "retry_step", "escalate_step", "handoff", "catalog_list", "catalog_get_version", "catalog_create_version", "catalog_set_active", "subscribe_run", "invoke_agent", "enqueue_job", "get_job", "list_jobs"],
       "enabled": false,
       "requiresInstall": false
     }

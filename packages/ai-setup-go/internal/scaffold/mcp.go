@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -96,7 +97,7 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	}
 
 	if enabledServerNames["orchestrator"] {
-		server, err := prepareManagedOrchestratorServer(libraryDir, catalog.Servers["orchestrator"])
+		server, err := prepareManagedOrchestratorServer(targetDir, libraryDir, catalog.Servers["orchestrator"])
 		if err != nil {
 			return err
 		}
@@ -154,42 +155,42 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	return nil
 }
 
-func prepareManagedOrchestratorServer(libraryDir string, server mcpServer) (mcpServer, error) {
+func prepareManagedOrchestratorServer(targetDir, libraryDir string, server mcpServer) (mcpServer, error) {
 	packageDir, ok := resolveOrchestratorPackageDir(libraryDir)
 	if !ok {
+		if binaryPath, err := orchestratorLookPath("ai-setup-orchestrator"); err == nil {
+			server.Command = binaryPath
+			server.Args = orchestratorConnectArgs(targetDir)
+			server.RequiresInstall = false
+			server.InstallHint = ""
+		}
 		return server, nil
 	}
 
-	nodePath, err := orchestratorLookPath("node")
+	goPath, err := orchestratorLookPath("go")
 	if err != nil {
-		return server, fmt.Errorf("prepare orchestrator MCP: node executable not found: %w", err)
+		return server, fmt.Errorf("prepare orchestrator MCP: go executable not found: %w", err)
 	}
 
-	entryPath := filepath.Join(packageDir, "dist", "index.js")
-	if !files.FileExists(entryPath) {
-		npmPath, err := orchestratorLookPath("npm")
-		if err != nil {
-			return server, fmt.Errorf("prepare orchestrator MCP: npm executable not found: %w", err)
-		}
-		if err := runOrchestratorBuildStep(npmPath, packageDir, "install"); err != nil {
-			return server, err
-		}
-		if err := runOrchestratorBuildStep(npmPath, packageDir, "run", "build"); err != nil {
-			return server, err
-		}
+	binaryPath, err := orchestratorBinaryPath()
+	if err != nil {
+		return server, err
 	}
-	if !files.FileExists(entryPath) {
-		return server, fmt.Errorf("prepare orchestrator MCP: expected build output %s", entryPath)
+	if err := runOrchestratorBuildStep(goPath, packageDir, binaryPath); err != nil {
+		return server, err
+	}
+	if !files.FileExists(binaryPath) {
+		return server, fmt.Errorf("prepare orchestrator MCP: expected build output %s", binaryPath)
 	}
 
 	if strings.EqualFold(os.Getenv("AI_SETUP_ORCHESTRATOR_SMOKE"), "1") || strings.EqualFold(os.Getenv("AI_SETUP_ORCHESTRATOR_SMOKE"), "true") {
-		if err := runOrchestratorSmokeTest(nodePath, entryPath); err != nil {
+		if err := runOrchestratorSmokeTest(binaryPath); err != nil {
 			return server, err
 		}
 	}
 
-	server.Command = nodePath
-	server.Args = []string{entryPath}
+	server.Command = binaryPath
+	server.Args = orchestratorConnectArgs(targetDir)
 	server.RequiresInstall = false
 	server.InstallHint = ""
 	return server, nil
@@ -200,27 +201,51 @@ func resolveOrchestratorPackageDir(libraryDir string) (string, bool) {
 		return "", false
 	}
 	repoRoot := filepath.Dir(libraryDir)
-	packageDir := filepath.Join(repoRoot, "orchestrator")
-	if !files.FileExists(filepath.Join(packageDir, "package.json")) {
+	packageDir := filepath.Join(repoRoot, "packages", "orchestrator-go")
+	if !files.FileExists(filepath.Join(packageDir, "go.mod")) {
 		return "", false
 	}
 	return packageDir, true
 }
 
-func runOrchestratorBuildStep(npmPath, packageDir string, args ...string) error {
+func orchestratorConnectArgs(targetDir string) []string {
+	args := []string{"connect"}
+	if targetDir != "" {
+		args = append(args, "--project", targetDir)
+	}
+	return args
+}
+
+func orchestratorBinaryPath() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil || cacheDir == "" {
+		cacheDir = os.TempDir()
+	}
+	outDir := filepath.Join(cacheDir, "ai-setup", "orchestrator")
+	if err := files.EnsureDir(outDir); err != nil {
+		return "", err
+	}
+	binaryName := "ai-setup-orchestrator"
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	return filepath.Join(outDir, binaryName), nil
+}
+
+func runOrchestratorBuildStep(goPath, packageDir, binaryPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	runArgs := append([]string{"--prefix", packageDir}, args...)
-	if err := orchestratorCommandRunner(ctx, npmPath, runArgs...); err != nil {
-		return fmt.Errorf("prepare orchestrator MCP: npm %s failed: %w", strings.Join(args, " "), err)
+	runArgs := []string{"-C", packageDir, "build", "-o", binaryPath, "./cmd/orchestrator"}
+	if err := orchestratorCommandRunner(ctx, goPath, runArgs...); err != nil {
+		return fmt.Errorf("prepare orchestrator MCP: go build failed: %w", err)
 	}
 	return nil
 }
 
-func runOrchestratorSmokeTest(nodePath, entryPath string) error {
+func runOrchestratorSmokeTest(binaryPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	if err := orchestratorCommandRunner(ctx, nodePath, entryPath, "catalog"); err != nil {
+	if err := orchestratorCommandRunner(ctx, binaryPath, "status"); err != nil {
 		return fmt.Errorf("prepare orchestrator MCP: smoke test failed: %w", err)
 	}
 	return nil

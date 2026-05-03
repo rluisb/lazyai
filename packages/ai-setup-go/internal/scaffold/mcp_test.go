@@ -16,21 +16,20 @@ func TestScaffoldMcp_PreparesManagedOrchestratorServerFromLocalBuild(t *testing.
 	targetDir := t.TempDir()
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")
-	orchestratorDir := filepath.Join(repoRoot, "orchestrator")
+	orchestratorDir := filepath.Join(repoRoot, "packages", "orchestrator-go")
+	t.Setenv("HOME", t.TempDir())
 	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
   "servers": {
     "orchestrator": {
       "description": "orchestrator",
-      "command": "npx",
-      "args": ["-y", "@ai-setup/orchestrator"],
+      "command": "ai-setup-orchestrator",
+      "args": ["connect"],
       "enabled": false,
       "requiresInstall": false
     }
   }
 }`)
-	mustWriteTestFile(t, filepath.Join(orchestratorDir, "package.json"), `{}`)
-	entryPath := filepath.Join(orchestratorDir, "dist", "index.js")
-	mustWriteTestFile(t, entryPath, `console.log("ok")`)
+	mustWriteTestFile(t, filepath.Join(orchestratorDir, "go.mod"), `module example.com/orchestrator`)
 
 	originalLookPath := orchestratorLookPath
 	originalRunner := orchestratorCommandRunner
@@ -40,15 +39,22 @@ func TestScaffoldMcp_PreparesManagedOrchestratorServerFromLocalBuild(t *testing.
 	})
 	orchestratorLookPath = func(file string) (string, error) {
 		switch file {
-		case "node":
-			return "/fake/bin/node", nil
-		case "npm":
-			return "/fake/bin/npm", nil
+		case "go":
+			return "/fake/bin/go", nil
 		default:
 			return "", os.ErrNotExist
 		}
 	}
-	orchestratorCommandRunner = func(ctx context.Context, name string, args ...string) error { return nil }
+	orchestratorCommandRunner = func(ctx context.Context, name string, args ...string) error {
+		if name == "/fake/bin/go" {
+			for i, arg := range args {
+				if arg == "-o" && i+1 < len(args) {
+					mustWriteTestFile(t, args[i+1], "binary")
+				}
+			}
+		}
+		return nil
+	}
 
 	var records []types.TrackedFile
 	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"orchestrator"}, &records, types.ConflictStrategyAlign, nil); err != nil {
@@ -57,10 +63,10 @@ func TestScaffoldMcp_PreparesManagedOrchestratorServerFromLocalBuild(t *testing.
 
 	parsed := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
 	entry := parsed.Servers["orchestrator"]
-	if entry.Command != "/fake/bin/node" {
-		t.Fatalf("command = %q, want fake node path", entry.Command)
+	if !filepath.IsAbs(entry.Command) || filepath.Base(entry.Command) != "ai-setup-orchestrator" {
+		t.Fatalf("command = %q, want prepared absolute ai-setup-orchestrator binary", entry.Command)
 	}
-	if want := []string{entryPath}; !reflect.DeepEqual(entry.Args, want) {
+	if want := []string{"connect", "--project", targetDir}; !reflect.DeepEqual(entry.Args, want) {
 		t.Fatalf("args = %#v, want %#v", entry.Args, want)
 	}
 	if entry.RequiresInstall {
@@ -75,16 +81,17 @@ func TestScaffoldMcp_BuildsOrchestratorWhenDistMissing(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")
-	orchestratorDir := filepath.Join(repoRoot, "orchestrator")
+	orchestratorDir := filepath.Join(repoRoot, "packages", "orchestrator-go")
+	t.Setenv("HOME", t.TempDir())
 	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
   "servers": {
     "orchestrator": {
-      "command": "npx",
-      "args": ["-y", "@ai-setup/orchestrator"]
+      "command": "ai-setup-orchestrator",
+      "args": ["connect"]
     }
   }
 }`)
-	mustWriteTestFile(t, filepath.Join(orchestratorDir, "package.json"), `{}`)
+	mustWriteTestFile(t, filepath.Join(orchestratorDir, "go.mod"), `module example.com/orchestrator`)
 
 	originalLookPath := orchestratorLookPath
 	originalRunner := orchestratorCommandRunner
@@ -94,10 +101,8 @@ func TestScaffoldMcp_BuildsOrchestratorWhenDistMissing(t *testing.T) {
 	})
 	orchestratorLookPath = func(file string) (string, error) {
 		switch file {
-		case "node":
-			return "/fake/bin/node", nil
-		case "npm":
-			return "/fake/bin/npm", nil
+		case "go":
+			return "/fake/bin/go", nil
 		default:
 			return "", os.ErrNotExist
 		}
@@ -105,8 +110,12 @@ func TestScaffoldMcp_BuildsOrchestratorWhenDistMissing(t *testing.T) {
 	var calls []string
 	orchestratorCommandRunner = func(ctx context.Context, name string, args ...string) error {
 		calls = append(calls, name+" "+strings.Join(args, " "))
-		if name == "/fake/bin/npm" && len(args) >= 4 && args[2] == "run" && args[3] == "build" {
-			mustWriteTestFile(t, filepath.Join(orchestratorDir, "dist", "index.js"), `console.log("built")`)
+		if name == "/fake/bin/go" {
+			for i, arg := range args {
+				if arg == "-o" && i+1 < len(args) {
+					mustWriteTestFile(t, args[i+1], "binary")
+				}
+			}
 		}
 		return nil
 	}
@@ -115,14 +124,11 @@ func TestScaffoldMcp_BuildsOrchestratorWhenDistMissing(t *testing.T) {
 		t.Fatalf("ScaffoldMcp: %v", err)
 	}
 
-	if len(calls) != 2 {
-		t.Fatalf("runner calls = %#v, want install and build", calls)
+	if len(calls) != 1 {
+		t.Fatalf("runner calls = %#v, want one go build", calls)
 	}
-	if !strings.Contains(calls[0], "--prefix "+orchestratorDir+" install") {
-		t.Fatalf("first call = %q, want npm install with --prefix", calls[0])
-	}
-	if !strings.Contains(calls[1], "--prefix "+orchestratorDir+" run build") {
-		t.Fatalf("second call = %q, want npm run build with --prefix", calls[1])
+	if !strings.Contains(calls[0], "-C "+orchestratorDir+" build -o ") || !strings.Contains(calls[0], " ./cmd/orchestrator") {
+		t.Fatalf("call = %q, want go build for orchestrator cmd", calls[0])
 	}
 }
 
@@ -130,11 +136,10 @@ func TestScaffoldMcp_OptionalOrchestratorSmokeTest(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")
-	orchestratorDir := filepath.Join(repoRoot, "orchestrator")
-	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{"servers":{"orchestrator":{"command":"npx","args":["-y","@ai-setup/orchestrator"]}}}`)
-	mustWriteTestFile(t, filepath.Join(orchestratorDir, "package.json"), `{}`)
-	entryPath := filepath.Join(orchestratorDir, "dist", "index.js")
-	mustWriteTestFile(t, entryPath, `console.log("ok")`)
+	orchestratorDir := filepath.Join(repoRoot, "packages", "orchestrator-go")
+	t.Setenv("HOME", t.TempDir())
+	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{"servers":{"orchestrator":{"command":"ai-setup-orchestrator","args":["connect"]}}}`)
+	mustWriteTestFile(t, filepath.Join(orchestratorDir, "go.mod"), `module example.com/orchestrator`)
 	t.Setenv("AI_SETUP_ORCHESTRATOR_SMOKE", "true")
 
 	originalLookPath := orchestratorLookPath
@@ -144,17 +149,21 @@ func TestScaffoldMcp_OptionalOrchestratorSmokeTest(t *testing.T) {
 		orchestratorCommandRunner = originalRunner
 	})
 	orchestratorLookPath = func(file string) (string, error) {
-		if file == "node" {
-			return "/fake/bin/node", nil
-		}
-		if file == "npm" {
-			return "/fake/bin/npm", nil
+		if file == "go" {
+			return "/fake/bin/go", nil
 		}
 		return "", os.ErrNotExist
 	}
 	var calls []string
 	orchestratorCommandRunner = func(ctx context.Context, name string, args ...string) error {
 		calls = append(calls, name+" "+strings.Join(args, " "))
+		if name == "/fake/bin/go" {
+			for i, arg := range args {
+				if arg == "-o" && i+1 < len(args) {
+					mustWriteTestFile(t, args[i+1], "binary")
+				}
+			}
+		}
 		return nil
 	}
 
@@ -162,27 +171,26 @@ func TestScaffoldMcp_OptionalOrchestratorSmokeTest(t *testing.T) {
 		t.Fatalf("ScaffoldMcp: %v", err)
 	}
 
-	if got := calls[len(calls)-1]; got != "/fake/bin/node "+entryPath+" catalog" {
+	if got := calls[len(calls)-1]; !strings.HasSuffix(got, "ai-setup-orchestrator status") {
 		t.Fatalf("last call = %q, want smoke test command", got)
 	}
 }
 
-func TestScaffoldMcp_ReportsMissingNodeForOrchestrator(t *testing.T) {
+func TestScaffoldMcp_ReportsMissingGoForOrchestrator(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")
-	orchestratorDir := filepath.Join(repoRoot, "orchestrator")
-	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{"servers":{"orchestrator":{"command":"npx","args":["-y","@ai-setup/orchestrator"]}}}`)
-	mustWriteTestFile(t, filepath.Join(orchestratorDir, "package.json"), `{}`)
-	mustWriteTestFile(t, filepath.Join(orchestratorDir, "dist", "index.js"), `console.log("ok")`)
+	orchestratorDir := filepath.Join(repoRoot, "packages", "orchestrator-go")
+	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{"servers":{"orchestrator":{"command":"ai-setup-orchestrator","args":["connect"]}}}`)
+	mustWriteTestFile(t, filepath.Join(orchestratorDir, "go.mod"), `module example.com/orchestrator`)
 
 	originalLookPath := orchestratorLookPath
 	t.Cleanup(func() { orchestratorLookPath = originalLookPath })
 	orchestratorLookPath = func(file string) (string, error) { return "", os.ErrNotExist }
 
 	err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"orchestrator"}, &[]types.TrackedFile{}, types.ConflictStrategyAlign, nil)
-	if err == nil || !strings.Contains(err.Error(), "node executable not found") {
-		t.Fatalf("err = %v, want missing node error", err)
+	if err == nil || !strings.Contains(err.Error(), "go executable not found") {
+		t.Fatalf("err = %v, want missing go error", err)
 	}
 }
 

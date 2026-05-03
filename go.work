@@ -3,4 +3,5 @@ go 1.26.1
 use (
 	./packages/ai-setup-go
 	./packages/diffviewer
+	./packages/orchestrator-go
 )

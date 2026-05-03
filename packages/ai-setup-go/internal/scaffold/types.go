@@ -87,6 +87,12 @@ type ScaffoldContext struct {
 	StoreData *types.StoreData
 	// SurfaceData optionally carries deterministic Scout analysis results.
 	SurfaceData *reversa.SurfaceData
+	// Inferred fields from Scout (populated by buildScaffoldContext when Scout runs).
+	MigrationsPath     string
+	TestPath           string
+	StrictMode        string
+	InstallCommand    string
+	ProtectedBranchGit string // git-detected default branch, used if no wizard override
 	// Optional context overrides for compiled root.
 	PrimaryLanguage     string
 	Framework           string

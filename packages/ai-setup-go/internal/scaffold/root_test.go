@@ -454,6 +454,10 @@ func TestW1ACompiledRootAnsweredProfileHasNoCollectedFallbackMarkers(t *testing.
 		APIConventions:    "JSON envelopes include data or error",
 		ImportOrder:       "External packages, internal aliases, relative imports",
 		ProtectedBranch:   "main",
+		MigrationsPath:    "prisma/migrations",
+		TestPath:          "src/**/*.test.ts",
+		StrictMode:        "TypeScript strict",
+		InstallCommand:    "yarn install",
 		TestCommand:       "yarn test",
 		LintCommand:       "yarn lint",
 		BuildCommand:      "yarn build",
@@ -483,8 +487,12 @@ func TestW1ACompiledRootAnsweredProfileHasNoCollectedFallbackMarkers(t *testing.
 		"- Return typed Result values at service boundaries",
 		"- JSON envelopes include data or error",
 		"- External packages, internal aliases, relative imports",
+		"- Never modify `prisma/migrations` without explicit human approval",
+		"- Never bypass `TypeScript strict`",
 		"- Never push directly to `main`",
+		"- Test location: `src/**/*.test.ts`",
 		"- Minimum coverage: `91`%",
+		"yarn install     # Install dependencies",
 		"| src | [WHAT_IT_DOES] |",
 	} {
 		mustContain(t, content, want)
@@ -540,23 +548,32 @@ func TestW1ACompiledRootSkippedProfilePreservesDocumentedFallbacks(t *testing.T)
 	}
 	content := string(contentBytes)
 	for _, fallback := range []string{
-		"[YOUR_PROJECT_OVERVIEW]",
-		"[YOUR_LANGUAGE]",
-		"[YOUR_FRAMEWORK]",
-		"[YOUR_DATABASE]",
-		"[YOUR_ORM]",
-		"[YOUR_TEST_FRAMEWORK]",
-		"[YOUR_PACKAGE_MANAGER]",
-		"[YOUR_NAMING_CONVENTION]",
-		"[YOUR_ERROR_PATTERN]",
-		"[YOUR_API_CONVENTION]",
-		"[YOUR_IMPORT_ORDER]",
-		"[YOUR_PROTECTED_BRANCH]",
+		"<!-- fill-in: project overview -->",
+		"- Language: <!-- fill-in: language -->",
+		"- Framework: <!-- fill-in: framework -->",
+		"- Database: <!-- fill-in: database -->",
+		"- ORM/Query: <!-- fill-in: ORM or query layer -->",
+		"- Testing: <!-- fill-in: test framework -->",
+		"- Package manager: <!-- fill-in: package manager -->",
+		"<!-- fill-in: naming convention -->",
+		"<!-- fill-in: error handling pattern -->",
+		"<!-- fill-in: API response convention -->",
+		"<!-- fill-in: import order -->",
+		"<!-- fill-in: protected branch -->",
+		"<!-- fill-in: migrations path -->",
+		"<!-- fill-in: strict mode -->",
+		"<!-- fill-in: shared path -->",
+		"<!-- fill-in: test path -->",
+		"<!-- fill-in: install command -->",
+		"<!-- fill-in: lint command -->",
 		"<!-- fill-in: test command -->",
 		"<!-- fill-in: build command -->",
 		"- Minimum coverage: `80`%",
 	} {
 		mustContain(t, content, fallback)
+	}
+	if strings.Contains(content, "[YOUR_") {
+		t.Fatalf("skipped profile should not leave raw [YOUR_*] placeholders in generated AGENTS.md:\n%s", content)
 	}
 	for _, bad := range []string{"null", "undefined"} {
 		if strings.Contains(content, bad) {

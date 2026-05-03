@@ -218,6 +218,9 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		if ctx.Framework != "" {
 			content = strings.ReplaceAll(content, "{{framework}}", ctx.Framework)
 		}
+		// Resolve any fallback [YOUR_*] placeholders emitted by the fragment
+		// resolver after {{VARIABLE}} substitution.
+		content = fillClaudeMdPlaceholders(content, opts)
 
 		// Append workspace repos section if applicable.
 		if workspaceReposSection != "" {
@@ -539,6 +542,11 @@ type ScaffoldCompiledRootOptions struct {
 	ORM                 string
 	TestFramework       string
 	PackageManager      string
+	MigrationsPath      string
+	TestPath            string
+	StrictMode          string
+	InstallCommand      string
+	ProtectedBranchGit  string // git-detected default branch
 	NamingConventions   string
 	ErrorHandling       string
 	APIConventions      string
@@ -573,6 +581,21 @@ func buildRootFragmentContext(opts ScaffoldCompiledRootOptions, features types.F
 		}
 	}
 
+	devCommand, testCommand, buildCommand := commandsForRoot(opts.PrimaryLanguage, opts.PackageManager)
+	if config.TestCommand == "" {
+		config.TestCommand = testCommand
+	}
+	if config.LintCommand == "" {
+		config.LintCommand = lintCommandForRoot(opts.PackageManager, opts.PrimaryLanguage)
+	}
+	if config.BuildCommand == "" {
+		config.BuildCommand = buildCommand
+	}
+	if config.ProtectedBranch == "" {
+		config.ProtectedBranch = opts.ProtectedBranchGit
+	}
+	installCommand := firstRootNonEmpty(opts.InstallCommand, installCommandForPackageManager(opts.PackageManager), fallbackMarker("", "install command"))
+
 	coverageThreshold := config.CoverageThreshold
 	var coverageThresholdPtr *int
 	if coverageThreshold > 0 {
@@ -592,6 +615,8 @@ func buildRootFragmentContext(opts ScaffoldCompiledRootOptions, features types.F
 		TestCommand:         config.TestCommand,
 		LintCommand:         config.LintCommand,
 		BuildCommand:        config.BuildCommand,
+		DevCommand:          devCommand,
+		InstallCommand:      installCommand,
 		ProjectDescription:  opts.ProjectDescription,
 		Features: &compiler.FeatureFlags{
 			ContextEngineering: templateBoolPtr(features.ContextEngineering),
@@ -700,42 +725,61 @@ func isIgnoredTopLevelCodebasePath(path string) bool {
 // Applying this centrally means each tool's root file gets consistent
 // substitutions.
 func fillClaudeMdPlaceholders(content string, opts ScaffoldCompiledRootOptions) string {
-	// Project name — always known; already substituted upstream but kept here
-	// for robustness when this helper runs on its own.
-	if opts.ProjectName != "" {
-		content = strings.ReplaceAll(content, "[YOUR_PROJECT_NAME]", opts.ProjectName)
+	dev, inferredTest, inferredBuild := commandsForRoot(opts.PrimaryLanguage, opts.PackageManager)
+	testCommand := firstRootNonEmpty(opts.TestCommand, inferredTest)
+	buildCommand := firstRootNonEmpty(opts.BuildCommand, inferredBuild)
+	lintCommand := firstRootNonEmpty(opts.LintCommand, lintCommandForRoot(opts.PackageManager, opts.PrimaryLanguage))
+	installCommand := firstRootNonEmpty(opts.InstallCommand, installCommandForPackageManager(opts.PackageManager))
+	protectedBranch := firstRootNonEmpty(opts.ProtectedBranch, opts.ProtectedBranchGit)
+	coverageThreshold := "80"
+	if opts.CoverageThreshold > 0 {
+		coverageThreshold = strconv.Itoa(opts.CoverageThreshold)
 	}
 
-	// Project description — derived from opts or a gentle default.
-	desc := opts.ProjectDescription
-	if desc == "" {
-		desc = "AI-assisted development project"
-	}
-	content = strings.ReplaceAll(content, "[YOUR_PROJECT_DESCRIPTION]", desc)
-
-	// Tech stack — derived from primary language + framework, else fill-in.
-	techStack := "<!-- fill-in: tech stack -->"
+	techStack := ""
 	if opts.PrimaryLanguage != "" {
 		techStack = opts.PrimaryLanguage
 		if opts.Framework != "" {
 			techStack += " · " + opts.Framework
 		}
 	}
-	content = strings.ReplaceAll(content, "[YOUR_TECH_STACK]", techStack)
 
-	// Organization and Team — from wizard/flags, else fill-in.
-	content = strings.ReplaceAll(content, "[YOUR_ORG]",
-		fallbackMarker(opts.Organization, "your org"))
-	content = strings.ReplaceAll(content, "[YOUR_TEAM]",
-		fallbackMarker(opts.Team, "your team"))
+	mechanicalMarkers := map[string]string{
+		"[YOUR_PROJECT_NAME]":        fallbackMarker(opts.ProjectName, "project name"),
+		"[YOUR_PROJECT_DESCRIPTION]": fallbackMarker(opts.ProjectDescription, "project description"),
+		"[YOUR_PROJECT_OVERVIEW]":    fallbackMarker(opts.ProjectOverview, "project overview"),
+		"[YOUR_LANGUAGE]":            fallbackMarker(opts.PrimaryLanguage, "language"),
+		"[YOUR_FRAMEWORK]":           fallbackMarker(opts.Framework, "framework"),
+		"[YOUR_DATABASE]":            fallbackMarker(opts.Database, "database"),
+		"[YOUR_ORM]":                 fallbackMarker(opts.ORM, "ORM or query layer"),
+		"[YOUR_TEST_FRAMEWORK]":      fallbackMarker(opts.TestFramework, "test framework"),
+		"[YOUR_PACKAGE_MANAGER]":     fallbackMarker(opts.PackageManager, "package manager"),
+		"[YOUR_TECH_STACK]":          fallbackMarker(techStack, "tech stack"),
+		"[YOUR_ORG]":                 fallbackMarker(opts.Organization, "your org"),
+		"[YOUR_TEAM]":                fallbackMarker(opts.Team, "your team"),
+		"[YOUR_INSTALL_COMMAND]":     fallbackMarker(installCommand, "install command"),
+		"[YOUR_TEST_COMMAND]":        fallbackMarker(testCommand, "test command"),
+		"[YOUR_LINT_COMMAND]":        fallbackMarker(lintCommand, "lint command"),
+		"[YOUR_DEV_COMMAND]":         fallbackMarker(dev, "dev command"),
+		"[YOUR_BUILD_COMMAND]":       fallbackMarker(buildCommand, "build command"),
+		"[YOUR_COVERAGE_THRESHOLD]":  coverageThreshold,
+		"[YOUR_NAMING_CONVENTION]":   fallbackMarker(opts.NamingConventions, "naming convention"),
+		"[YOUR_NAMING_CONVENTIONS]":  fallbackMarker(opts.NamingConventions, "naming conventions"),
+		"[YOUR_ERROR_PATTERN]":       fallbackMarker(opts.ErrorHandling, "error handling pattern"),
+		"[YOUR_API_CONVENTION]":      fallbackMarker(opts.APIConventions, "API response convention"),
+		"[YOUR_IMPORT_ORDER]":        fallbackMarker(opts.ImportOrder, "import order"),
+		"[YOUR_PROTECTED_BRANCH]":    fallbackMarker(protectedBranch, "protected branch"),
+		"[YOUR_MIGRATIONS_PATH]":     fallbackMarker(opts.MigrationsPath, "migrations path"),
+		"[YOUR_STRICT_MODE]":         fallbackMarker(opts.StrictMode, "strict mode"),
+		"[YOUR_SHARED_PATH]":         fallbackMarker(sharedPathFromCodebaseMap(opts.CodebaseMap), "shared path"),
+		"[YOUR_TEST_PATH]":           fallbackMarker(opts.TestPath, "test path"),
+	}
+	for placeholder, value := range mechanicalMarkers {
+		content = strings.ReplaceAll(content, placeholder, value)
+	}
 
-	// Dev/test/build commands — inferred by primary language.
-	dev, test, build := commandsForLanguage(opts.PrimaryLanguage)
-	content = strings.ReplaceAll(content, "[YOUR_DEV_COMMAND]", dev)
 	content = strings.ReplaceAll(content, "[YOUR_DEV_DESCRIPTION]", "Run the app from source")
-	content = strings.ReplaceAll(content, "[YOUR_TEST_COMMAND]", test)
 	content = strings.ReplaceAll(content, "[YOUR_TEST_DESCRIPTION]", "Run the test suite")
-	content = strings.ReplaceAll(content, "[YOUR_BUILD_COMMAND]", build)
 	content = strings.ReplaceAll(content, "[YOUR_BUILD_DESCRIPTION]", "Build the project")
 
 	// Subjective fields — always fill-in markers.
@@ -759,6 +803,8 @@ func fillClaudeMdPlaceholders(content string, opts ScaffoldCompiledRootOptions) 
 		"[YOUR_RESPONSIBILITY_2]":             "<!-- fill-in: responsibility -->",
 		"[YOUR_PATH_1]":                       "<!-- fill-in: path -->",
 		"[YOUR_PATH_2]":                       "<!-- fill-in: path -->",
+		"[YOUR_PATH_3]":                       "<!-- fill-in: path -->",
+		"[YOUR_INFRA_PATH]":                   "<!-- fill-in: infra path -->",
 	}
 	for placeholder, marker := range subjectiveMarkers {
 		content = strings.ReplaceAll(content, placeholder, marker)
@@ -769,10 +815,98 @@ func fillClaudeMdPlaceholders(content string, opts ScaffoldCompiledRootOptions) 
 
 // fallbackMarker returns value if non-empty, else an HTML-comment fill-in hint.
 func fallbackMarker(value, hint string) string {
-	if value != "" {
-		return value
+	if strings.TrimSpace(value) != "" {
+		return strings.TrimSpace(value)
 	}
 	return "<!-- fill-in: " + hint + " -->"
+}
+
+func firstRootNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func commandsForRoot(lang, pkgManager string) (dev, test, build string) {
+	if isJSLanguage(lang) {
+		switch strings.ToLower(pkgManager) {
+		case "pnpm":
+			return "pnpm dev", "pnpm test", "pnpm build"
+		case "yarn":
+			return "yarn dev", "yarn test", "yarn build"
+		case "npm":
+			return "npm run dev", "npm test", "npm run build"
+		}
+	}
+	return commandsForLanguage(lang)
+}
+
+func installCommandForPackageManager(pkgManager string) string {
+	switch strings.ToLower(pkgManager) {
+	case "pnpm":
+		return "pnpm install"
+	case "yarn":
+		return "yarn install"
+	case "npm":
+		return "npm install"
+	case "go modules":
+		return "go mod tidy"
+	case "cargo":
+		return "cargo build"
+	case "bundler":
+		return "bundle install"
+	case "poetry":
+		return "poetry install"
+	case "pipenv":
+		return "pipenv install"
+	case "composer":
+		return "composer install"
+	}
+	return ""
+}
+
+func lintCommandForRoot(pkgManager, lang string) string {
+	switch strings.ToLower(lang) {
+	case "go":
+		return "go vet ./..."
+	case "python":
+		return "ruff check ."
+	case "rust":
+		return "cargo clippy"
+	case "ruby":
+		return "bundle exec rubocop"
+	}
+	switch strings.ToLower(pkgManager) {
+	case "pnpm":
+		return "pnpm lint"
+	case "yarn":
+		return "yarn lint"
+	case "npm":
+		return "npm run lint"
+	}
+	return ""
+}
+
+func isJSLanguage(lang string) bool {
+	switch strings.ToLower(lang) {
+	case "node", "nodejs", "node.js", "javascript", "typescript":
+		return true
+	}
+	return false
+}
+
+func sharedPathFromCodebaseMap(entries []compiler.CodebaseMapEntry) string {
+	for _, entry := range entries {
+		if strings.Contains(strings.ToLower(entry.Responsibility), "shared utilities") &&
+			strings.TrimSpace(entry.Path) != "" &&
+			!strings.Contains(entry.Path, "fill-in") {
+			return entry.Path
+		}
+	}
+	return ""
 }
 
 // commandsForLanguage returns canonical (dev, test, build) commands per

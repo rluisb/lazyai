@@ -9,6 +9,7 @@ import (
 	"github.com/ricardoborges-teachable/ai-setup/internal/db"
 	"github.com/ricardoborges-teachable/ai-setup/internal/library"
 	"github.com/ricardoborges-teachable/ai-setup/internal/preset"
+	reversa "github.com/ricardoborges-teachable/ai-setup/internal/reversa/scout"
 	"github.com/ricardoborges-teachable/ai-setup/internal/scaffold"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
 	"github.com/ricardoborges-teachable/ai-setup/tui/wizard"
@@ -213,6 +214,22 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 
 	if config.HomeDir == "" {
 		ctx.PlanningRepoPath, _ = os.UserHomeDir()
+	}
+
+	// Run deterministic Scout to populate mechanical placeholders.
+	if config.TargetDir != "" {
+		surface, err := reversa.RunScout(config.TargetDir)
+		if err == nil && surface != nil {
+			// Fill in what Scout detected.
+			if surface.PrimaryLanguage != "" {
+				ctx.PrimaryLanguage = surface.PrimaryLanguage
+			}
+			if len(surface.Frameworks) > 0 {
+				ctx.Framework = surface.Frameworks[0].Name
+			}
+			// Store surface data for downstream use.
+			ctx.SurfaceData = surface
+		}
 	}
 
 	return ctx, nil

@@ -261,6 +261,10 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		if err := files.WriteFile(destPath, []byte(content), 0o644); err != nil {
 			return err
 		}
+		// Signal populate if placeholders remain.
+		if err := writePopulateSignal(opts.TargetDir, content); err != nil {
+			log.Printf("[warn] failed to write populate signal: %v", err)
+		}
 
 		hash, _ := files.FileHash(destPath)
 		relPath, _ := filepath.Rel(opts.TargetDir, destPath)

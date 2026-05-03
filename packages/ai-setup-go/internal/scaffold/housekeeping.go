@@ -42,9 +42,15 @@ func ScaffoldHousekeeping(targetDir string, cfg *types.HousekeepingConfig) error
 			"dataPath":    cfg.CodegraphDataPath,
 			"driftStatus": "unknown",
 		},
+		"graphify": map[string]any{
+			"enabled":     cfg.EnableGraphify,
+			"dataPath":    cfg.GraphifyDataPath,
+			"driftStatus": "unknown",
+		},
 		"staleAcked": map[string]any{
 			"qmd":       []any{},
 			"codegraph": []any{},
+			"graphify":  []any{},
 		},
 		"repairProposals": []any{},
 	}

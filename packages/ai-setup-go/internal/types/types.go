@@ -289,9 +289,11 @@ type SyncState struct {
 	UpdatedAt     string        `json:"updatedAt"`
 	QMD           ToolSyncState `json:"qmd"`
 	Codegraph     ToolSyncState `json:"codegraph"`
+	Graphify      ToolSyncState `json:"graphify"`
 	StaleAcked    struct {
 		QMD       []SyncAcknowledgement `json:"qmd"`
 		Codegraph []SyncAcknowledgement `json:"codegraph"`
+		Graphify  []SyncAcknowledgement `json:"graphify"`
 	} `json:"staleAcked"`
 	RepairProposals []RepairProposal `json:"repairProposals,omitempty"`
 }
@@ -304,6 +306,8 @@ type HousekeepingConfig struct {
 	QmdIndexPath      string `json:"qmdIndexPath,omitempty"`
 	EnableCodegraph   bool   `json:"enableCodegraph,omitempty"`
 	CodegraphDataPath string `json:"codegraphDataPath,omitempty"`
+	EnableGraphify    bool   `json:"enableGraphify,omitempty"`
+	GraphifyDataPath  string `json:"graphifyDataPath,omitempty"`
 }
 
 // PresetLevel defines the preset density level.

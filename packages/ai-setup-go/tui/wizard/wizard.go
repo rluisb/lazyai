@@ -67,6 +67,8 @@ type WizardConfig struct {
 	CLIQmdIndexPath        string
 	CLIEnableCodegraph     bool
 	CLICodegraphDataPath   string
+	CLIEnableGraphify      bool
+	CLIGraphifyDataPath    string
 	CLIExistingSetupPolicy types.SetupPolicy
 	CLIUseReversa          *bool
 

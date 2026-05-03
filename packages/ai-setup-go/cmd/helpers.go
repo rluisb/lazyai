@@ -390,6 +390,8 @@ func housekeepingFromResult(result *wizard.WizardResult) *types.HousekeepingConf
 		QmdIndexPath:      result.Phase5.QmdIndexPath,
 		EnableCodegraph:   result.Phase5.EnableCodegraph,
 		CodegraphDataPath: result.Phase5.CodegraphDataPath,
+		EnableGraphify:    result.Phase5.EnableGraphify,
+		GraphifyDataPath:  result.Phase5.GraphifyDataPath,
 	}
 }
 

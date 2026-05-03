@@ -80,9 +80,19 @@ func TestBuildPhase5Result(t *testing.T) {
 			want: Phase5Result{MemoryPath: "specs/memory", EnableCodegraph: true, CodegraphDataPath: "custom-graph"},
 		},
 		{
-			name: "all enabled applies both default fallbacks",
-			args: Phase5Result{EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, QmdIndexPath: ".qmd-index", EnableCodegraph: true, CodegraphDataPath: ".codegraph"},
+			name: "graphify enabled fills default data path when empty",
+			args: Phase5Result{EnableGraphify: true},
+			want: Phase5Result{MemoryPath: "specs/memory", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
+		},
+		{
+			name: "graphify enabled preserves provided data path",
+			args: Phase5Result{EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
+			want: Phase5Result{MemoryPath: "specs/memory", EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
+		},
+		{
+			name: "all enabled applies default fallbacks",
+			args: Phase5Result{EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true, EnableGraphify: true},
+			want: Phase5Result{MemoryPath: "specs/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, QmdIndexPath: ".qmd-index", EnableCodegraph: true, CodegraphDataPath: ".codegraph", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
 		},
 	}
 
@@ -99,6 +109,8 @@ func TestBuildPhase5Result(t *testing.T) {
 				tt.args.QmdIndexPath,
 				tt.args.EnableCodegraph,
 				tt.args.CodegraphDataPath,
+				tt.args.EnableGraphify,
+				tt.args.GraphifyDataPath,
 				tt.args.OpenCodePlugins,
 			)
 
@@ -113,21 +125,27 @@ func TestPhase5StepInfoTitles(t *testing.T) {
 	t.Parallel()
 
 	allDisabled := Phase5Result{}
-	if got, want := phase5EnableQmdStepInfo(allDisabled).Title(), "Optional Tooling — 3/4: Enable qmd"; got != want {
+	if got, want := phase5EnableQmdStepInfo(allDisabled).Title(), "Optional Tooling — 3/5: Enable qmd"; got != want {
 		t.Fatalf("phase5EnableQmdStepInfo().Title() = %q, want %q", got, want)
 	}
-	if got, want := phase5EnableCodegraphStepInfo(allDisabled).Title(), "Optional Tooling — 4/4: Enable Codegraph"; got != want {
+	if got, want := phase5EnableCodegraphStepInfo(allDisabled).Title(), "Optional Tooling — 4/5: Enable Codegraph"; got != want {
 		t.Fatalf("phase5EnableCodegraphStepInfo().Title() = %q, want %q", got, want)
+	}
+	if got, want := phase5EnableGraphifyStepInfo(allDisabled).Title(), "Optional Tooling — 5/5: Enable Graphify"; got != want {
+		t.Fatalf("phase5EnableGraphifyStepInfo().Title() = %q, want %q", got, want)
 	}
 
 	obsidianOnly := Phase5Result{EnableObsidian: true}
-	if got, want := phase5EnableQmdStepInfo(obsidianOnly).Title(), "Optional Tooling — 4/5: Enable qmd"; got != want {
+	if got, want := phase5EnableQmdStepInfo(obsidianOnly).Title(), "Optional Tooling — 4/6: Enable qmd"; got != want {
 		t.Fatalf("phase5EnableQmdStepInfo().Title() = %q, want %q", got, want)
 	}
 
-	allEnabled := Phase5Result{EnableObsidian: true, EnableQmd: true, EnableCodegraph: true}
-	if got, want := phase5CodegraphDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 7/7: Codegraph Data Path"; got != want {
+	allEnabled := Phase5Result{EnableObsidian: true, EnableQmd: true, EnableCodegraph: true, EnableGraphify: true}
+	if got, want := phase5CodegraphDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 7/9: Codegraph Data Path"; got != want {
 		t.Fatalf("phase5CodegraphDataPathStepInfo().Title() = %q, want %q", got, want)
+	}
+	if got, want := phase5GraphifyDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 9/9: Graphify Data Path"; got != want {
+		t.Fatalf("phase5GraphifyDataPathStepInfo().Title() = %q, want %q", got, want)
 	}
 }
 
@@ -149,5 +167,8 @@ func TestRunPhase5NonInteractiveDefaults(t *testing.T) {
 	}
 	if result.CodegraphDataPath != ".codegraph" {
 		t.Fatalf("CodegraphDataPath = %q, want .codegraph", result.CodegraphDataPath)
+	}
+	if result.GraphifyDataPath != "graphify-out" {
+		t.Fatalf("GraphifyDataPath = %q, want graphify-out", result.GraphifyDataPath)
 	}
 }

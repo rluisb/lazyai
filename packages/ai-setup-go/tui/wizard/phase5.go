@@ -25,6 +25,8 @@ type Phase5Result struct {
 	QmdIndexPath      string
 	EnableCodegraph   bool
 	CodegraphDataPath string
+	EnableGraphify    bool
+	GraphifyDataPath  string
 	OpenCodePlugins   []string
 }
 
@@ -52,6 +54,8 @@ func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction
 		result.QmdIndexPath,
 		result.EnableCodegraph,
 		result.CodegraphDataPath,
+		result.EnableGraphify,
+		result.GraphifyDataPath,
 		result.OpenCodePlugins,
 	), PhaseContinue, nil
 }
@@ -66,9 +70,9 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 	showPlugins := opencodeSelected && opencodeBinaryPresent()
 
 	currentStep := 1
-	maxStep := 7
+	maxStep := 9
 	if showPlugins {
-		maxStep = 8
+		maxStep = 10
 	}
 	for currentStep >= 1 && currentStep <= maxStep {
 		switch currentStep {
@@ -134,6 +138,24 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 			state.CodegraphDataPath = codegraphDataPath
 			currentStep++
 		case 8:
+			enableGraphify, action, err := askEnableGraphify(state.EnableGraphify, phase5EnableGraphifyStepInfo(state))
+			if err != nil {
+				return nil, action, err
+			}
+			state.EnableGraphify = enableGraphify
+			if !state.EnableGraphify {
+				currentStep = 10
+				continue
+			}
+			currentStep++
+		case 9:
+			graphifyDataPath, action, err := askGraphifyDataPath(state.GraphifyDataPath, phase5GraphifyDataPathStepInfo(state, showPlugins))
+			if err != nil {
+				return nil, action, err
+			}
+			state.GraphifyDataPath = graphifyDataPath
+			currentStep++
+		case 10:
 			plugins, action, err := askOpenCodePlugins(state.OpenCodePlugins, phase5OpenCodePluginsStepInfo(state, showPlugins))
 			if err != nil {
 				return nil, action, err
@@ -155,11 +177,13 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 		state.QmdIndexPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
+		state.EnableGraphify,
+		state.GraphifyDataPath,
 		state.OpenCodePlugins,
 	), PhaseContinue, nil
 }
 
-func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, opencodePlugins []string) *Phase5Result {
+func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, enableGraphify bool, graphifyDataPath string, opencodePlugins []string) *Phase5Result {
 	if memoryPath == "" {
 		memoryPath = "specs/memory"
 	}
@@ -168,6 +192,9 @@ func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath
 	}
 	if enableCodegraph && codegraphDataPath == "" {
 		codegraphDataPath = ".codegraph"
+	}
+	if enableGraphify && graphifyDataPath == "" {
+		graphifyDataPath = "graphify-out"
 	}
 
 	return &Phase5Result{
@@ -178,6 +205,8 @@ func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath
 		QmdIndexPath:      qmdIndexPath,
 		EnableCodegraph:   enableCodegraph,
 		CodegraphDataPath: codegraphDataPath,
+		EnableGraphify:    enableGraphify,
+		GraphifyDataPath:  graphifyDataPath,
 		OpenCodePlugins:   opencodePlugins,
 	}
 }
@@ -187,6 +216,7 @@ func defaultPhase5Result() Phase5Result {
 		MemoryPath:        "specs/memory",
 		QmdIndexPath:      ".qmd-index",
 		CodegraphDataPath: ".codegraph",
+		GraphifyDataPath:  "graphify-out",
 	}
 }
 
@@ -281,6 +311,32 @@ func askCodegraphDataPath(defaultValue string, info phase5StepInfo) (string, Pha
 	return dataPath, PhaseContinue, nil
 }
 
+func askEnableGraphify(defaultValue bool, info phase5StepInfo) (bool, PhaseAction, error) {
+	enabled := defaultValue
+	group := huh.NewGroup(
+		huh.NewConfirm().Title(info.Title()).Description("Read-only graph inspection allowed; graph rebuilds remain approval-gated.").Value(&enabled),
+	)
+
+	if err := huh.NewForm(group).Run(); err != nil {
+		return false, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
+	}
+
+	return enabled, PhaseContinue, nil
+}
+
+func askGraphifyDataPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
+	dataPath := defaultValue
+	group := huh.NewGroup(
+		huh.NewInput().Title(info.Title()).Placeholder("graphify-out").Value(&dataPath),
+	)
+
+	if err := huh.NewForm(group).Run(); err != nil {
+		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
+	}
+
+	return dataPath, PhaseContinue, nil
+}
+
 func phase5MemoryPathStepInfo(state Phase5Result) phase5StepInfo {
 	return phase5StepInfo{Current: 1, Total: phase5TotalSteps(state), StepTitle: "Memory Path"}
 }
@@ -309,6 +365,14 @@ func phase5CodegraphDataPathStepInfo(state Phase5Result, showPlugins bool) phase
 	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state, showPlugins), StepTitle: "Codegraph Data Path"}
 }
 
+func phase5EnableGraphifyStepInfo(state Phase5Result) phase5StepInfo {
+	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph), Total: phase5TotalSteps(state), StepTitle: "Enable Graphify"}
+}
+
+func phase5GraphifyDataPathStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
+	return phase5StepInfo{Current: 6 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph), Total: phase5TotalSteps(state, showPlugins), StepTitle: "Graphify Data Path"}
+}
+
 func phase5OpenCodePluginsStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
 	return phase5StepInfo{Current: phase5TotalSteps(state, showPlugins), Total: phase5TotalSteps(state, showPlugins), StepTitle: "OpenCode Plugins"}
 }
@@ -318,7 +382,7 @@ func phase5TotalSteps(state Phase5Result, showPlugins ...bool) int {
 	if len(showPlugins) > 0 && showPlugins[0] {
 		extra = 1
 	}
-	return 4 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph) + extra
+	return 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph) + boolToInt(state.EnableGraphify) + extra
 }
 
 func opencodeBinaryPresent() bool {

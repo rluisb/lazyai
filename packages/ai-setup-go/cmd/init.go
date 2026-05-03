@@ -58,6 +58,8 @@ func init() {
 	initCmd.Flags().String("qmd-index-path", "", "Project-local qmd index path")
 	initCmd.Flags().Bool("enable-codegraph", false, "Enable codegraph analysis")
 	initCmd.Flags().String("codegraph-data-path", "", "Project-local codegraph data path")
+	initCmd.Flags().Bool("enable-graphify", false, "Enable graphify knowledge graph analysis")
+	initCmd.Flags().String("graphify-data-path", "", "Project-local graphify data path")
 	initCmd.Flags().Bool("reversa", false, "Analyze existing code with Scout/Reversa to auto-populate project details")
 	initCmd.Flags().Bool("no-reversa", false, "Skip Scout/Reversa analysis and leave project details explicit/manual")
 	rootCmd.AddCommand(initCmd)
@@ -79,6 +81,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	qmdIndexPath, _ := cmd.Flags().GetString("qmd-index-path")
 	enableCodegraph, _ := cmd.Flags().GetBool("enable-codegraph")
 	codegraphDataPath, _ := cmd.Flags().GetString("codegraph-data-path")
+	enableGraphify, _ := cmd.Flags().GetBool("enable-graphify")
+	graphifyDataPath, _ := cmd.Flags().GetString("graphify-data-path")
 	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -156,6 +160,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLIQmdIndexPath:        qmdIndexPath,
 		CLIEnableCodegraph:     enableCodegraph,
 		CLICodegraphDataPath:   codegraphDataPath,
+		CLIEnableGraphify:      enableGraphify,
+		CLIGraphifyDataPath:    graphifyDataPath,
 		CLIExistingSetupPolicy: existingSetupPolicy,
 		CLIUseReversa:          useReversa,
 	}
@@ -377,6 +383,8 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 			QmdIndexPath:      config.CLIQmdIndexPath,
 			EnableCodegraph:   config.CLIEnableCodegraph,
 			CodegraphDataPath: config.CLICodegraphDataPath,
+			EnableGraphify:    config.CLIEnableGraphify,
+			GraphifyDataPath:  config.CLIGraphifyDataPath,
 		},
 	}
 

@@ -53,6 +53,8 @@ type WizardState struct {
 	QmdIndexPath      string
 	EnableCodegraph   bool
 	CodegraphDataPath string
+	EnableGraphify    bool
+	GraphifyDataPath  string
 	OpenCodePlugins   []string
 }
 
@@ -156,6 +158,7 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.MemoryPath = "specs/memory"
 	s.QmdIndexPath = ".qmd-index"
 	s.CodegraphDataPath = ".codegraph"
+	s.GraphifyDataPath = "graphify-out"
 
 	if defaults != nil && defaults.Phase5 != nil {
 		if defaults.Phase5.MemoryPath != "" {
@@ -172,6 +175,10 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		s.EnableCodegraph = defaults.Phase5.EnableCodegraph
 		if defaults.Phase5.CodegraphDataPath != "" {
 			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
+		}
+		s.EnableGraphify = defaults.Phase5.EnableGraphify
+		if defaults.Phase5.GraphifyDataPath != "" {
+			s.GraphifyDataPath = defaults.Phase5.GraphifyDataPath
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
@@ -426,6 +433,18 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Value(&state.CodegraphDataPath),
 		).WithHideFunc(func() bool { return !state.EnableCodegraph }),
 		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Enable Graphify").
+				Description("Read-only graph inspection allowed; graph rebuilds remain approval-gated.").
+				Value(&state.EnableGraphify),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Graphify Data Path").
+				Placeholder("graphify-out").
+				Value(&state.GraphifyDataPath),
+		).WithHideFunc(func() bool { return !state.EnableGraphify }),
+		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Plugins").
 				Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
@@ -502,6 +521,8 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		state.QmdIndexPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
+		state.EnableGraphify,
+		state.GraphifyDataPath,
 		state.OpenCodePlugins,
 	)
 

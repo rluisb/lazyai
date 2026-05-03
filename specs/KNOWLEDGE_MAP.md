@@ -23,6 +23,12 @@
 | 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
 | 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
 
+## Standards
+
+| Document | Path | Status | Description |
+|----------|------|--------|-------------|
+| Reversa Confidence Scale | `specs/standards/confidence-scale.md` | Active | 🟢🟡🔴 confidence scale for `/populate` and AI-inferred content — meaning, evidence rules, write behavior, and human-escalation criteria |
+
 ## Key Architecture Decisions
 
 | Decision | ADR | Rationale |

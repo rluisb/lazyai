@@ -37,6 +37,9 @@ theme:
 
 plugins:
   - search
+  - gen-files:
+      scripts:
+        - docs/.build/generate_llm_txt.py
 
 exclude_docs: |
   AI-Agentic-Setup-Implementation-Plan.md
@@ -52,6 +55,7 @@ exclude_docs: |
   prompts/**
   rules/**
   templates/**
+  .build/**
 
 extra:
   social:

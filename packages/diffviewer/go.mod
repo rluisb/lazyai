@@ -1,4 +1,4 @@
-module github.com/ricardoborges-teachable/ai-setup/packages/diffviewer
+module github.com/rluisb/lazyai/packages/diffviewer
 
 go 1.26.1
 

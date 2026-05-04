@@ -1,6 +1,6 @@
 # Scopes
 
-`ai-setup` supports three setup scopes. Choose the one that matches how you work.
+`lazyai-cli` supports three setup scopes. Choose the one that matches how you work.
 
 ## Overview
 
@@ -23,7 +23,7 @@
 **Example command:**
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
   --name my-app \
@@ -54,7 +54,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 **Example command:**
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope global \
   --tools opencode,claude-code \
   --name global \
@@ -84,7 +84,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 **Example command:**
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope workspace \
   --planning-repo ./planning-repo \
   --repos ../api,../web,../worker \

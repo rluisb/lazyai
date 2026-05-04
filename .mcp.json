@@ -25,7 +25,7 @@
       "args": ["mcp"]
     },
     "orchestrator": {
-      "command": "ai-setup-orchestrator",
+      "command": "lazyai-orchestrator",
       "args": ["connect"]
     }
   }

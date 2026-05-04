@@ -23,6 +23,7 @@
 | 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
 | 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
 | 019 | Orchestrator Go runtime + ai-setup integration — Go binary `ai-setup-orchestrator` replaces `npx -y @ai-setup/orchestrator`; release assets/download/cache support implemented; A2A deferred/opt-in | ✅ Complete | `feature/orchestrator-a2a-rewrite` |
+| 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
 
 ## Standards
 
@@ -48,35 +49,35 @@
 
 | Package | Purpose |
 |---------|---------|
-| `internal/adapter/scope.go` | `ResolveToolRoot`, `ResolveCodexRoots`, `IsScopeSupported`, `ErrScopeUnsupported` |
-| `internal/adapter/mcp_compiler.go` | `CompileMCPForTool`, per-tool compile functions (scope-aware via `CompileContext`) |
-| `internal/configmerge/` | `MergeJSONFile`, `MergeTOMLFile` — deep-merge with `.bak` |
-| `internal/globalpaths/` | Home-dir roots for all tools; `ResolveCodexSkillsGlobalDir` |
-| `internal/scaffold/root.go` | Single emitter for memory docs (`memoryDocDestPath`) |
+| `packages/cli/internal/adapter/scope.go` | `ResolveToolRoot`, `ResolveCodexRoots`, `IsScopeSupported`, `ErrScopeUnsupported` |
+| `packages/cli/internal/adapter/mcp_compiler.go` | `CompileMCPForTool`, per-tool compile functions (scope-aware via `CompileContext`) |
+| `packages/cli/internal/configmerge/` | `MergeJSONFile`, `MergeTOMLFile` — deep-merge with `.bak` |
+| `packages/cli/internal/globalpaths/` | Home-dir roots for all tools; `ResolveCodexSkillsGlobalDir` |
+| `packages/cli/internal/scaffold/root.go` | Single emitter for memory docs (`memoryDocDestPath`) |
 | `library/commands/*.toml` | Gemini custom slash command templates |
 | `library/chatmodes/*.chatmode.md` | Copilot chat mode templates |
-| `internal/scaffold/root.go#fillClaudeMdPlaceholders` | Hybrid template-placeholder substitution (mechanical auto-infer + subjective fill-in markers) |
-| `internal/adapter/opencode_frontmatter.go` | `BuildOpenCodeAgentFrontmatter` — emits opencode-schema YAML frontmatter, drops incompatible source fields |
-| `internal/adapter/opencode_validate.go` | `ValidateOpenCodeInstall` — post-install opencode debug checks via injectable `CmdRunner` |
+| `packages/cli/internal/scaffold/root.go#fillClaudeMdPlaceholders` | Hybrid template-placeholder substitution (mechanical auto-infer + subjective fill-in markers) |
+| `packages/cli/internal/adapter/opencode_frontmatter.go` | `BuildOpenCodeAgentFrontmatter` — emits opencode-schema YAML frontmatter, drops incompatible source fields |
+| `packages/cli/internal/adapter/opencode_validate.go` | `ValidateOpenCodeInstall` — post-install opencode debug checks via injectable `CmdRunner` |
 | `library/opencode/commands/` | OpenCode slash command templates (review, test, commit) |
 | `library/opencode/modes/` | OpenCode chat mode templates (plan, audit) |
 | `library/opencode/plugins.json` | Curated list of installable plugin module names |
-| `internal/adapter/claude_cli.go` | `ClaudeCLIRunner` interface, `LookupClaudeBinary()` — testable substrate for `claude` CLI invocations (spec 012) |
-| `internal/adapter/copilot_cli.go` | `CopilotCLIRunner` interface, `LookupCopilotBinary()`, `CopilotHomePresent()` — Copilot probe helpers (spec 013) |
-| `internal/adapter/mcp_compiler.go#toCopilotServerEntries` | Shared per-server translation for Copilot; callers `toCopilotVSCodeMcp` (uses `servers`) and `toCopilotCLIMcp` (uses `mcpServers`) split the two schema surfaces (spec 014) |
-| `internal/adapter/mcp_compiler.go#compileCopilotCLIMcp` | Deep-merge emitter for `~/.copilot/mcp-config.json`; runs at every scope when probe passes (spec 014) |
-| `internal/adapter/mcp_compiler.go#writeClaudeSettingsLocal` | Deep-merge emitter for `.claude/settings.local.json` when `--local-secrets` flag is set (spec 015) |
-| `internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
-| `internal/plugin/plugin.go#Build` | Generates a Claude Code plugin directory from the library FS: manifest, agents (forbidden-field stripping), skills (flat → `<name>/SKILL.md`), commands, output styles (spec 016) |
-| `cmd/build_plugin.go` | `ai-setup build-plugin --out <path> [--force]` cobra subcommand (spec 016) |
-| `cmd/build_helpers.go#preflightOutDir` | Shared out-dir preflight logic reused by `build-plugin` and `build-gemini-extension` (spec 017) |
-| `internal/library/embed.go#ResolveGeminiCommandsSubdir` | Resolves preferred `gemini/commands` with fallback to legacy top-level `commands/` for one release (spec 017) |
-| `internal/geminiext/geminiext.go#Build` | Generates a Gemini CLI extension directory: `gemini-extension.json`, raw `GEMINI.md`, commands (with namespacing), static-only `mcpServers` (spec 017) |
-| `cmd/build_gemini_extension.go` | `ai-setup build-gemini-extension --out <path> [--force]` cobra subcommand (spec 017) |
-| `internal/library/embed.go#CodexAssetsDir` | Per-tool dir helper for `library/codex/`; `CodexAgentsOverrideTemplate` constant points to the starter template (spec 018) |
-| `internal/adapter/codex.go#writeCodexAgentsOverride` | Copies `library/codex/AGENTS.override.template.md` into the config root on first install; never overwrites user-authored content (spec 018) |
-| `internal/adapter/codex.go#displayCodexInstallSummary` | Post-install summary via `codex mcp list --json` with plaintext fallback; matches the Claude Code summary pattern from spec 012 (spec 018) |
-| `internal/adapter/codex.go#codexExecValidationArgs` | Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix) |
+| `packages/cli/internal/adapter/claude_cli.go` | `ClaudeCLIRunner` interface, `LookupClaudeBinary()` — testable substrate for `claude` CLI invocations (spec 012) |
+| `packages/cli/internal/adapter/copilot_cli.go` | `CopilotCLIRunner` interface, `LookupCopilotBinary()`, `CopilotHomePresent()` — Copilot probe helpers (spec 013) |
+| `packages/cli/internal/adapter/mcp_compiler.go#toCopilotServerEntries` | Shared per-server translation for Copilot; callers `toCopilotVSCodeMcp` (uses `servers`) and `toCopilotCLIMcp` (uses `mcpServers`) split the two schema surfaces (spec 014) |
+| `packages/cli/internal/adapter/mcp_compiler.go#compileCopilotCLIMcp` | Deep-merge emitter for `~/.copilot/mcp-config.json`; runs at every scope when probe passes (spec 014) |
+| `packages/cli/internal/adapter/mcp_compiler.go#writeClaudeSettingsLocal` | Deep-merge emitter for `.claude/settings.local.json` when `--local-secrets` flag is set (spec 015) |
+| `packages/cli/internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
+| `packages/cli/internal/plugin/plugin.go#Build` | Generates a Claude Code plugin directory from the library FS: manifest, agents (forbidden-field stripping), skills (flat → `<name>/SKILL.md`), commands, output styles (spec 016) |
+| `packages/cli/cmd/build_plugin.go` | `lazyai-cli build-plugin --out <path> [--force]` cobra subcommand (spec 016) |
+| `packages/cli/cmd/build_helpers.go#preflightOutDir` | Shared out-dir preflight logic reused by `build-plugin` and `build-gemini-extension` (spec 017) |
+| `packages/cli/internal/library/embed.go#ResolveGeminiCommandsSubdir` | Resolves preferred `gemini/commands` with fallback to legacy top-level `commands/` for one release (spec 017) |
+| `packages/cli/internal/geminiext/geminiext.go#Build` | Generates a Gemini CLI extension directory: `gemini-extension.json`, raw `GEMINI.md`, commands (with namespacing), static-only `mcpServers` (spec 017) |
+| `packages/cli/cmd/build_gemini_extension.go` | `lazyai-cli build-gemini-extension --out <path> [--force]` cobra subcommand (spec 017) |
+| `packages/cli/internal/library/embed.go#CodexAssetsDir` | Per-tool dir helper for `library/codex/`; `CodexAgentsOverrideTemplate` constant points to the starter template (spec 018) |
+| `packages/cli/internal/adapter/codex.go#writeCodexAgentsOverride` | Copies `library/codex/AGENTS.override.template.md` into the config root on first install; never overwrites user-authored content (spec 018) |
+| `packages/cli/internal/adapter/codex.go#displayCodexInstallSummary` | Post-install summary via `codex mcp list --json` with plaintext fallback; matches the Claude Code summary pattern from spec 012 (spec 018) |
+| `packages/cli/internal/adapter/codex.go#codexExecValidationArgs` | Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 

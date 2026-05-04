@@ -1,16 +1,16 @@
-# ai-setup
+# LazyAI
 
 Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
 
-`ai-setup` initializes and maintains a **tool-agnostic canonical layer** under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and optional MCP servers so teams can adopt a consistent AI operating system with minimal configuration.
+`lazyai-cli` initializes and maintains a **tool-agnostic canonical layer** under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and optional MCP servers so teams can adopt a consistent AI operating system with minimal configuration.
 
 ## What it does
 
-- **One-time setup**: `ai-setup init` scaffolds canonical files, tool-native directories, and an MCP catalog.
-- **Compile**: `ai-setup compile` regenerates per-tool configs from the canonical source of truth.
-- **Update**: `ai-setup update` refreshes library content while preserving customizations.
-- **Doctor**: `ai-setup doctor` checks drift, missing files, and skill state.
-- **Orchestration** (opt-in): `ai-setup init --enable-servers orchestrator` scaffolds chain/team/workflow definitions and registers the local orchestrator MCP runtime.
+- **One-time setup**: `lazyai-cli init` scaffolds canonical files, tool-native directories, and an MCP catalog.
+- **Compile**: `lazyai-cli compile` regenerates per-tool configs from the canonical source of truth.
+- **Update**: `lazyai-cli update` refreshes library content while preserving customizations.
+- **Doctor**: `lazyai-cli doctor` checks drift, missing files, and skill state.
+- **Orchestration** (opt-in): `lazyai-cli init --enable-servers orchestrator` scaffolds chain/team/workflow definitions and registers the local orchestrator MCP runtime.
 
 ## Where to start
 
@@ -22,13 +22,13 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
 ## Architecture at a glance
 
 ```text
-ai-setup CLI (Go binary + npm bootstrap)
+lazyai-cli (Go binary)
    │ init ──▶ .ai/ (canonical)
    │ compile ──▶ .opencode/ + .claude/ + .github/ + .vscode/
    │ doctor ──▶ .ai-setup.json / .ai-setup.db (manifest + SQLite)
    │
    └── optional orchestrator MCP server
-        └── ai-setup-orchestrator (Go runtime)
+         └── lazyai-orchestrator (Go runtime)
              └── catalog, state, handoffs, prompt composition
 ```
 
@@ -36,6 +36,6 @@ The execution path uses **local native agents** (Claude Code, OpenCode, Copilot)
 
 ## Status
 
-- CLI: v0.3.x (Go binary with npm bootstrap)
+- CLI: Go module at `github.com/rluisb/lazyai/packages/cli`
 - Platforms: macOS, Linux
 - License: MIT

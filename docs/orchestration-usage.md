@@ -1,16 +1,16 @@
 # Orchestration Usage
 
-This guide describes the **currently shipped** orchestration experience in `ai-setup`.
+This guide describes the **currently shipped** orchestration experience in LazyAI.
 
-It is intentionally scoped to what exists in Phases 1–4 today:
+It is intentionally scoped to what exists today:
 
-- opt-in enablement through `ai-setup init`
+- opt-in enablement through `lazyai-cli init`
 - project-local orchestration definitions under `.ai/orchestration/`
 - CLI support for `create`, `list`, `info`, and `orchestration ...`
-- MCP server registration for the `@ai-setup/orchestrator` package
+- MCP server registration for the `lazyai-orchestrator` Go binary
 - tool-specific orchestrator guidance files for supported adapters
 
-It does **not** describe speculative future UX or a separate `ai-setup` runtime runner command, because `ai-setup` is the scaffolding/configuration layer, not the orchestration runner itself.
+It does **not** describe speculative future UX or a separate `lazyai-cli` runtime runner command, because `lazyai-cli` is the scaffolding/configuration layer, not the orchestration runner itself.
 
 ---
 
@@ -18,16 +18,16 @@ It does **not** describe speculative future UX or a separate `ai-setup` runtime 
 
 Think of orchestration in this repo as three layers:
 
-1. **`ai-setup` CLI**
+1. **`lazyai-cli` CLI**
    - scaffolds definitions
    - copies the built-in orchestration library into your project
    - registers the optional MCP server
    - generates tool-specific orchestrator guidance
 2. **`.ai/orchestration/`**
    - your editable project-local source of truth for chains, teams, workflows, domains, and modes
-3. **`ai-setup-orchestrator` runtime**
+3. **`lazyai-orchestrator` runtime**
    - the Go binary that implements catalog loading, composition, state handling, persistence, and MCP tool handlers
-   - built from `packages/orchestrator-go/`
+   - built from `packages/orchestrator/`
    - invoked via `connect` so multiple MCP clients share a single daemon process
 
 That means the adoption path is:
@@ -38,12 +38,12 @@ That means the adoption path is:
 
 ---
 
-## Enable orchestration in `ai-setup`
+## Enable orchestration in `lazyai-cli`
 
 ### Non-interactive setup
 
 ```bash
-ai-setup init \
+lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
   --enable-servers orchestrator \
@@ -57,7 +57,7 @@ ai-setup init \
 Run:
 
 ```bash
-ai-setup init
+lazyai-cli init
 ```
 
 Then, when the wizard asks which optional MCP integrations to enable, include:
@@ -70,7 +70,7 @@ orchestrator
 
 ## What files are created
 
-When `orchestrator` is enabled, `ai-setup` copies the orchestration library into:
+When `orchestrator` is enabled, `lazyai-cli` copies the orchestration library into:
 
 ```text
 .ai/orchestration/
@@ -115,9 +115,9 @@ Project-local files with the same name override the built-in library entries for
 You can generate new orchestration definitions with the normal `create` command:
 
 ```bash
-ai-setup create domain payments --description "Payments domain constraints" --no-interactive
-ai-setup create mode strict-review --description "High-friction approval mode" --no-interactive
-ai-setup create workflow payments-review --chain feature --team review-team --no-interactive
+lazyai-cli create domain payments --description "Payments domain constraints" --no-interactive
+lazyai-cli create mode strict-review --description "High-friction approval mode" --no-interactive
+lazyai-cli create workflow payments-review --chain feature --team review-team --no-interactive
 ```
 
 Generated file locations:
@@ -131,12 +131,12 @@ Generated file locations:
 You can list orchestration categories directly:
 
 ```bash
-ai-setup list workflows
-ai-setup list chains
-ai-setup list teams
-ai-setup list domains
-ai-setup list modes
-ai-setup list orchestration --json
+lazyai-cli list workflows
+lazyai-cli list chains
+lazyai-cli list teams
+lazyai-cli list domains
+lazyai-cli list modes
+lazyai-cli list orchestration --json
 ```
 
 `list orchestration` is the aggregate view. It returns all orchestration categories together.
@@ -146,10 +146,10 @@ ai-setup list orchestration --json
 Use `info` with a workflow, chain, team, domain, or mode name:
 
 ```bash
-ai-setup info feature
-ai-setup info review-team
-ai-setup info backend --json
-ai-setup info rpi
+lazyai-cli info feature
+lazyai-cli info review-team
+lazyai-cli info backend --json
+lazyai-cli info rpi
 ```
 
 ### Use the orchestration namespace
@@ -157,13 +157,13 @@ ai-setup info rpi
 The focused namespace is useful if you want orchestration-only commands:
 
 ```bash
-ai-setup orchestration list workflows --json
-ai-setup orchestration create domain payments --description "Payments domain" --no-interactive
-ai-setup orchestration create workflow payments-review --chain feature --team review-team --no-interactive
-ai-setup orchestration status --json
+lazyai-cli orchestration list workflows --json
+lazyai-cli orchestration create domain payments --description "Payments domain" --no-interactive
+lazyai-cli orchestration create workflow payments-review --chain feature --team review-team --no-interactive
+lazyai-cli orchestration status --json
 ```
 
-`ai-setup orchestration status` reports whether orchestration has been scaffolded plus project/library counts for workflows, chains, teams, domains, and modes.
+`lazyai-cli orchestration status` reports whether orchestration has been scaffolded plus project/library counts for workflows, chains, teams, domains, and modes.
 
 ---
 
@@ -175,18 +175,18 @@ When you enable:
 --enable-servers orchestrator
 ```
 
-`ai-setup` adds the optional orchestrator server entry to the canonical MCP catalog in `.ai/mcp.json` and compiles it into supported tool-specific MCP config output.
+`lazyai-cli` adds the optional orchestrator server entry to the canonical MCP catalog in `.ai/mcp.json` and compiles it into supported tool-specific MCP config output.
 
 At a high level, the configured server runs the managed Go binary:
 
 ```bash
-ai-setup-orchestrator
+lazyai-orchestrator connect
 ```
 
 The runtime source lives in:
 
 ```text
-packages/orchestrator-go/
+packages/orchestrator/
 ```
 
 That package is where the repo keeps the orchestration runtime logic, including:
@@ -199,21 +199,21 @@ That package is where the repo keeps the orchestration runtime logic, including:
 
 Important boundary:
 
-- **`ai-setup`** scaffolds definitions and config
-- **`ai-setup-orchestrator`** owns runtime behavior
+- **`lazyai-cli`** scaffolds definitions and config
+- **`lazyai-orchestrator`** owns runtime behavior
 - **your host CLI tool** is what actually calls the MCP tools during a session
 
 > **A2A protocol:** Agent-to-Agent (A2A) orchestration is optional and currently deferred. The default execution model uses the native host CLI (e.g., Claude Code, OpenCode) directly. A2A can be enabled opt-in when it becomes available.
 
-> **Packaging caveat:** Released installs can download, verify, and cache the matching prebuilt `ai-setup-orchestrator` binary when local source and a PATH binary are unavailable. Local-source managed setups still build from `packages/orchestrator-go/` and require `go` to be installed.
+> **Packaging caveat:** Released installs can use the matching `lazyai-orchestrator` binary from the Go install path or release assets. Local-source managed setups build from `packages/orchestrator/` and require `go` to be installed.
 
-So there is no separate `ai-setup` command that “runs a workflow” end-to-end. The MCP server is the runtime boundary.
+So there is no separate `lazyai-cli` command that “runs a workflow” end-to-end. The MCP server is the runtime boundary.
 
 ---
 
 ## Supported tool integration notes
 
-When orchestration is enabled, `ai-setup` generates additional user-facing guidance files:
+When orchestration is enabled, `lazyai-cli` generates additional user-facing guidance files:
 
 | Tool | Generated orchestration guidance |
 |---|---|
@@ -234,7 +234,7 @@ Notes:
 
 No matter which CLI tool you use, the practical flow is the same:
 
-1. Run `ai-setup init --enable-servers orchestrator`
+1. Run `lazyai-cli init --enable-servers orchestrator`
 2. Open the project root in your coding-agent CLI so it can see the generated MCP config and orchestration guidance files
 3. Ask the tool to use the orchestrator for a specific task
 4. Let the host tool do the execution while the orchestrator MCP server tracks chain/team/workflow state
@@ -248,7 +248,7 @@ Example prompts that should work conceptually across tools:
 
 ### Claude Code
 
-**What ai-setup generates**
+**What lazyai-cli generates**
 - MCP config: `.mcp.json`
 - Orchestrator guidance: `.claude/agents/orchestrator.md`
 
@@ -269,7 +269,7 @@ Use the orchestrator agent and start the feature chain for the payments refactor
 
 ### OpenCode
 
-**What ai-setup generates**
+**What lazyai-cli generates**
 - MCP config: `.opencode/opencode.jsonc`
 - Orchestrator guidance: `.opencode/agents/orchestrator.md`
 
@@ -288,7 +288,7 @@ Use the orchestrator to start the bugfix chain for the login failure.
 
 ### GitHub Copilot
 
-**What ai-setup generates**
+**What lazyai-cli generates**
 - MCP config: `.vscode/mcp.json`
 - Orchestrator guidance: `.github/prompts/orchestrator.prompt.md`
 

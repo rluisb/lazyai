@@ -1,6 +1,6 @@
 # CLI Overview
 
-`ai-setup` is a single binary with subcommands grouped by purpose:
+`lazyai-cli` is a single binary with subcommands grouped by purpose:
 
 - **Lifecycle**: `init`, `compile`, `update`, `doctor`, `status`
 - **Scaffolding**: `create`, `add`, `import`, `migrate`, `eject`
@@ -15,33 +15,33 @@ All commands support `--verbose` / `-v`.
 ### First-time setup
 
 ```bash
-ai-setup init
-ai-setup status
-ai-setup doctor
+lazyai-cli init
+lazyai-cli status
+lazyai-cli doctor
 ```
 
 ### Add a new tool to an existing setup
 
 ```bash
-ai-setup add claude-code
-ai-setup compile
+lazyai-cli add claude-code
+lazyai-cli compile
 ```
 
 ### Refresh after upgrading the binary
 
 ```bash
-ai-setup update-self
-ai-setup update --check
-ai-setup update
-ai-setup doctor
+lazyai-cli update-self
+lazyai-cli update --check
+lazyai-cli update
+lazyai-cli doctor
 ```
 
 ### Check drift and health
 
 ```bash
-ai-setup doctor
-ai-setup doctor --skills-check
-ai-setup doctor --migration-check
+lazyai-cli doctor
+lazyai-cli doctor --skills-check
+lazyai-cli doctor --migration-check
 ```
 
 ## Global flags
@@ -56,7 +56,7 @@ ai-setup doctor --migration-check
 
 ## TOML defaults
 
-You can set CLI defaults in `.ai-setup.toml` (project) or `~/.config/ai-setup/config.toml` (global):
+You can set CLI defaults in `.ai-setup.toml` (project) or `~/.config/lazyai/config.toml` (global):
 
 ```toml
 default_scope = "project"

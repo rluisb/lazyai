@@ -2,79 +2,82 @@
 
 ## Prerequisites
 
-- **Node.js** `>=20.12.0`
-- **Go 1.26+** (only if building the binary from source)
-- **pnpm** `>=9.0.0` (for monorepo development)
+- **Go 1.26+**
+- `$(go env GOPATH)/bin` on your `PATH` so installed binaries are discoverable
 
-## Option 1: Run from GitHub with `npx` (recommended)
+## Install released commands
 
-The shortest install path uses the GitHub shortcut form:
+Install the CLI:
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
-This downloads the latest version automatically on each invocation. No local install needed.
-
-If you prefer the explicit package identity:
+Install the optional orchestrator MCP runtime:
 
 ```bash
-npx @ricardoborges-teachable/ai-setup@github:ricardoborges-teachable/ai-setup init
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 ```
 
-## Option 2: Clone + link for development
-
-If you are working on `ai-setup` itself:
+Install the diff viewer utility:
 
 ```bash
-git clone git@github.com:ricardoborges-teachable/ai-setup.git
-cd ai-setup
-pnpm install
-pnpm run build
-pnpm --filter @ricardoborges-teachable/ai-setup link --global
+go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
+```
+
+## Clone for development
+
+If you are working on LazyAI itself:
+
+```bash
+git clone git@github.com:rluisb/lazyai.git
+cd lazyai
+cd packages/cli && go install ./cmd/lazyai-cli
+cd ../orchestrator && go install ./cmd/lazyai-orchestrator
+cd ../diffviewer && go install ./cmd/lazyai-diffviewer
 ```
 
 After linking, the binary is available as:
 
 ```bash
-ai-setup --help
+lazyai-cli --help
 ```
 
-## Option 3: Upgrade from an earlier install
+## Upgrade from an earlier Go install
 
-If you already have `ai-setup` linked or installed:
+Re-run the relevant `go install ...@latest` command. For example:
 
 ```bash
-ai-setup update-self --check   # see if a newer release exists
-ai-setup update-self --dry-run # preview what would change
-ai-setup update-self             # download and replace the binary
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
 After upgrading the binary, refresh managed files:
 
 ```bash
-ai-setup update --check
-ai-setup update
-ai-setup doctor
+lazyai-cli update --check
+lazyai-cli update
+lazyai-cli doctor
 ```
 
-## Binary name
+## Binary names
 
-The executable name is always `ai-setup`:
+LazyAI ships three Go command packages:
 
 ```bash
-ai-setup init
-ai-setup compile
-ai-setup doctor
-ai-setup status
+lazyai-cli init
+lazyai-cli compile
+lazyai-cli doctor
+lazyai-cli status
+lazyai-orchestrator connect
+lazyai-diffviewer --help
 ```
 
 ## Symlink mode
 
-By default, `ai-setup` copies library files into tool directories. You can use symlinks instead to keep all tools in sync when the library updates:
+By default, `lazyai-cli` copies library files into tool directories. You can use symlinks instead to keep all tools in sync when the library updates:
 
 ```bash
-ai-setup init --install-mode symlink --no-interactive
+lazyai-cli init --install-mode symlink --no-interactive
 ```
 
 Symlinked files are tracked in `.ai-setup.json` with `kind: "symlink"`.

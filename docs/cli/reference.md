@@ -1,11 +1,13 @@
 # Command Reference
 
+All command examples use the LazyAI CLI binary, `lazyai-cli`.
+
 ## `init`
 
 Initialize a new managed AI setup.
 
 ```bash
-ai-setup init [options]
+lazyai-cli init [options]
 ```
 
 | Flag | Type | Default | Description |
@@ -33,10 +35,10 @@ ai-setup init [options]
 **Examples**
 
 ```bash
-ai-setup init
-ai-setup init --scope project --tools opencode,claude-code --name my-repo --no-interactive
-ai-setup init --scope workspace --planning-repo ./planning --repos ../api,../web --no-interactive
-ai-setup init --migrate --from ../legacy-project
+lazyai-cli init
+lazyai-cli init --scope project --tools opencode,claude-code --name my-repo --no-interactive
+lazyai-cli init --scope workspace --planning-repo ./planning --repos ../api,../web --no-interactive
+lazyai-cli init --migrate --from ../legacy-project
 ```
 
 ---
@@ -46,7 +48,7 @@ ai-setup init --migrate --from ../legacy-project
 Recompile canonical content into tool-native directories.
 
 ```bash
-ai-setup compile [options]
+lazyai-cli compile [options]
 ```
 
 | Flag | Type | Default | Description |
@@ -60,9 +62,9 @@ ai-setup compile [options]
 **Examples**
 
 ```bash
-ai-setup compile
-ai-setup compile --tools opencode,claude-code
-ai-setup compile --scope global
+lazyai-cli compile
+lazyai-cli compile --tools opencode,claude-code
+lazyai-cli compile --scope global
 ```
 
 ---
@@ -72,7 +74,7 @@ ai-setup compile --scope global
 Add another tool adapter to an existing setup.
 
 ```bash
-ai-setup add <tool>
+lazyai-cli add <tool>
 ```
 
 | Argument | Description |
@@ -82,7 +84,7 @@ ai-setup add <tool>
 **Example**
 
 ```bash
-ai-setup add copilot
+lazyai-cli add copilot
 ```
 
 ---
@@ -92,7 +94,7 @@ ai-setup add copilot
 Refresh tracked files from the bundled library.
 
 ```bash
-ai-setup update [options]
+lazyai-cli update [options]
 ```
 
 | Flag | Type | Default | Description |
@@ -103,9 +105,9 @@ ai-setup update [options]
 **Examples**
 
 ```bash
-ai-setup update
-ai-setup update --force
-ai-setup update --check
+lazyai-cli update
+lazyai-cli update --force
+lazyai-cli update --check
 ```
 
 ---
@@ -115,12 +117,12 @@ ai-setup update --check
 Verify setup health and detect drift.
 
 ```bash
-ai-setup doctor [options]
+lazyai-cli doctor [options]
 ```
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--migration-check` | boolean | `false` | Compare to a clean ai-setup state |
+| `--migration-check` | boolean | `false` | Compare to a clean LazyAI state |
 | `--verbose` | boolean | `false` | Detailed output |
 | `--json` | boolean | `false` | Emit JSON |
 | `--skills-check` | boolean | `false` | Compare installed skills to library source |
@@ -128,9 +130,9 @@ ai-setup doctor [options]
 **Examples**
 
 ```bash
-ai-setup doctor
-ai-setup doctor --verbose
-ai-setup doctor --skills-check --json
+lazyai-cli doctor
+lazyai-cli doctor --verbose
+lazyai-cli doctor --skills-check --json
 ```
 
 ---
@@ -140,7 +142,7 @@ ai-setup doctor --skills-check --json
 Print setup summary: scope, tools, features, git conventions, file health.
 
 ```bash
-ai-setup status [--json]
+lazyai-cli status [--json]
 ```
 
 ---
@@ -150,7 +152,7 @@ ai-setup status [--json]
 Scaffold a new artifact: agent, skill, command, prompt, template, workflow, domain, or mode.
 
 ```bash
-ai-setup create <type> [name] [options]
+lazyai-cli create <type> [name] [options]
 ```
 
 | Flag | Default | Description |
@@ -174,20 +176,20 @@ ai-setup create <type> [name] [options]
 **Examples**
 
 ```bash
-ai-setup create agent --name release-manager
-ai-setup create skill deploy --command /deploy --steps "validate\nbuild\nship"
-ai-setup create workflow release --chain feature --team review-team --no-interactive
+lazyai-cli create agent --name release-manager
+lazyai-cli create skill deploy --command /deploy --steps "validate\nbuild\nship"
+lazyai-cli create workflow release --chain feature --team review-team --no-interactive
 ```
 
 ---
 
 ## `import` / `migrate`
 
-Detect and import an existing AI setup into `ai-setup` canonical format.
+Detect and import an existing AI setup into LazyAI canonical format.
 
 ```bash
-ai-setup import [path] [options]
-ai-setup migrate [path] [options]
+lazyai-cli import [path] [options]
+lazyai-cli migrate [path] [options]
 ```
 
 | Flag | Default | Description |
@@ -203,9 +205,9 @@ ai-setup migrate [path] [options]
 **Examples**
 
 ```bash
-ai-setup import --preview
-ai-setup import ../legacy-project --strategy preserve --yes
-ai-setup migrate ../legacy-project --no-canonical
+lazyai-cli import --preview
+lazyai-cli import ../legacy-project --strategy preserve --yes
+lazyai-cli migrate ../legacy-project --no-canonical
 ```
 
 ---
@@ -215,7 +217,7 @@ ai-setup migrate ../legacy-project --no-canonical
 Stop managing the current setup. Removes `.ai-setup.json` while leaving generated files in place.
 
 ```bash
-ai-setup eject
+lazyai-cli eject
 ```
 
 ---
@@ -225,7 +227,7 @@ ai-setup eject
 List bundled library content.
 
 ```bash
-ai-setup list [category] [--json] [--enabled]
+lazyai-cli list [category] [--json] [--enabled]
 ```
 
 **Categories:** `agents`, `skills`, `templates`, `rules`, `servers`/`mcp`, `tools`/`cli`, `workflows`, `chains`, `teams`, `domains`, `modes`, `orchestration`, `all`
@@ -233,9 +235,9 @@ ai-setup list [category] [--json] [--enabled]
 **Examples**
 
 ```bash
-ai-setup list agents
-ai-setup list servers --enabled
-ai-setup list orchestration --json
+lazyai-cli list agents
+lazyai-cli list servers --enabled
+lazyai-cli list orchestration --json
 ```
 
 ---
@@ -245,15 +247,15 @@ ai-setup list orchestration --json
 Show detailed information about a library item.
 
 ```bash
-ai-setup info <item> [--json]
+lazyai-cli info <item> [--json]
 ```
 
 **Examples**
 
 ```bash
-ai-setup info builder
-ai-setup info code-style --json
-ai-setup info review-team
+lazyai-cli info builder
+lazyai-cli info code-style --json
+lazyai-cli info review-team
 ```
 
 ---
@@ -263,9 +265,9 @@ ai-setup info review-team
 Orchestration-focused commands.
 
 ```bash
-ai-setup orchestration list [kind] [--json]
-ai-setup orchestration create <type> <name> [options]
-ai-setup orchestration status [--json]
+lazyai-cli orchestration list [kind] [--json]
+lazyai-cli orchestration create <type> <name> [options]
+lazyai-cli orchestration status [--json]
 ```
 
 **Kinds:** `workflows`, `chains`, `teams`, `domains`, `modes`
@@ -273,9 +275,9 @@ ai-setup orchestration status [--json]
 **Examples**
 
 ```bash
-ai-setup orchestration list workflows --json
-ai-setup orchestration create domain payments --description "Payments domain" --no-interactive
-ai-setup orchestration status
+lazyai-cli orchestration list workflows --json
+lazyai-cli orchestration create domain payments --description "Payments domain" --no-interactive
+lazyai-cli orchestration status
 ```
 
 ---
@@ -285,34 +287,34 @@ ai-setup orchestration status
 Print a shell completion script.
 
 ```bash
-ai-setup completions [bash|zsh|fish]
+lazyai-cli completions [bash|zsh|fish]
 ```
 
 **Example**
 
 ```bash
-ai-setup completions bash
-ai-setup completions zsh > ~/.config/fish/completions/ai-setup.fish
+lazyai-cli completions bash
+lazyai-cli completions zsh > ~/.config/fish/completions/lazyai-cli.fish
 ```
 
 ---
 
 ## `extensions` / `ext`
 
-List discovered ai-setup extensions.
+List discovered LazyAI extensions.
 
 ```bash
-ai-setup extensions [--json]
+lazyai-cli extensions [--json]
 ```
 
 ---
 
 ## `update-self`
 
-Download the latest `ai-setup` binary from GitHub Releases and replace the running binary.
+Download the latest `lazyai-cli` binary from GitHub Releases and replace the running binary.
 
 ```bash
-ai-setup update-self [--check] [--dry-run] [--force]
+lazyai-cli update-self [--check] [--dry-run] [--force]
 ```
 
 | Flag | Description |
@@ -324,7 +326,7 @@ ai-setup update-self [--check] [--dry-run] [--force]
 **Example**
 
 ```bash
-ai-setup update-self --check
-ai-setup update-self --dry-run
-ai-setup update-self
+lazyai-cli update-self --check
+lazyai-cli update-self --dry-run
+lazyai-cli update-self
 ```

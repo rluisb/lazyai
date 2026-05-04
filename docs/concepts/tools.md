@@ -1,6 +1,6 @@
 # Supported Tools
 
-`ai-setup` compiles canonical content into native formats for three AI coding assistants.
+`lazyai-cli` compiles canonical content into native formats for three AI coding assistants.
 
 ## OpenCode
 
@@ -44,17 +44,17 @@
 ## Tool selection during init
 
 ```bash
-ai-setup init --tools opencode,claude-code,copilot
+lazyai-cli init --tools opencode,claude-code,copilot
 ```
 
 You can add a tool later:
 
 ```bash
-ai-setup add copilot
+lazyai-cli add copilot
 ```
 
 Then recompile:
 
 ```bash
-ai-setup compile
+lazyai-cli compile
 ```

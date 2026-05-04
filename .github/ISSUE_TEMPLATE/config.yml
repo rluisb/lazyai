@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/rluisb/lazyai/discussions
+    about: Please ask questions and start discussions here, not in issues
+  - name: Security Vulnerability
+    url: https://github.com/rluisb/lazyai/blob/main/SECURITY.md
+    about: DO NOT open a public issue for security bugs. See our security policy.

@@ -16,3 +16,5 @@ jobs:
         uses: christophebedard/dco-check@master
         with:
           args: --verbose
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

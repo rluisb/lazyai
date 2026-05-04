@@ -4,10 +4,13 @@ import (
 	"context"
 
 	"github.com/charmbracelet/fang"
+	buildversion "github.com/ricardoborges-teachable/ai-setup/internal/version"
 	"github.com/spf13/cobra"
 )
 
-// Version is set at build time via ldflags
+// Version is set at build time via ldflags.
+// It is kept in cmd for existing release/build scripts and synced into
+// internal/version so non-cmd packages can read the same value without cycles.
 var Version = "0.0.0-dev"
 
 var rootCmd = &cobra.Command{
@@ -23,7 +26,17 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	syncBuildVersion()
+	rootCmd.Version = Version
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose debug output")
+}
+
+func syncBuildVersion() {
+	if Version != buildversion.DevVersion {
+		buildversion.Version = Version
+		return
+	}
+	Version = buildversion.Version
 }
 
 func Execute(ctx context.Context) error {

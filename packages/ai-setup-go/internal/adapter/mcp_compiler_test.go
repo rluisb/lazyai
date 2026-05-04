@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -174,8 +175,8 @@ func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
 	orchestratorEntry := `{
   "servers": {
     "orchestrator": {
-      "command": "/tmp/fake-node",
-      "args": ["/tmp/orchestrator/dist/index.js"]
+      "command": "/tmp/ai-setup-orchestrator",
+      "args": ["connect", "--project", "/tmp/project"]
     }
   }
 }`
@@ -195,8 +196,78 @@ func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
 	if !strings.Contains(contents, `"orchestrator"`) {
 		t.Fatalf("compiled config missing orchestrator entry:\n%s", contents)
 	}
-	if !strings.Contains(contents, `/tmp/fake-node`) || !strings.Contains(contents, `/tmp/orchestrator/dist/index.js`) {
+	if !strings.Contains(contents, `/tmp/ai-setup-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
 		t.Fatalf("compiled config missing orchestrator command/args:\n%s", contents)
+	}
+	if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
+		t.Fatalf("compiled config should keep orchestrator execution mode implicit/native by default:\n%s", contents)
+	}
+}
+
+func TestCompileOpenCodeMCP_PreservesLegacyOrchestratorCommand(t *testing.T) {
+	targetDir := t.TempDir()
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	orchestratorEntry := `{
+  "servers": {
+    "orchestrator": {
+      "command": "npx",
+      "args": ["-y", "@ai-setup/orchestrator"]
+    },
+    "orchestrator-node": {
+      "command": "/tmp/fake-node",
+      "args": ["/tmp/orchestrator/dist/index.js"]
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(orchestratorEntry), 0o644); err != nil {
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	if _, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{TargetDir: targetDir, SetupScope: types.SetupScopeProject}); err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "opencode.jsonc"))
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+	contents := string(data)
+	if !strings.Contains(contents, `"npx"`) || !strings.Contains(contents, `@ai-setup/orchestrator`) {
+		t.Fatalf("compiled config did not preserve legacy npx orchestrator command:\n%s", contents)
+	}
+	if !strings.Contains(contents, `/tmp/fake-node`) || !strings.Contains(contents, `/tmp/orchestrator/dist/index.js`) {
+		t.Fatalf("compiled config did not preserve legacy node orchestrator command:\n%s", contents)
+	}
+}
+
+func TestMCPCompilerPreservesGoOrchestratorCommandArgsForToolPayloads(t *testing.T) {
+	servers := map[string]McpServer{
+		"orchestrator": {
+			Command: "/tmp/ai-setup-orchestrator",
+			Args:    []string{"connect", "--project", "/tmp/project"},
+		},
+	}
+
+	for name, payload := range map[string]any{
+		"opencode": toOpenCodeMcp(servers),
+		"claude":   toClaudeCodeMcpInner(servers),
+		"copilot": func() any {
+			entries, _ := toCopilotServerEntries(servers)
+			return entries
+		}(),
+	} {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("marshal %s payload: %v", name, err)
+		}
+		contents := string(encoded)
+		if !strings.Contains(contents, `/tmp/ai-setup-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/tmp/project`) {
+			t.Fatalf("%s payload did not preserve Go orchestrator command/args: %s", name, contents)
+		}
+		if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
+			t.Fatalf("%s payload should not opt into A2A execution mode by default: %s", name, contents)
+		}
 	}
 }
 

@@ -69,3 +69,7 @@ gh release create v0.2.0 \
 ## Important safety note
 
 Because `.github/workflows/publish.yml` is configured for release-related automation and npm publishing, treat the GitHub release as a documentation artifact for now. Keep the release in draft state until you intentionally want an npm publication flow.
+
+## Orchestrator binary assets
+
+The release workflow publishes `ai-setup-orchestrator-*` assets for the same supported platforms as the main `ai-setup-*` binary and includes both sets in `checksums.txt` so released installs can verify cached orchestrator downloads. Released `ai-setup` binaries request the orchestrator assets from the matching `v{version}` release tag; development builds fall back to the latest release.

@@ -9,9 +9,15 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
 ---
 
 ## Quick Start
+Install LazyAI
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+```
+
+Initialize the CLI
+
+```bash
 lazyai-cli init
 ```
 

@@ -111,8 +111,8 @@ var serverDoctorCmd = &cobra.Command{
 
 func init() {
 	serverListCmd.Flags().Bool("json", false, "Output as JSON")
-	serverAddCmd.Flags().Bool("non-interactive", false, "Skip confirmation prompt")
-	serverRemoveCmd.Flags().Bool("non-interactive", false, "Skip confirmation prompt")
+	serverAddCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
+	serverRemoveCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
 	serverDoctorCmd.Flags().Bool("json", false, "Output as JSON")
 
 	serverCmd.AddCommand(serverListCmd)

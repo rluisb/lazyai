@@ -24,13 +24,13 @@ var createCmd = &cobra.Command{
 
 func init() {
 	createCmd.Flags().Bool("force", false, "Overwrite existing artifact")
-	createCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	createCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	createCmd.Flags().String("description", "", "Description of the artifact")
 	rootCmd.AddCommand(createCmd)
 }
 
 func runCreate(cmd *cobra.Command, args []string) error {
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	description, _ := cmd.Flags().GetString("description")
 

@@ -108,10 +108,10 @@ func captureOutput(t *testing.T, fn func()) (string, string) {
 func newUpdateCommand(force, nonInteractive, dryRun bool) *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "")
-	cmd.Flags().Bool("non-interactive", false, "")
+	cmd.Flags().Bool("no-interactive", false, "")
 	cmd.Flags().Bool("dry-run", false, "")
 	_ = cmd.Flags().Set("force", boolString(force))
-	_ = cmd.Flags().Set("non-interactive", boolString(nonInteractive))
+	_ = cmd.Flags().Set("no-interactive", boolString(nonInteractive))
 	_ = cmd.Flags().Set("dry-run", boolString(dryRun))
 	return cmd
 }
@@ -135,7 +135,7 @@ func newCompileCommand(dir, tool string, dryRun bool) *cobra.Command {
 func newImportCommand(tool string, nonInteractive, preview bool) *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Flags().String("tool", "", "")
-	cmd.Flags().Bool("non-interactive", false, "")
+	cmd.Flags().Bool("no-interactive", false, "")
 	cmd.Flags().Bool("preview", false, "")
 	cmd.Flags().String("strategy", "smart", "")
 	cmd.Flags().Bool("verbose", false, "")
@@ -143,7 +143,7 @@ func newImportCommand(tool string, nonInteractive, preview bool) *cobra.Command 
 	if tool != "" {
 		_ = cmd.Flags().Set("tool", tool)
 	}
-	_ = cmd.Flags().Set("non-interactive", boolString(nonInteractive))
+	_ = cmd.Flags().Set("no-interactive", boolString(nonInteractive))
 	_ = cmd.Flags().Set("preview", boolString(preview))
 	return cmd
 }

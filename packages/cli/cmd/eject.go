@@ -23,7 +23,7 @@ var ejectCmd = &cobra.Command{
 }
 
 func init() {
-	ejectCmd.Flags().Bool("non-interactive", false, "Skip confirmation prompt")
+	ejectCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
 	rootCmd.AddCommand(ejectCmd)
 }
 
@@ -32,7 +32,7 @@ func runEject(cmd *cobra.Command, args []string) error {
 	if dir == "" {
 		dir, _ = os.Getwd()
 	}
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 
 	// Check that a store exists
 	dbPath := db.DefaultDBPath(dir)

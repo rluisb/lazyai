@@ -20,7 +20,7 @@ into LazyAI format. The source can be a path to a directory containing an existi
 
 func init() {
 	importCmd.Flags().String("tool", "", "Source tool to import from (auto-detected if omitted)")
-	importCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	importCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	importCmd.Flags().Bool("preview", false, "Preview changes without executing")
 	importCmd.Flags().String("strategy", "smart", "Merge strategy: smart, preserve, replace, append")
 	importCmd.Flags().Bool("verbose", false, "Show detailed output")
@@ -39,7 +39,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	// Parse flags.
 	toolFlag, _ := cmd.Flags().GetString("tool")
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 	preview, _ := cmd.Flags().GetBool("preview")
 	strategyStr, _ := cmd.Flags().GetString("strategy")
 	verbose, _ := cmd.Flags().GetBool("verbose")

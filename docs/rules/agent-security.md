@@ -38,7 +38,7 @@ Protect AI agent operations from adversarial inputs, prompt injection, and privi
 **Mitigations:**
 - Track config file hashes in manifest
 - Alert on unexpected changes to root configuration files
-- `ai-setup doctor` verifies config file integrity (run `ai-setup doctor` to check managed file hashes)
+- `lazyai-cli doctor` verifies config file integrity (run `lazyai-cli doctor` to check managed file hashes)
 
 ### 5. Context Poisoning
 **Risk:** Large or crafted inputs may overwhelm agent context, causing degraded reasoning.

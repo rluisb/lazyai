@@ -36,7 +36,7 @@ Metadata lives in `.claude-plugin/plugin.json`. The manifest is **optional** —
   "version": "1.0.0",
   "description": "ai-setup agents, skills, commands, and output styles",
   "author": { "name": "Ricardo Borges" },
-  "homepage": "https://github.com/ricardoborges-teachable/ai-setup",
+  "homepage": "https://github.com/rluisb/lazyai",
   "license": "MIT"
 }
 ```
@@ -154,7 +154,7 @@ Close out the deferred item with a short design note explaining why ai-setup doe
 3. **Q3** — Output path for the generated plugin (Option B): `dist/plugin/` default, or user-specified via `--out`?
 4. **Q4** — `plugin.json` metadata source: hardcoded in code, or read from `pkg.json`-like metadata file in the repo?
 5. **Q5** — Ship a `marketplace.json` alongside (to make the directory publishable to a marketplace repo), or leave that for a future spec?
-6. **Q6** — Plugin name: `"ai-setup"` (repo match) or `"teachable-ai-setup"` (more specific)?
+6. **Q6** — Plugin name: `"ai-setup"` (repo match) or `"rluisb-lazyai"` (more specific)?
 7. **Q7** — Should the plugin carry a version number synchronized with ai-setup's binary version, or start at `1.0.0` independently?
 
 ---

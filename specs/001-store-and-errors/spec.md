@@ -1,6 +1,6 @@
 # Spec: Store & Error Handling (001)
 
-> Technical specification for lowdb v7 + zod state management and structured error handling in `@ricardoborges-teachable/ai-setup`.
+> Technical specification for lowdb v7 + zod state management and structured error handling in `@rluisb/lazyai`.
 
 ---
 

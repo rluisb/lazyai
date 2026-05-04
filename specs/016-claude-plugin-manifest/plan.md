@@ -63,10 +63,10 @@ dist/plugin/
   "description": "ai-setup agents, skills, commands, and output styles for Claude Code",
   "author": {
     "name": "Ricardo Borges",
-    "url": "https://github.com/ricardoborges-teachable/ai-setup"
+    "url": "https://github.com/rluisb/lazyai"
   },
-  "homepage": "https://github.com/ricardoborges-teachable/ai-setup",
-  "repository": "https://github.com/ricardoborges-teachable/ai-setup",
+  "homepage": "https://github.com/rluisb/lazyai",
+  "repository": "https://github.com/rluisb/lazyai",
   "license": "MIT",
   "keywords": ["ai-setup", "claude-code", "agents", "skills"]
 }

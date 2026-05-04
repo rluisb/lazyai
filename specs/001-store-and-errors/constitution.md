@@ -1,6 +1,6 @@
 # Constitution: Store & Error Handling (001)
 
-> Governing principles and non-negotiables for the lowdb/zod state management and structured error handling additions to `@ricardoborges-teachable/ai-setup`.
+> Governing principles and non-negotiables for the lowdb/zod state management and structured error handling additions to `@rluisb/lazyai`.
 
 ---
 

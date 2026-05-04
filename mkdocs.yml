@@ -1,0 +1,96 @@
+site_name: ai-setup
+site_description: Scaffold a canonical, multi-tool AI development environment from one CLI.
+site_author: ricardoborges-teachable
+site_url: https://ricardoborges-teachable.github.io/ai-setup/
+repo_name: ricardoborges-teachable/ai-setup
+repo_url: https://github.com/ricardoborges-teachable/ai-setup
+copyright: Copyright &copy; ricardoborges-teachable
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+
+exclude_docs: |
+  AI-Agentic-Setup-Implementation-Plan.md
+  AI-Agentic-Setup-Playbook.md
+  AI-Agentic-Setup-Templates/**
+  compliance.md
+  orchestration-usage.md
+  orchestrator-blueprint.md
+  orchestrator-design.md
+  orchestrator-research.md
+  release-process.md
+  template-design-principles.md
+  prompts/**
+  rules/**
+  templates/**
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ricardoborges-teachable/ai-setup
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting-started/quick-start.md
+      - Installation: getting-started/installation.md
+  - Concepts:
+      - How It Works: concepts/how-it-works.md
+      - Scopes: concepts/scopes.md
+      - Presets: concepts/presets.md
+      - Tools: concepts/tools.md
+  - CLI Reference:
+      - Overview: cli/index.md
+      - Command Reference: cli/reference.md
+  - Integration:
+      - MCP: integration/mcp.md
+      - Orchestration: integration/orchestration.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Release Process: development/release.md
+  - Troubleshooting:
+      - FAQ: troubleshooting/faq.md

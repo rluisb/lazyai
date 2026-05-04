@@ -25,8 +25,10 @@ Think of orchestration in this repo as three layers:
    - generates tool-specific orchestrator guidance
 2. **`.ai/orchestration/`**
    - your editable project-local source of truth for chains, teams, workflows, domains, and modes
-3. **`orchestrator/` package**
-   - the runtime package that implements catalog loading, composition, state handling, persistence, and MCP tool handlers
+3. **`ai-setup-orchestrator` runtime**
+   - the Go binary that implements catalog loading, composition, state handling, persistence, and MCP tool handlers
+   - built from `packages/orchestrator-go/`
+   - invoked via `connect` so multiple MCP clients share a single daemon process
 
 That means the adoption path is:
 
@@ -175,16 +177,16 @@ When you enable:
 
 `ai-setup` adds the optional orchestrator server entry to the canonical MCP catalog in `.ai/mcp.json` and compiles it into supported tool-specific MCP config output.
 
-At a high level, the configured server runs:
+At a high level, the configured server runs the managed Go binary:
 
 ```bash
-npx -y @ai-setup/orchestrator
+ai-setup-orchestrator
 ```
 
-The runtime package lives in:
+The runtime source lives in:
 
 ```text
-orchestrator/
+packages/orchestrator-go/
 ```
 
 That package is where the repo keeps the orchestration runtime logic, including:
@@ -198,8 +200,12 @@ That package is where the repo keeps the orchestration runtime logic, including:
 Important boundary:
 
 - **`ai-setup`** scaffolds definitions and config
-- **`@ai-setup/orchestrator`** owns runtime behavior
+- **`ai-setup-orchestrator`** owns runtime behavior
 - **your host CLI tool** is what actually calls the MCP tools during a session
+
+> **A2A protocol:** Agent-to-Agent (A2A) orchestration is optional and currently deferred. The default execution model uses the native host CLI (e.g., Claude Code, OpenCode) directly. A2A can be enabled opt-in when it becomes available.
+
+> **Packaging caveat:** Released installs can download, verify, and cache the matching prebuilt `ai-setup-orchestrator` binary when local source and a PATH binary are unavailable. Local-source managed setups still build from `packages/orchestrator-go/` and require `go` to be installed.
 
 So there is no separate `ai-setup` command that “runs a workflow” end-to-end. The MCP server is the runtime boundary.
 

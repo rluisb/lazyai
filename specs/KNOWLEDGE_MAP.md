@@ -22,6 +22,7 @@
 | 016 | `ai-setup build-plugin` — generate Claude Code plugin from library (agents + skills + commands + output styles) | ✅ Complete | `feature/go-migration` |
 | 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
 | 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
+| 019 | Orchestrator Go runtime + ai-setup integration — Go binary `ai-setup-orchestrator` replaces `npx -y @ai-setup/orchestrator`; release assets/download/cache support implemented; A2A deferred/opt-in | ✅ Complete | `feature/orchestrator-a2a-rewrite` |
 
 ## Key Architecture Decisions
 

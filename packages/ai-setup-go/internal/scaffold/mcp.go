@@ -2,10 +2,15 @@ package scaffold
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,7 +21,11 @@ import (
 	"github.com/ricardoborges-teachable/ai-setup/internal/conflict"
 	"github.com/ricardoborges-teachable/ai-setup/internal/files"
 	"github.com/ricardoborges-teachable/ai-setup/internal/types"
+	buildversion "github.com/ricardoborges-teachable/ai-setup/internal/version"
 )
+
+const orchestratorLatestReleaseURL = "https://api.github.com/repos/ricardoborges-teachable/ai-setup/releases/latest"
+const orchestratorReleaseByTagURLFormat = "https://api.github.com/repos/ricardoborges-teachable/ai-setup/releases/tags/%s"
 
 // mcpCatalog represents the MCP server catalog structure.
 type mcpCatalog struct {
@@ -39,11 +48,29 @@ type mcpServer struct {
 
 var orchestratorLookPath = exec.LookPath
 
+var orchestratorUserCacheDir = os.UserCacheDir
+
 var orchestratorCommandRunner = func(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run()
+}
+
+var orchestratorReleaseFetcher = fetchOrchestratorRelease
+
+var orchestratorAssetDownloader = downloadOrchestratorAsset
+
+var orchestratorHTTPClient = http.DefaultClient
+
+type orchestratorRelease struct {
+	TagName string                     `json:"tag_name"`
+	Assets  []orchestratorReleaseAsset `json:"assets"`
+}
+
+type orchestratorReleaseAsset struct {
+	Name               string `json:"name"`
+	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
 // ScaffoldMcp scaffolds .ai/mcp.json from the library catalog, enabling
@@ -163,7 +190,17 @@ func prepareManagedOrchestratorServer(targetDir, libraryDir string, server mcpSe
 			server.Args = orchestratorConnectArgs(targetDir)
 			server.RequiresInstall = false
 			server.InstallHint = ""
+			return server, nil
 		}
+
+		binaryPath, err := prepareDownloadedOrchestratorBinary()
+		if err != nil {
+			return server, err
+		}
+		server.Command = binaryPath
+		server.Args = orchestratorConnectArgs(targetDir)
+		server.RequiresInstall = false
+		server.InstallHint = ""
 		return server, nil
 	}
 
@@ -194,6 +231,252 @@ func prepareManagedOrchestratorServer(targetDir, libraryDir string, server mcpSe
 	server.RequiresInstall = false
 	server.InstallHint = ""
 	return server, nil
+}
+
+func prepareDownloadedOrchestratorBinary() (string, error) {
+	assetName, err := orchestratorReleaseAssetName(runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		return "", err
+	}
+
+	releaseURL := orchestratorReleaseURL(buildversion.Version)
+	release, err := orchestratorReleaseFetcher(releaseURL)
+	if err != nil {
+		return "", err
+	}
+	if release == nil {
+		return "", fmt.Errorf("prepare orchestrator MCP: release response was empty")
+	}
+	if release.TagName == "" {
+		return "", fmt.Errorf("prepare orchestrator MCP: release did not include a tag_name")
+	}
+
+	binaryAsset, ok := findOrchestratorReleaseAsset(release.Assets, assetName)
+	if !ok {
+		return "", fmt.Errorf("prepare orchestrator MCP: release %s does not include asset %q", release.TagName, assetName)
+	}
+	checksumsAsset, ok := findOrchestratorReleaseAsset(release.Assets, "checksums.txt")
+	if !ok {
+		return "", fmt.Errorf("prepare orchestrator MCP: release %s does not include checksums.txt", release.TagName)
+	}
+
+	cacheDir, err := orchestratorReleaseCacheDir(release.TagName)
+	if err != nil {
+		return "", err
+	}
+	binaryPath := filepath.Join(cacheDir, assetName)
+	checksumsPath := filepath.Join(cacheDir, "checksums.txt")
+
+	if err := orchestratorAssetDownloader(checksumsAsset.BrowserDownloadURL, checksumsPath); err != nil {
+		return "", fmt.Errorf("prepare orchestrator MCP: downloading checksums: %w", err)
+	}
+
+	if files.FileExists(binaryPath) {
+		if err := verifyOrchestratorChecksum(binaryPath, checksumsPath, assetName); err == nil {
+			return ensureExecutableOrchestratorBinary(binaryPath)
+		}
+		_ = os.Remove(binaryPath)
+	}
+
+	tempPath := binaryPath + ".download"
+	_ = os.Remove(tempPath)
+	if err := orchestratorAssetDownloader(binaryAsset.BrowserDownloadURL, tempPath); err != nil {
+		_ = os.Remove(tempPath)
+		return "", fmt.Errorf("prepare orchestrator MCP: downloading binary: %w", err)
+	}
+	if err := verifyOrchestratorChecksum(tempPath, checksumsPath, assetName); err != nil {
+		_ = os.Remove(tempPath)
+		return "", err
+	}
+	if err := os.Rename(tempPath, binaryPath); err != nil {
+		_ = os.Remove(tempPath)
+		return "", fmt.Errorf("prepare orchestrator MCP: caching binary: %w", err)
+	}
+
+	return ensureExecutableOrchestratorBinary(binaryPath)
+}
+
+func orchestratorReleaseAssetName(goos, goarch string) (string, error) {
+	supported := map[string]bool{
+		"darwin/arm64":  true,
+		"darwin/amd64":  true,
+		"linux/amd64":   true,
+		"linux/arm64":   true,
+		"windows/amd64": true,
+	}
+	platform := goos + "/" + goarch
+	if !supported[platform] {
+		return "", fmt.Errorf("prepare orchestrator MCP: unsupported platform %s", platform)
+	}
+
+	name := fmt.Sprintf("ai-setup-orchestrator-%s-%s", goos, goarch)
+	if goos == "windows" {
+		name += ".exe"
+	}
+	return name, nil
+}
+
+func orchestratorReleaseCacheDir(tagName string) (string, error) {
+	cacheDir, err := orchestratorUserCacheDir()
+	if err != nil || cacheDir == "" {
+		cacheDir = os.TempDir()
+	}
+	outDir := filepath.Join(cacheDir, "ai-setup", "orchestrator", "releases", safePathSegment(tagName))
+	if err := files.EnsureDir(outDir); err != nil {
+		return "", err
+	}
+	return outDir, nil
+}
+
+func safePathSegment(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "latest"
+	}
+	replacer := strings.NewReplacer("/", "_", "\\", "_", ":", "_", "..", "_")
+	return replacer.Replace(value)
+}
+
+func orchestratorReleaseURL(currentVersion string) string {
+	tagName, ok := buildversion.ReleaseTag(currentVersion)
+	if !ok {
+		return orchestratorLatestReleaseURL
+	}
+	return fmt.Sprintf(orchestratorReleaseByTagURLFormat, url.PathEscape(tagName))
+}
+
+func fetchOrchestratorRelease(releaseURL string) (*orchestratorRelease, error) {
+	req, err := http.NewRequest(http.MethodGet, releaseURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("prepare orchestrator MCP: creating release request: %w", err)
+	}
+	addOrchestratorGitHubHeaders(req)
+
+	resp, err := orchestratorHTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("prepare orchestrator MCP: fetching release: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("prepare orchestrator MCP: fetching release: GitHub returned %s", resp.Status)
+	}
+
+	var release orchestratorRelease
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return nil, fmt.Errorf("prepare orchestrator MCP: parsing release: %w", err)
+	}
+	return &release, nil
+}
+
+func downloadOrchestratorAsset(url, destination string) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("creating download request: %w", err)
+	}
+	addOrchestratorGitHubHeaders(req)
+
+	resp, err := orchestratorHTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("download returned %s", resp.Status)
+	}
+
+	if err := files.EnsureDir(filepath.Dir(destination)); err != nil {
+		return err
+	}
+	out, err := os.Create(destination)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(out, resp.Body)
+	closeErr := out.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	return closeErr
+}
+
+func addOrchestratorGitHubHeaders(req *http.Request) {
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+}
+
+func findOrchestratorReleaseAsset(assets []orchestratorReleaseAsset, name string) (orchestratorReleaseAsset, bool) {
+	for _, asset := range assets {
+		if asset.Name == name {
+			return asset, true
+		}
+	}
+	return orchestratorReleaseAsset{}, false
+}
+
+func verifyOrchestratorChecksum(binaryPath, checksumsPath, assetName string) error {
+	expectedChecksum, err := orchestratorChecksumForAsset(checksumsPath, assetName)
+	if err != nil {
+		return err
+	}
+
+	actualChecksum, err := sha256ForOrchestratorFile(binaryPath)
+	if err != nil {
+		return fmt.Errorf("prepare orchestrator MCP: computing checksum: %w", err)
+	}
+	if !strings.EqualFold(actualChecksum, expectedChecksum) {
+		return fmt.Errorf("prepare orchestrator MCP: checksum mismatch for %s: expected %s, got %s", assetName, expectedChecksum, actualChecksum)
+	}
+	return nil
+}
+
+func orchestratorChecksumForAsset(checksumsPath, assetName string) (string, error) {
+	contents, err := os.ReadFile(checksumsPath)
+	if err != nil {
+		return "", fmt.Errorf("prepare orchestrator MCP: reading checksums: %w", err)
+	}
+	for _, line := range strings.Split(string(contents), "\n") {
+		fields := strings.Fields(strings.TrimSpace(line))
+		if len(fields) < 2 {
+			continue
+		}
+		filename := strings.TrimPrefix(fields[len(fields)-1], "*")
+		if filepath.Base(filename) == assetName {
+			return fields[0], nil
+		}
+	}
+	return "", fmt.Errorf("prepare orchestrator MCP: checksums.txt does not include %s", assetName)
+}
+
+func sha256ForOrchestratorFile(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func ensureExecutableOrchestratorBinary(binaryPath string) (string, error) {
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(binaryPath, 0o755); err != nil {
+			return "", fmt.Errorf("prepare orchestrator MCP: chmod binary: %w", err)
+		}
+	}
+	absPath, err := filepath.Abs(binaryPath)
+	if err != nil {
+		return "", err
+	}
+	return absPath, nil
 }
 
 func resolveOrchestratorPackageDir(libraryDir string) (string, bool) {

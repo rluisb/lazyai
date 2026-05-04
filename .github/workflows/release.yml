@@ -29,20 +29,35 @@ jobs:
       - name: Build (darwin arm64)
         run: GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-arm64 .
 
+      - name: Build orchestrator (darwin arm64)
+        run: GOOS=darwin GOARCH=arm64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-darwin-arm64 ./cmd/orchestrator
+
       - name: Build (darwin amd64)
         run: GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-amd64 .
+
+      - name: Build orchestrator (darwin amd64)
+        run: GOOS=darwin GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-darwin-amd64 ./cmd/orchestrator
 
       - name: Build (linux amd64)
         run: GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-amd64 .
 
+      - name: Build orchestrator (linux amd64)
+        run: GOOS=linux GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-linux-amd64 ./cmd/orchestrator
+
       - name: Build (linux arm64)
         run: GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-arm64 .
+
+      - name: Build orchestrator (linux arm64)
+        run: GOOS=linux GOARCH=arm64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-linux-arm64 ./cmd/orchestrator
 
       - name: Build (windows amd64)
         run: GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-windows-amd64.exe .
 
+      - name: Build orchestrator (windows amd64)
+        run: GOOS=windows GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-windows-amd64.exe ./cmd/orchestrator
+
       - name: Generate checksums
-        run: cd dist && shasum -a 256 * > checksums.txt
+        run: cd dist && shasum -a 256 ai-setup-* > checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

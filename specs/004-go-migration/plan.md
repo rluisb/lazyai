@@ -96,7 +96,7 @@ ai-setup (Go binary)
 
 #### 1.1 — Initialize Go module + Cobra structure
 
-- `go mod init github.com/ricardoborges-teachable/ai-setup`
+- `go mod init github.com/rluisb/lazyai`
 - Install dependencies: cobra, fang, bubbletea v2, lipgloss v2, huh v2, bubbles v2
 - Create `main.go` with `fang.Execute(ctx, rootCmd)`
 - Create all 14 command stubs in `cmd/`

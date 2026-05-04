@@ -6,8 +6,8 @@ LazyAI is the Go-only identity for the former `ai-setup` project. This restructu
 
 | Old | New |
 |---|---|
-| `github.com/ricardoborges-teachable/ai-setup` | `github.com/rluisb/lazyai` |
-| `https://ricardoborges-teachable.github.io/ai-setup/` | `https://rluisb.github.io/lazyai/` |
+| `github.com/rluisb/ai-setup` | `github.com/rluisb/lazyai` |
+| `https://rluisb.github.io/ai-setup/` | `https://rluisb.github.io/lazyai/` |
 | npm/npx package usage | Go installs with `go install` |
 
 ## Install LazyAI commands

@@ -4,12 +4,6 @@ LazyAI is the new Go-only identity for the former `ai-setup` project. This restr
 
 ## Repository and docs
 
-| Old | New |
-|---|---|
-| `github.com/ricardoborges-teachable/ai-setup` | `github.com/rluisb/lazyai` |
-| `https://ricardoborges-teachable.github.io/ai-setup/` | `https://rluisb.github.io/lazyai/` |
-| `@ricardoborges-teachable/ai-setup` | No npm package; use Go installs |
-
 ## Install commands
 
 Replace npm/npx usage with Go installs:
@@ -24,21 +18,21 @@ go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@la
 
 LazyAI packages are independent Go submodules. Release tags must be prefixed with the module directory:
 
-| Package | Tag format |
-|---|---|
-| CLI | `packages/cli/vX.Y.Z` |
+| Package      | Tag format                     |
+| ------------ | ------------------------------ |
+| CLI          | `packages/cli/vX.Y.Z`          |
 | Orchestrator | `packages/orchestrator/vX.Y.Z` |
-| Diffviewer | `packages/diffviewer/vX.Y.Z` |
+| Diffviewer   | `packages/diffviewer/vX.Y.Z`   |
 
 Root `vX.Y.Z` tags do not version these submodules for `go install`.
 
 ## Command renames
 
-| Old command | New command |
-|---|---|
-| `ai-setup` | `lazyai-cli` |
+| Old command             | New command           |
+| ----------------------- | --------------------- |
+| `ai-setup`              | `lazyai-cli`          |
 | `ai-setup-orchestrator` | `lazyai-orchestrator` |
-| `diffviewer` | `lazyai-diffviewer` |
+| `diffviewer`            | `lazyai-diffviewer`   |
 
 Examples:
 

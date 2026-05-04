@@ -1,6 +1,6 @@
 # Implementation Plan: Store & Error Handling (001)
 
-> Ordered execution plan for spec `001-store-and-errors` in `@ricardoborges-teachable/ai-setup`.  
+> Ordered execution plan for spec `001-store-and-errors` in `@rluisb/lazyai`.  
 > **Stack:** TypeScript ESM, Commander, @clack/prompts, tsup, vitest  
 > **Quality gates:** `npm run typecheck`, `npm run test`, `npm run build`
 

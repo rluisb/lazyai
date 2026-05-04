@@ -10,13 +10,13 @@ Set TypingSpeed 30ms
 Set Shell "bash"
 
 Hide
-Type "cd /Users/ricardo/projects/teachable/ai-setup && npm run build 2>/dev/null"
+Type "cd /Users/ricardo/projects/lazyai && npm run build 2>/dev/null"
 Enter
 Sleep 3s
 Type "export TMPDIR=$(mktemp -d)/my-app && mkdir -p $TMPDIR && cd $TMPDIR && git init -q"
 Enter
 Sleep 500ms
-Type "alias ai-setup='/Users/ricardo/projects/teachable/ai-setup/bin/ai-setup.js'"
+Type "alias ai-setup='/Users/ricardo/projects/lazyai/bin/ai-setup.js'"
 Enter
 Sleep 300ms
 Show

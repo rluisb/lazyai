@@ -11,7 +11,7 @@ This protocol governs how skills and agents move between repos, where they recor
 ## 1. Workspace topology
 
 ```
-~/work/teachable-workspace/                  ← workspace root (where AI tools live)
+~/work/lazyai-workspace/                  ← workspace root (where AI tools live)
 ├── .claude/                                 ← Claude Code config (workspace-scope)
 ├── .github/                                 ← Copilot config (workspace-scope)
 ├── .specify/                                ← shared spec-kit memory + templates

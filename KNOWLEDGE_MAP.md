@@ -32,10 +32,9 @@
 
 | Path | Responsibility |
 |------|---------------|
-| `packages/ai-setup-go/` | Go CLI — canonical implementation (source of truth) |
-| `packages/ai-setup-go/library/` | Library: agents, skills, templates, commands, MCP catalog |
-| `packages/ai-setup-go/internal/adapter/` | Per-tool adapters (Claude, OpenCode, Gemini, Copilot, Codex) |
-| `packages/ai-setup-go/internal/scaffold/` | Scaffold pipeline (specs, constitution, MCP, templates, infra) |
-| `packages/ai-setup-ts/` | TypeScript CLI — mirrors Go behavior |
-| `packages/ai-setup-ts/src/adapters/` | TS per-tool adapters (parity with Go) |
-| `packages/orchestrator/` | MCP server for multi-agent orchestration (optional, user opt-in) |
+| `packages/cli/` | Go CLI — canonical implementation (source of truth) |
+| `packages/cli/library/` | Library: agents, skills, templates, commands, MCP catalog |
+| `packages/cli/internal/adapter/` | Per-tool adapters (Claude, OpenCode, Gemini, Copilot, Codex) |
+| `packages/cli/internal/scaffold/` | Scaffold pipeline (specs, constitution, MCP, templates, infra) |
+| `packages/orchestrator/` | Go MCP server for multi-agent orchestration (optional, user opt-in) |
+| `packages/diffviewer/` | Go diff review utility shipped as `lazyai-diffviewer` |

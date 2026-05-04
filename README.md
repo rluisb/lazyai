@@ -1,17 +1,18 @@
-# @ricardoborges-teachable/ai-setup
+# LazyAI
 
-![Node >=20.12.0](https://img.shields.io/badge/node-%3E%3D20.12.0-339933?logo=node.js&logoColor=white)
+![Go >=1.26](https://img.shields.io/badge/go-%3E%3D1.26-00ADD8?logo=go&logoColor=white)
 
 Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
 
-`ai-setup` initializes and manages tool-agnostic project rules, agents, skills, and templates, then compiles them into native formats for OpenCode, Claude Code, and GitHub Copilot.
+`lazyai-cli` initializes and manages tool-agnostic project rules, agents, skills, and templates, then compiles them into native formats for OpenCode, Claude Code, and GitHub Copilot. LazyAI is distributed as Go modules under `github.com/rluisb/lazyai`.
 
 ---
 
 ## Quick Start
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+lazyai-cli init
 ```
 
 This launches an interactive wizard that asks for scope, tools, preset, and optional MCP servers.
@@ -19,7 +20,7 @@ This launches an interactive wizard that asks for scope, tools, preset, and opti
 For a non-interactive project setup:
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
   --name my-app \
@@ -33,8 +34,10 @@ Read the full [Quick Start guide](docs/getting-started/quick-start.md) for works
 
 ## Installation
 
-- **From GitHub via npx** (recommended): `npx github:ricardoborges-teachable/ai-setup init`
-- **Clone for development**: `git clone git@github.com:ricardoborges-teachable/ai-setup.git && npm install && npm run build && npm link`
+- **CLI**: `go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest`
+- **Orchestrator MCP runtime**: `go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest`
+- **Diff viewer utility**: `go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest`
+- **Clone for development**: `git clone git@github.com:rluisb/lazyai.git`
 
 See [Installation](docs/getting-started/installation.md) for details.
 
@@ -42,7 +45,7 @@ See [Installation](docs/getting-started/installation.md) for details.
 
 ## How It Works
 
-`ai-setup` uses a **canonical source → compile** model:
+`lazyai-cli` uses a **canonical source → compile** model:
 
 1. `init` scaffolds a tool-agnostic canonical layer under `.ai/`
 2. You edit rules, agents, and templates in one place
@@ -85,14 +88,12 @@ Learn more in [How It Works](docs/concepts/how-it-works.md).
 
 Requirements:
 
-- Go 1.26+ (for the binary)
-- Node.js >=20.12.0 and pnpm >=9.0.0 (for the monorepo)
+- Go 1.26+
 
 ```bash
-pnpm install
-pnpm run build
-pnpm run test
-pnpm run lint
+cd packages/cli && go test ./...
+cd ../orchestrator && go test ./...
+cd ../diffviewer && go test ./...
 ```
 
 Read the full [Contributing guide](docs/development/contributing.md).

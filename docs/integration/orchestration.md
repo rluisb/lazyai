@@ -1,20 +1,26 @@
 # Orchestration
 
-`ai-setup` can optionally scaffold orchestration definitions and register the `@ai-setup/orchestrator` MCP server. This is **opt-in**; if you never enable `orchestrator`, nothing about the existing `ai-setup` flow changes.
+`lazyai-cli` can optionally scaffold orchestration definitions and register the `lazyai-orchestrator` MCP server. This is **opt-in**; if you never enable `orchestrator`, nothing about the existing LazyAI flow changes.
 
 ## Execution model
 
 - **Local native agents** (Claude Code, OpenCode, Copilot) are the intended execution path.
 - A2A is a config/seam only and is **not** remote/network execution by default.
-- The `ai-setup-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.
-- Released installs can download, verify, and cache matching prebuilt `ai-setup-orchestrator-*` assets from GitHub Releases.
+- The `lazyai-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.
+- Released installs can download, verify, and cache matching prebuilt `lazyai-orchestrator-*` assets from GitHub Releases.
+
+## Install the runtime
+
+```bash
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
+```
 
 ## Enable during `init`
 
 **Non-interactive**
 
 ```bash
-ai-setup init \
+lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
   --enable-servers orchestrator \
@@ -25,11 +31,11 @@ ai-setup init \
 
 **Interactive wizard**
 
-Run `ai-setup init` and select `orchestrator` when asked for optional MCP integrations.
+Run `lazyai-cli init` and select `orchestrator` when asked for optional MCP integrations.
 
 ## What gets scaffolded
 
-When enabled, `ai-setup` copies the orchestration library into:
+When enabled, `lazyai-cli` copies the orchestration library into:
 
 ```text
 .ai/orchestration/
@@ -56,41 +62,41 @@ Project-local files with the same name override built-in library entries for `li
 ### Create custom artifacts
 
 ```bash
-ai-setup create domain payments --description "Payments domain constraints" --no-interactive
-ai-setup create mode strict-review --description "High-friction approval mode" --no-interactive
-ai-setup create workflow payments-review --chain feature --team review-team --no-interactive
+lazyai-cli create domain payments --description "Payments domain constraints" --no-interactive
+lazyai-cli create mode strict-review --description "High-friction approval mode" --no-interactive
+lazyai-cli create workflow payments-review --chain feature --team review-team --no-interactive
 ```
 
 ### List orchestration artifacts
 
 ```bash
-ai-setup list workflows
-ai-setup list chains
-ai-setup list teams
-ai-setup list domains
-ai-setup list modes
-ai-setup list orchestration --json
+lazyai-cli list workflows
+lazyai-cli list chains
+lazyai-cli list teams
+lazyai-cli list domains
+lazyai-cli list modes
+lazyai-cli list orchestration --json
 ```
 
 ### Inspect an item
 
 ```bash
-ai-setup info feature
-ai-setup info review-team
-ai-setup info backend --json
+lazyai-cli info feature
+lazyai-cli info review-team
+lazyai-cli info backend --json
 ```
 
 ### Orchestration namespace
 
 ```bash
-ai-setup orchestration list workflows --json
-ai-setup orchestration create domain payments --description "Payments domain" --no-interactive
-ai-setup orchestration status --json
+lazyai-cli orchestration list workflows --json
+lazyai-cli orchestration create domain payments --description "Payments domain" --no-interactive
+lazyai-cli orchestration status --json
 ```
 
 ## Tool integration
 
-When orchestration is enabled, `ai-setup` generates additional guidance files:
+When orchestration is enabled, `lazyai-cli` generates additional guidance files:
 
 | Tool | Generated guidance |
 |---|---|
@@ -100,7 +106,7 @@ When orchestration is enabled, `ai-setup` generates additional guidance files:
 
 ## Using the orchestrator in your CLI tool
 
-1. Run `ai-setup init --enable-servers orchestrator`
+1. Run `lazyai-cli init --enable-servers orchestrator`
 2. Open the project root in your coding-agent CLI so it can see the generated MCP config and orchestration guidance files
 3. Ask the tool to use the orchestrator for a specific task
 4. The host tool does the execution while the orchestrator MCP server tracks chain/team/workflow state
@@ -113,9 +119,9 @@ Example prompts:
 
 ## Runtime details
 
-- The orchestrator runtime source lives in `packages/orchestrator-go/`
-- `ai-setup` scaffolds definitions and config; `ai-setup-orchestrator` owns runtime behavior
-- The MCP server is the runtime boundary; there is no separate `ai-setup` command that runs a workflow end-to-end
+- The orchestrator runtime source lives in `packages/orchestrator/`
+- `lazyai-cli` scaffolds definitions and config; `lazyai-orchestrator` owns runtime behavior
+- The MCP server is the runtime boundary; there is no separate `lazyai-cli` command that runs a workflow end-to-end
 
 ## Legacy orchestration usage doc
 

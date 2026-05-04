@@ -1,6 +1,6 @@
 # MCP Integration
 
-`ai-setup` maintains a canonical MCP catalog under `.ai/` and compiles it into each tool’s native config format.
+`lazyai-cli` maintains a canonical MCP catalog under `.ai/` and compiles it into each tool’s native config format.
 
 ## Canonical source
 
@@ -31,18 +31,18 @@ It contains the full catalog of bundled servers, including:
 During setup:
 
 ```bash
-ai-setup init --enable-servers atlassian,playwright,orchestrator
+lazyai-cli init --enable-servers atlassian,playwright,orchestrator
 ```
 
 Or edit `.ai/mcp.json` later, then recompile:
 
 ```bash
-ai-setup compile
+lazyai-cli compile
 ```
 
 ## Disabling servers
 
-Edit `.ai/mcp.json` and set the server's `enabled` flag to `false`, then rerun `ai-setup compile`.
+Edit `.ai/mcp.json` and set the server's `enabled` flag to `false`, then rerun `lazyai-cli compile`.
 
 ## Bundled MCP servers
 
@@ -52,18 +52,18 @@ Edit `.ai/mcp.json` and set the server's `enabled` flag to `false`, then rerun `
 | `filesystem` | enabled | No | Local filesystem read/write access |
 | `ripgrep` | enabled | No | Fast code search |
 | `memoria` | enabled | No | Git history + code memory |
-| `codegraph` | disabled | Yes | Semantic code graph (`bun install -g codegraph`) |
+| `codegraph` | disabled | Yes | Semantic code graph (`go install` or project-specific install) |
 | `qmd` | disabled | Yes | Markdown knowledge search (`brew install qmd`) |
 | `playwright` | disabled | No | Browser automation and testing |
 | `context7` | disabled | No | Remote docs lookup; uses `CONTEXT7_API_KEY` |
 | `atlassian` | disabled | No | Jira/Confluence remote access |
 | `brave-search` | disabled | No | Web search; needs `BRAVE_API_KEY` |
 | `fetch` | disabled | No | General HTTP fetch MCP |
-| `orchestrator` | disabled | No | Optional orchestration runtime |
+| `orchestrator` | disabled | Yes | Optional LazyAI orchestration runtime (`lazyai-orchestrator`) |
 
 ## Environment variables
 
-If any enabled MCP server declares env vars, `ai-setup` generates:
+If any enabled MCP server declares env vars, `lazyai-cli` generates:
 
 ```text
 .env.example
@@ -76,8 +76,14 @@ Example:
 BRAVE_API_KEY=
 ```
 
-`ai-setup` never writes real secrets into `.env.example`.
+`lazyai-cli` never writes real secrets into `.env.example`.
 
 ## Orchestrator MCP server
 
-When `orchestrator` is enabled, `ai-setup` scaffolds `.ai/orchestration/` and generates per-tool orchestrator guidance files. See [Orchestration](orchestration.md).
+When `orchestrator` is enabled, `lazyai-cli` scaffolds `.ai/orchestration/` and generates per-tool orchestrator guidance files. Install the runtime with:
+
+```bash
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
+```
+
+See [Orchestration](orchestration.md).

@@ -3,68 +3,121 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'packages/cli/v*'
+      - 'packages/orchestrator/v*'
+      - 'packages/diffviewer/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label to embed during dry-run builds'
+        required: false
+        default: '0.0.0-dry-run'
+      dry_run:
+        description: 'Build and upload artifacts without creating a GitHub Release'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: '1.26.x'
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/ai-setup-go
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Set version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Set release metadata
+        id: metadata
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+            tag_name="dry-run/$version"
+            dry_run="${{ inputs.dry_run }}"
+          else
+            tag_name="${GITHUB_REF_NAME}"
+            version="${GITHUB_REF_NAME##*/}"
+            dry_run="false"
+
+            case "$tag_name" in
+              packages/cli/v*|packages/orchestrator/v*|packages/diffviewer/v*) ;;
+              *)
+                echo "Unsupported release tag: $tag_name" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          {
+            echo "VERSION=$version"
+            echo "TAG_NAME=$tag_name"
+            echo "DRY_RUN=$dry_run"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "version=$version"
+            echo "tag_name=$tag_name"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare dist
-        run: mkdir -p dist
+        run: rm -rf dist && mkdir -p dist
 
-      - name: Build (darwin arm64)
-        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-arm64 .
+      - name: Build release assets
+        run: |
+          cli_version_ldflags="-s -w -X github.com/rluisb/lazyai/packages/cli/cmd.Version=${VERSION} -X github.com/rluisb/lazyai/packages/cli/internal/version.Version=${VERSION}"
 
-      - name: Build orchestrator (darwin arm64)
-        run: GOOS=darwin GOARCH=arm64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-darwin-arm64 ./cmd/orchestrator
+          build_asset() {
+            module="$1"
+            package="$2"
+            binary="$3"
+            os="$4"
+            arch="$5"
+            ldflags="$6"
+            ext=""
 
-      - name: Build (darwin amd64)
-        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-darwin-amd64 .
+            if [ "$os" = "windows" ]; then
+              ext=".exe"
+            fi
 
-      - name: Build orchestrator (darwin amd64)
-        run: GOOS=darwin GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-darwin-amd64 ./cmd/orchestrator
+            output="$PWD/dist/$binary-$os-$arch$ext"
+            echo "Building $output"
+            (cd "$module" && GOOS="$os" GOARCH="$arch" go build -ldflags "$ldflags" -o "$output" "$package")
+          }
 
-      - name: Build (linux amd64)
-        run: GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-amd64 .
+          for target in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64; do
+            os="${target%/*}"
+            arch="${target#*/}"
 
-      - name: Build orchestrator (linux amd64)
-        run: GOOS=linux GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-linux-amd64 ./cmd/orchestrator
-
-      - name: Build (linux arm64)
-        run: GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-linux-arm64 .
-
-      - name: Build orchestrator (linux arm64)
-        run: GOOS=linux GOARCH=arm64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-linux-arm64 ./cmd/orchestrator
-
-      - name: Build (windows amd64)
-        run: GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X github.com/ricardoborges-teachable/ai-setup/cmd.Version=${VERSION}" -o dist/ai-setup-windows-amd64.exe .
-
-      - name: Build orchestrator (windows amd64)
-        run: GOOS=windows GOARCH=amd64 go build -C ../orchestrator-go -ldflags "-s -w" -o ../ai-setup-go/dist/ai-setup-orchestrator-windows-amd64.exe ./cmd/orchestrator
+            build_asset packages/cli ./cmd/lazyai-cli lazyai-cli "$os" "$arch" "$cli_version_ldflags"
+            build_asset packages/orchestrator ./cmd/lazyai-orchestrator lazyai-orchestrator "$os" "$arch" "-s -w"
+            build_asset packages/diffviewer ./cmd/lazyai-diffviewer lazyai-diffviewer "$os" "$arch" "-s -w"
+          done
 
       - name: Generate checksums
-        run: cd dist && shasum -a 256 ai-setup-* > checksums.txt
+        run: cd dist && shasum -a 256 lazyai-* > checksums.txt
+
+      - name: Upload dry-run artifacts
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lazyai-release-dry-run-${{ steps.metadata.outputs.version }}
+          path: dist/
 
       - name: Create Release
+        if: env.DRY_RUN != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ env.VERSION }}
+          tag_name: ${{ steps.metadata.outputs.tag_name }}
+          name: LazyAI ${{ steps.metadata.outputs.version }}
           files: |
-            packages/ai-setup-go/dist/ai-setup-*
-            packages/ai-setup-go/dist/checksums.txt
+            dist/lazyai-*
+            dist/checksums.txt
           generate_release_notes: true
           draft: false

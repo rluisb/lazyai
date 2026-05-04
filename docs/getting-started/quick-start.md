@@ -1,11 +1,17 @@
 # Quick Start
 
-> **Important:** `ai-setup` is **not published to npm**. Install and run it directly from GitHub with `npx`.
+> **Important:** LazyAI is Go-only. Install `lazyai-cli` with `go install`; npm/npx distribution has been removed.
+
+## Install
+
+```bash
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+```
 
 ## Interactive setup
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init
+lazyai-cli init
 ```
 
 This launches a wizard where you choose:
@@ -20,7 +26,7 @@ This launches a wizard where you choose:
 ### Project scope (default)
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
   --enable-servers orchestrator \
@@ -32,7 +38,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 ### Global scope
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope global \
   --tools opencode,claude-code \
   --name global \
@@ -43,7 +49,7 @@ npx github:ricardoborges-teachable/ai-setup init \
 ### Workspace scope
 
 ```bash
-npx github:ricardoborges-teachable/ai-setup init \
+lazyai-cli init \
   --scope workspace \
   --planning-repo ./planning-repo \
   --repos ../app-one,../app-two \
@@ -66,8 +72,8 @@ npx github:ricardoborges-teachable/ai-setup init \
 ## Verify the setup
 
 ```bash
-ai-setup status
-ai-setup doctor
+lazyai-cli status
+lazyai-cli doctor
 ```
 
 ## Next steps

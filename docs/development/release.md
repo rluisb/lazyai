@@ -1,71 +1,73 @@
 # Release Process
 
-This document describes the safe release flow for `@ricardoborges-teachable/ai-setup`.
+LazyAI is released as Go submodules from `github.com/rluisb/lazyai`. It is not published to npm.
 
-## Do not publish to npm
+## Go module tags
 
-The repository currently includes `.github/workflows/publish.yml`, which publishes to npm on release automation paths. For current releases, the goal is to prepare release assets and a GitHub release draft **without** publishing the package.
+Each package is an independent Go module and must be tagged with its module directory prefix:
+
+| Module | Command | Tag format |
+|---|---|---|
+| `packages/cli` | `lazyai-cli` | `packages/cli/vX.Y.Z` |
+| `packages/orchestrator` | `lazyai-orchestrator` | `packages/orchestrator/vX.Y.Z` |
+| `packages/diffviewer` | `lazyai-diffviewer` | `packages/diffviewer/vX.Y.Z` |
+
+Root `vX.Y.Z` tags do not version these submodules for `go install`.
+
+## Install contracts
+
+Released users install commands with:
+
+```bash
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
+go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
+```
+
+Pinned installs should use the same module path with the matching submodule version, for example:
+
+```bash
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
+```
 
 ## Recommended release preparation steps
 
-1. Review the version bump in `package.json` and `package-lock.json`.
-2. Review `CHANGELOG.md` for final release notes.
-3. Merge the release preparation branch through the normal PR process.
-4. After merge, create a **draft** GitHub release only.
-5. Do **not** click publish and do **not** run `npm publish`.
+1. Confirm the package module(s) being released and the target `packages/<module>/vX.Y.Z` tag(s).
+2. Review `CHANGELOG.md` and package-specific release notes.
+3. Run package tests, vet, and local builds for affected modules.
+4. Run `mkdocs build --strict` so release documentation stays publishable.
+5. Merge the release preparation branch through the normal PR process.
+6. Create the prefixed submodule tag(s) and let release automation build `lazyai-*` assets.
 
-## Draft GitHub release
+## GitHub release assets
 
-### Option A: GitHub UI
+Release assets should use the LazyAI binary names:
 
-1. Open the repository on GitHub.
-2. Go to **Releases**.
-3. Choose **Draft a new release**.
-4. Create or select the version tag.
-5. Set the release title.
-6. Paste notes from `CHANGELOG.md`.
-7. Save as draft.
-8. Do not publish the release.
+- `lazyai-cli-<os>-<arch>[.exe]`
+- `lazyai-orchestrator-<os>-<arch>[.exe]`
+- `lazyai-diffviewer-<os>-<arch>[.exe]`
+- `checksums.txt`
 
-### Option B: GitHub CLI
+The orchestrator MCP runtime is distributed as `lazyai-orchestrator`; generated MCP configs should not reference the old `ai-setup-orchestrator` name.
 
-Only use this if you have confirmed that creating a draft release will not trigger unintended publish automation in your repository settings/workflows.
+## Upgrading commands
+
+End users upgrade by re-running the relevant Go install command:
 
 ```bash
-gh release create vX.Y.Z \
-  --draft \
-  --title "ai-setup vX.Y.Z" \
-  --notes-file CHANGELOG.md
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
-## Important safety note
-
-Because `.github/workflows/publish.yml` is configured for release-related automation and npm publishing, treat the GitHub release as a documentation artifact for now. Keep the release in draft state until you intentionally want an npm publication flow.
-
-## Orchestrator binary assets
-
-The release workflow publishes `ai-setup-orchestrator-*` assets for the same supported platforms as the main `ai-setup-*` binary. Both sets are included in `checksums.txt` so released installs can verify cached orchestrator downloads.
-
-Released `ai-setup` binaries request the orchestrator assets from the matching `v{version}` release tag. Development builds fall back to the latest release.
-
-## Upgrading the CLI
-
-End users can upgrade with:
+After upgrading the CLI binary, refresh managed files:
 
 ```bash
-ai-setup update-self --check
-ai-setup update-self --dry-run
-ai-setup update-self
-```
-
-After upgrading the binary, refresh managed files:
-
-```bash
-ai-setup update --check
-ai-setup update
-ai-setup doctor
+lazyai-cli update --check
+lazyai-cli update
+lazyai-cli doctor
 ```
 
 ## Store migration
 
-When the Go binary detects an existing `.ai-setup.json` without a `.ai-setup.db`, it automatically imports the configuration into SQLite. This happens on any command (`init`, `update`, `doctor`, `status`). No user action is needed. The `.ai-setup.json` file is left in place for backward compatibility.
+Existing managed projects may still contain `.ai-setup.json` and `.ai-setup.db`. Those file names are part of the current local state contract and are not automatically renamed in the LazyAI package restructure.
+
+See [Migration from ai-setup to LazyAI](../migration/ai-setup-to-lazyai.md) for user-facing rename guidance.

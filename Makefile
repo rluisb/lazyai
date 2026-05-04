@@ -1,79 +1,83 @@
-.PHONY: build test lint vet clean install release cross-build checksums go-build go-test go-vet go-tidy ts-install ts-build ts-test ts-typecheck orch-build orch-test go-all ts-all all
+.PHONY: build test lint vet clean cli-build cli-test cli-vet cli-tidy orchestrator-build orchestrator-test orchestrator-vet orchestrator-tidy diffviewer-build diffviewer-test diffviewer-vet diffviewer-tidy go-work-sync release-dry-run all
 
-# ── Go (packages/ai-setup-go) ──────────────────────────────────────────────
-
-GO_DIR = packages/ai-setup-go
-BINARY_NAME = ai-setup
 GO = go
+CLI_DIR = packages/cli
+ORCHESTRATOR_DIR = packages/orchestrator
+DIFFVIEWER_DIR = packages/diffviewer
+DIST_DIR = dist
+VERSION ?= 0.0.0-dev
+CLI_VERSION_LDFLAGS = -s -w -X github.com/rluisb/lazyai/packages/cli/cmd.Version=$(VERSION) -X github.com/rluisb/lazyai/packages/cli/internal/version.Version=$(VERSION)
+PLATFORMS = darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64
 
-go-build:
-	cd $(GO_DIR) && $(GO) build -o $(BINARY_NAME) .
+cli-build:
+	cd $(CLI_DIR) && $(GO) build -o lazyai-cli ./cmd/lazyai-cli
 
-go-test:
-	cd $(GO_DIR) && $(GO) test ./... -v -count=1
+cli-test:
+	cd $(CLI_DIR) && $(GO) test ./... -count=1
 
-go-test-short:
-	cd $(GO_DIR) && $(GO) test ./... -short -count=1
+cli-vet:
+	cd $(CLI_DIR) && $(GO) vet ./...
 
-go-test-coverage:
-	cd $(GO_DIR) && $(GO) test ./... -coverprofile=coverage.out -count=1
-	cd $(GO_DIR) && $(GO) tool cover -html=coverage.out -o coverage.html
+cli-tidy:
+	cd $(CLI_DIR) && $(GO) mod tidy
 
-go-vet:
-	cd $(GO_DIR) && $(GO) vet ./...
+orchestrator-build:
+	cd $(ORCHESTRATOR_DIR) && $(GO) build -o lazyai-orchestrator ./cmd/lazyai-orchestrator
 
-go-tidy:
-	cd $(GO_DIR) && $(GO) mod tidy
+orchestrator-test:
+	cd $(ORCHESTRATOR_DIR) && $(GO) test ./... -count=1
 
-go-fmt:
-	cd $(GO_DIR) && gofmt -w . && goimports -w .
+orchestrator-vet:
+	cd $(ORCHESTRATOR_DIR) && $(GO) vet ./...
 
-go-clean:
-	rm -f $(GO_DIR)/$(BINARY_NAME) $(GO_DIR)/coverage.out $(GO_DIR)/coverage.html
+orchestrator-tidy:
+	cd $(ORCHESTRATOR_DIR) && $(GO) mod tidy
 
-go-cross-build:
-	cd $(GO_DIR) && \
-		GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-arm64 . && \
-		GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-darwin-amd64 . && \
-		GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-amd64 . && \
-		GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-linux-arm64 . && \
-		GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o dist/$(BINARY_NAME)-windows-amd64.exe .
+diffviewer-build:
+	cd $(DIFFVIEWER_DIR) && $(GO) build -o lazyai-diffviewer ./cmd/lazyai-diffviewer
 
-go-checksums: go-cross-build
-	cd $(GO_DIR)/dist && shasum -a 256 * > checksums.txt
+diffviewer-test:
+	cd $(DIFFVIEWER_DIR) && $(GO) test ./... -count=1
 
-go-all: go-vet go-test go-build
+diffviewer-vet:
+	cd $(DIFFVIEWER_DIR) && $(GO) vet ./...
 
-# ── TypeScript (pnpm workspaces) ────────────────────────────────────────────
+diffviewer-tidy:
+	cd $(DIFFVIEWER_DIR) && $(GO) mod tidy
 
-ts-install:
-	pnpm install
+go-work-sync:
+	$(GO) work sync
 
-ts-build:
-	pnpm run build
+build: cli-build orchestrator-build diffviewer-build
 
-ts-test:
-	pnpm run test
+test: cli-test orchestrator-test diffviewer-test
 
-ts-typecheck:
-	pnpm run typecheck
+vet: cli-vet orchestrator-vet diffviewer-vet
 
-# ── Orchestrator ────────────────────────────────────────────────────────────
-
-orch-build:
-	pnpm --filter @ai-setup/orchestrator run build
-
-orch-test:
-	pnpm --filter @ai-setup/orchestrator run test
-
-# ── Convenience ─────────────────────────────────────────────────────────────
-
-build: ts-build go-build
-test: ts-test go-test
-lint: go-vet ts-typecheck
+lint: vet
 
 clean:
-	rm -rf packages/ai-setup-go/dist packages/ai-setup-ts/dist packages/orchestrator/dist
-	rm -f packages/ai-setup-go/$(BINARY_NAME) packages/ai-setup-go/coverage.out packages/ai-setup-go/coverage.html
+	rm -f $(CLI_DIR)/lazyai-cli $(CLI_DIR)/coverage.out $(CLI_DIR)/coverage.html
+	rm -f $(ORCHESTRATOR_DIR)/lazyai-orchestrator
+	rm -f $(DIFFVIEWER_DIR)/lazyai-diffviewer
+	rm -rf $(CLI_DIR)/dist $(ORCHESTRATOR_DIR)/dist $(DIFFVIEWER_DIR)/dist
+	rm -rf $(DIST_DIR)
 
-all: lint test build
+release-dry-run:
+	rm -rf $(DIST_DIR)
+	mkdir -p $(DIST_DIR)
+	@for target in $(PLATFORMS); do \
+		os=$${target%/*}; \
+		arch=$${target#*/}; \
+		ext=""; \
+		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
+		echo "Building lazyai-cli-$$os-$$arch$$ext"; \
+		(cd $(CLI_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "$(CLI_VERSION_LDFLAGS)" -o ../../$(DIST_DIR)/lazyai-cli-$$os-$$arch$$ext ./cmd/lazyai-cli) || exit 1; \
+		echo "Building lazyai-orchestrator-$$os-$$arch$$ext"; \
+		(cd $(ORCHESTRATOR_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "-s -w" -o ../../$(DIST_DIR)/lazyai-orchestrator-$$os-$$arch$$ext ./cmd/lazyai-orchestrator) || exit 1; \
+		echo "Building lazyai-diffviewer-$$os-$$arch$$ext"; \
+		(cd $(DIFFVIEWER_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "-s -w" -o ../../$(DIST_DIR)/lazyai-diffviewer-$$os-$$arch$$ext ./cmd/lazyai-diffviewer) || exit 1; \
+	done
+	cd $(DIST_DIR) && shasum -a 256 lazyai-* > checksums.txt
+
+all: vet test build

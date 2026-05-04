@@ -1,6 +1,6 @@
 # How It Works
 
-`ai-setup` uses a **canonical source → compile** model. You edit one tool-agnostic layer; `ai-setup` generates the rest.
+`lazyai-cli` uses a **canonical source → compile** model. You edit one tool-agnostic layer; `lazyai-cli` generates the rest.
 
 ## Canonical source
 
@@ -27,7 +27,7 @@ This is where you make changes. Everything in `.ai/` is human-editable and versi
 
 ## Compiled output
 
-From `.ai/`, `ai-setup compile` generates tool-native files:
+From `.ai/`, `lazyai-cli compile` generates tool-native files:
 
 - `AGENTS.md` — root instructions for all tools
 - `.opencode/` — OpenCode agents, skills, commands, and MCP config
@@ -38,10 +38,10 @@ From `.ai/`, `ai-setup compile` generates tool-native files:
 
 ## Workflow
 
-1. **Initialize once**: `ai-setup init`
+1. **Initialize once**: `lazyai-cli init`
 2. **Edit canonical files**: change rules, agents, or templates in `.ai/`
-3. **Recompile**: `ai-setup compile` (or `ai-setup update` to refresh library content)
-4. **Verify**: `ai-setup doctor` checks drift and missing files
+3. **Recompile**: `lazyai-cli compile` (or `lazyai-cli update` to refresh library content)
+4. **Verify**: `lazyai-cli doctor` checks drift and missing files
 
 ## Manifest tracking
 
@@ -60,7 +60,7 @@ It tracks:
 - managed file paths and content hashes
 - operation history and sync metadata
 
-This powers `ai-setup status`, `ai-setup doctor`, and `ai-setup update`.
+This powers `lazyai-cli status`, `lazyai-cli doctor`, and `lazyai-cli update`.
 
 ## Conflict and update behavior
 
@@ -79,7 +79,7 @@ Backups are written under `.ai-setup-backup/` with relative paths preserved.
 You can provide CLI defaults via TOML:
 
 - Project: `.ai-setup.toml`
-- Global: `~/.config/ai-setup/config.toml`
+- Global: `~/.config/lazyai/config.toml`
 
 Precedence: `CLI flags > project TOML > global TOML > built-in defaults`
 
@@ -87,4 +87,4 @@ Precedence: `CLI flags > project TOML > global TOML > built-in defaults`
 
 - **Local native agents** are the intended execution path (Claude Code, OpenCode, Copilot).
 - **A2A** is a config/seam only and is not remote/network execution by default.
-- The optional `ai-setup-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.
+- The optional `lazyai-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.

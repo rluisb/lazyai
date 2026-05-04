@@ -1,6 +1,6 @@
 # Feature Presets
 
-Presets control how much guidance and structure `ai-setup` installs by default.
+Presets control how much guidance and structure `lazyai-cli` installs by default.
 
 ## Preset levels
 
@@ -29,13 +29,13 @@ Presets control how much guidance and structure `ai-setup` installs by default.
 Disable specific features:
 
 ```bash
-ai-setup init --preset full --disable-features treeOfThoughts,agentHarness
+lazyai-cli init --preset full --disable-features treeOfThoughts,agentHarness
 ```
 
 Start from nothing and re-enable only what you want:
 
 ```bash
-ai-setup init \
+lazyai-cli init \
   --disable-features all \
   --features rpiWorkflow,qualityGates \
   --scope project \

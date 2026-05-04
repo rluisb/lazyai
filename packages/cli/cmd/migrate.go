@@ -18,7 +18,7 @@ var migrateCmd = &cobra.Command{
 
 func init() {
 	migrateCmd.Flags().String("from", "", "Source version to migrate from")
-	migrateCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	migrateCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	migrateCmd.Flags().Bool("preview", false, "Preview changes without executing")
 	migrateCmd.Flags().String("strategy", "smart", "Merge strategy: smart, preserve, replace, append")
 	migrateCmd.Flags().Bool("verbose", false, "Show detailed output")
@@ -33,7 +33,7 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 	}
 	targetPath, _ := os.Getwd()
 
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 	preview, _ := cmd.Flags().GetBool("preview")
 	strategyStr, _ := cmd.Flags().GetString("strategy")
 	verbose, _ := cmd.Flags().GetBool("verbose")

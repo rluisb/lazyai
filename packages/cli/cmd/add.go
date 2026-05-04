@@ -26,12 +26,12 @@ func init() {
 	addCmd.Flags().StringSlice("tools", []string{}, "Tools to add configuration for")
 	addCmd.Flags().StringSlice("agents", []string{}, "Agents to add")
 	addCmd.Flags().StringSlice("skills", []string{}, "Skills to add")
-	addCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	addCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	rootCmd.AddCommand(addCmd)
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 
 	// Parse flags.
 	toolsStr, _ := cmd.Flags().GetStringSlice("tools")

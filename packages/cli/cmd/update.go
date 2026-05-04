@@ -25,14 +25,14 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	updateCmd.Flags().Bool("force", false, "Overwrite local changes without prompting")
-	updateCmd.Flags().Bool("non-interactive", false, "Run without interactive prompts")
+	updateCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	updateCmd.Flags().Bool("dry-run", false, "Show what would be changed without making changes")
 	rootCmd.AddCommand(updateCmd)
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
-	nonInteractive, _ := cmd.Flags().GetBool("non-interactive")
+	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	targetDir, _ := os.Getwd()

@@ -12,6 +12,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
+	"github.com/rluisb/lazyai/packages/cli/tui/components"
 	"github.com/rluisb/lazyai/packages/cli/tui/wizard"
 )
 
@@ -263,6 +264,11 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 	fmt.Println()
 	printScaffoldSummary(scaffoldResult, ctx)
 	fmt.Println()
+
+	if catalog := adapter.ReadCanonicalMcp(ctx.TargetDir); catalog != nil {
+		PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
+	}
+
 	return nil
 }
 
@@ -438,29 +444,27 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	fmt.Println()
 	printScaffoldSummary(scaffoldResult, ctx)
 	fmt.Println()
+
+	if catalog := adapter.ReadCanonicalMcp(ctx.TargetDir); catalog != nil {
+		PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
+	}
+
 	return nil
 }
 
 // printScaffoldSummary prints a human-readable summary of the scaffold results.
 func printScaffoldSummary(result *scaffold.ScaffoldResult, ctx *scaffold.ScaffoldContext) {
-	style := headerStyle()
-	greenStyle := successStyle()
+	box := components.NewSummaryBox("Setup complete!")
+	box.AddSuccess(fmt.Sprintf("Scope: %s", ctx.SetupScope))
+	box.AddSuccess(fmt.Sprintf("Tools: %v", ctx.Tools))
+	box.AddSuccess(fmt.Sprintf("Project: %s", ctx.ProjectName))
+	box.SetStats(len(result.Files), 0, 0)
 
-	fmt.Println(style.Render("✅ Setup complete!"))
-	fmt.Println()
-	fmt.Printf("  %s Scope: %s\n", greenStyle.Render("•"), ctx.SetupScope)
-	fmt.Printf("  %s Tools: %v\n", greenStyle.Render("•"), ctx.Tools)
-	fmt.Printf("  %s Project: %s\n", greenStyle.Render("•"), ctx.ProjectName)
-	fmt.Printf("  %s Files installed: %d\n", greenStyle.Render("•"), len(result.Files))
-
-	if len(result.Errors) > 0 {
-		warnStyle := warningStyle()
-		fmt.Println()
-		fmt.Println(warnStyle.Render(fmt.Sprintf("⚠ %d warnings:", len(result.Errors))))
-		for _, e := range result.Errors {
-			fmt.Printf("  • %v\n", e)
-		}
+	for _, e := range result.Errors {
+		box.AddWarning(fmt.Sprintf("%v", e))
 	}
+
+	fmt.Println(box.Render())
 }
 
 func compileMCPForInit(ctx *scaffold.ScaffoldContext, result *scaffold.ScaffoldResult) error {

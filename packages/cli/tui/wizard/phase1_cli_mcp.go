@@ -34,6 +34,7 @@ type McpServer struct {
 	Enabled         bool   `json:"enabled"`
 	RequiresInstall bool   `json:"requiresInstall"`
 	InstallHint     string `json:"installHint"`
+	SetupHint       string `json:"setupHint,omitempty"`
 }
 
 type CliTool struct {

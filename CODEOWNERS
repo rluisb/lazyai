@@ -1,0 +1,11 @@
+# Core code — maintainer only
+* @rluisb
+
+# Docs and standards
+/specs/ @rluisb
+
+# Sensitive governance files
+/AGENTS.md @rluisb
+/.github/ @rluisb
+/go.work @rluisb
+/go.work.sum @rluisb

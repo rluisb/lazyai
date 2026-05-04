@@ -36,7 +36,6 @@ GEMINI.md
 .worktrees/
 AGENTS.md
 INSTRUCTIONS.md
-CODEOWNERS
 
 # Scaffold-generated docs (copies from library/)
 specs/adrs/

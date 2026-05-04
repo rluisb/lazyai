@@ -1,0 +1,67 @@
+name: Bug Report
+description: Report a bug in LazyAI
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form completely.
+  - type: input
+    id: version
+    attributes:
+      label: LazyAI Version
+      description: What version are you using? (`lazyai-cli --version`)
+      placeholder: "e.g., 0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (arm64)
+        - macOS (amd64)
+        - Linux (amd64)
+        - Linux (arm64)
+        - Windows (amd64)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: go-version
+    attributes:
+      label: Go Version
+      description: What Go version are you running?
+      placeholder: "e.g., 1.26.1"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the bug
+      placeholder: |
+        1. Run `lazyai-cli ...`
+        2. ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs & Output
+      description: Paste any relevant logs or terminal output
+      render: shell
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Anything else we should know?

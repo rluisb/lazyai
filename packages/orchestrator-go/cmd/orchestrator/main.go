@@ -34,6 +34,7 @@ var (
 	port        int
 	projectRoot string
 	execMode    string
+	configPath  string
 	scope       string
 	globalRoot  string
 	detachFlag  bool
@@ -52,7 +53,7 @@ var rootCmd = &cobra.Command{
 	Short: "Multi-agent orchestration runtime for ai-setup",
 	Long:  `Coordinates chains, teams, and workflows with durable SQLite state and MCP tools.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runStdio()
+		return runStdio(cmd)
 	},
 }
 
@@ -99,10 +100,16 @@ var statusCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serveCmd, connectCmd, startCmd, stopCmd, statusCmd)
 
+	rootCmd.Flags().StringVar(&projectRoot, "project", "", "Project root path")
+	rootCmd.Flags().StringVar(&scope, "scope", "project", "Scope: project|global|workspace")
+	rootCmd.Flags().StringVar(&execMode, "execution-mode", "native", "Execution: native|a2a|hybrid")
+	rootCmd.Flags().StringVar(&configPath, "config", "", "Orchestrator config path (default: .ai/orchestrator.json; env: AI_SETUP_ORCHESTRATOR_CONFIG)")
+
 	serveCmd.Flags().IntVar(&port, "port", defaultPort, "TCP port")
 	serveCmd.Flags().StringVar(&projectRoot, "project", "", "Project root path")
 	serveCmd.Flags().StringVar(&scope, "scope", "project", "Scope: project|global|workspace")
 	serveCmd.Flags().StringVar(&execMode, "execution-mode", "native", "Execution: native|a2a|hybrid")
+	serveCmd.Flags().StringVar(&configPath, "config", "", "Orchestrator config path (default: .ai/orchestrator.json; env: AI_SETUP_ORCHESTRATOR_CONFIG)")
 	serveCmd.Flags().DurationVar(&idleTimeout, "idle-timeout", defaultIdleTimeout, "Auto-shutdown idle timeout (0 disables, env: AI_SETUP_ORCHESTRATOR_IDLE_TIMEOUT)")
 	serveCmd.Flags().BoolVar(&detachFlag, "detach", false, "Run in background")
 
@@ -110,19 +117,24 @@ func init() {
 	connectCmd.Flags().StringVar(&projectRoot, "project", "", "Project root")
 	connectCmd.Flags().StringVar(&scope, "scope", "project", "Scope")
 	connectCmd.Flags().StringVar(&execMode, "execution-mode", "native", "Execution mode")
+	connectCmd.Flags().StringVar(&configPath, "config", "", "Orchestrator config path")
 	connectCmd.Flags().DurationVar(&idleTimeout, "idle-timeout", defaultIdleTimeout, "Auto-shutdown idle timeout for auto-started daemon (0 disables, env: AI_SETUP_ORCHESTRATOR_IDLE_TIMEOUT)")
 
 	startCmd.Flags().IntVar(&port, "port", defaultPort, "TCP port")
 	startCmd.Flags().StringVar(&projectRoot, "project", "", "Project root")
 	startCmd.Flags().StringVar(&scope, "scope", "project", "Scope")
 	startCmd.Flags().StringVar(&execMode, "execution-mode", "native", "Execution mode")
+	startCmd.Flags().StringVar(&configPath, "config", "", "Orchestrator config path")
 	startCmd.Flags().DurationVar(&idleTimeout, "idle-timeout", defaultIdleTimeout, "Auto-shutdown idle timeout (0 disables, env: AI_SETUP_ORCHESTRATOR_IDLE_TIMEOUT)")
 }
 
 // ──────────────────── Implementation ──────────────────────────────
 
-func runStdio() error {
-	runtimeConfig, err := orchmcp.NewRuntimeConfig(execMode)
+func runStdio(cmd *cobra.Command) error {
+	if projectRoot == "" {
+		projectRoot, _ = os.Getwd()
+	}
+	runtimeConfig, err := runtimeConfigForCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -149,7 +161,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
 	}
-	runtimeConfig, err := orchmcp.NewRuntimeConfig(execMode)
+	runtimeConfig, err := runtimeConfigForCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -159,7 +171,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	if detachFlag {
-		return startDetached(port, projectRoot, scope, execMode, resolvedIdleTimeout)
+		return startDetached(port, projectRoot, scope, execMode, configPath, cmd.Flags().Changed("execution-mode"), cmd.Flags().Changed("config"), resolvedIdleTimeout)
 	}
 
 	database, err := openDatabase(projectRoot)
@@ -227,7 +239,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 			StartedAt:     startedAt,
 			ProjectRoot:   projectRoot,
 			Scope:         scope,
-			ExecutionMode: execMode,
+			ExecutionMode: string(runtimeConfig.ExecutionMode),
+			ConfigPath:    runtimeConfig.ConfigPath,
 			Clients:       clients,
 			Idle:          idleState,
 			ActiveRuns:    idleState.ActiveRuns,
@@ -275,7 +288,7 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
 	}
-	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+	if _, err := runtimeConfigForCommand(cmd); err != nil {
 		return err
 	}
 	resolvedIdleTimeout, err := resolveIdleTimeout(cmd)
@@ -286,7 +299,7 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	info, err := findRunningServer()
 	if err != nil {
 		// Start daemon in background
-		if err := startDetachedQuiet(port, projectRoot, scope, execMode, resolvedIdleTimeout); err != nil {
+		if err := startDetachedQuiet(port, projectRoot, scope, execMode, configPath, cmd.Flags().Changed("execution-mode"), cmd.Flags().Changed("config"), resolvedIdleTimeout); err != nil {
 			info, findErr := findRunningServer()
 			if findErr != nil {
 				return fmt.Errorf("failed to start daemon: %w", err)
@@ -307,7 +320,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
 	}
-	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+	if _, err := runtimeConfigForCommand(cmd); err != nil {
 		return err
 	}
 	resolvedIdleTimeout, err := resolveIdleTimeout(cmd)
@@ -319,7 +332,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Orchestrator already running at http://127.0.0.1:%d/mcp (pid %d)\n", info.Port, info.PID)
 		return nil
 	}
-	return startDetached(port, projectRoot, scope, execMode, resolvedIdleTimeout)
+	return startDetached(port, projectRoot, scope, execMode, configPath, cmd.Flags().Changed("execution-mode"), cmd.Flags().Changed("config"), resolvedIdleTimeout)
 }
 
 func runStop(cmd *cobra.Command, args []string) error {
@@ -348,6 +361,12 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	health, err := checkServerHealth(info.Port, 2*time.Second)
 	if err != nil {
 		return fmt.Errorf("daemon health unavailable: %w", err)
+	}
+	if health.ExecutionMode != "" {
+		fmt.Printf("Execution mode: %s\n", health.ExecutionMode)
+	}
+	if health.ConfigPath != "" {
+		fmt.Printf("Config: %s\n", health.ConfigPath)
 	}
 	fmt.Printf("Clients: %d active/recent (%d active requests, %d recent MCP sessions)\n", health.Clients.Count, health.Clients.ActiveRequests, health.Clients.RecentMCPSessions)
 	fmt.Printf("Active runs/jobs: %d (chains %d, teams %d, workflows %d, queue jobs %d)\n", health.ActiveRuns.Total, health.ActiveRuns.Chains, health.ActiveRuns.Teams, health.ActiveRuns.Workflows, health.ActiveRuns.QueueJobs)
@@ -420,19 +439,41 @@ func parseDurationSetting(value string) (time.Duration, error) {
 	return parsed, nil
 }
 
-func startDetached(port int, projectRoot, scope, execMode string, idleTimeout time.Duration) error {
-	return startDetachedWithStatus(port, projectRoot, scope, execMode, idleTimeout, os.Stdout)
+func runtimeConfigForCommand(cmd *cobra.Command) (orchmcp.RuntimeConfig, error) {
+	modeExplicit := false
+	configExplicit := false
+	if cmd != nil {
+		modeExplicit = cmd.Flags().Changed("execution-mode")
+		configExplicit = cmd.Flags().Changed("config")
+	}
+	return orchmcp.LoadRuntimeConfig(orchmcp.RuntimeConfigOptions{
+		ProjectRoot:           projectRoot,
+		ConfigPath:            configPath,
+		ConfigPathExplicit:    configExplicit,
+		ExecutionMode:         execMode,
+		ExecutionModeExplicit: modeExplicit,
+	})
 }
 
-func startDetachedQuiet(port int, projectRoot, scope, execMode string, idleTimeout time.Duration) error {
-	return startDetachedWithStatus(port, projectRoot, scope, execMode, idleTimeout, nil)
+func startDetached(port int, projectRoot, scope, execMode, configPath string, execModeExplicit, configPathExplicit bool, idleTimeout time.Duration) error {
+	return startDetachedWithStatus(port, projectRoot, scope, execMode, configPath, execModeExplicit, configPathExplicit, idleTimeout, os.Stdout)
 }
 
-func startDetachedWithStatus(port int, projectRoot, scope, execMode string, idleTimeout time.Duration, status io.Writer) error {
+func startDetachedQuiet(port int, projectRoot, scope, execMode, configPath string, execModeExplicit, configPathExplicit bool, idleTimeout time.Duration) error {
+	return startDetachedWithStatus(port, projectRoot, scope, execMode, configPath, execModeExplicit, configPathExplicit, idleTimeout, nil)
+}
+
+func startDetachedWithStatus(port int, projectRoot, scope, execMode, configPath string, execModeExplicit, configPathExplicit bool, idleTimeout time.Duration, status io.Writer) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
 	}
-	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+	if _, err := orchmcp.LoadRuntimeConfig(orchmcp.RuntimeConfigOptions{
+		ProjectRoot:           projectRoot,
+		ConfigPath:            configPath,
+		ConfigPathExplicit:    configPathExplicit,
+		ExecutionMode:         execMode,
+		ExecutionModeExplicit: execModeExplicit,
+	}); err != nil {
 		return err
 	}
 
@@ -456,8 +497,13 @@ func startDetachedWithStatus(port int, projectRoot, scope, execMode string, idle
 		"--port", strconv.Itoa(port),
 		"--project", projectRoot,
 		"--scope", scope,
-		"--execution-mode", execMode,
 		"--idle-timeout", idleTimeout.String(),
+	}
+	if execModeExplicit {
+		args = append(args, "--execution-mode", execMode)
+	}
+	if configPathExplicit && strings.TrimSpace(configPath) != "" {
+		args = append(args, "--config", configPath)
 	}
 	cmd := exec.Command(exe, args...)
 	cmd.Env = os.Environ()
@@ -504,6 +550,7 @@ type daemonHealth struct {
 	ProjectRoot   string             `json:"projectRoot,omitempty"`
 	Scope         string             `json:"scope,omitempty"`
 	ExecutionMode string             `json:"executionMode,omitempty"`
+	ConfigPath    string             `json:"configPath,omitempty"`
 	Clients       clientSnapshot     `json:"clients"`
 	Idle          idleStatus         `json:"idle"`
 	ActiveRuns    db.ActiveRunCounts `json:"activeRuns"`

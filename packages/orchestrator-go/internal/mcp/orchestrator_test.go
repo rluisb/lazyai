@@ -10,6 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/catalog"
+	oconfig "github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/config"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/db"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/types"
 )
@@ -373,10 +374,51 @@ func TestInvokeAgentA2AModeReturnsNotConfiguredError(t *testing.T) {
 		t.Fatalf("invoke agent returned transport error: %v", err)
 	}
 	message := decodeToolText(t, result)
-	for _, want := range []string{"A2A execution mode", "not configured", "Phase 1"} {
+	for _, want := range []string{"A2A execution mode", "not configured", "orchestrator config"} {
 		if !strings.Contains(message, want) {
 			t.Fatalf("A2A not-configured message %q missing %q", message, want)
 		}
+	}
+}
+
+func TestInvokeAgentA2AConfiguredCliToolTargetReturnsPhase3Error(t *testing.T) {
+	orchestrator := newTestOrchestratorWithOptions(t, WithRuntimeConfig(RuntimeConfig{
+		ExecutionMode: types.ExecutionA2A,
+		A2AConfig:     testRuntimeA2AConfig(types.ExecutionA2A),
+	}))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent":   "builder",
+		"task":    "ship the feature",
+		"cliTool": "opencode",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	message := decodeToolText(t, result)
+	for _, want := range []string{"A2A provider", "builder", "not implemented until Phase 3"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("configured A2A message %q missing %q", message, want)
+		}
+	}
+}
+
+func TestInvokeAgentA2AConfiguredCliToolMismatchFailsBeforePhase3(t *testing.T) {
+	orchestrator := newTestOrchestratorWithOptions(t, WithRuntimeConfig(RuntimeConfig{
+		ExecutionMode: types.ExecutionA2A,
+		A2AConfig:     testRuntimeA2AConfig(types.ExecutionA2A),
+	}))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent":   "builder",
+		"task":    "ship the feature",
+		"cliTool": "copilot",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	if message := decodeToolText(t, result); !strings.Contains(message, "cliTool") {
+		t.Fatalf("expected cliTool targeting error, got %q", message)
 	}
 }
 
@@ -397,6 +439,27 @@ func TestInvokeAgentHybridWithoutA2AConfigFallsBackToNative(t *testing.T) {
 	}
 	if spec.Prompt != "Task: ship the feature\nExecute as the builder agent." {
 		t.Fatalf("hybrid fallback prompt shape changed: %q", spec.Prompt)
+	}
+}
+
+func TestInvokeAgentHybridWithConfiguredA2ATargetFallsBackToNative(t *testing.T) {
+	orchestrator := newTestOrchestratorWithOptions(t, WithRuntimeConfig(RuntimeConfig{
+		ExecutionMode: types.ExecutionHybrid,
+		A2AConfig:     testRuntimeA2AConfig(types.ExecutionHybrid),
+	}))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent":   "builder",
+		"task":    "ship the feature",
+		"cliTool": "opencode",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	var spec types.ComposedAgentSpec
+	decodeToolResult(t, result, &spec)
+	if spec.ID != "builder" || spec.Base != "builder" || spec.Prompt != "Task: ship the feature\nExecute as the builder agent." {
+		t.Fatalf("hybrid configured fallback should preserve native shape, got %+v", spec)
 	}
 }
 
@@ -425,6 +488,20 @@ func newTestOrchestratorWithOptions(t *testing.T, options ...OrchestratorOption)
 		t.Fatalf("migrate db: %v", err)
 	}
 	return NewOrchestrator(database, NewScopeContext("project", "/tmp/project", ""), options...)
+}
+
+func testRuntimeA2AConfig(mode types.ExecutionMode) *oconfig.Config {
+	enabled := true
+	return &oconfig.Config{
+		Version:   1,
+		Execution: oconfig.ExecutionConfig{Mode: mode},
+		Providers: map[string]oconfig.ProviderConfig{
+			"local": {Endpoint: "https://a2a.example.test/rpc", Auth: oconfig.AuthConfig{Type: oconfig.AuthNone}},
+		},
+		Agents: map[string]oconfig.AgentConfig{
+			"builder": {Provider: "local", Enabled: &enabled, Tools: []string{"opencode"}},
+		},
+	}
 }
 
 func createSimpleChainCatalog(t *testing.T, orchestrator *Orchestrator) {

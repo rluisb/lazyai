@@ -435,7 +435,8 @@ func (o *Orchestrator) CatalogSetActive(ctx context.Context, req mcp.CallToolReq
 func (o *Orchestrator) InvokeAgent(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	agent := req.GetString("agent", "")
 	task := req.GetString("task", "")
-	result, err := o.Dispatcher.InvokeAgent(ctx, dispatch.InvocationRequest{Agent: agent, Task: task})
+	cliTool := req.GetString("cliTool", "")
+	result, err := o.Dispatcher.InvokeAgent(ctx, dispatch.InvocationRequest{Agent: agent, Task: task, CliTool: cliTool})
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}

@@ -46,7 +46,7 @@ func TestFindRunningServerDoesNotClearDiscoveryOnHealthTimeout(t *testing.T) {
 }
 
 func TestStartDetachedRejectsInvalidExecutionMode(t *testing.T) {
-	err := startDetachedWithStatus(0, t.TempDir(), "project", "bogus", 0, nil)
+	err := startDetachedWithStatus(0, t.TempDir(), "project", "bogus", "", true, false, 0, nil)
 	if err == nil {
 		t.Fatalf("expected invalid execution mode error")
 	}

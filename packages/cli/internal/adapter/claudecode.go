@@ -182,7 +182,7 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 		return false
 	}
 
-	catalog := readCanonicalMcp(ctx.TargetDir)
+	catalog := ReadCanonicalMcp(ctx.TargetDir)
 	if catalog == nil || len(catalog.Servers) == 0 {
 		return false
 	}

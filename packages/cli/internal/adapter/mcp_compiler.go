@@ -30,6 +30,7 @@ type McpServer struct {
 	Headers     map[string]string `json:"headers,omitempty"`
 	Tools       []string          `json:"tools,omitempty"`
 	Enabled     *bool             `json:"enabled,omitempty"`
+	SetupHint   string            `json:"setupHint,omitempty"`
 }
 
 // McpCatalog represents the canonical .ai/mcp.json structure.
@@ -51,12 +52,12 @@ func (s McpServer) isEnabled() bool {
 // each adapter writes to the correct path per scope. Tools with no global
 // layout (Copilot × global) are skipped cleanly.
 func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.TrackedFile, error) {
-	catalog := readCanonicalMcp(ctx.TargetDir)
+	catalog := ReadCanonicalMcp(ctx.TargetDir)
 	if catalog == nil {
 		return ctx.FileRecords, nil
 	}
 
-	enabledServers := getEnabledServers(catalog)
+	enabledServers := GetEnabledServers(catalog)
 	if len(enabledServers) == 0 {
 		return ctx.FileRecords, nil
 	}
@@ -90,8 +91,8 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 	}
 }
 
-// readCanonicalMcp reads and parses the canonical .ai/mcp.json.
-func readCanonicalMcp(targetDir string) *McpCatalog {
+// ReadCanonicalMcp reads and parses the canonical .ai/mcp.json.
+func ReadCanonicalMcp(targetDir string) *McpCatalog {
 	mcpPath := filepath.Join(targetDir, ".ai", "mcp.json")
 	if !files.FileExists(mcpPath) {
 		return nil
@@ -107,8 +108,8 @@ func readCanonicalMcp(targetDir string) *McpCatalog {
 	return &catalog
 }
 
-// getEnabledServers returns only the servers that are enabled.
-func getEnabledServers(catalog *McpCatalog) map[string]McpServer {
+// GetEnabledServers returns only the servers that are enabled.
+func GetEnabledServers(catalog *McpCatalog) map[string]McpServer {
 	result := make(map[string]McpServer)
 	for name, server := range catalog.Servers {
 		if server.isEnabled() {

@@ -288,6 +288,12 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println()
 
+	if !dryRun {
+		if catalog := adapter.ReadCanonicalMcp(dir); catalog != nil {
+			PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
+		}
+	}
+
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/budget"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/catalog"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/db"
+	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/dispatch"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/events"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/queue"
 	"github.com/ricardoborges-teachable/ai-setup/packages/orchestrator-go/internal/state"
@@ -18,12 +19,14 @@ import (
 )
 
 type Orchestrator struct {
-	DB      *db.DB
-	Catalog *catalog.Store
-	Events  *events.Bus
-	Queue   *queue.Queue
-	Scope   *ScopeContext
-	Runs    map[string]*RunContext
+	DB         *db.DB
+	Catalog    *catalog.Store
+	Events     *events.Bus
+	Queue      *queue.Queue
+	Scope      *ScopeContext
+	Runs       map[string]*RunContext
+	Runtime    RuntimeConfig
+	Dispatcher dispatch.Dispatcher
 }
 
 type RunContext struct {
@@ -33,15 +36,24 @@ type RunContext struct {
 	CancelFunc context.CancelFunc
 }
 
-func NewOrchestrator(database *db.DB, scope *ScopeContext) *Orchestrator {
-	return &Orchestrator{
-		DB:      database,
-		Catalog: catalog.NewStore(database),
-		Events:  events.NewBus(database),
-		Queue:   queue.New(database),
-		Scope:   scope,
-		Runs:    make(map[string]*RunContext),
+func NewOrchestrator(database *db.DB, scope *ScopeContext, options ...OrchestratorOption) *Orchestrator {
+	runtime := DefaultRuntimeConfig()
+	o := &Orchestrator{
+		DB:         database,
+		Catalog:    catalog.NewStore(database),
+		Events:     events.NewBus(database),
+		Queue:      queue.New(database),
+		Scope:      scope,
+		Runs:       make(map[string]*RunContext),
+		Runtime:    runtime,
+		Dispatcher: defaultDispatcherFor(runtime),
 	}
+	for _, option := range options {
+		if option != nil {
+			option(o)
+		}
+	}
+	return o
 }
 
 func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
@@ -423,10 +435,14 @@ func (o *Orchestrator) CatalogSetActive(ctx context.Context, req mcp.CallToolReq
 func (o *Orchestrator) InvokeAgent(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	agent := req.GetString("agent", "")
 	task := req.GetString("task", "")
-	return jsonOut(&types.ComposedAgentSpec{
-		ID: agent, Base: agent, Model: "sonnet",
-		Prompt: fmt.Sprintf("Task: %s\nExecute as the %s agent.", task, agent),
-	}), nil
+	result, err := o.Dispatcher.InvokeAgent(ctx, dispatch.InvocationRequest{Agent: agent, Task: task})
+	if err != nil {
+		return text(fmt.Sprintf("Error: %v", err)), nil
+	}
+	if result == nil || result.Spec == nil {
+		return text("Error: dispatcher returned no invocation spec"), nil
+	}
+	return jsonOut(result.Spec), nil
 }
 
 func (o *Orchestrator) SubscribeRun(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -313,11 +313,108 @@ func TestHandoffPersistsResumableArtifactWithStatusPlanAndPath(t *testing.T) {
 	}
 }
 
+func TestDefaultRuntimeConfigIsNative(t *testing.T) {
+	orchestrator := newTestOrchestrator(t)
+	if orchestrator.Runtime.ExecutionMode != types.ExecutionNative {
+		t.Fatalf("expected default execution mode native, got %q", orchestrator.Runtime.ExecutionMode)
+	}
+}
+
+func TestInvokeAgentNativePreservesComposedSpecShape(t *testing.T) {
+	orchestrator := newTestOrchestrator(t)
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent": "builder",
+		"task":  "ship the feature",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	var spec types.ComposedAgentSpec
+	decodeToolResult(t, result, &spec)
+	if spec.ID != "builder" || spec.Base != "builder" || spec.Model != "sonnet" {
+		t.Fatalf("unexpected native invoke_agent spec identity/model: %+v", spec)
+	}
+	if spec.Prompt != "Task: ship the feature\nExecute as the builder agent." {
+		t.Fatalf("native invoke_agent prompt shape changed: %q", spec.Prompt)
+	}
+}
+
+func TestStartChainCompiledStepsRemainNativeByDefault(t *testing.T) {
+	orchestrator := newTestOrchestrator(t)
+	createSimpleChainCatalog(t, orchestrator)
+	started := startSimpleChain(t, orchestrator)
+	chainState, err := loadChainState(orchestrator.DB, started.ChainID)
+	if err != nil {
+		t.Fatalf("load chain state: %v", err)
+	}
+	plan, err := loadExecutionPlan(orchestrator.DB, chainState.ExecutionPlanID)
+	if err != nil {
+		t.Fatalf("load execution plan: %v", err)
+	}
+	if len(plan.CompiledSteps) == 0 {
+		t.Fatalf("expected compiled chain steps")
+	}
+	for _, step := range plan.CompiledSteps {
+		if step.ExecutionMode != types.ExecutionNative {
+			t.Fatalf("compiled step %q should remain native by default, got %q", step.ID, step.ExecutionMode)
+		}
+	}
+}
+
+func TestInvokeAgentA2AModeReturnsNotConfiguredError(t *testing.T) {
+	orchestrator := newTestOrchestratorWithOptions(t, WithRuntimeConfig(RuntimeConfig{ExecutionMode: types.ExecutionA2A}))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent": "builder",
+		"task":  "ship the feature",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	message := decodeToolText(t, result)
+	for _, want := range []string{"A2A execution mode", "not configured", "Phase 1"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("A2A not-configured message %q missing %q", message, want)
+		}
+	}
+}
+
+func TestInvokeAgentHybridWithoutA2AConfigFallsBackToNative(t *testing.T) {
+	orchestrator := newTestOrchestratorWithOptions(t, WithRuntimeConfig(RuntimeConfig{ExecutionMode: types.ExecutionHybrid}))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent": "builder",
+		"task":  "ship the feature",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+	var spec types.ComposedAgentSpec
+	decodeToolResult(t, result, &spec)
+	if spec.ID != "builder" || spec.Base != "builder" {
+		t.Fatalf("hybrid without A2A config should fall back to native spec, got %+v", spec)
+	}
+	if spec.Prompt != "Task: ship the feature\nExecute as the builder agent." {
+		t.Fatalf("hybrid fallback prompt shape changed: %q", spec.Prompt)
+	}
+}
+
+func TestNewRuntimeConfigRejectsInvalidExecutionMode(t *testing.T) {
+	if _, err := NewRuntimeConfig("bogus"); err == nil {
+		t.Fatalf("expected invalid execution mode error")
+	}
+}
+
 func toolRequest(args map[string]any) mcp.CallToolRequest {
 	return mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: args}}
 }
 
 func newTestOrchestrator(t *testing.T) *Orchestrator {
+	return newTestOrchestratorWithOptions(t)
+}
+
+func newTestOrchestratorWithOptions(t *testing.T, options ...OrchestratorOption) *Orchestrator {
 	t.Helper()
 	database, err := db.Open(":memory:")
 	if err != nil {
@@ -327,7 +424,7 @@ func newTestOrchestrator(t *testing.T) *Orchestrator {
 	if err := database.RunMigrations(); err != nil {
 		t.Fatalf("migrate db: %v", err)
 	}
-	return NewOrchestrator(database, NewScopeContext("project", "/tmp/project", ""))
+	return NewOrchestrator(database, NewScopeContext("project", "/tmp/project", ""), options...)
 }
 
 func createSimpleChainCatalog(t *testing.T, orchestrator *Orchestrator) {

@@ -122,6 +122,11 @@ func init() {
 // ──────────────────── Implementation ──────────────────────────────
 
 func runStdio() error {
+	runtimeConfig, err := orchmcp.NewRuntimeConfig(execMode)
+	if err != nil {
+		return err
+	}
+
 	database, err := openDatabase("")
 	if err != nil {
 		return err
@@ -129,7 +134,7 @@ func runStdio() error {
 	defer database.Close()
 
 	sc := orchmcp.NewScopeContext(scope, projectRoot, globalRoot)
-	o := orchmcp.NewOrchestrator(database, sc)
+	o := orchmcp.NewOrchestrator(database, sc, orchmcp.WithRuntimeConfig(runtimeConfig))
 
 	mcpServer := server.NewMCPServer("ai-setup-orchestrator", "0.1.0",
 		server.WithToolCapabilities(true),
@@ -143,6 +148,10 @@ func runStdio() error {
 func runServe(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
+	}
+	runtimeConfig, err := orchmcp.NewRuntimeConfig(execMode)
+	if err != nil {
+		return err
 	}
 	resolvedIdleTimeout, err := resolveIdleTimeout(cmd)
 	if err != nil {
@@ -160,7 +169,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	defer database.Close()
 
 	sc := orchmcp.NewScopeContext(scope, projectRoot, globalRoot)
-	o := orchmcp.NewOrchestrator(database, sc)
+	o := orchmcp.NewOrchestrator(database, sc, orchmcp.WithRuntimeConfig(runtimeConfig))
 
 	mcpServer := server.NewMCPServer("ai-setup-orchestrator", "0.1.0",
 		server.WithToolCapabilities(true),
@@ -266,6 +275,9 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
 	}
+	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+		return err
+	}
 	resolvedIdleTimeout, err := resolveIdleTimeout(cmd)
 	if err != nil {
 		return err
@@ -294,6 +306,9 @@ func runConnect(cmd *cobra.Command, args []string) error {
 func runStart(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
+	}
+	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+		return err
 	}
 	resolvedIdleTimeout, err := resolveIdleTimeout(cmd)
 	if err != nil {
@@ -416,6 +431,9 @@ func startDetachedQuiet(port int, projectRoot, scope, execMode string, idleTimeo
 func startDetachedWithStatus(port int, projectRoot, scope, execMode string, idleTimeout time.Duration, status io.Writer) error {
 	if projectRoot == "" {
 		projectRoot, _ = os.Getwd()
+	}
+	if _, err := orchmcp.NewRuntimeConfig(execMode); err != nil {
+		return err
 	}
 
 	exe, err := os.Executable()

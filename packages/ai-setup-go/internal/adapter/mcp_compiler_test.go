@@ -199,6 +199,9 @@ func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
 	if !strings.Contains(contents, `/tmp/ai-setup-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
 		t.Fatalf("compiled config missing orchestrator command/args:\n%s", contents)
 	}
+	if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
+		t.Fatalf("compiled config should keep orchestrator execution mode implicit/native by default:\n%s", contents)
+	}
 }
 
 func TestCompileOpenCodeMCP_PreservesLegacyOrchestratorCommand(t *testing.T) {
@@ -261,6 +264,9 @@ func TestMCPCompilerPreservesGoOrchestratorCommandArgsForToolPayloads(t *testing
 		contents := string(encoded)
 		if !strings.Contains(contents, `/tmp/ai-setup-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/tmp/project`) {
 			t.Fatalf("%s payload did not preserve Go orchestrator command/args: %s", name, contents)
+		}
+		if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
+			t.Fatalf("%s payload should not opt into A2A execution mode by default: %s", name, contents)
 		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -41,5 +42,15 @@ func TestFindRunningServerDoesNotClearDiscoveryOnHealthTimeout(t *testing.T) {
 	}
 	if _, err := os.Stat(discoveryPath()); err != nil {
 		t.Fatalf("expected discovery to remain after timeout: %v", err)
+	}
+}
+
+func TestStartDetachedRejectsInvalidExecutionMode(t *testing.T) {
+	err := startDetachedWithStatus(0, t.TempDir(), "project", "bogus", 0, nil)
+	if err == nil {
+		t.Fatalf("expected invalid execution mode error")
+	}
+	if !strings.Contains(err.Error(), "invalid execution mode") {
+		t.Fatalf("unexpected error for invalid execution mode: %v", err)
 	}
 }

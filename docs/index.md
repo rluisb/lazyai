@@ -18,6 +18,7 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
 - [Installation](getting-started/installation.md) — install options and prerequisites
 - [How It Works](concepts/how-it-works.md) — canonical source, compile model, and manifest tracking
 - [CLI Reference](cli/reference.md) — full command and flag documentation
+- [GitHub Wiki](https://github.com/rluisb/lazyai/wiki) — short-form operational notes and release/install references
 
 ## Architecture at a glance
 

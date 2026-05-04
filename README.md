@@ -67,6 +67,9 @@ Learn more in [How It Works](docs/concepts/how-it-works.md).
 
 ## Documentation
 
+- **Official docs:** <https://rluisb.github.io/lazyai/>
+- **GitHub Wiki:** <https://github.com/rluisb/lazyai/wiki>
+
 | Topic | Link |
 |---|---|
 | Quick Start | [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md) |

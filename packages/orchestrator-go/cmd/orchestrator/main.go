@@ -510,7 +510,7 @@ func startDetachedWithStatus(port int, projectRoot, scope, execMode, configPath 
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	cmd.Stdin = nil
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	configureDetachedCommand(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start daemon: %w", err)
@@ -522,7 +522,7 @@ func startDetachedWithStatus(port int, projectRoot, scope, execMode, configPath 
 
 	if err := waitForServerHealth(port, pid, 5*time.Second); err != nil {
 		if processExists(pid) {
-			_ = syscall.Kill(pid, syscall.SIGTERM)
+			terminateProcess(pid)
 		}
 		return fmt.Errorf("orchestrator did not become ready on port %d; see %s: %w", port, logPath, err)
 	}
@@ -615,14 +615,6 @@ func isDefinitiveHealthFailure(err error) bool {
 
 func clearDiscovery() {
 	os.Remove(discoveryPath())
-}
-
-func processExists(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-	err := syscall.Kill(pid, 0)
-	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
 func checkServerHealth(port int, timeout time.Duration) (*daemonHealth, error) {

@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
@@ -244,6 +246,9 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 		return err
 	}
 
+	// Run headless init to fill AGENTS.md placeholders.
+	runHeadlessInit(config, ctx)
+
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
 	if err != nil {
@@ -269,7 +274,69 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 		PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
 	}
 
+	printInitNextSteps(ctx)
+
 	return nil
+}
+
+// runHeadlessInit attempts headless AGENTS.md placeholder filling for each
+// selected tool. Three-pass: (1) mechanical fill from Scout data, (2) deep
+// headless populate per tool if binary is available, (3) signal update.
+// Non-blocking — logs progress and never fails the init command.
+func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext) {
+	if config.DryRun {
+		return
+	}
+
+	// Skip headless init in test environments to avoid slow binary lookups.
+	if os.Getenv("AI_SETUP_SKIP_HEADLESS_INIT") != "" {
+		log.Printf("[init] skipping headless init (AI_SETUP_SKIP_HEADLESS_INIT set)")
+		return
+	}
+
+	// Pass 1: Mechanical fill from Scout data already in ctx.
+	mechanicalFill(ctx)
+
+	// Pass 2: Deep headless init per tool.
+	prompt := buildPopulatePrompt(ctx, ctx.ProjectName)
+	reg := adapter.NewRegistry()
+
+	for _, tool := range ctx.Tools {
+		adapt, err := reg.Get(tool)
+		if err != nil {
+			continue
+		}
+
+		adapterCtx := &adapter.AdapterContext{
+			TargetDir:  ctx.TargetDir,
+			HomeDir:    ctx.HomeDir,
+			SetupScope: ctx.SetupScope,
+			LibraryFS:  ctx.LibraryFS,
+		}
+
+		log.Printf("[init] running headless populate via %s...", tool)
+		if err := adapt.RunHeadlessInit(adapterCtx, prompt); err != nil {
+			log.Printf("[init] %s headless init failed: %v", tool, err)
+		}
+	}
+
+	// Pass 3: Update populate-needed signal after Pass 1+2.
+	updatePopulateNeeded(ctx)
+}
+
+// updatePopulateNeeded checks AGENTS.md for remaining placeholders and
+// updates the .ai/populate-needed signal accordingly.
+func updatePopulateNeeded(ctx *scaffold.ScaffoldContext) {
+	agentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
+	data, err := os.ReadFile(agentsPath)
+	if err != nil {
+		return
+	}
+
+	remaining := strings.Count(string(data), "<!-- fill-in:")
+	if remaining > 0 {
+		log.Printf("[init] %d placeholders remain — run /init or /populate in your AI tool", remaining)
+	}
 }
 
 func runInitNonInteractive(config *wizard.WizardConfig) error {
@@ -429,6 +496,9 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return err
 	}
 
+	// Run headless init to fill AGENTS.md placeholders.
+	runHeadlessInit(config, ctx)
+
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
 	if err != nil {
@@ -448,6 +518,8 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	if catalog := adapter.ReadCanonicalMcp(ctx.TargetDir); catalog != nil {
 		PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
 	}
+
+	printInitNextSteps(ctx)
 
 	return nil
 }
@@ -495,6 +567,21 @@ func compileMCPForInit(ctx *scaffold.ScaffoldContext, result *scaffold.ScaffoldR
 	}
 
 	return nil
+}
+
+// printInitNextSteps prints a next-step message about filling AGENTS.md placeholders.
+func printInitNextSteps(ctx *scaffold.ScaffoldContext) {
+	agentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
+	data, err := os.ReadFile(agentsPath)
+	if err != nil {
+		return
+	}
+	remaining := strings.Count(string(data), "\x3c!-- fill-in:")
+	if remaining > 0 {
+		fmt.Println(successStyle().Render(fmt.Sprintf("Next: Run /init or /populate in your AI tool to fill %d remaining placeholder(s).", remaining)))
+	} else {
+		fmt.Println(successStyle().Render("All placeholders filled! Your AGENTS.md is ready."))
+	}
 }
 
 // headerStyle returns a bold styled header with the primary color.

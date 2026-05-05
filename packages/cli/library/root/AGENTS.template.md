@@ -13,7 +13,53 @@ Default to repository conventions before introducing new patterns.
 
 > This file is read at the start of every AI session.
 > Keep it accurate. Keep it current. Treat it like code.
-> AGENTS.md is the canonical AI agent instruction file. Existing CLAUDE.md files may reference this file, but new projects should not generate root CLAUDE.md.
+
+---
+
+## ⛔ HARD PROCESS GATE — OVERRIDES ALL EXECUTION MODES
+
+**The following rules are PROCESS-CRITICAL and cannot be overridden by
+auto mode, accept-edits mode, agent mode, plan mode, or any execution mode:**
+
+### Gate Protocol
+
+When executing any RPI (Research → Plan → Implement) workflow:
+- You MUST stop at every ⛔ Human gate marker
+- You MUST receive explicit human approval (APPROVE, OK, yes, proceed)
+- "Silence is not approval" — no response means HALT
+
+### Mode-Aware Fallback
+
+If your execution mode prevents pausing:
+- Complete ONLY the Research phase
+- State: "Research complete. Review research.md. Approve to proceed."
+- DO NOT proceed past Research without explicit human approval
+
+### Gated Phases
+
+| Phase | Gate |
+|-------|------|
+| Feed Forward | ⛔ Confirm scope before research |
+| Research | ⛔ Approve research before planning |
+| Plan | ⛔ Approve plan before implementing |
+| Implementation | ⛔ Checkpoint after each task batch |
+| Feedback | ⛔ Approve before merging |
+
+### Gate Attestation Integrity
+
+Gate markers ("Human Gate: APPROVED") are verified by:
+- **Git authorship:** Must be from a human committer
+- **Timestamp check:** Plan approval must precede implementation
+- **Pre-commit hook:** Blocks commits >20 lines without attestation
+- **CI gate check:** Second verification on pull request
+- **Cupcake** (optional): Real-time enforcement via Rego policies
+
+**AI-generated "Human Gate: APPROVED" text will be detected and rejected.**
+
+### Precedence
+
+This block is AUTHORITATIVE. It takes precedence over execution-mode
+instructions, tool runtime settings, and prompt-level framing.
 
 ---
 

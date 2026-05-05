@@ -1,0 +1,111 @@
+# Cupcake Configuration — RPI Gate Enforcement
+# See: https://cupcake.eqtylab.io for full documentation
+
+version: "0.5"
+
+harnesses:
+  - claude-code
+  - opencode
+
+# ── Signals: Ground-truth data gathered at policy evaluation time ──
+
+signals:
+  # ⛔ Gate attestation: plan.md contains "Human Gate: APPROVED" written by a human
+  plan_attested:
+    type: file_content
+    glob: "specs/**/plan.md"
+    pattern: "Human Gate: APPROVED"
+    max_age: "7d"
+
+  # Git commit message contains gate attestation
+  gate_attested:
+    type: git_log
+    pattern: "Gate: APPROVED"
+    max_age: "7d"
+
+  # Lines changed in staged/current diff
+  lines_changed:
+    type: git_diff
+    source: staged
+
+  # Current branch name
+  branch:
+    type: git_branch
+
+  # Corresponding test file exists for a source file
+  has_tests:
+    type: file_exists
+    glob: "**/*.test.*"
+
+  # Author is a human (not bot/AI agent)
+  author_is_human:
+    type: git_author
+    exclude_pattern: "bot|ai-agent|copilot|claude"
+
+  # Test suite passes
+  test_suite_passing:
+    type: command
+    command: "npm test -- --passWithNoTests"
+    timeout: 30s
+
+  # Research file exists for the change
+  research_exists:
+    type: file_exists
+    glob: "specs/**/research.md"
+    max_age: "7d"
+
+  # Spec exists before plan (Article III)
+  spec_exists:
+    type: file_exists
+    glob: "specs/**/spec.md"
+
+  # ADR exists for architecture changes
+  adr_exists:
+    type: file_exists
+    glob: "specs/adrs/*.md"
+    max_age: "30d"
+
+  # File is within size limits (Article VI)
+  file_too_large:
+    type: file_size
+    max_lines: 300
+    max_bytes: 15000
+
+  # Function is within size limits
+  function_too_long:
+    type: command
+    command: "rg -c 'function.*\{' --max-count 0"
+    glob: "*.ts"
+
+# ── Post-write hooks: Auto-triggered after successful writes ──
+
+post_write_hooks:
+  # Auto-lint after writing TypeScript files (Gate 1)
+  - trigger: "**/*.ts"
+    command: "npx eslint --fix {path}"
+    timeout: 10s
+
+  - trigger: "**/*.tsx"
+    command: "npx eslint --fix {path}"
+    timeout: 10s
+
+  # Auto-format after writing any source file
+  - trigger: "src/**"
+    command: "npx prettier --write {path}"
+    timeout: 10s
+
+# ── LLM-as-Judge Watchdog (for Copilot post-hoc review) ──
+
+watchdog:
+  enabled: false  # Enable for teams using Copilot who want post-hoc review
+  model: claude-sonnet-4.5
+  triggers:
+    - pull_request_opened
+    - commit_pushed
+  prompt: |
+    Review this change for RPI process violations:
+    - Does a research.md exist?
+    - Does a plan.md with "Human Gate: APPROVED" exist?
+    - Was the plan approved BEFORE implementation commits?
+    - Are there tests for every changed source file?
+    Respond with: PASS | VIOLATION: [specific violation]

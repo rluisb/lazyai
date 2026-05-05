@@ -129,4 +129,29 @@ Every RPI run passes through five phases. Each phase has an entry blueprint, a s
 | 3 Implement | tasks.md | code + tests | 5 gates green | per-commit |
 | 4 Feedback | code + tests | review report | reviewer pass | ledger + last-known-state |
 
+---
+
+## Gate Attestation Integrity
+
+Gate attestation markers ("Human Gate: APPROVED") are verified through multiple independent signals, not text matching alone:
+
+- **Git authorship:** The attestation must be traceable to a human committer (verified by cupcake `author_is_human` signal and pre-commit git log check).
+- **Timestamp correlation:** Plan approval must precede implementation commits. Cupcake signals verify chronological ordering.
+- **Review state:** Merged PRs must show reviewer approval. CI gate check enforces this.
+- **Hook attestation:** Pre-commit and CI hooks verify attestation presence and authenticity.
+- **Cupcake enforcement** (optional): Real-time policy evaluation via Rego policies compiled to WebAssembly. Physically blocks writes to `src/` when gates are not attested.
+
+**AI-generated "Human Gate: APPROVED" text will be detected and rejected** at commit and PR time. Do NOT attempt to forge gate markers.
+
+### Enforcement Layers (defense in depth)
+
+| Layer | Tool | Mechanism |
+|-------|------|-----------|
+| Cupcake (real-time) | Claude Code, OpenCode | Native hook → `require_review` blocks writes |
+| Agent YAML (real-time) | Copilot | `tools:` restriction prevents writes during research |
+| Claude permissions | Claude Code | `settings.json` blocks git push, writes to src/ |
+| Pre-commit hook | All tools | Blocks commits >20 lines without gate attestation |
+| CI gate check | All tools | Second checkpoint on PR, verifies artifacts |
+| This fragment (text) | All tools | Mode-aware instructions as last-resort defense |
+
 </rpi-workflow>

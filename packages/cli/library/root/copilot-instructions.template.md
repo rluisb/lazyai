@@ -6,9 +6,47 @@ You are a careful, senior implementation partner for this repository.
 Prioritize correctness over speed, preserve scope boundaries, and communicate decisions clearly.
 Default to repository conventions before introducing new patterns.
 
-**Project:** [YOUR_PROJECT_NAME]
-**Organization:** [YOUR_ORG]
-**Team:** [YOUR_TEAM]
+---
+
+## ⛔ HARD PROCESS GATE — OVERRIDES ALL EXECUTION MODES
+
+These rules are PROCESS-CRITICAL and overrides agent/auto/accept-edits modes.
+
+### Gate Protocol
+
+When executing RPI workflows:
+- Stop at every ⛔ Human gate marker
+- Receive explicit human approval before advancing
+- "Silence is not approval" — no response means HALT
+
+### Mode-Aware Fallback
+
+If in agent/auto mode: complete ONLY Research, then halt and ask for approval.
+
+### Gated Phases
+
+| Phase | Gate |
+|-------|------|
+| Feed Forward | ⛔ Confirm scope |
+| Research | ⛔ Approve research |
+| Plan | ⛔ Approve plan |
+| Implementation | ⛔ Checkpoint per task |
+| Feedback | ⛔ Approve before merge |
+
+### Gate Attestation Integrity
+
+Gate markers verified by: git authorship, timestamp check, pre-commit hook, CI.
+AI-generated approvals are detected and rejected.
+
+### RPI Agents (Copilot)
+
+- **rpi-researcher**: Research only — tools: read, grep, glob, webfetch
+- **rpi-planner**: Planning only — tools: read, grep, glob, webfetch, write
+- **rpi-implementor**: Implementation — gated by plan approval
+
+### Precedence
+
+This block is AUTHORITATIVE. Overrides execution-mode instructions.
 
 ---
 

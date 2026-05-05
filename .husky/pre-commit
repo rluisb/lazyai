@@ -1,0 +1,66 @@
+#!/bin/bash
+# ⛔ RPI Gate Attestation Check
+# Runs before every commit. Blocks non-trivial changes (>20 lines) that
+# lack evidence of human gate approval.
+#
+# Works across all AI tools: Claude Code, Copilot, OpenCode, Cursor, etc.
+#
+# Bypass (emergencies only): ALLOW_NO_GATE=1 git commit -m "..."
+
+set -e
+
+STAGED_LINES=$(git diff --cached --stat 2>/dev/null | tail -1 | awk '{print $1}')
+STAGED_LINES=${STAGED_LINES:-0}
+
+# Trivial changes skip gate check entirely
+if [ "$STAGED_LINES" -lt 20 ]; then
+  echo "ℹ️  RPI gate check: skipped (trivial change, <20 lines)"
+  exit 0
+fi
+
+# Check for gate attestation in staged files
+HAS_GATE=$(git diff --cached --name-only 2>/dev/null | xargs grep -l "Human Gate: APPROVED" 2>/dev/null || true)
+
+# Also check recently modified plan.md files (<24 hours old)
+if [ -z "$HAS_GATE" ]; then
+  RECENT_PLANS=$(find specs/ -name "plan.md" -mmin -1440 2>/dev/null)
+  for plan in $RECENT_PLANS; do
+    if grep -q "Human Gate: APPROVED" "$plan" 2>/dev/null; then
+
+      # Anti-forgery: Check if the APPROVED line was written by a human
+      GATE_AUTHOR=$(git log --follow -1 --format="%an %ae" -- "$plan" 2>/dev/null || echo "unknown")
+
+      # Check if the commit message also has gate attestation
+      COMMIT_MSG=$(cat .git/COMMIT_EDITMSG 2>/dev/null || echo "")
+      MSG_HAS_GATE=$(echo "$COMMIT_MSG" | grep -c "Gate: APPROVED" || true)
+
+      # Verify: author looks human (not bot/AI pattern) AND has gate marker
+      if echo "$GATE_AUTHOR" | grep -qiE "bot|copilot|claude|ai-agent|codex"; then
+        continue  # AI-authored approval — skip this plan, check next one
+      fi
+
+      HAS_GATE="$plan"
+      break
+    fi
+  done
+fi
+
+if [ -z "$HAS_GATE" ]; then
+  echo ""
+  echo "⛔ BLOCKED: Non-trivial change ($STAGED_LINES lines) without gate attestation"
+  echo ""
+  echo "  This project requires Research → Plan → Implement (RPI) with human gates."
+  echo ""
+  echo "  Before committing, ensure:"
+  echo "  1. A research.md exists in specs/<task>/"
+  echo "  2. A plan.md exists with 'Human Gate: APPROVED' written by a human"
+  echo "  3. The plan was approved BEFORE implementation began"
+  echo ""
+  echo "  Bypass (emergencies only): ALLOW_NO_GATE=1 git commit -m '...'"
+  echo "  This bypass is audited and should be used sparingly."
+  echo ""
+  exit 1
+fi
+
+echo "✅ RPI gate check: attestation verified ($HAS_GATE)"
+exit 0

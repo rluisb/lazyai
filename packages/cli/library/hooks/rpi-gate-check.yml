@@ -1,0 +1,88 @@
+name: RPI Gate Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+
+jobs:
+  gate-check:
+    name: Verify RPI Gate Attestation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for RPI phase artifacts
+        run: |
+          # Count changed lines
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            LINES=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD 2>/dev/null | awk '{print $1}')
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null)
+          else
+            LINES=$(git diff --shortstat HEAD~1...HEAD 2>/dev/null | awk '{print $1}')
+            CHANGED=$(git diff --name-only HEAD~1...HEAD 2>/dev/null)
+          fi
+
+          if [ "${LINES:-0}" -lt 20 ]; then
+            echo "✅ Trivial change — gate check skipped"
+            exit 0
+          fi
+
+          echo "📊 $LINES lines changed across these files:"
+          echo "$CHANGED" | head -20
+          echo ""
+
+          # Check for plan.md
+          HAS_PLAN=$(echo "$CHANGED" | grep "plan\.md" || true)
+          HAS_RESEARCH=$(echo "$CHANGED" | grep "research\.md" || true)
+
+          # Check recent spec files on disk
+          RECENT_PLANS=$(find specs/ -name "plan.md" -mtime -14 2>/dev/null || true)
+          RECENT_RESEARCH=$(find specs/ -name "research.md" -mtime -14 2>/dev/null || true)
+
+          FAILURES=0
+
+          if [ -z "$HAS_RESEARCH" ] && [ -z "$RECENT_RESEARCH" ]; then
+            echo "❌ FAIL: No research.md found for this change"
+            FAILURES=$((FAILURES + 1))
+          fi
+
+          if [ -z "$HAS_PLAN" ] && [ -z "$RECENT_PLANS" ]; then
+            echo "❌ FAIL: No plan.md found for this change"
+            FAILURES=$((FAILURES + 1))
+          fi
+
+          # Check gate attestation
+          HAS_GATE=0
+          for plan in $RECENT_PLANS; do
+            if grep -q "Human Gate: APPROVED" "$plan" 2>/dev/null; then
+              # Anti-forgery: check author
+              GATE_AUTHOR=$(git log --follow -1 --format="%an" -- "$plan" 2>/dev/null || echo "")
+              if echo "$GATE_AUTHOR" | grep -qiE "bot|copilot|claude|ai-agent"; then
+                continue
+              fi
+              HAS_GATE=1
+              break
+            fi
+          done
+
+          if [ "$HAS_GATE" -eq 0 ]; then
+            echo "❌ FAIL: No plan.md with human gate attestation found"
+            FAILURES=$((FAILURES + 1))
+          fi
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo ""
+            echo "⛔ GATE CHECK FAILED ($FAILURES violations)"
+            echo ""
+            echo "This project requires Research → Plan → Implement (RPI):"
+            echo "  - [ ] research.md (Affected Surface, Patterns, Unknowns, Risks)"
+            echo "  - [ ] plan.md with 'Human Gate: APPROVED' written by a human"
+            echo ""
+            echo "Add the missing artifacts and update this PR."
+            exit 1
+          fi
+
+          echo "✅ All RPI gate checks passed"

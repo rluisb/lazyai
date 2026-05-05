@@ -27,12 +27,20 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
 
 1. **Discover** — `list_catalog({ kinds: ["chain"] })` (or `["team"]`, `["domain"]`, `["mode"]`) to confirm the target exists and to surface options to the user.
 2. **Budget gate** — call `get_budget` on a sentinel run or show an estimate from the chain definition. Present cost range to the user and wait for explicit confirmation. Never skip.
-3. **Start** — `start_chain({ chain, task, domainSkill?, modeSkill?, context? })`. Capture `chainId` and the first step.
-4. **Loop**
+3. **Classify dispatch** — before chain/wave dispatch, apply prompt-level Cupcake-signal-aware AFK/HITL awareness:
+    - `plan_attested = true` means `src/ writes` can be AFK when other approvals/dependencies are satisfied.
+    - `plan_attested = false` means `src/ writes` are HITL.
+    - `gate_attested = false` means commits >20 lines are HITL.
+    - Hard blocks like push to main/force push are always HITL.
+    - Read-only/spec writes are AFK.
+    This classification is prompt-level awareness only and does not change `ChainState`, `StepState`, `get_status`, approval outcomes, runtime state, Cupcake Rego, or pre-commit behavior.
+4. **vocabulary alignment before dispatch** — when the task depends on project vocabulary, check accepted terms and `KNOWLEDGE_MAP.md` before dispatch. If a terminology decision is unresolved, pause as HITL instead of guessing. This is prompt-level guidance only; do not add runtime terminology infrastructure, new state, or persistence.
+5. **Start** — `start_chain({ chain, task, domainSkill?, modeSkill?, context? })`. Capture `chainId` and the first step.
+6. **Loop**
    - Dispatch the agent named by the current step, using the composed prompt from `compose_agent` if the step needs domain/mode layering.
    - On step completion, call `advance_chain({ chainId, stepId, outcome, output?, usage? })`.
    - Repeat until the returned state is `done`.
-5. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
+7. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
 
 ## Lifecycle reporting vocabulary
 

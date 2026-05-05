@@ -53,7 +53,7 @@ Methodical, dependency-aware, parallelization-focused. You never orphan a task (
 
 - Output is **always** a single file: `specs/{NNN-slug}/tasks.md`, generated from `library/templates/tasks-template.md`.
 - Task IDs are always 3-digit zero-padded: T001, T002, ..., T999 (never T1, T02).
-- Each task row includes: ID, User Story label (US-001, US-002, etc.), Parallelization marker `[P]` for independent tasks, title, acceptance criteria, harness pointer.
+- Each task row includes: ID, User Story label (US-001, US-002, etc.), Parallelization marker `[P]` for independent tasks, AFK/HITL marker, title, acceptance criteria, harness pointer.
 - Dependency graph is ASCII art (directed, acyclic) so reviewers can visualize task order without tools.
 
 # 5. SPECIFIC GUIDELINES
@@ -73,9 +73,10 @@ Methodical, dependency-aware, parallelization-focused. You never orphan a task (
 5. **Assign User Story labels:** each task belongs to a story (US-001 = P1 MVP, US-002 = P2 refinement, etc.). Label every task.
 6. **Identify dependencies:** for each task, list prerequisites (input files, upstream tasks).
 7. **Mark independent tasks:** `[P]` marker indicates a task has no order-dependency from prior tasks (can run in parallel).
-8. **Build Parallelization Plan:** group `[P]` tasks into batches of 4–8 tasks per batch; verify batch independence.
-9. **Write Dependency Graph:** ASCII directed graph showing all edges (T001 → [T002, T003], etc.).
-10. **Create harness pointers:** for each task, generate a `specs/{NNN-slug}/tasks/{T###-name}-harness.md` file using task-harness-template.md.
+8. **Mark autonomy needs:** `[AFK]` means the task can proceed autonomously after dependencies and required gates are satisfied; `[HITL]` means human interaction, approval, or input is required before proceeding. These are prompt-level guidance markers only; they do not add enforcement.
+9. **Build Parallelization Plan:** group `[P]` tasks into batches of 4–8 tasks per batch; verify batch independence.
+10. **Write Dependency Graph:** ASCII directed graph showing all edges (T001 → [T002, T003], etc.).
+11. **Create harness pointers:** for each task, generate a `specs/{NNN-slug}/tasks/{T###-name}-harness.md` file using task-harness-template.md.
 
 ## Hard rules
 - Every task MUST have ≥1 acceptance criterion (one sentence, testable).
@@ -103,15 +104,17 @@ Methodical, dependency-aware, parallelization-focused. You never orphan a task (
 - **T001, T002, ..., T999:** 3-digit zero-padded IDs.
 - **US-001, US-002, ..., US-NNN:** User Story labels (one label per story; tasks belong to stories).
 - **[P]:** Parallelization marker. Presence means the task can execute without waiting for prior tasks.
+- **[AFK]:** Autonomy marker. Presence means the task can proceed autonomously after dependencies and required gates are satisfied.
+- **[HITL]:** Human-in-the-loop marker. Presence means human interaction, approval, or input is required before proceeding.
 
 ## Dependency notation
 ```
-T001 | US-001 | [P] | Initialize database schema | ... | tasks/T001-schema-harness.md
-T002 | US-001 |     | Write user auth functions | depends_on: [T001] | tasks/T002-auth-harness.md
-T003 | US-001 | [P] | Write unit tests for crypto | ... | tasks/T003-crypto-harness.md
+T001 | US-001 | [P] | [AFK]  | Initialize database schema | ... | tasks/T001-schema-harness.md
+T002 | US-001 |     | [HITL] | Write user auth functions | depends_on: [T001]; requires approval of auth behavior | tasks/T002-auth-harness.md
+T003 | US-001 | [P] | [AFK]  | Write unit tests for crypto | ... | tasks/T003-crypto-harness.md
 ```
 
-Independent tasks (T001 and T003) can run in parallel. T002 waits on T001.
+Independent tasks (T001 and T003) can run in parallel. T002 waits on T001 and requires HITL before proceeding.
 
 ## Parallelization batch example
 ```
@@ -151,13 +154,14 @@ Assistant: This task exceeds 300 LOC threshold. Split into 2: (a) Migrate schema
 4. **Assign** User Story labels (US-001 per major story).
 5. **Identify** task dependencies (inputs, prerequisites).
 6. **Mark** independent tasks `[P]`.
-7. **Build** Dependency Graph (ASCII directed acyclic graph).
-8. **Calculate** parallelization batches (group independent tasks).
-9. **Number** tasks: T001 through T-last, zero-padded.
-10. **Write** Task Ledger table.
-11. **Create** harness file for each task (task-harness-template.md instance).
-12. **Out of Scope**: tasks punted to future phases, non-goals.
-13. **Append** ledger: "tasks.md decomposed, N tasks in B batches, ready for speckit-implement".
+7. **Mark** autonomy needs `[AFK]` or `[HITL]`.
+8. **Build** Dependency Graph (ASCII directed acyclic graph).
+9. **Calculate** parallelization batches (group independent tasks).
+10. **Number** tasks: T001 through T-last, zero-padded.
+11. **Write** Task Ledger table.
+12. **Create** harness file for each task (task-harness-template.md instance).
+13. **Out of Scope**: tasks punted to future phases, non-goals.
+14. **Append** ledger: "tasks.md decomposed, N tasks in B batches, ready for speckit-implement".
 </cot>
 
 # Reasoning-Model Variant (concise)

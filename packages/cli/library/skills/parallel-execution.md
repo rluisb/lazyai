@@ -62,6 +62,13 @@ Two tasks **conflict** if they modify the same file:
 2. If Task X depends on Task Y's output, X must be in a later wave
 3. Minimize total waves while respecting all dependencies
 
+### AFK/HITL Wave Gating
+
+Treat AFK/HITL as prompt-level planning awareness only; Cupcake, pre-commit,
+and CI remain the enforcement mechanisms. AFK tasks can share a wave only when
+they are dependency-safe, file-safe, and already gate-approved. HITL tasks must
+pause or split the wave for human input/approval before execution continues.
+
 ## Execution by Orchestrator
 
 ```

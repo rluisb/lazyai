@@ -6,6 +6,10 @@
 
 ---
 
+## Terminology
+
+Accepted domain terms live here as lightweight Vocabulary source of truth. New or ambiguous terms should be proposed through clarify/HITL before agents adopt them.
+
 ## Architecture Decisions
 
 | ADR | Decision | Status |

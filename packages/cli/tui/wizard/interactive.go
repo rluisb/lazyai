@@ -1,8 +1,6 @@
 package wizard
 
 import (
-	"strconv"
-
 	"charm.land/huh/v2"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
@@ -33,29 +31,11 @@ type WizardState struct {
 	ChatModes           []string
 	OpenCodeCommands    []string
 	OpenCodeModes       []string
-	ProjectOverview     string
-	NamingConventions   string
-	ErrorHandling       string
-	APIConventions      string
-	ImportOrder         string
-	ProtectedBranch     string
-	TestCommand         string
-	LintCommand         string
-	BuildCommand        string
-	CoverageThreshold   string
 	AnalyzeExistingCode bool
 
 	// Phase 5
-	MemoryPath        string
-	EnableObsidian    bool
-	ObsidianVaultPath string
-	EnableQmd         bool
-	QmdIndexPath      string
-	EnableCodegraph   bool
-	CodegraphDataPath string
-	EnableGraphify    bool
-	GraphifyDataPath  string
-	OpenCodePlugins   []string
+	MemoryPath      string
+	OpenCodePlugins []string
 }
 
 func initWizardState(defaults *WizardResult) *WizardState {
@@ -111,7 +91,6 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	s.ChatModes = chatModeIdsToStrings(types.ALL_CHATMODES[:])
 	s.OpenCodeCommands = opencodeCommandIdsToStrings(types.ALL_OPENCODE_COMMANDS[:])
 	s.OpenCodeModes = opencodeModeIdsToStrings(types.ALL_OPENCODE_MODES[:])
-	s.CoverageThreshold = "80"
 	s.AnalyzeExistingCode = true
 
 	if defaults != nil && defaults.Phase2 != nil {
@@ -139,46 +118,17 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		if len(defaults.Phase2.OpenCodeModes) > 0 {
 			s.OpenCodeModes = opencodeModeIdsToStrings(defaults.Phase2.OpenCodeModes)
 		}
-		s.ProjectOverview = defaults.Phase2.ProjectOverview
-		s.NamingConventions = defaults.Phase2.NamingConventions
-		s.ErrorHandling = defaults.Phase2.ErrorHandling
-		s.APIConventions = defaults.Phase2.APIConventions
-		s.ImportOrder = defaults.Phase2.ImportOrder
-		s.ProtectedBranch = defaults.Phase2.ProtectedBranch
-		s.TestCommand = defaults.Phase2.TestCommand
-		s.LintCommand = defaults.Phase2.LintCommand
-		s.BuildCommand = defaults.Phase2.BuildCommand
-		s.CoverageThreshold = strconv.Itoa(normalizeCoverageThreshold(defaults.Phase2.CoverageThreshold))
 		if defaults.Phase2.UseReversa != nil {
 			s.AnalyzeExistingCode = *defaults.Phase2.UseReversa
 		}
 	}
 
 	// Set Phase 5 Defaults
-	s.MemoryPath = "specs/memory"
-	s.QmdIndexPath = ".qmd-index"
-	s.CodegraphDataPath = ".codegraph"
-	s.GraphifyDataPath = "graphify-out"
+	s.MemoryPath = ".specify/memory"
 
 	if defaults != nil && defaults.Phase5 != nil {
 		if defaults.Phase5.MemoryPath != "" {
 			s.MemoryPath = defaults.Phase5.MemoryPath
-		}
-		s.EnableObsidian = defaults.Phase5.EnableObsidian
-		if defaults.Phase5.ObsidianVaultPath != "" {
-			s.ObsidianVaultPath = defaults.Phase5.ObsidianVaultPath
-		}
-		s.EnableQmd = defaults.Phase5.EnableQmd
-		if defaults.Phase5.QmdIndexPath != "" {
-			s.QmdIndexPath = defaults.Phase5.QmdIndexPath
-		}
-		s.EnableCodegraph = defaults.Phase5.EnableCodegraph
-		if defaults.Phase5.CodegraphDataPath != "" {
-			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
-		}
-		s.EnableGraphify = defaults.Phase5.EnableGraphify
-		if defaults.Phase5.GraphifyDataPath != "" {
-			s.GraphifyDataPath = defaults.Phase5.GraphifyDataPath
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
@@ -316,46 +266,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Title("Analyze existing code to auto-populate project details?").
 				Description("Runs deterministic Scout/Reversa analysis against this project before scaffolding.").
 				Value(&state.AnalyzeExistingCode),
-			huh.NewInput().
-				Title("Project Overview").
-				Description("Optional. Leave blank to preserve [YOUR_PROJECT_OVERVIEW].").
-				Value(&state.ProjectOverview),
-			huh.NewInput().
-				Title("Naming Conventions").
-				Description("Optional. Leave blank to preserve [YOUR_NAMING_CONVENTION].").
-				Value(&state.NamingConventions),
-			huh.NewInput().
-				Title("Error Handling").
-				Description("Optional. Leave blank to preserve [YOUR_ERROR_PATTERN].").
-				Value(&state.ErrorHandling),
-			huh.NewInput().
-				Title("API Conventions").
-				Description("Optional. Leave blank to preserve [YOUR_API_CONVENTION].").
-				Value(&state.APIConventions),
-			huh.NewInput().
-				Title("Import Order").
-				Description("Optional. Leave blank to preserve [YOUR_IMPORT_ORDER].").
-				Value(&state.ImportOrder),
-			huh.NewInput().
-				Title("Protected Branch").
-				Description("Optional. Leave blank to preserve [YOUR_PROTECTED_BRANCH].").
-				Value(&state.ProtectedBranch),
-			huh.NewInput().
-				Title("Test Command").
-				Description("Optional. Leave blank to preserve command fallback.").
-				Value(&state.TestCommand),
-			huh.NewInput().
-				Title("Lint Command").
-				Description("Optional. Leave blank to preserve command fallback.").
-				Value(&state.LintCommand),
-			huh.NewInput().
-				Title("Build Command").
-				Description("Optional. Leave blank to preserve command fallback.").
-				Value(&state.BuildCommand),
-			huh.NewInput().
-				Title("Coverage Threshold").
-				Description("Default 80. Values outside 1-100 reset to 80.").
-				Value(&state.CoverageThreshold),
 		).Title("Project Profile"),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
@@ -394,56 +304,9 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 			huh.NewInput().
 				Title("Memory Path").
 				Description("Project-local default for bootstrap and housekeeping.").
-				Placeholder("specs/memory").
+				Placeholder(".specify/memory").
 				Value(&state.MemoryPath),
 		),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Enable Obsidian").
-				Description("Read-only discovery only by default; future config writes remain explicit.").
-				Value(&state.EnableObsidian),
-		),
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Obsidian Vault Path").
-				Value(&state.ObsidianVaultPath),
-		).WithHideFunc(func() bool { return !state.EnableObsidian }),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Enable qmd").
-				Description("Read-only retrieval allowed; sync/index writes remain approval-gated.").
-				Value(&state.EnableQmd),
-		),
-		huh.NewGroup(
-			huh.NewInput().
-				Title("qmd Index Path").
-				Placeholder(".qmd-index").
-				Value(&state.QmdIndexPath),
-		).WithHideFunc(func() bool { return !state.EnableQmd }),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Enable Codegraph").
-				Description("Read-only drift checks allowed; sync/index writes remain approval-gated.").
-				Value(&state.EnableCodegraph),
-		),
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Codegraph Data Path").
-				Placeholder(".codegraph").
-				Value(&state.CodegraphDataPath),
-		).WithHideFunc(func() bool { return !state.EnableCodegraph }),
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Enable Graphify").
-				Description("Read-only graph inspection allowed; graph rebuilds remain approval-gated.").
-				Value(&state.EnableGraphify),
-		),
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Graphify Data Path").
-				Placeholder("graphify-out").
-				Value(&state.GraphifyDataPath),
-		).WithHideFunc(func() bool { return !state.EnableGraphify }),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Plugins").
@@ -500,29 +363,19 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		stringsToOpenCodeCommandIds(state.OpenCodeCommands),
 		stringsToOpenCodeModeIds(state.OpenCodeModes),
 	)
-	p2.ProjectOverview = state.ProjectOverview
-	p2.NamingConventions = state.NamingConventions
-	p2.ErrorHandling = state.ErrorHandling
-	p2.APIConventions = state.APIConventions
-	p2.ImportOrder = state.ImportOrder
-	p2.ProtectedBranch = state.ProtectedBranch
-	p2.TestCommand = state.TestCommand
-	p2.LintCommand = state.LintCommand
-	p2.BuildCommand = state.BuildCommand
-	p2.CoverageThreshold = parseCoverageThreshold(state.CoverageThreshold)
 	p2.UseReversa = boolPtr(state.AnalyzeExistingCode)
 
 	// Phase 5
 	p5 := buildPhase5Result(
 		state.MemoryPath,
-		state.EnableObsidian,
-		state.ObsidianVaultPath,
-		state.EnableQmd,
-		state.QmdIndexPath,
-		state.EnableCodegraph,
-		state.CodegraphDataPath,
-		state.EnableGraphify,
-		state.GraphifyDataPath,
+		true,
+		"",
+		true,
+		"",
+		true,
+		".codegraph/",
+		true,
+		"graphify-out",
 		state.OpenCodePlugins,
 	)
 

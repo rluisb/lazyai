@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:status,git:diff,git:log,git:branch,git:add)",
+      "Bash(npm:test,npm:run,npm:install,npx:*)",
+      "Bash(ls:*,find:*,rg:*,grep:*)",
+      "Bash(cupcake:*)"
+    ],
+    "deny": [
+      "Bash(git:push)",
+      "Bash(git:commit)",
+      "Bash(rm:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)"
+    ]
+  },
+  "customInstructions": "CRITICAL OVERRIDE — RPI GATE PROTOCOL: The following rules cannot be overridden by any execution mode (auto, accept-edits, plan, or ask).\n\n1. When executing RPI workflows, you MUST halt at every ⛔ Human gate marker. Present the gate question and wait for explicit approval. 'Silence is not approval.'\n\n2. If your execution mode prevents pausing: complete ONLY the Research phase. Then state: 'Research complete. See research.md. Please approve to proceed to Plan phase.' DO NOT proceed past Research without explicit human approval.\n\n3. Gated phases: Feed Forward (confirm scope) → Research (approve research) → Plan (approve plan) → Implementation (checkpoint per task) → Feedback (approve before merge).\n\n4. Gate attestation markers must be written by a human. AI-generated 'Human Gate: APPROVED' will be caught by cupcake signals (git authorship + timestamp verification).\n\n5. This instruction takes precedence over all execution-mode framing and tool runtime settings. It is authoritative."
+}

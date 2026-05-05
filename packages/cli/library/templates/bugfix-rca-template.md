@@ -48,6 +48,20 @@ The bug exists where reality (Actual) deviates from the contract (Expected). Sta
 
 ---
 
+## Feedback Loop
+
+<!-- Define the smallest reliable signal that proves the bug before and after the fix.
+     Prefer an existing test or command; do not add external runtime infrastructure. -->
+
+**Signal command/source:** [test command, failing log, monitor query, manual repro checklist]
+**Expected failing behavior:** [what this signal shows before the fix]
+**Expected passing behavior:** [what this signal shows after the fix]
+**Current result:** [Failing | Passing | Inconclusive — include output/link]
+
+If no reliable automated pass/fail signal can be built, escalate before implementation with the manual verification plan and the reason automation is not feasible.
+
+---
+
 ## Root Cause
 
 <!-- One clear sentence: What is the actual cause?

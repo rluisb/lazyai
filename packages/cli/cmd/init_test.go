@@ -66,28 +66,20 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	}
 }
 
-func TestInitNonInteractivePersistsProjectProfileAndCoverage(t *testing.T) {
+func TestInitNonInteractiveLeavesProjectProfileEmptyAndPreservesPlaceholders(t *testing.T) {
 	dir := t.TempDir()
 	ensureTestLibraryFS(t)
 	withWorkingDir(t, dir)
+	useReversa := false
 
 	config := &wizard.WizardConfig{
-		Interactive:          false,
-		HomeDir:              testRepoRoot(t),
-		TargetDir:            dir,
-		CLIScope:             types.SetupScopeProject,
-		CLITools:             []types.ToolId{types.ToolIdOpenCode},
-		CLIPreset:            types.PresetLevelMinimal,
-		CLIProjectOverview:   "CLI overview",
-		CLINamingConventions: "Use camelCase",
-		CLIErrorHandling:     "Return wrapped errors",
-		CLIApiConventions:    "JSON APIs",
-		CLIImportOrder:       "stdlib, third-party, internal",
-		CLIProtectedBranch:   "trunk",
-		CLITestCommand:       "go test ./...",
-		CLILintCommand:       "go vet ./...",
-		CLIBuildCommand:      "go build ./...",
-		CLICoverageThreshold: 92,
+		Interactive:   false,
+		HomeDir:       testRepoRoot(t),
+		TargetDir:     dir,
+		CLIScope:      types.SetupScopeProject,
+		CLITools:      []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:     types.PresetLevelMinimal,
+		CLIUseReversa: &useReversa,
 	}
 
 	captureOutput(t, func() {
@@ -97,17 +89,17 @@ func TestInitNonInteractivePersistsProjectProfileAndCoverage(t *testing.T) {
 	})
 
 	storeData := readSeededStoreData(t, dir)
-	if storeData.Config.ProjectOverview != "CLI overview" || storeData.Config.NamingConventions != "Use camelCase" || storeData.Config.ErrorHandling != "Return wrapped errors" || storeData.Config.ApiConventions != "JSON APIs" {
-		t.Fatalf("profile config not persisted: %#v", storeData.Config)
+	if storeData.Config.ProjectOverview != "" || storeData.Config.NamingConventions != "" || storeData.Config.ErrorHandling != "" || storeData.Config.ApiConventions != "" {
+		t.Fatalf("profile config should remain empty: %#v", storeData.Config)
 	}
-	if storeData.Config.ImportOrder != "stdlib, third-party, internal" || storeData.Config.ProtectedBranch != "trunk" {
-		t.Fatalf("convention config not persisted: %#v", storeData.Config)
+	if storeData.Config.ImportOrder != "" || storeData.Config.ProtectedBranch != "" {
+		t.Fatalf("convention config should remain empty: %#v", storeData.Config)
 	}
-	if storeData.Config.TestCommand != "go test ./..." || storeData.Config.LintCommand != "go vet ./..." || storeData.Config.BuildCommand != "go build ./..." {
-		t.Fatalf("command config not persisted: %#v", storeData.Config)
+	if storeData.Config.TestCommand != "" || storeData.Config.LintCommand != "" || storeData.Config.BuildCommand != "" {
+		t.Fatalf("command config should remain empty: %#v", storeData.Config)
 	}
-	if storeData.Config.CoverageThreshold != 92 {
-		t.Fatalf("CoverageThreshold = %d, want 92", storeData.Config.CoverageThreshold)
+	if storeData.Config.CoverageThreshold != 80 {
+		t.Fatalf("CoverageThreshold = %d, want 80", storeData.Config.CoverageThreshold)
 	}
 
 	agents, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
@@ -115,9 +107,50 @@ func TestInitNonInteractivePersistsProjectProfileAndCoverage(t *testing.T) {
 		t.Fatalf("read AGENTS.md: %v", err)
 	}
 	content := string(agents)
-	for _, want := range []string{"CLI overview", "Use camelCase", "Return wrapped errors", "JSON APIs", "stdlib, third-party, internal", "trunk", "go test ./...", "go vet ./...", "go build ./...", "92"} {
+	for _, want := range []string{
+		"<!-- fill-in: project overview -->",
+		"<!-- fill-in: naming convention -->",
+		"<!-- fill-in: error handling pattern -->",
+		"<!-- fill-in: API response convention -->",
+		"<!-- fill-in: import order -->",
+		"<!-- fill-in: protected branch -->",
+	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("AGENTS.md missing %q\n%s", want, content)
+		}
+	}
+}
+
+func TestInitRemovedFlagsNotRegistered(t *testing.T) {
+	removed := []string{
+		"project-overview",
+		"naming-conventions",
+		"error-handling",
+		"api-conventions",
+		"import-order",
+		"protected-branch",
+		"test-command",
+		"lint-command",
+		"build-command",
+		"coverage-threshold",
+		"enable-obsidian",
+		"obsidian-vault-path",
+		"enable-qmd",
+		"qmd-index-path",
+		"enable-codegraph",
+		"codegraph-data-path",
+		"enable-graphify",
+		"graphify-data-path",
+	}
+	for _, name := range removed {
+		if initCmd.Flags().Lookup(name) != nil {
+			t.Fatalf("removed flag %q is still registered", name)
+		}
+	}
+
+	for _, name := range []string{"memory-path", "reversa", "no-reversa"} {
+		if initCmd.Flags().Lookup(name) == nil {
+			t.Fatalf("expected flag %q to remain registered", name)
 		}
 	}
 }

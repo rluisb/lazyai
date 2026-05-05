@@ -70,98 +70,27 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 	showPlugins := opencodeSelected && opencodeBinaryPresent()
 
 	currentStep := 1
-	maxStep := 9
-	if showPlugins {
-		maxStep = 10
-	}
+	maxStep := phase5TotalSteps(showPlugins)
 	for currentStep >= 1 && currentStep <= maxStep {
 		switch currentStep {
 		case 1:
-			memoryPath, action, err := askMemoryPath(state.MemoryPath, phase5MemoryPathStepInfo(state))
+			memoryPath, action, err := askMemoryPath(state.MemoryPath, phase5MemoryPathStepInfo(state, showPlugins))
 			if err != nil {
 				return nil, action, err
 			}
 			state.MemoryPath = memoryPath
 			currentStep++
 		case 2:
-			enableObsidian, action, err := askEnableObsidian(state.EnableObsidian, phase5EnableObsidianStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.EnableObsidian = enableObsidian
-			if !state.EnableObsidian {
-				currentStep = 4
+			if !showPlugins {
+				currentStep++
 				continue
 			}
-			currentStep++
-		case 3:
-			obsidianVaultPath, action, err := askObsidianVaultPath(state.ObsidianVaultPath, phase5ObsidianVaultPathStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.ObsidianVaultPath = obsidianVaultPath
-			currentStep++
-		case 4:
-			enableQmd, action, err := askEnableQmd(state.EnableQmd, phase5EnableQmdStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.EnableQmd = enableQmd
-			if !state.EnableQmd {
-				currentStep = 6
-				continue
-			}
-			currentStep++
-		case 5:
-			qmdIndexPath, action, err := askQmdIndexPath(state.QmdIndexPath, phase5QmdIndexPathStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.QmdIndexPath = qmdIndexPath
-			currentStep++
-		case 6:
-			enableCodegraph, action, err := askEnableCodegraph(state.EnableCodegraph, phase5EnableCodegraphStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.EnableCodegraph = enableCodegraph
-			if !state.EnableCodegraph {
-				currentStep = 8
-				continue
-			}
-			currentStep++
-		case 7:
-			codegraphDataPath, action, err := askCodegraphDataPath(state.CodegraphDataPath, phase5CodegraphDataPathStepInfo(state, showPlugins))
-			if err != nil {
-				return nil, action, err
-			}
-			state.CodegraphDataPath = codegraphDataPath
-			currentStep++
-		case 8:
-			enableGraphify, action, err := askEnableGraphify(state.EnableGraphify, phase5EnableGraphifyStepInfo(state))
-			if err != nil {
-				return nil, action, err
-			}
-			state.EnableGraphify = enableGraphify
-			if !state.EnableGraphify {
-				currentStep = 10
-				continue
-			}
-			currentStep++
-		case 9:
-			graphifyDataPath, action, err := askGraphifyDataPath(state.GraphifyDataPath, phase5GraphifyDataPathStepInfo(state, showPlugins))
-			if err != nil {
-				return nil, action, err
-			}
-			state.GraphifyDataPath = graphifyDataPath
-			currentStep++
-		case 10:
 			plugins, action, err := askOpenCodePlugins(state.OpenCodePlugins, phase5OpenCodePluginsStepInfo(state, showPlugins))
 			if err != nil {
 				return nil, action, err
 			}
 			if action == PhaseBack {
-				currentStep--
+				currentStep = 1
 				continue
 			}
 			state.OpenCodePlugins = plugins
@@ -185,13 +114,10 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 
 func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, enableGraphify bool, graphifyDataPath string, opencodePlugins []string) *Phase5Result {
 	if memoryPath == "" {
-		memoryPath = "specs/memory"
-	}
-	if enableQmd && qmdIndexPath == "" {
-		qmdIndexPath = ".qmd-index"
+		memoryPath = ".specify/memory"
 	}
 	if enableCodegraph && codegraphDataPath == "" {
-		codegraphDataPath = ".codegraph"
+		codegraphDataPath = ".codegraph/"
 	}
 	if enableGraphify && graphifyDataPath == "" {
 		graphifyDataPath = "graphify-out"
@@ -213,9 +139,12 @@ func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath
 
 func defaultPhase5Result() Phase5Result {
 	return Phase5Result{
-		MemoryPath:        "specs/memory",
-		QmdIndexPath:      ".qmd-index",
-		CodegraphDataPath: ".codegraph",
+		MemoryPath:        ".specify/memory",
+		EnableObsidian:    true,
+		EnableQmd:         true,
+		EnableCodegraph:   true,
+		CodegraphDataPath: ".codegraph/",
+		EnableGraphify:    true,
 		GraphifyDataPath:  "graphify-out",
 	}
 }
@@ -223,7 +152,7 @@ func defaultPhase5Result() Phase5Result {
 func askMemoryPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
 	memoryPath := defaultValue
 	group := huh.NewGroup(
-		huh.NewInput().Title(info.Title()).Description("Project-local default for bootstrap and housekeeping.").Placeholder("specs/memory").Value(&memoryPath),
+		huh.NewInput().Title(info.Title()).Description("Project-local default for bootstrap and housekeeping.").Placeholder(".specify/memory").Value(&memoryPath),
 	)
 
 	if err := huh.NewForm(group).Run(); err != nil {
@@ -233,156 +162,19 @@ func askMemoryPath(defaultValue string, info phase5StepInfo) (string, PhaseActio
 	return memoryPath, PhaseContinue, nil
 }
 
-func askEnableObsidian(defaultValue bool, info phase5StepInfo) (bool, PhaseAction, error) {
-	enabled := defaultValue
-	group := huh.NewGroup(
-		huh.NewConfirm().Title(info.Title()).Description("Read-only discovery only by default; future config writes remain explicit.").Value(&enabled),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return false, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return enabled, PhaseContinue, nil
+func phase5MemoryPathStepInfo(_ Phase5Result, showPlugins ...bool) phase5StepInfo {
+	return phase5StepInfo{Current: 1, Total: phase5TotalSteps(showPlugins...), StepTitle: "Memory Path"}
 }
 
-func askObsidianVaultPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
-	vaultPath := defaultValue
-	group := huh.NewGroup(
-		huh.NewInput().Title(info.Title()).Value(&vaultPath),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return vaultPath, PhaseContinue, nil
+func phase5OpenCodePluginsStepInfo(_ Phase5Result, showPlugins bool) phase5StepInfo {
+	return phase5StepInfo{Current: phase5TotalSteps(showPlugins), Total: phase5TotalSteps(showPlugins), StepTitle: "OpenCode Plugins"}
 }
 
-func askEnableQmd(defaultValue bool, info phase5StepInfo) (bool, PhaseAction, error) {
-	enabled := defaultValue
-	group := huh.NewGroup(
-		huh.NewConfirm().Title(info.Title()).Description("Read-only retrieval allowed; sync/index writes remain approval-gated.").Value(&enabled),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return false, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return enabled, PhaseContinue, nil
-}
-
-func askQmdIndexPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
-	indexPath := defaultValue
-	group := huh.NewGroup(
-		huh.NewInput().Title(info.Title()).Placeholder(".qmd-index").Value(&indexPath),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return indexPath, PhaseContinue, nil
-}
-
-func askEnableCodegraph(defaultValue bool, info phase5StepInfo) (bool, PhaseAction, error) {
-	enabled := defaultValue
-	group := huh.NewGroup(
-		huh.NewConfirm().Title(info.Title()).Description("Read-only drift checks allowed; sync/index writes remain approval-gated.").Value(&enabled),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return false, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return enabled, PhaseContinue, nil
-}
-
-func askCodegraphDataPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
-	dataPath := defaultValue
-	group := huh.NewGroup(
-		huh.NewInput().Title(info.Title()).Placeholder(".codegraph").Value(&dataPath),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return dataPath, PhaseContinue, nil
-}
-
-func askEnableGraphify(defaultValue bool, info phase5StepInfo) (bool, PhaseAction, error) {
-	enabled := defaultValue
-	group := huh.NewGroup(
-		huh.NewConfirm().Title(info.Title()).Description("Read-only graph inspection allowed; graph rebuilds remain approval-gated.").Value(&enabled),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return false, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return enabled, PhaseContinue, nil
-}
-
-func askGraphifyDataPath(defaultValue string, info phase5StepInfo) (string, PhaseAction, error) {
-	dataPath := defaultValue
-	group := huh.NewGroup(
-		huh.NewInput().Title(info.Title()).Placeholder("graphify-out").Value(&dataPath),
-	)
-
-	if err := huh.NewForm(group).Run(); err != nil {
-		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	return dataPath, PhaseContinue, nil
-}
-
-func phase5MemoryPathStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 1, Total: phase5TotalSteps(state), StepTitle: "Memory Path"}
-}
-
-func phase5EnableObsidianStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 2, Total: phase5TotalSteps(state), StepTitle: "Enable Obsidian"}
-}
-
-func phase5ObsidianVaultPathStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 3, Total: phase5TotalSteps(state), StepTitle: "Obsidian Vault Path"}
-}
-
-func phase5EnableQmdStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 3 + boolToInt(state.EnableObsidian), Total: phase5TotalSteps(state), StepTitle: "Enable qmd"}
-}
-
-func phase5QmdIndexPathStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 4 + boolToInt(state.EnableObsidian), Total: phase5TotalSteps(state), StepTitle: "qmd Index Path"}
-}
-
-func phase5EnableCodegraphStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 4 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state), StepTitle: "Enable Codegraph"}
-}
-
-func phase5CodegraphDataPathStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
-	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd), Total: phase5TotalSteps(state, showPlugins), StepTitle: "Codegraph Data Path"}
-}
-
-func phase5EnableGraphifyStepInfo(state Phase5Result) phase5StepInfo {
-	return phase5StepInfo{Current: 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph), Total: phase5TotalSteps(state), StepTitle: "Enable Graphify"}
-}
-
-func phase5GraphifyDataPathStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
-	return phase5StepInfo{Current: 6 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph), Total: phase5TotalSteps(state, showPlugins), StepTitle: "Graphify Data Path"}
-}
-
-func phase5OpenCodePluginsStepInfo(state Phase5Result, showPlugins bool) phase5StepInfo {
-	return phase5StepInfo{Current: phase5TotalSteps(state, showPlugins), Total: phase5TotalSteps(state, showPlugins), StepTitle: "OpenCode Plugins"}
-}
-
-func phase5TotalSteps(state Phase5Result, showPlugins ...bool) int {
-	extra := 0
+func phase5TotalSteps(showPlugins ...bool) int {
 	if len(showPlugins) > 0 && showPlugins[0] {
-		extra = 1
+		return 2
 	}
-	return 5 + boolToInt(state.EnableObsidian) + boolToInt(state.EnableQmd) + boolToInt(state.EnableCodegraph) + boolToInt(state.EnableGraphify) + extra
+	return 1
 }
 
 func opencodeBinaryPresent() bool {
@@ -431,11 +223,4 @@ var opencodePluginURLs = []string{
 	"https://github.com/JRedeker/opencode-shell-strategy",
 	"https://github.com/boxpositron/envsitter-guard",
 	"https://github.com/kdcokenny/opencode-background-agents",
-}
-
-func boolToInt(value bool) int {
-	if value {
-		return 1
-	}
-	return 0
 }

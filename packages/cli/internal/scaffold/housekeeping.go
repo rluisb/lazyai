@@ -14,11 +14,11 @@ func ScaffoldHousekeeping(targetDir string, cfg *types.HousekeepingConfig) error
 	}
 
 	memoryPath := cfg.MemoryPath
-	// In speckit mode, remap the default specs/memory to .specify/memory
-	if HasSpecKitStructure(targetDir) && (memoryPath == "" || memoryPath == filepath.Join("specs", "memory")) {
+	// In speckit mode, remap legacy specs/memory and empty defaults to .specify/memory.
+	if HasSpecKitStructure(targetDir) && (memoryPath == "" || memoryPath == filepath.Join("specs", "memory") || memoryPath == filepath.Join(".specify", "memory")) {
 		memoryPath = filepath.Join(".specify", "memory")
 	} else if memoryPath == "" {
-		memoryPath = filepath.Join("specs", "memory")
+		memoryPath = filepath.Join(".specify", "memory")
 	}
 	if err := files.EnsureDir(filepath.Join(targetDir, memoryPath)); err != nil {
 		return err

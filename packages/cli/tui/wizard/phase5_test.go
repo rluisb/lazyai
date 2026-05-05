@@ -52,7 +52,7 @@ func TestBuildPhase5Result(t *testing.T) {
 		{
 			name: "all optional integrations disabled keeps explicit paths except memory fallback",
 			args: Phase5Result{},
-			want: Phase5Result{MemoryPath: "specs/memory"},
+			want: Phase5Result{MemoryPath: ".specify/memory"},
 		},
 		{
 			name: "obsidian enabled preserves provided vault path",
@@ -60,39 +60,39 @@ func TestBuildPhase5Result(t *testing.T) {
 			want: Phase5Result{MemoryPath: "memory/custom", EnableObsidian: true, ObsidianVaultPath: "/vault"},
 		},
 		{
-			name: "qmd enabled fills default index path when empty",
+			name: "qmd enabled keeps empty index path for global qmd index",
 			args: Phase5Result{EnableQmd: true},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableQmd: true, QmdIndexPath: ".qmd-index"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableQmd: true},
 		},
 		{
 			name: "qmd enabled preserves provided index path",
 			args: Phase5Result{EnableQmd: true, QmdIndexPath: "custom-index"},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableQmd: true, QmdIndexPath: "custom-index"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableQmd: true, QmdIndexPath: "custom-index"},
 		},
 		{
 			name: "codegraph enabled fills default data path when empty",
 			args: Phase5Result{EnableCodegraph: true},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableCodegraph: true, CodegraphDataPath: ".codegraph"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableCodegraph: true, CodegraphDataPath: ".codegraph/"},
 		},
 		{
 			name: "codegraph enabled preserves provided data path",
 			args: Phase5Result{EnableCodegraph: true, CodegraphDataPath: "custom-graph"},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableCodegraph: true, CodegraphDataPath: "custom-graph"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableCodegraph: true, CodegraphDataPath: "custom-graph"},
 		},
 		{
 			name: "graphify enabled fills default data path when empty",
 			args: Phase5Result{EnableGraphify: true},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
 		},
 		{
 			name: "graphify enabled preserves provided data path",
 			args: Phase5Result{EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
 		},
 		{
 			name: "all enabled applies default fallbacks",
 			args: Phase5Result{EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true, EnableGraphify: true},
-			want: Phase5Result{MemoryPath: "specs/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, QmdIndexPath: ".qmd-index", EnableCodegraph: true, CodegraphDataPath: ".codegraph", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true, CodegraphDataPath: ".codegraph/", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
 		},
 	}
 
@@ -124,28 +124,27 @@ func TestBuildPhase5Result(t *testing.T) {
 func TestPhase5StepInfoTitles(t *testing.T) {
 	t.Parallel()
 
-	allDisabled := Phase5Result{}
-	if got, want := phase5EnableQmdStepInfo(allDisabled).Title(), "Optional Tooling — 3/5: Enable qmd"; got != want {
-		t.Fatalf("phase5EnableQmdStepInfo().Title() = %q, want %q", got, want)
+	state := Phase5Result{}
+	if got, want := phase5MemoryPathStepInfo(state).Title(), "Optional Tooling — 1/1: Memory Path"; got != want {
+		t.Fatalf("phase5MemoryPathStepInfo().Title() = %q, want %q", got, want)
 	}
-	if got, want := phase5EnableCodegraphStepInfo(allDisabled).Title(), "Optional Tooling — 4/5: Enable Codegraph"; got != want {
-		t.Fatalf("phase5EnableCodegraphStepInfo().Title() = %q, want %q", got, want)
+	if got, want := phase5MemoryPathStepInfo(state, true).Title(), "Optional Tooling — 1/2: Memory Path"; got != want {
+		t.Fatalf("phase5MemoryPathStepInfo(showPlugins).Title() = %q, want %q", got, want)
 	}
-	if got, want := phase5EnableGraphifyStepInfo(allDisabled).Title(), "Optional Tooling — 5/5: Enable Graphify"; got != want {
-		t.Fatalf("phase5EnableGraphifyStepInfo().Title() = %q, want %q", got, want)
+	if got, want := phase5OpenCodePluginsStepInfo(state, true).Title(), "Optional Tooling — 2/2: OpenCode Plugins"; got != want {
+		t.Fatalf("phase5OpenCodePluginsStepInfo().Title() = %q, want %q", got, want)
 	}
+}
 
-	obsidianOnly := Phase5Result{EnableObsidian: true}
-	if got, want := phase5EnableQmdStepInfo(obsidianOnly).Title(), "Optional Tooling — 4/6: Enable qmd"; got != want {
-		t.Fatalf("phase5EnableQmdStepInfo().Title() = %q, want %q", got, want)
-	}
+func TestDefaultPhase5ResultEnablesToolingByDefault(t *testing.T) {
+	t.Parallel()
 
-	allEnabled := Phase5Result{EnableObsidian: true, EnableQmd: true, EnableCodegraph: true, EnableGraphify: true}
-	if got, want := phase5CodegraphDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 7/9: Codegraph Data Path"; got != want {
-		t.Fatalf("phase5CodegraphDataPathStepInfo().Title() = %q, want %q", got, want)
+	result := defaultPhase5Result()
+	if !result.EnableObsidian || !result.EnableQmd || !result.EnableCodegraph || !result.EnableGraphify {
+		t.Fatalf("tooling defaults not enabled: %#v", result)
 	}
-	if got, want := phase5GraphifyDataPathStepInfo(allEnabled, false).Title(), "Optional Tooling — 9/9: Graphify Data Path"; got != want {
-		t.Fatalf("phase5GraphifyDataPathStepInfo().Title() = %q, want %q", got, want)
+	if result.MemoryPath != ".specify/memory" || result.QmdIndexPath != "" || result.CodegraphDataPath != ".codegraph/" || result.GraphifyDataPath != "graphify-out" {
+		t.Fatalf("unexpected phase 5 defaults: %#v", result)
 	}
 }
 
@@ -159,14 +158,17 @@ func TestRunPhase5NonInteractiveDefaults(t *testing.T) {
 	if action != PhaseContinue {
 		t.Fatalf("action = %v, want %v", action, PhaseContinue)
 	}
-	if result.MemoryPath != "specs/memory" {
-		t.Fatalf("MemoryPath = %q, want specs/memory", result.MemoryPath)
+	if result.MemoryPath != ".specify/memory" {
+		t.Fatalf("MemoryPath = %q, want .specify/memory", result.MemoryPath)
 	}
-	if result.QmdIndexPath != ".qmd-index" {
-		t.Fatalf("QmdIndexPath = %q, want .qmd-index", result.QmdIndexPath)
+	if !result.EnableObsidian || !result.EnableQmd || !result.EnableCodegraph || !result.EnableGraphify {
+		t.Fatalf("tooling defaults not enabled: %#v", result)
 	}
-	if result.CodegraphDataPath != ".codegraph" {
-		t.Fatalf("CodegraphDataPath = %q, want .codegraph", result.CodegraphDataPath)
+	if result.QmdIndexPath != "" {
+		t.Fatalf("QmdIndexPath = %q, want empty", result.QmdIndexPath)
+	}
+	if result.CodegraphDataPath != ".codegraph/" {
+		t.Fatalf("CodegraphDataPath = %q, want .codegraph/", result.CodegraphDataPath)
 	}
 	if result.GraphifyDataPath != "graphify-out" {
 		t.Fatalf("GraphifyDataPath = %q, want graphify-out", result.GraphifyDataPath)

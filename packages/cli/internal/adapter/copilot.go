@@ -3,11 +3,14 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -421,6 +424,37 @@ func (a *CopilotAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, er
 	return CompileMCPForTool(types.ToolIdCopilot, ctx)
 }
 
-func (a *CopilotAdapter) CanRunHeadless() bool { return false }
+func (a *CopilotAdapter) CanRunHeadless() bool { return true }
+
+func (a *CopilotAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) error {
+	_, err := exec.LookPath("copilot")
+	if err != nil {
+		log.Printf("[copilot] copilot not on PATH, skipping headless init")
+		return nil
+	}
+
+	log.Printf("[copilot] running headless init (populate via copilot -p)...")
+	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(execCtx, "copilot",
+		"-p", prompt,
+		"--allow-all",
+	)
+	cmd.Dir = ctx.TargetDir
+	cmd.Stdin = nil
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("[copilot] headless init completed with warning: %v", err)
+		if len(output) > 0 {
+			log.Printf("[copilot] output: %s", truncateOutput(string(output), 200))
+		}
+		return nil // non-fatal
+	}
+
+	log.Printf("[copilot] headless init completed (%d bytes)", len(output))
+	return nil
+}
 
 func (a *CopilotAdapter) RunHeadlessValidation(ctx *AdapterContext) error { return nil }

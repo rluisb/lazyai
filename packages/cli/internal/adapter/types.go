@@ -124,4 +124,9 @@ type ToolAdapter interface {
 	// RunHeadlessValidation runs a headless validation command if the tool is
 	// installed. Non-fatal: logs a warning on error and returns nil.
 	RunHeadlessValidation(ctx *AdapterContext) error
+	// RunHeadlessInit attempts to fill AGENTS.md placeholders via this tool's
+	// headless CLI mode. prompt is the populate instruction text. Returns nil
+	// on success or if the tool binary is not available. Errors are non-fatal
+	// — the caller logs and continues.
+	RunHeadlessInit(ctx *AdapterContext, prompt string) error
 }

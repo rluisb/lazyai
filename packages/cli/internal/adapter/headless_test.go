@@ -19,7 +19,7 @@ func TestAllAdapters_SatisfyToolAdapter(t *testing.T) {
 	var _ ToolAdapter = (*CopilotAdapter)(nil)
 }
 
-// --- Test: CanRunHeadless returns correct values per adapter ---
+// --- Test: CanRunHeadless returns true for all adapters ---
 
 func TestCanRunHeadless_Values(t *testing.T) {
 	tests := []struct {
@@ -27,9 +27,9 @@ func TestCanRunHeadless_Values(t *testing.T) {
 		adapter  ToolAdapter
 		expected bool
 	}{
-		{"OpenCode", &OpenCodeAdapter{}, false},
+		{"OpenCode", &OpenCodeAdapter{}, true},
 		{"ClaudeCode", &ClaudeCodeAdapter{}, true},
-		{"Copilot", &CopilotAdapter{}, false},
+		{"Copilot", &CopilotAdapter{}, true},
 	}
 
 	for _, tc := range tests {
@@ -73,17 +73,12 @@ func TestRunHeadlessValidation_ToolNotInstalled(t *testing.T) {
 		SetupScope: types.SetupScopeProject,
 	}
 
-	// Claude Code should return nil (non-fatal) when the tool is not on PATH.
-	// We can't easily remove them from PATH, but we can verify the behavior
-	// by checking that the method doesn't panic and returns nil.
 	adapters := []ToolAdapter{
 		&ClaudeCodeAdapter{},
 	}
 
 	for _, adapter := range adapters {
 		t.Run(adapter.Name()+"_not_installed", func(t *testing.T) {
-			// This test passes if the method returns nil regardless of install state.
-			// The actual behavior (skip vs run) depends on whether the tool is on PATH.
 			err := adapter.RunHeadlessValidation(ctx)
 			if err != nil {
 				t.Errorf("%s.RunHeadlessValidation() should be non-fatal, got error: %v", adapter.Name(), err)
@@ -95,7 +90,6 @@ func TestRunHeadlessValidation_ToolNotInstalled(t *testing.T) {
 // --- Test: RunHeadlessValidation runs the correct command when tool is installed ---
 
 func TestRunHeadlessValidation_ClaudeCode_Installed(t *testing.T) {
-	// Skip if claude is not on PATH.
 	if _, err := exec.LookPath("claude"); err != nil {
 		t.Skip("claude not on PATH, skipping installed test")
 	}
@@ -120,7 +114,6 @@ func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping headless validation test in short mode (requires claude CLI)")
 	}
-	// Create a temp dir with a marker file to verify cmd.Dir is set correctly.
 	targetDir := t.TempDir()
 	markerPath := filepath.Join(targetDir, ".marker")
 	if err := os.WriteFile(markerPath, []byte("test"), 0o644); err != nil {
@@ -132,8 +125,6 @@ func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
 		SetupScope: types.SetupScopeProject,
 	}
 
-	// Claude adapter should use ctx.TargetDir as the working directory.
-	// We verify this indirectly by ensuring no panic/error from invalid dir.
 	adapters := []ToolAdapter{
 		&ClaudeCodeAdapter{},
 	}
@@ -142,6 +133,80 @@ func TestRunHeadlessValidation_UsesTargetDir(t *testing.T) {
 		t.Run(adapter.Name(), func(t *testing.T) {
 			// Should not panic even if tool is not installed.
 			_ = adapter.RunHeadlessValidation(ctx)
+		})
+	}
+}
+
+// --- Test: RunHeadlessInit is non-fatal when tool binary is not on PATH ---
+
+func TestRunHeadlessInit_BinaryNotOnPath(t *testing.T) {
+	ctx := &AdapterContext{
+		TargetDir:  t.TempDir(),
+		SetupScope: types.SetupScopeProject,
+	}
+
+	adapters := []ToolAdapter{
+		&ClaudeCodeAdapter{},
+		&OpenCodeAdapter{},
+		&CopilotAdapter{},
+	}
+
+	for _, adapter := range adapters {
+		t.Run(adapter.Name(), func(t *testing.T) {
+			// If the binary happens to be on PATH, this will actually run.
+			// That's fine — the test verifies the method is non-fatal either way.
+			err := adapter.RunHeadlessInit(ctx, "test populate prompt")
+			if err != nil {
+				t.Errorf("%s.RunHeadlessInit() should be non-fatal, got: %v", adapter.Name(), err)
+			}
+		})
+	}
+}
+
+// --- Test: RunHeadlessInit with empty prompt is non-fatal ---
+
+func TestRunHeadlessInit_EmptyPrompt(t *testing.T) {
+	ctx := &AdapterContext{
+		TargetDir:  t.TempDir(),
+		SetupScope: types.SetupScopeProject,
+	}
+
+	adapters := []ToolAdapter{
+		&ClaudeCodeAdapter{},
+		&OpenCodeAdapter{},
+		&CopilotAdapter{},
+	}
+
+	for _, adapter := range adapters {
+		t.Run(adapter.Name(), func(t *testing.T) {
+			err := adapter.RunHeadlessInit(ctx, "")
+			if err != nil {
+				t.Errorf("%s.RunHeadlessInit() with empty prompt should be non-fatal, got: %v", adapter.Name(), err)
+			}
+		})
+	}
+}
+
+// --- Test: truncateOutput helper ---
+
+func TestTruncateOutput(t *testing.T) {
+	tests := []struct {
+		input   string
+		maxLen  int
+		want    string
+	}{
+		{"hello", 10, "hello"},
+		{"hello world", 5, "hello..."},
+		{"", 5, ""},
+		{"abc", 3, "abc"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := truncateOutput(tc.input, tc.maxLen)
+			if got != tc.want {
+				t.Errorf("truncateOutput(%q, %d) = %q, want %q", tc.input, tc.maxLen, got, tc.want)
+			}
 		})
 	}
 }

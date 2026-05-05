@@ -3,12 +3,14 @@
 package adapter
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/configmerge"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -188,7 +190,39 @@ func (a *OpenCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, e
 	return CompileMCPForTool(types.ToolIdOpenCode, ctx)
 }
 
-func (a *OpenCodeAdapter) CanRunHeadless() bool { return false }
+func (a *OpenCodeAdapter) CanRunHeadless() bool { return true }
+
+func (a *OpenCodeAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) error {
+	_, err := exec.LookPath("opencode")
+	if err != nil {
+		log.Printf("[opencode] opencode not on PATH, skipping headless init")
+		return nil
+	}
+
+	log.Printf("[opencode] running headless init (populate via opencode run)...")
+	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(execCtx, "opencode",
+		"run", prompt,
+		"--dangerously-skip-permissions",
+		"--format", "json",
+	)
+	cmd.Dir = ctx.TargetDir
+	cmd.Stdin = nil
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("[opencode] headless init completed with warning: %v", err)
+		if len(output) > 0 {
+			log.Printf("[opencode] output: %s", truncateOutput(string(output), 200))
+		}
+		return nil // non-fatal
+	}
+
+	log.Printf("[opencode] headless init completed (%d bytes)", len(output))
+	return nil
+}
 
 func (a *OpenCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error { return nil }
 

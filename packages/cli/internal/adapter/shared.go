@@ -827,3 +827,11 @@ func WriteJSONFile(path string, data any) error {
 	content = append(content, '\n')
 	return files.WriteFile(path, content, 0o644)
 }
+
+// truncateOutput truncates s to maxLen characters, appending "..." when truncated.
+func truncateOutput(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}

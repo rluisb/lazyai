@@ -103,7 +103,7 @@ func TestPropagateWritesPerRepoMcpConfigs(t *testing.T) {
 
 	// Workspace canonical mcp.json (PropagateMcpToRepos reads from each
 	// repo's TargetDir, but having it at the workspace root is part of
-	// the realistic setup — adapters fall back to it via readCanonicalMcp).
+	// the realistic setup — adapters fall back to it via ReadCanonicalMcp).
 	if err := files.EnsureDir(filepath.Join(tmp, ".ai")); err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,7 @@ type SummaryBox struct {
 	warnings  []string
 	errors    []string
 	stats     summaryStats
+	notes     string
 }
 
 type summaryStats struct {
@@ -52,6 +53,11 @@ func (s *SummaryBox) SetStats(installed, modified, skipped int) {
 		modified:  modified,
 		skipped:   skipped,
 	}
+}
+
+// SetNotes sets the extra notes section displayed below the stats.
+func (s *SummaryBox) SetNotes(notes string) {
+	s.notes = notes
 }
 
 // Render returns the summary box as a styled string.
@@ -101,6 +107,11 @@ func (s *SummaryBox) Render() string {
 			parts = append(parts, fmt.Sprintf("skipped: %d", s.stats.skipped))
 		}
 		lines = append(lines, theme.DimText(strings.Join(parts, "  ")))
+	}
+
+	if s.notes != "" {
+		lines = append(lines, "")
+		lines = append(lines, s.notes)
 	}
 
 	content := strings.Join(lines, "\n")

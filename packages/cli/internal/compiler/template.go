@@ -112,7 +112,7 @@ func (tc *TemplateCompiler) CompileAndWrite() error {
 		if err := os.WriteFile(fullPath, []byte(file.Content), 0o644); err != nil {
 			return fmt.Errorf("write file %s: %w", fullPath, err)
 		}
-		fmt.Fprintf(os.Stderr, "  -> %s\n", file.RelativePath)
+		compilerLog.Info("wrote compiled file", "path", file.RelativePath)
 	}
 	return nil
 }

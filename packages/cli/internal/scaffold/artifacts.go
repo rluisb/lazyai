@@ -1,8 +1,6 @@
 package scaffold
 
 import (
-	"log"
-
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
@@ -46,7 +44,7 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 
 		records, err := a.Install(adapterCtx)
 		if err != nil {
-			log.Printf("Warning: adapter %s install failed: %v", a.ID(), err)
+			scaffoldLog.Warn("adapter install failed", "adapter", a.ID(), "error", err)
 			continue
 		}
 		allRecords = append(allRecords, records...)

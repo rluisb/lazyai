@@ -258,7 +258,7 @@ func (r *FragmentResolver) loadFragment(fragmentPath string) string {
 	}
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fragment not found: %s\n", fragmentPath)
+		compilerLog.Error("Fragment not found", "fragment_path", fragmentPath)
 		return fmt.Sprintf("<!-- Fragment not found: %s -->", fragmentPath)
 	}
 

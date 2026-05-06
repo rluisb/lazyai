@@ -66,11 +66,11 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		libFS := getContractLibraryFS()
 		contracts, err := compiler.LoadSkillContracts(libFS)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "  Warning: contract load failed: %v\n", err)
+			cmdLog.Warn("contract load failed", "error", err)
 		} else {
 			issues := compiler.ValidateChain(contracts)
 			if len(issues) > 0 {
-				fmt.Fprintln(os.Stderr, compiler.FormatContractIssues(issues))
+				cmdLog.Error("contract validation failed", "issues", compiler.FormatContractIssues(issues))
 			}
 			if compiler.ContractValidationFails(issues, strictContracts) {
 				return fmt.Errorf("contract validation failed; pass --validate-contracts=false to override")
@@ -104,7 +104,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	// Auto-import from JSON if DB is new.
 	imported, err := db.AutoImportJSON(dir, database)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  Warning: JSON import failed: %v\n", err)
+		cmdLog.Warn("JSON import failed", "error", err)
 	}
 	if imported {
 		fmt.Println("  Imported existing .ai-setup.json → SQLite")
@@ -263,7 +263,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			}
 			propagated, err := adapter.PropagateMcpToRepos(reg, propagatedCtx)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Warning: workspace propagation: %v\n", err)
+				cmdLog.Warn("workspace propagation failed", "error", err)
 			}
 			if len(propagated) > 0 {
 				newFileRecords = append(newFileRecords, propagated...)

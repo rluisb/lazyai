@@ -90,7 +90,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	if err := writeStoreData(dir, storeData); err != nil {
 		// Non-fatal: status update failed, but we can still report
 		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: could not update store: %v\n", err)
+			cmdLog.Warn("could not update store", "error", err)
 		}
 	}
 

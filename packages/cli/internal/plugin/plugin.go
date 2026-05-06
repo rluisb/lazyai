@@ -174,7 +174,7 @@ func copyAgents(libFS fs.FS, srcSubdir, destDir string) (int, error) {
 		}
 		sanitized, warned := sanitizeAgentFrontmatter(data)
 		if warned {
-			fmt.Fprintf(os.Stderr, "[plugin] stripped forbidden fields from %s (plugin agents cannot ship hooks/mcpServers/permissionMode)\n", entry.Name())
+			pluginLog.Warn("stripped forbidden fields from plugin agent", "file", entry.Name(), "fields", forbiddenAgentFields)
 		}
 		if err := os.WriteFile(filepath.Join(destDir, entry.Name()), sanitized, 0o644); err != nil {
 			return count, err

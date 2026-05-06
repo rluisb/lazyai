@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	charmlog "charm.land/log/v2"
+	ailog "github.com/rluisb/lazyai/packages/diffviewer/internal/log"
 )
 
 // Reviewer runs a prepared review and returns the user's final response.
@@ -46,7 +49,7 @@ func RunCLI(stdin io.Reader, stdout, stderr io.Writer, newReviewer ReviewerFacto
 	}
 
 	if err := encodeReviewResponse(stdout, resp); err != nil {
-		fmt.Fprintf(stderr, "diffviewer: write response: %v\n", err)
+		cliLogger(stderr).Error("write response failed", "error", err)
 		return 1
 	}
 
@@ -75,7 +78,8 @@ func reviewRequestConflictViews(req ReviewRequest) []ConflictView {
 }
 
 func writeErrorResponse(stdout, stderr io.Writer, err error) int {
-	fmt.Fprintf(stderr, "diffviewer: %v\n", err)
+	logger := cliLogger(stderr)
+	logger.Error("review failed", "error", err)
 	message := err.Error()
 	resp := ReviewResponse{
 		Version:     reviewContractVersion,
@@ -84,9 +88,15 @@ func writeErrorResponse(stdout, stderr io.Writer, err error) int {
 		Message:     &message,
 	}
 	if encodeErr := encodeReviewResponse(stdout, resp); encodeErr != nil {
-		fmt.Fprintf(stderr, "diffviewer: write error response: %v\n", encodeErr)
+		logger.Error("write error response failed", "error", encodeErr)
 	}
 	return 1
+}
+
+func cliLogger(stderr io.Writer) *charmlog.Logger {
+	logger := ailog.Default().With("component", "cli")
+	logger.SetOutput(stderr)
+	return logger
 }
 
 func encodeReviewResponse(stdout io.Writer, resp ReviewResponse) error {

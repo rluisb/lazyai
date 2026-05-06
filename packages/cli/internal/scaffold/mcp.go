@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -97,7 +96,7 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 		return err
 	}
 	if action == "skip" {
-		log.Printf("Skipping existing file: %s", relPath)
+		scaffoldLog.Info("skipping existing file", "path", relPath)
 		return nil
 	}
 

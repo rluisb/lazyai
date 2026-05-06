@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"encoding/json"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -63,7 +62,7 @@ func ScaffoldEnvExample(targetDir string, fileRecords *[]types.TrackedFile, stra
 		return err
 	}
 	if action == "skip" {
-		log.Printf("Skipping existing file: %s", relPath)
+		scaffoldLog.Info("skipping existing file", "path", relPath)
 		return nil
 	}
 

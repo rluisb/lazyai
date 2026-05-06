@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +84,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		})
 	}
 
-	log.Println("Installing Claude Code tools...")
+	adapterLog.Info("installing tools", "adapter", "claude-code")
 
 	// Copy agents.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
@@ -160,7 +159,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	// settings.json merge) on any failure.
 	if ctx.DriveCLI {
 		if ok := installClaudeMCPViaCLI(ctx, claudeDir); ok {
-			log.Println("[claude] MCP servers registered via CLI")
+			adapterLog.Info("mcp servers registered via CLI", "adapter", "claude-code")
 		}
 	}
 
@@ -178,7 +177,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 	_, found := LookupClaudeBinary()
 	if !found {
-		log.Println("[claude] claude binary not found; falling back to direct-write for MCP servers")
+		adapterLog.Info("claude binary not found; falling back to direct-write for MCP servers", "adapter", "claude-code")
 		return false
 	}
 
@@ -210,7 +209,7 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 		cancel()
 		if err == nil {
 			// Server already exists, skip it
-			log.Printf("[claude] MCP server %q already registered, skipping", name)
+			adapterLog.Info("mcp server already registered, skipping", "adapter", "claude-code", "server", name)
 			success = true
 			continue
 		}
@@ -221,12 +220,12 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 		_, stderr, err := runner.Run(addCtx, workingDir, "mcp", "add-json", name, payload, "-s", scopeFlag)
 		cancel()
 		if err != nil {
-			log.Printf("[claude] mcp add-json %q failed: %v\nstderr: %s", name, err, string(stderr))
+			adapterLog.Error("mcp add-json failed", "adapter", "claude-code", "server", name, "error", err, "stderr", string(stderr))
 			// Continue trying other servers, but note the failure.
 			continue
 		}
 
-		log.Printf("[claude] registered MCP server %q via CLI", name)
+		adapterLog.Info("registered MCP server via CLI", "adapter", "claude-code", "server", name)
 		success = true
 	}
 	_ = claudeDir
@@ -351,14 +350,14 @@ func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
 			continue
 		}
 		if files.FileExists(newPath) {
-			log.Printf("[claude-code] legacy agent %q remains at %s (canonical %s also exists; leaving both for manual review)", file, legacyPath, newPath)
+			adapterLog.Warn("legacy agent remains alongside canonical agent; leaving both for manual review", "adapter", "claude-code", "file", file, "legacy_path", legacyPath, "canonical_path", newPath)
 			continue
 		}
 		if err := os.Rename(legacyPath, newPath); err != nil {
-			log.Printf("[claude-code] failed to migrate legacy agent %s -> %s: %v", legacyPath, newPath, err)
+			adapterLog.Error("failed to migrate legacy agent", "adapter", "claude-code", "from", legacyPath, "to", newPath, "error", err)
 			continue
 		}
-		log.Printf("[claude-code] migrated legacy global agent %s -> %s", legacyPath, newPath)
+		adapterLog.Info("migrated legacy global agent", "adapter", "claude-code", "from", legacyPath, "to", newPath)
 	}
 }
 
@@ -371,11 +370,11 @@ func (a *ClaudeCodeAdapter) CanRunHeadless() bool { return true }
 func (a *ClaudeCodeAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) error {
 	_, err := exec.LookPath("claude")
 	if err != nil {
-		log.Printf("[claude-code] claude not on PATH, skipping headless init")
+		adapterLog.Info("claude not on PATH, skipping headless init", "adapter", "claude-code")
 		return nil
 	}
 
-	log.Printf("[claude-code] running headless init (populate via claude -p)...")
+	adapterLog.Info("running headless init", "adapter", "claude-code", "command", "claude -p")
 	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
@@ -390,25 +389,25 @@ func (a *ClaudeCodeAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) 
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[claude-code] headless init completed with warning: %v", err)
+		adapterLog.Warn("headless init completed with warning", "adapter", "claude-code", "error", err)
 		if len(output) > 0 {
-			log.Printf("[claude-code] output: %s", truncateOutput(string(output), 200))
+			adapterLog.Info("headless init output", "adapter", "claude-code", "output", truncateOutput(string(output), 200))
 		}
 		return nil // non-fatal
 	}
 
-	log.Printf("[claude-code] headless init completed (%d bytes)", len(output))
+	adapterLog.Info("headless init completed", "adapter", "claude-code", "bytes", len(output))
 	return nil
 }
 
 func (a *ClaudeCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
 	_, err := exec.LookPath("claude")
 	if err != nil {
-		log.Printf("[claude-code] claude not on PATH, skipping headless validation")
+		adapterLog.Info("claude not on PATH, skipping headless validation", "adapter", "claude-code")
 		return nil
 	}
 
-	log.Printf("[claude-code] running headless validation: claude -p \"verify setup structure\"")
+	adapterLog.Info("running headless validation", "adapter", "claude-code", "command", "claude -p", "prompt", "verify setup structure")
 	execCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -418,14 +417,14 @@ func (a *ClaudeCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[claude-code] headless validation completed with warning: %v", err)
+		adapterLog.Warn("headless validation completed with warning", "adapter", "claude-code", "error", err)
 		if len(output) > 0 {
-			log.Printf("[claude-code] output: %s", string(output))
+			adapterLog.Info("headless validation output", "adapter", "claude-code", "output", string(output))
 		}
 		return nil // non-fatal
 	}
 
-	log.Printf("[claude-code] headless validation succeeded")
+	adapterLog.Info("headless validation succeeded", "adapter", "claude-code")
 	return nil
 }
 
@@ -466,21 +465,21 @@ func displayInstallSummary(ctx *AdapterContext, claudeDir string, isGlobal bool)
 	}
 
 	// Emit summary
-	log.Printf("[claude] Install summary (scope: %s)", scopeLabel)
+	adapterLog.Info("install summary", "adapter", "claude-code", "scope", scopeLabel)
 	if mcpCount > 0 {
-		log.Printf("  • %d MCP server(s) registered", mcpCount)
+		adapterLog.Info("mcp servers registered", "adapter", "claude-code", "scope", scopeLabel, "count", mcpCount)
 	}
 	if agents > 0 {
-		log.Printf("  • %d agent(s) available", agents)
+		adapterLog.Info("agents available", "adapter", "claude-code", "scope", scopeLabel, "count", agents)
 	}
 	if skills > 0 {
-		log.Printf("  • %d skill(s) available", skills)
+		adapterLog.Info("skills available", "adapter", "claude-code", "scope", scopeLabel, "count", skills)
 	}
 	if commands > 0 {
-		log.Printf("  • %d command(s) available", commands)
+		adapterLog.Info("commands available", "adapter", "claude-code", "scope", scopeLabel, "count", commands)
 	}
 	if styles > 0 {
-		log.Printf("  • %d output style(s) available", styles)
+		adapterLog.Info("output styles available", "adapter", "claude-code", "scope", scopeLabel, "count", styles)
 	}
 }
 

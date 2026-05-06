@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -64,7 +63,7 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 
 	// Skip unsupported scopes.
 	if !IsScopeSupported(toolId, ctx.SetupScope) {
-		log.Printf("[compile] %s × %s scope is unsupported; skipping", toolId, ctx.SetupScope)
+		adapterLog.Info("scope is unsupported; skipping", "operation", "compile", "tool", toolId, "scope", ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
 
@@ -74,7 +73,7 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 	// CLI surface is gated internally in compileCopilotMCP).
 	if toolId == types.ToolIdCopilot && ctx.SetupScope == types.SetupScopeGlobal {
 		if !copilotProbePasses(ctx) {
-			log.Printf("[compile] copilot CLI or ~/.copilot/ not found; skipping global MCP compilation")
+			adapterLog.Info("copilot CLI or ~/.copilot/ not found; skipping global MCP compilation", "operation", "compile", "tool", types.ToolIdCopilot)
 			return ctx.FileRecords, nil
 		}
 	}
@@ -236,7 +235,7 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 
 	// Default path: at global, skip (settings.json merge at init time covers it).
 	if ctx.SetupScope == types.SetupScopeGlobal {
-		log.Println("[compile] claude-code × global: mcpServers live in settings.json; skipping")
+		adapterLog.Info("mcpServers live in settings.json; skipping", "operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
 
@@ -275,7 +274,7 @@ func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) 
 			}
 		}
 		settingsPath = filepath.Join(home, ".claude", "settings.local.json")
-		log.Printf("[compile] claude-code × global --local-secrets: writing %s (ai-setup convention, not a standard Claude path)", settingsPath)
+		adapterLog.Info("writing local secrets settings with ai-setup convention", "operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope, "path", settingsPath)
 	default:
 		settingsPath = filepath.Join(ctx.TargetDir, ".claude", "settings.local.json")
 	}
@@ -323,7 +322,7 @@ func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
 		cancel()
 		if err == nil {
 			// Already registered, skip it.
-			log.Printf("[compile-mcp] server %q already registered, skipping", name)
+			adapterLog.Info("server already registered, skipping", "operation", "compile-mcp", "server", name)
 			continue
 		}
 
@@ -333,12 +332,12 @@ func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
 		_, stderr, err := runner.Run(addCtx, workingDir, "mcp", "add-json", name, payload, "-s", scopeFlag)
 		cancel()
 		if err != nil {
-			log.Printf("[compile-mcp] mcp add-json %q failed: %v\nstderr: %s", name, err, string(stderr))
+			adapterLog.Error("mcp add-json failed", "operation", "compile-mcp", "server", name, "error", err, "stderr", string(stderr))
 			// CLI error — fall back to direct-write.
 			return false
 		}
 
-		log.Printf("[compile-mcp] registered server %q via CLI", name)
+		adapterLog.Info("registered server via CLI", "operation", "compile-mcp", "server", name)
 	}
 
 	return true
@@ -441,7 +440,7 @@ func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]type
 func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
 	home, err := resolveCopilotHomeDir(ctx)
 	if err != nil {
-		log.Printf("[compile] copilot: cannot resolve home dir: %v", err)
+		adapterLog.Error("cannot resolve home dir", "operation", "compile", "tool", types.ToolIdCopilot, "error", err)
 		return ctx.FileRecords, nil
 	}
 	copilotDir := filepath.Join(home, ".copilot")

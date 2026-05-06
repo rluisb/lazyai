@@ -2,7 +2,6 @@ package migration
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -313,6 +312,6 @@ func adapterToToolID(adapter string) (types.ToolId, bool) {
 
 // Rollback is a placeholder for restoring backed-up files.
 func Rollback(_ *MigrationContext, _ string) error {
-	fmt.Fprintln(os.Stderr, "Rolling back migration...")
+	migrationLog.Info("rolling back migration")
 	return nil
 }

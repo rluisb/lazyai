@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,7 +116,7 @@ func scaffoldKnowledgeMap(targetDir string, libFS fs.FS, projectName string, fil
 		return err
 	}
 	if action == "skip" {
-		log.Printf("Skipping existing file: %s", relPath)
+		scaffoldLog.Info("skipping existing file", "path", relPath)
 		return nil
 	}
 
@@ -158,13 +157,13 @@ func copyInfraFileFromFS(libFS fs.FS, srcRelPath, dest, targetDir string, fileRe
 		return err
 	}
 	if action == "skip" {
-		log.Printf("Skipping existing file: %s", relPath)
+		scaffoldLog.Info("skipping existing file", "path", relPath)
 		return nil
 	}
 
 	data, err := files.ReadFS(libFS, srcRelPath)
 	if err != nil {
-		log.Printf("Warning: could not read %s: %v", srcRelPath, err)
+		scaffoldLog.Warn("could not read library file", "path", srcRelPath, "error", err)
 		return nil
 	}
 

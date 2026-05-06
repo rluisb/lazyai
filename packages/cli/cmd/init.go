@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -236,7 +235,7 @@ func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext)
 
 	// Skip headless init in test environments to avoid slow binary lookups.
 	if os.Getenv("AI_SETUP_SKIP_HEADLESS_INIT") != "" {
-		log.Printf("[init] skipping headless init (AI_SETUP_SKIP_HEADLESS_INIT set)")
+		cmdLog.Info("skipping headless init", "reason", "AI_SETUP_SKIP_HEADLESS_INIT set")
 		return
 	}
 
@@ -260,9 +259,9 @@ func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext)
 			LibraryFS:  ctx.LibraryFS,
 		}
 
-		log.Printf("[init] running headless populate via %s...", tool)
+		cmdLog.Info("running headless populate", "tool", tool)
 		if err := adapt.RunHeadlessInit(adapterCtx, prompt); err != nil {
-			log.Printf("[init] %s headless init failed: %v", tool, err)
+			cmdLog.Warn("headless init failed", "tool", tool, "error", err)
 		}
 	}
 
@@ -281,7 +280,7 @@ func updatePopulateNeeded(ctx *scaffold.ScaffoldContext) {
 
 	remaining := strings.Count(string(data), "<!-- fill-in:")
 	if remaining > 0 {
-		log.Printf("[init] %d placeholders remain — run /init or /populate in your AI tool", remaining)
+		cmdLog.Info("placeholders remain", "count", remaining)
 	}
 }
 
@@ -303,7 +302,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 			kept = append(kept, t)
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "WARN: skipping tool %q for scope %q — not supported\n", t, config.CLIScope)
+		cmdLog.Warn("skipping unsupported tool for scope", "tool", t, "scope", config.CLIScope)
 	}
 	if len(kept) == 0 {
 		return fmt.Errorf("no tools remain after filtering for scope %q", config.CLIScope)

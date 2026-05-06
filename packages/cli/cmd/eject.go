@@ -84,7 +84,7 @@ func runEject(cmd *cobra.Command, args []string) error {
 	// Delete .ai-setup.db
 	if dbExists {
 		if err := os.Remove(dbPath); err != nil {
-			fmt.Fprintf(os.Stderr, "  Warning: could not remove %s: %v\n", dbPath, err)
+			cmdLog.Warn("could not remove database", "path", dbPath, "error", err)
 		} else {
 			fmt.Printf("  Removed %s\n", dbPath)
 		}
@@ -93,7 +93,7 @@ func runEject(cmd *cobra.Command, args []string) error {
 	// Delete .ai-setup.json
 	if manifestExists {
 		if err := os.Remove(manifestPath); err != nil {
-			fmt.Fprintf(os.Stderr, "  Warning: could not remove %s: %v\n", manifestPath, err)
+			cmdLog.Warn("could not remove manifest", "path", manifestPath, "error", err)
 		} else {
 			fmt.Printf("  Removed %s\n", manifestPath)
 		}

@@ -984,6 +984,312 @@ body[data-theme="dark"] .chip-toggle[aria-pressed="true"] {
 }
 
 /* ==========================================================================
+   Run detail — hero, timeline, budget cards, collapsibles
+   ========================================================================== */
+.run-hero {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: var(--pad-lg);
+  padding-bottom: var(--pad-md);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.run-hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.run-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.run-hero-title h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.2rem, 0.9rem + 1vw, 1.6rem);
+  letter-spacing: -0.02em;
+}
+
+.run-hero-id {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--panel-soft);
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+}
+
+.run-hero-copy {
+  padding: 0.15rem 0.45rem;
+}
+
+.run-hero-meta {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+
+.run-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.run-detail-block {
+  margin: var(--pad-md) 0;
+}
+
+.run-detail-block-title {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--muted);
+  margin-bottom: var(--pad-sm);
+  border-bottom: 1px dashed var(--border-soft);
+  padding-bottom: 0.3rem;
+}
+
+/* Budget cards */
+.budget-grid {
+  display: grid;
+  gap: var(--gap-md);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.budget-card {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: var(--pad-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.budget-card-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  color: var(--muted);
+}
+
+.budget-card-value {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.budget-card-foot {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.budget-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 240ms ease;
+}
+
+.budget-bar-fill[data-health="warning"] { background: var(--warning); }
+.budget-bar-fill[data-health="critical"],
+.budget-bar-fill[data-health="over"]    { background: var(--danger); }
+
+.budget-card[data-health="warning"]  { border-color: var(--warning); }
+.budget-card[data-health="critical"],
+.budget-card[data-health="over"]     { border-color: var(--danger); }
+
+/* Vertical timeline */
+.run-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.run-timeline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 9px;
+  width: 1px;
+  background: var(--border-soft);
+}
+
+.timeline-node {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.4rem 0;
+  position: relative;
+}
+
+.timeline-marker {
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--panel);
+  margin-top: 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  z-index: 1;
+}
+
+.timeline-marker[data-state="running"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.timeline-marker[data-state="completed"] {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--ctp-base);
+}
+
+.timeline-marker[data-state="failed"] {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--ctp-base);
+}
+
+.timeline-marker[data-state="gated"],
+.timeline-marker[data-state="paused"] {
+  border-color: var(--gate);
+  color: var(--gate);
+}
+
+.timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.timeline-title strong {
+  font-weight: 600;
+}
+
+.timeline-title-meta {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.timeline-events {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.timeline-event {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.45rem;
+}
+
+.timeline-event-time {
+  color: var(--muted);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.timeline-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+
+/* Collapsibles */
+.run-detail-collapsible {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 0;
+  margin: var(--gap-sm) 0;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.run-detail-collapsible > summary {
+  cursor: pointer;
+  padding: var(--pad-sm) var(--pad-md);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  list-style: none;
+  background: var(--panel-soft);
+  color: var(--text);
+  position: relative;
+}
+
+.run-detail-collapsible > summary::-webkit-details-marker { display: none; }
+
+.run-detail-collapsible > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+
+.run-detail-collapsible[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.run-detail-collapsible > :not(summary) {
+  padding: var(--pad-md);
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 800px) {

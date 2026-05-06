@@ -374,6 +374,79 @@ func TestDashboardJSHashRoutingAndErrorsScreen(t *testing.T) {
 	}
 }
 
+func TestDashboardViewRunDetailHasHeroTimelineAndBudgetCards(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`id="run-detail-hero"`,
+		`id="run-detail-state-chip"`,
+		`id="run-detail-copy-id"`,
+		`id="run-timeline"`,
+		`id="run-budget-cards"`,
+		`<details `, // collapsibles for raw JSON / execution plan / handoffs
+		`id="run-detail-raw-state"`,
+		`id="run-detail-execution-plan"`,
+		`id="run-detail-handoffs"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard run detail shell missing %q", want)
+		}
+	}
+}
+
+func TestDashboardJSRunDetailRenderersAndCopy(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"renderRunHero",
+		"renderTimeline",
+		"renderBudgetCards",
+		"renderRunStateChip",
+		"navigator.clipboard",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing run-detail renderer %q", want)
+		}
+	}
+}
+
+func TestDashboardCSSRunDetailVisuals(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		".run-hero",
+		".run-timeline",
+		".timeline-node",
+		".timeline-marker",
+		".budget-card",
+		".budget-bar",
+		".budget-bar-fill",
+		"summary",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing run-detail visual %q", want)
+		}
+	}
+}
+
 func TestDashboardCSSCatppuccinAndNavLayout(t *testing.T) {
 	handler := NewViewHandler(ViewConfig{})
 	response := httptest.NewRecorder()

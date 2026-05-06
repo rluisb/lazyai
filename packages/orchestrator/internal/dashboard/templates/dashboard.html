@@ -200,31 +200,79 @@
         </section>
 
         <section id="run-detail-panel" class="panel" data-dashboard-section="run-detail" aria-labelledby="run-detail-heading" hidden>
-          <div class="panel-heading">
-            <h2 id="run-detail-heading">Run detail</h2>
-            <span id="run-detail-status" class="muted">Select a run to inspect details.</span>
-          </div>
+          <header id="run-detail-hero" class="run-hero">
+            <div class="run-hero-eyebrow">
+              <span id="run-detail-eyebrow" class="eyebrow">run detail</span>
+              <span id="run-detail-state-chip" class="chip" aria-live="polite"></span>
+            </div>
+            <div class="run-hero-title">
+              <h2 id="run-detail-heading">Run detail</h2>
+              <code id="run-detail-id" class="run-hero-id" aria-live="polite"></code>
+              <button type="button" id="run-detail-copy-id" class="icon-btn run-hero-copy" title="Copy run id" aria-label="Copy run id">
+                <span class="nav-icon">⎘</span>
+              </button>
+            </div>
+            <p id="run-detail-status" class="muted run-hero-meta">Select a run to inspect details.</p>
+            <div class="run-hero-actions">
+              <button type="button" class="icon-btn link-btn" data-route="#/runs">← back to runs</button>
+            </div>
+          </header>
+
           <p id="run-detail-empty" class="empty-state">No run selected. <button type="button" class="link-btn" data-route="#/runs">Pick a run from the Runs list →</button></p>
-          <div class="detail-grid">
-            <section aria-labelledby="run-summary-heading">
-              <h3 id="run-summary-heading">Summary</h3>
-              <dl id="run-summary" class="kv-list"></dl>
-              <pre id="run-state-json" class="json-block" aria-label="Run state JSON"></pre>
-            </section>
-            <section id="budget-panel" aria-labelledby="budget-heading">
-              <h3 id="budget-heading">Budget</h3>
-              <dl id="budget-state" class="kv-list" data-empty="No budget state available."></dl>
-              <dl id="budget-evaluation" class="kv-list" data-empty="No budget evaluation available."></dl>
-            </section>
-            <section aria-labelledby="events-heading">
-              <h3 id="events-heading">Events <span class="muted mono tiny">selected run · per-run sse</span></h3>
-              <ol id="event-timeline" class="event-timeline" data-empty="No events for this run yet."></ol>
-            </section>
-            <section aria-labelledby="run-errors-heading">
-              <h3 id="run-errors-heading">Errors</h3>
-              <ul id="run-errors" class="error-list" data-empty="No errors for this run."></ul>
-            </section>
-          </div>
+
+          <section aria-labelledby="run-budget-heading-visual" class="run-detail-block">
+            <h3 id="run-budget-heading-visual" class="run-detail-block-title">Budget</h3>
+            <div id="run-budget-cards" class="budget-grid" data-empty="No budget data."></div>
+          </section>
+
+          <section aria-labelledby="run-timeline-heading" class="run-detail-block">
+            <h3 id="run-timeline-heading" class="run-detail-block-title">Timeline</h3>
+            <ol id="run-timeline" class="run-timeline" data-empty="No timeline data for this run yet."></ol>
+          </section>
+
+          <section aria-labelledby="run-errors-heading" class="run-detail-block">
+            <h3 id="run-errors-heading" class="run-detail-block-title">Errors</h3>
+            <ul id="run-errors" class="error-list" data-empty="No errors for this run."></ul>
+          </section>
+
+          <details id="run-detail-summary-details" class="run-detail-collapsible">
+            <summary>Summary</summary>
+            <dl id="run-summary" class="kv-list"></dl>
+          </details>
+
+          <details id="run-detail-events-details" class="run-detail-collapsible">
+            <summary>Events <span class="muted mono tiny">selected run · per-run sse</span></summary>
+            <ol id="event-timeline" class="event-timeline" data-empty="No events for this run yet."></ol>
+          </details>
+
+          <details id="run-detail-budget-details" class="run-detail-collapsible">
+            <summary>Budget — raw state &amp; evaluation</summary>
+            <div id="budget-panel" class="detail-grid">
+              <section>
+                <h4>State</h4>
+                <dl id="budget-state" class="kv-list" data-empty="No budget state available."></dl>
+              </section>
+              <section>
+                <h4>Evaluation</h4>
+                <dl id="budget-evaluation" class="kv-list" data-empty="No budget evaluation available."></dl>
+              </section>
+            </div>
+          </details>
+
+          <details id="run-detail-raw-state" class="run-detail-collapsible">
+            <summary>Raw state JSON</summary>
+            <pre id="run-state-json" class="json-block" aria-label="Run state JSON"></pre>
+          </details>
+
+          <details id="run-detail-execution-plan" class="run-detail-collapsible">
+            <summary>Execution plan</summary>
+            <pre id="run-execution-plan" class="json-block" aria-label="Execution plan JSON" data-empty="No execution plan attached to this run."></pre>
+          </details>
+
+          <details id="run-detail-handoffs" class="run-detail-collapsible">
+            <summary>Handoffs</summary>
+            <ol id="run-handoffs" class="error-list" data-empty="No handoffs recorded."></ol>
+          </details>
         </section>
 
         <section id="catalog-browser" class="panel" data-dashboard-section="catalog" aria-labelledby="catalog-heading" hidden>

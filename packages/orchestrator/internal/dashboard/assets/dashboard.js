@@ -371,11 +371,7 @@
 
   function renderRunDetail(detail) {
     const summary = detail.summary || {};
-    const status = byID("run-detail-status");
-    if (status) {
-      const bestEffort = summary.kind === "team" || summary.kind === "workflow" ? " · best-effort runtime data" : "";
-      status.textContent = `${text(summary.kind)}/${text(summary.id)}${bestEffort}`;
-    }
+    renderRunHero(summary);
     renderKV(byID("run-summary"), {
       Kind: summary.kind,
       ID: summary.id,
@@ -395,8 +391,252 @@
       stateTarget.textContent = JSON.stringify(detail.state || {}, null, 2);
     }
     renderBudget(detail.budget || null);
+    renderBudgetCards(detail.budget || null);
+    renderTimeline(detail);
     renderEventCollection(byID("event-timeline"), detail.events || []);
     renderErrorCollection(byID("run-errors"), detail.errors || []);
+    renderExecutionPlan(detail.executionPlan || null);
+    renderHandoffs(detail.handoffs || []);
+  }
+
+  // ===== Run detail hero ======================================================
+  const RUN_STATE_GLYPHS = {
+    running: { glyph: "●", cls: "chip-warn" },
+    completed: { glyph: "✓", cls: "chip-ok" },
+    failed: { glyph: "✕", cls: "chip-err" },
+    gated: { glyph: "◇", cls: "chip-gate" },
+    paused: { glyph: "❚❚", cls: "chip-warn" },
+    awaiting_recovery: { glyph: "↻", cls: "chip-warn" },
+    waiting_on_child: { glyph: "↯", cls: "chip-gate" },
+  };
+
+  function renderRunStateChip(stateValue) {
+    const target = byID("run-detail-state-chip");
+    if (!target) return;
+    const key = String(stateValue || "").toLowerCase();
+    const meta = RUN_STATE_GLYPHS[key] || { glyph: "·", cls: "" };
+    target.className = `chip ${meta.cls}`;
+    target.textContent = `${meta.glyph} ${stateValue || "—"}`;
+  }
+
+  function renderRunHero(summary) {
+    const status = byID("run-detail-status");
+    if (status) {
+      const bestEffort = summary.kind === "team" || summary.kind === "workflow" ? " · best-effort runtime data" : "";
+      const definition = summary.definitionName ? `${summary.definitionName} v${summary.definitionVersion || "—"}` : "—";
+      status.textContent = `${definition} · started ${formatDate(summary.createdAt)} · updated ${formatDate(summary.updatedAt)}${bestEffort}`;
+    }
+    const idTarget = byID("run-detail-id");
+    if (idTarget) {
+      idTarget.textContent = summary.kind && summary.id ? `${summary.kind}/${summary.id}` : "—";
+    }
+    const eyebrow = byID("run-detail-eyebrow");
+    if (eyebrow) {
+      eyebrow.textContent = `${text(summary.kind)} run`;
+    }
+    renderRunStateChip(summary.state);
+  }
+
+  // ===== Vertical timeline ====================================================
+  function renderTimeline(detail) {
+    const target = byID("run-timeline");
+    if (!target) return;
+    clear(target);
+    const summary = detail.summary || {};
+    const events = detail.events || [];
+    const eventsByStep = {};
+    events.forEach((event) => {
+      const stepID = (event.data && (event.data.stepId || event.data.taskId || event.data.phaseId)) || "_unscoped";
+      eventsByStep[stepID] = eventsByStep[stepID] || [];
+      eventsByStep[stepID].push(event);
+    });
+
+    let nodes = [];
+    if (summary.kind === "chain" && Array.isArray(detail.steps)) {
+      nodes = detail.steps.map((step) => ({
+        id: step.stepId,
+        title: `Step ${step.order != null ? step.order + 1 : "?"} · ${text(step.stepId)}`,
+        meta: `${text(step.agent)} · ${text(step.stepType)}`,
+        state: step.state,
+        startedAt: step.startedAt,
+        completedAt: step.completedAt,
+        attempts: step.attempts,
+        usage: step.usage,
+        error: step.error,
+      }));
+    } else if (summary.kind === "team" && Array.isArray(detail.tasks)) {
+      nodes = detail.tasks.map((task) => ({
+        id: task.taskId,
+        title: `Task · ${text(task.taskId)}`,
+        meta: `${text(task.role || task.kind)} · ${text(task.agent)}`,
+        state: task.state,
+        startedAt: task.assignedAt || task.claimedAt,
+        completedAt: task.completedAt,
+        attempts: 0,
+        usage: task.usage,
+        error: task.error,
+      }));
+    } else if (summary.kind === "workflow" && Array.isArray(detail.phases)) {
+      nodes = detail.phases.map((phase) => ({
+        id: phase.phaseId,
+        title: `Phase · ${text(phase.phaseId)}`,
+        meta: `${text(phase.kind)}${phase.ref ? ` · ${phase.ref}` : ""}${phase.gate ? ` · gate=${phase.gate}` : ""}`,
+        state: phase.state,
+        startedAt: phase.startedAt,
+        completedAt: phase.completedAt,
+        attempts: 0,
+        error: null,
+      }));
+    }
+
+    if (nodes.length === 0) {
+      target.append(element("li", { class: "empty-state", text: target.dataset.empty || "No timeline data for this run yet." }));
+      return;
+    }
+
+    nodes.forEach((node) => target.append(renderTimelineNode(node, eventsByStep[node.id] || [])));
+  }
+
+  function renderTimelineNode(node, events) {
+    const stateKey = String(node.state || "").toLowerCase();
+    const marker = element("span", { class: "timeline-marker", "data-state": stateKey });
+    if (stateKey === "completed") marker.textContent = "✓";
+    else if (stateKey === "failed") marker.textContent = "✕";
+    else if (stateKey === "running") marker.textContent = "●";
+    else if (stateKey === "gated" || stateKey === "paused") marker.textContent = "◇";
+
+    const titleParts = [
+      element("strong", { text: node.title }),
+      element("span", { class: "chip chip-toggle", "aria-pressed": "true", text: node.state || "—" }),
+    ];
+    if (node.attempts && node.attempts > 1) {
+      titleParts.push(element("span", { class: "timeline-title-meta", text: `attempt ${node.attempts}` }));
+    }
+    const titleRow = element("div", { class: "timeline-title" }, titleParts);
+
+    const metaBits = [];
+    if (node.meta) metaBits.push(node.meta);
+    if (node.startedAt) metaBits.push(`started ${formatDate(node.startedAt)}`);
+    if (node.completedAt) metaBits.push(`done ${formatDate(node.completedAt)}`);
+    if (node.usage && (node.usage.totalTokens || node.usage.costUsd || node.usage.wallClockMs)) {
+      const usageBits = [];
+      if (node.usage.totalTokens) usageBits.push(`${formatNumberCompact(node.usage.totalTokens)} tok`);
+      if (node.usage.costUsd) usageBits.push(`$${node.usage.costUsd.toFixed(3)}`);
+      if (node.usage.wallClockMs) usageBits.push(`${(node.usage.wallClockMs / 1000).toFixed(1)}s`);
+      metaBits.push(usageBits.join(" · "));
+    }
+    const metaRow = element("p", { class: "timeline-title-meta", text: metaBits.join(" · ") || "—" });
+
+    const eventsList = element("ul", { class: "timeline-events" });
+    events.forEach((event) => {
+      eventsList.append(element("li", { class: "timeline-event" }, [
+        element("span", { class: "timeline-event-time", text: formatDate(event.createdAt) }),
+        element("span", { text: event.eventType || "event" }),
+      ]));
+    });
+
+    const body = element("div", { class: "timeline-body" }, [titleRow, metaRow, eventsList]);
+    if (node.error && (node.error.message || node.error.code)) {
+      body.append(element("div", { class: "timeline-error", text: `${text(node.error.code, "error")} · ${text(node.error.message)}` }));
+    }
+    return element("li", { class: "timeline-node" }, [marker, body]);
+  }
+
+  // ===== Budget cards =========================================================
+  function renderBudgetCards(budget) {
+    const target = byID("run-budget-cards");
+    if (!target) return;
+    clear(target);
+    if (!budget || !budget.state) {
+      target.append(element("p", { class: "empty-state", text: target.dataset.empty || "No budget data." }));
+      return;
+    }
+    const dimensions = (budget.evaluation && budget.evaluation.dimensions) || {};
+    const cards = [
+      buildBudgetCard("tokens", budget.state.tokens, dimensions.tokens, formatNumberCompact),
+      buildBudgetCard("cost · usd", budget.state.costUsd, dimensions.costUsd, (n) => `$${n.toFixed(3)}`),
+      buildBudgetCard("wall clock", budget.state.wallClockMs, dimensions.wallClockMs, formatDuration),
+      buildBudgetCard("retries", budget.state.retries, dimensions.retries, (n) => String(n)),
+    ];
+    cards.forEach((card) => card && target.append(card));
+  }
+
+  function buildBudgetCard(label, dim, health, formatter) {
+    if (!dim) return null;
+    const consumed = dim.consumed || 0;
+    const limit = dim.limit || 0;
+    const ratio = limit > 0 ? Math.min(1, consumed / limit) : 0;
+    const healthValue = String(health || "").toLowerCase();
+    const card = element("article", { class: "budget-card", "data-health": healthValue });
+    card.append(element("span", { class: "budget-card-label", text: label }));
+    card.append(element("strong", { class: "budget-card-value", text: formatter(consumed) }));
+    const fill = element("span", { class: "budget-bar-fill", "data-health": healthValue });
+    fill.style.width = `${Math.round(ratio * 100)}%`;
+    const bar = element("div", { class: "budget-bar" }, [fill]);
+    card.append(bar);
+    const limitText = limit > 0 ? `of ${formatter(limit)}` : "no limit";
+    const healthText = healthValue ? `· ${healthValue}` : "";
+    card.append(element("span", { class: "budget-card-foot", text: `${limitText} ${healthText}`.trim() }));
+    return card;
+  }
+
+  function renderExecutionPlan(plan) {
+    const target = byID("run-execution-plan");
+    if (!target) return;
+    if (!plan || Object.keys(plan).length === 0) {
+      target.textContent = target.dataset.empty || "No execution plan attached to this run.";
+      return;
+    }
+    target.textContent = JSON.stringify(plan, null, 2);
+  }
+
+  function renderHandoffs(handoffs) {
+    const target = byID("run-handoffs");
+    if (!target) return;
+    clear(target);
+    if (!handoffs.length) {
+      target.append(element("li", { class: "empty-state", text: target.dataset.empty || "No handoffs recorded." }));
+      return;
+    }
+    handoffs.forEach((doc) => {
+      target.append(element("li", { class: "error-item" }, [
+        element("strong", { text: text(doc.title || doc.handoffType || "handoff") }),
+        element("pre", { class: "json-block", text: JSON.stringify(doc, null, 2) }),
+      ]));
+    });
+  }
+
+  function formatNumberCompact(n) {
+    if (n == null) return "—";
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+    return String(n);
+  }
+
+  function formatDuration(ms) {
+    if (!ms) return "0s";
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const restSec = Math.round(seconds % 60);
+    return restSec ? `${minutes}m ${restSec}s` : `${minutes}m`;
+  }
+
+  function bindCopyHandlers() {
+    const copyBtn = byID("run-detail-copy-id");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        const idTarget = byID("run-detail-id");
+        const idText = idTarget ? idTarget.textContent || "" : "";
+        if (!idText) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(idText).then(
+            () => setStatus("Run id copied to clipboard.", "ok"),
+            () => setStatus("Could not copy to clipboard.", "error"),
+          );
+        }
+      });
+    }
   }
 
   function renderBudget(budget) {
@@ -929,6 +1169,7 @@
     bindTweaks();
     bindNavClicks();
     bindEvents();
+    bindCopyHandlers();
     restoreSelectedRun();
     refreshRunDetailNav();
     // Initial data fetches — don't block routing.

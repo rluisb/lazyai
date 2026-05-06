@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="{{ .AssetPath }}dashboard.css">
+    <script defer src="{{ .AssetPath }}dashboard.js"></script>
+  </head>
+  <body>
+    <main id="dashboard-app" class="dashboard-shell" data-api-prefix="{{ .APIPrefix }}" data-base-path="{{ .BasePath }}">
+      <header class="dashboard-header">
+        <div>
+          <p class="eyebrow">local read-only dashboard</p>
+          <h1>{{ .Title }}</h1>
+          <p class="lede">Observe orchestrator health, runs, events, budgets, errors, and catalog definitions.</p>
+        </div>
+        <div id="status-message" class="status-message" role="status" aria-live="polite">Loading dashboard…</div>
+      </header>
+
+      <section id="overview-panel" class="panel" aria-labelledby="overview-heading">
+        <div class="panel-heading">
+          <h2 id="overview-heading">Overview</h2>
+          <button type="button" class="secondary" id="refresh-overview">Refresh</button>
+        </div>
+        <div class="cards" aria-label="Daemon summary">
+          <article class="card">
+            <h3>Health</h3>
+            <dl id="health-status" class="kv-list" data-empty="Health has not loaded yet."></dl>
+          </article>
+          <article class="card">
+            <h3>Active runs</h3>
+            <dl id="active-runs" class="kv-list" data-empty="No active run counts reported."></dl>
+          </article>
+          <article class="card">
+            <h3>Run states</h3>
+            <dl id="run-counts" class="kv-list" data-empty="No runs recorded yet."></dl>
+          </article>
+          <article class="card">
+            <h3>Catalog</h3>
+            <dl id="catalog-counts" class="kv-list" data-empty="No catalog definitions found."></dl>
+          </article>
+        </div>
+        <div class="two-column">
+          <section aria-labelledby="recent-runs-heading">
+            <h3 id="recent-runs-heading">Recent runs</h3>
+            <ul id="recent-runs" class="run-list compact" data-empty="No recent runs."></ul>
+          </section>
+          <section aria-labelledby="recent-errors-heading">
+            <h3 id="recent-errors-heading">Recent errors</h3>
+            <ul id="recent-errors" class="error-list" data-empty="No recent errors."></ul>
+          </section>
+        </div>
+      </section>
+
+      <section id="run-browser" class="panel" aria-labelledby="runs-heading">
+        <div class="panel-heading">
+          <h2 id="runs-heading">Runs</h2>
+          <button type="button" class="secondary" id="refresh-runs">Refresh runs</button>
+        </div>
+        <form id="run-filters" class="toolbar" aria-label="Run filters">
+          <label>Kind
+            <select id="run-kind-filter" name="kind">
+              <option value="">All kinds</option>
+              <option value="chain">Chains</option>
+              <option value="team">Teams</option>
+              <option value="workflow">Workflows</option>
+            </select>
+          </label>
+          <label>State
+            <input id="run-state-filter" name="state" type="search" placeholder="running, completed, failed">
+          </label>
+          <label>Limit
+            <input id="run-limit" name="limit" type="number" min="1" max="200" value="50">
+          </label>
+          <button type="submit">Apply filters</button>
+        </form>
+        <p id="run-list-empty" class="empty-state" hidden>No runs match the current filters.</p>
+        <ul id="run-list" class="run-list" aria-live="polite"></ul>
+      </section>
+
+      <section id="run-detail-panel" class="panel" aria-labelledby="run-detail-heading">
+        <div class="panel-heading">
+          <h2 id="run-detail-heading">Run detail</h2>
+          <span id="run-detail-status" class="muted">Select a run to inspect details.</span>
+        </div>
+        <p id="run-detail-empty" class="empty-state">No run selected.</p>
+        <div class="detail-grid">
+          <section aria-labelledby="run-summary-heading">
+            <h3 id="run-summary-heading">Summary</h3>
+            <dl id="run-summary" class="kv-list"></dl>
+            <pre id="run-state-json" class="json-block" aria-label="Run state JSON"></pre>
+          </section>
+          <section id="budget-panel" aria-labelledby="budget-heading">
+            <h3 id="budget-heading">Budget</h3>
+            <dl id="budget-state" class="kv-list" data-empty="No budget state available."></dl>
+            <dl id="budget-evaluation" class="kv-list" data-empty="No budget evaluation available."></dl>
+          </section>
+          <section aria-labelledby="events-heading">
+            <h3 id="events-heading">Events</h3>
+            <ol id="event-timeline" class="event-timeline" data-empty="No events for this run yet."></ol>
+          </section>
+          <section aria-labelledby="run-errors-heading">
+            <h3 id="run-errors-heading">Errors</h3>
+            <ul id="run-errors" class="error-list" data-empty="No errors for this run."></ul>
+          </section>
+        </div>
+      </section>
+
+      <section id="catalog-browser" class="panel" aria-labelledby="catalog-heading">
+        <div class="panel-heading">
+          <h2 id="catalog-heading">Catalog</h2>
+          <button type="button" class="secondary" id="refresh-catalog">Refresh catalog</button>
+        </div>
+        <form id="catalog-filters" class="toolbar" aria-label="Catalog filters">
+          <label>Kind
+            <select id="catalog-kind-filter" name="kind">
+              <option value="">All kinds</option>
+              <option value="chain">Chains</option>
+              <option value="team">Teams</option>
+              <option value="workflow">Workflows</option>
+            </select>
+          </label>
+          <button type="submit">Apply catalog filter</button>
+        </form>
+        <div class="two-column catalog-layout">
+          <section aria-labelledby="catalog-list-heading">
+            <h3 id="catalog-list-heading">Definitions</h3>
+            <ul id="catalog-list" class="catalog-list" data-empty="No catalog definitions found."></ul>
+          </section>
+          <section aria-labelledby="catalog-detail-heading">
+            <h3 id="catalog-detail-heading">Definition detail</h3>
+            <article id="catalog-detail" class="catalog-detail empty-state">Select a catalog definition to inspect metadata and body.</article>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

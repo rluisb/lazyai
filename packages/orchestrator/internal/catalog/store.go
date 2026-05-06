@@ -67,10 +67,21 @@ func (s *Store) List(kind string) ([]DefinitionSummary, error) {
 	var query string
 	var args []any
 	if kind != "" {
-		query = `SELECT kind, name, active_version, created_at, updated_at FROM definitions WHERE kind = ? ORDER BY name`
+		query = `
+			SELECT d.kind, d.name, d.active_version, d.created_at, d.updated_at, COUNT(v.id)
+			FROM definitions d
+			LEFT JOIN definition_versions v ON v.definition_id = d.id
+			WHERE d.kind = ?
+			GROUP BY d.id, d.kind, d.name, d.active_version, d.created_at, d.updated_at
+			ORDER BY d.name`
 		args = []any{kind}
 	} else {
-		query = `SELECT kind, name, active_version, created_at, updated_at FROM definitions ORDER BY kind, name`
+		query = `
+			SELECT d.kind, d.name, d.active_version, d.created_at, d.updated_at, COUNT(v.id)
+			FROM definitions d
+			LEFT JOIN definition_versions v ON v.definition_id = d.id
+			GROUP BY d.id, d.kind, d.name, d.active_version, d.created_at, d.updated_at
+			ORDER BY d.kind, d.name`
 	}
 
 	rows, err := s.db.Query(query, args...)
@@ -82,10 +93,9 @@ func (s *Store) List(kind string) ([]DefinitionSummary, error) {
 	var result []DefinitionSummary
 	for rows.Next() {
 		var d DefinitionSummary
-		if err := rows.Scan(&d.Kind, &d.Name, &d.ActiveVersion, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.Kind, &d.Name, &d.ActiveVersion, &d.CreatedAt, &d.UpdatedAt, &d.TotalVersions); err != nil {
 			return nil, err
 		}
-		d.TotalVersions = s.countVersions(d.Kind, d.Name)
 		result = append(result, d)
 	}
 	return result, rows.Err()
@@ -141,10 +151,10 @@ func (s *Store) CreateVersion(input CreateVersionInput) (*CreateVersionResult, e
 	nextVer := s.nextVersion(defID)
 
 	// Check for duplicate checksum
-	var existingID int
-	err := s.db.QueryRow(`SELECT id FROM definition_versions WHERE definition_id = ? AND checksum = ?`, defID, cs).Scan(&existingID)
+	var existingVersion int
+	err := s.db.QueryRow(`SELECT version FROM definition_versions WHERE definition_id = ? AND checksum = ? ORDER BY version DESC LIMIT 1`, defID, cs).Scan(&existingVersion)
 	if err == nil {
-		return &CreateVersionResult{Version: nextVer - 1, Checksum: cs, AlreadyExists: true}, nil
+		return &CreateVersionResult{Version: existingVersion, Checksum: cs, AlreadyExists: true}, nil
 	}
 
 	fmJSON, _ := json.Marshal(input.Frontmatter)

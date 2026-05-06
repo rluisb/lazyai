@@ -1,0 +1,270 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7fb;
+  --panel: #ffffff;
+  --text: #172033;
+  --muted: #667085;
+  --border: #d8dee9;
+  --accent: #2357d8;
+  --accent-soft: #e8efff;
+  --danger: #b42318;
+  --warning: #a15c07;
+  --ok: #047857;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+}
+
+button.secondary {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.dashboard-shell {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 1.25rem;
+}
+
+.dashboard-header,
+.panel-heading,
+.toolbar,
+.run-item-header,
+.catalog-item-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.dashboard-header {
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+.lede,
+.muted {
+  color: var(--muted);
+}
+
+.status-message {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  padding: 0.45rem 0.75rem;
+}
+
+.status-message.error {
+  border-color: #f4b4ad;
+  color: var(--danger);
+}
+
+.status-message.ok {
+  border-color: #9bd7bc;
+  color: var(--ok);
+}
+
+.panel,
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 6%);
+}
+
+.panel {
+  margin: 1rem 0;
+  padding: 1rem;
+}
+
+.cards,
+.detail-grid,
+.two-column {
+  display: grid;
+  gap: 1rem;
+}
+
+.cards {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.two-column,
+.detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.card {
+  padding: 1rem;
+}
+
+.toolbar {
+  justify-content: flex-start;
+  margin: 0.75rem 0;
+}
+
+.toolbar label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+input,
+select {
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.kv-list {
+  display: grid;
+  gap: 0.4rem 0.75rem;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+}
+
+.kv-list dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.kv-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.run-list,
+.error-list,
+.catalog-list {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.run-list.compact {
+  gap: 0.35rem;
+}
+
+.run-item,
+.error-item,
+.catalog-item,
+.event-timeline li {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+}
+
+.run-item button,
+.catalog-item button,
+.version-list button {
+  margin-top: 0.45rem;
+}
+
+.badge {
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+}
+
+.badge.warning {
+  background: #fff4dc;
+  color: var(--warning);
+}
+
+.badge.error {
+  background: #fee4e2;
+  color: var(--danger);
+}
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 0.65rem;
+  color: var(--muted);
+  padding: 0.85rem;
+}
+
+.json-block,
+.catalog-body {
+  background: #101828;
+  border-radius: 0.65rem;
+  color: #edf2f7;
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.event-timeline {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.catalog-detail {
+  min-height: 8rem;
+}
+
+.version-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --panel: #111827;
+    --text: #f3f4f6;
+    --muted: #a0aec0;
+    --border: #2d3748;
+    --accent-soft: #182f69;
+  }
+}

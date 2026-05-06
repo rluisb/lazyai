@@ -7,11 +7,34 @@
   }
 
   const apiPrefix = app.dataset.apiPrefix || "/api/dashboard";
+  const TWEAK_KEY = "lazyai.dashboard.tweaks.v1";
+  const TWEAK_DEFAULTS = { theme: "light", density: "balanced", nav: "top" };
+  const TWEAK_FIELDS = ["theme", "density", "nav"];
+
+  const ROUTES = {
+    OVERVIEW: "#/overview",
+    RUNS: "#/runs",
+    RUN_DETAIL: "#/run-detail",
+    CATALOG: "#/catalog",
+    ERRORS: "#/errors",
+  };
+
+  const SECTION_BY_ROUTE = {
+    overview: "overview",
+    runs: "runs",
+    "run-detail": "run-detail",
+    catalog: "catalog",
+    errors: "errors",
+  };
+
   const state = {
     currentRun: null,
     eventSource: null,
     lastEventID: 0,
     catalogItems: [],
+    selectedRun: null,
+    activeRoute: { name: "overview" },
+    tweaks: Object.assign({}, TWEAK_DEFAULTS),
   };
 
   function byID(id) {
@@ -153,6 +176,10 @@
     renderKV(byID("catalog-counts"), Object.assign({ Total: overview.catalogCounts && overview.catalogCounts.total }, (overview.catalogCounts && overview.catalogCounts.byKind) || {}), "No catalog definitions found.");
     renderRunCollection(byID("recent-runs"), overview.recentRuns || [], true);
     renderErrorCollection(byID("recent-errors"), overview.recentErrors || []);
+    updateNavCounts({
+      catalog: overview.catalogCounts && overview.catalogCounts.total,
+      errors: (overview.recentErrors || []).length,
+    });
     setStatus("Dashboard data loaded.", "ok");
   }
 
@@ -178,7 +205,9 @@
   async function fetchRuns() {
     try {
       const payload = await fetchJSON("/runs", runFilters());
-      renderRunCollection(byID("run-list"), (payload && payload.items) || [], false);
+      const items = (payload && payload.items) || [];
+      renderRunCollection(byID("run-list"), items, false);
+      updateNavCounts({ runs: items.length });
       setStatus("Run list loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("run-list"), err.message);
@@ -212,8 +241,11 @@
     item.append(element("p", { class: "muted", text: `Updated ${formatDate(run.updatedAt)} · errors ${run.errorCount || 0}` }));
     if (!compact) {
       const button = element("button", { type: "button", text: "Open details" });
-      button.addEventListener("click", () => openRunDetail(run.kind, run.id));
+      button.addEventListener("click", () => openRunFromList(run.kind, run.id));
       item.append(button);
+    } else {
+      item.style.cursor = "pointer";
+      item.addEventListener("click", () => openRunFromList(run.kind, run.id));
     }
     return item;
   }
@@ -229,10 +261,18 @@
     return "badge";
   }
 
+  // Open from a run row: update hash → router will activate detail and load data.
+  function openRunFromList(kind, id) {
+    navigateTo(`#/runs/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`);
+  }
+
   async function openRunDetail(kind, id) {
     closeRunEvents();
     state.currentRun = { kind, id };
     state.lastEventID = 0;
+    state.selectedRun = { kind, id };
+    rememberSelectedRun(kind, id);
+    refreshRunDetailNav();
     const empty = byID("run-detail-empty");
     if (empty) {
       empty.hidden = true;
@@ -375,6 +415,7 @@
       const payload = await fetchJSON("/catalog");
       state.catalogItems = (payload && payload.items) || [];
       renderCatalogList(applyCatalogFilters(state.catalogItems));
+      updateNavCounts({ catalog: state.catalogItems.length });
       setStatus("Catalog loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("catalog-list"), err.message);
@@ -437,7 +478,22 @@
     renderCatalogList(applyCatalogFilters(state.catalogItems));
   }
 
+  // First-class Errors screen: bounded recent errors backed by /errors.
   async function fetchErrors() {
+    const target = byID("errors-list");
+    try {
+      const payload = await fetchJSON("/errors", { limit: 50 });
+      const items = (payload && payload.items) || [];
+      renderErrorCollection(target, items);
+      updateNavCounts({ errors: items.length });
+      setStatus("Errors loaded.", "ok");
+    } catch (err) {
+      renderErrorState(target, err.message);
+    }
+  }
+
+  // Also seed Overview's recent-errors panel on first load (without forcing a /errors call).
+  async function fetchOverviewErrors() {
     try {
       const payload = await fetchJSON("/errors", { limit: 25 });
       renderErrorCollection(byID("recent-errors"), (payload && payload.items) || []);
@@ -531,6 +587,215 @@
     );
   }
 
+  // ==========================================================================
+  // Hash routing
+  // ==========================================================================
+  function parseHash() {
+    const raw = (window.location.hash || ROUTES.OVERVIEW).replace(/^#/, "");
+    const parts = raw.split("/").filter(Boolean);
+    if (parts[0] === "runs" && parts[1] && parts[2]) {
+      return { name: "run-detail", kind: decodeURIComponent(parts[1]), id: decodeURIComponent(parts[2]) };
+    }
+    if (parts[0] === "runs") {
+      return { name: "runs" };
+    }
+    if (parts[0] === "run-detail") {
+      // Explicit run-detail route without a selection — show empty state.
+      return { name: "run-detail" };
+    }
+    if (parts[0] === "catalog") {
+      return { name: "catalog" };
+    }
+    if (parts[0] === "errors") {
+      return { name: "errors" };
+    }
+    return { name: "overview" };
+  }
+
+  function navigateTo(hash) {
+    if (window.location.hash === hash) {
+      // Force a re-route even when hash unchanged (e.g., re-clicking active tab).
+      handleRouteChange();
+      return;
+    }
+    window.location.hash = hash;
+  }
+
+  function activateSection(name) {
+    const target = SECTION_BY_ROUTE[name] || "overview";
+    document.querySelectorAll("[data-dashboard-section]").forEach((node) => {
+      node.hidden = node.dataset.dashboardSection !== target;
+    });
+  }
+
+  function updateNavState(name) {
+    const target = SECTION_BY_ROUTE[name] || "overview";
+    document.querySelectorAll("[data-nav-link], [data-tab-link]").forEach((node) => {
+      const linkName = node.dataset.navLink || node.dataset.tabLink;
+      if (linkName === target) {
+        node.setAttribute("aria-current", "page");
+      } else {
+        node.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function refreshRunDetailNav() {
+    const enabled = !!state.selectedRun;
+    document.querySelectorAll("[data-nav-run-detail]").forEach((node) => {
+      if (enabled) {
+        node.removeAttribute("disabled");
+        node.removeAttribute("aria-disabled");
+        node.dataset.route = `#/runs/${encodeURIComponent(state.selectedRun.kind)}/${encodeURIComponent(state.selectedRun.id)}`;
+        node.title = `${state.selectedRun.kind} / ${state.selectedRun.id}`;
+      } else {
+        node.setAttribute("disabled", "true");
+        node.setAttribute("aria-disabled", "true");
+        node.dataset.route = ROUTES.RUN_DETAIL;
+        node.title = "Select a run first";
+      }
+    });
+    const hint = document.querySelector("[data-run-detail-hint]");
+    if (hint) {
+      hint.textContent = enabled ? state.selectedRun.id : "Select a run first";
+    }
+  }
+
+  function rememberSelectedRun(kind, id) {
+    try {
+      window.sessionStorage.setItem("lazyai.dashboard.selectedRun", JSON.stringify({ kind, id }));
+    } catch (_err) { /* sessionStorage unavailable */ }
+  }
+
+  function restoreSelectedRun() {
+    try {
+      const raw = window.sessionStorage.getItem("lazyai.dashboard.selectedRun");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.kind && parsed.id) {
+        state.selectedRun = parsed;
+      }
+    } catch (_err) { /* ignore */ }
+  }
+
+  function updateNavCounts(counts) {
+    if (counts && counts.runs !== undefined) {
+      const node = byID("nav-runs-count");
+      if (node) node.textContent = String(counts.runs);
+    }
+    if (counts && counts.catalog !== undefined && counts.catalog !== null) {
+      const node = byID("nav-catalog-count");
+      if (node) node.textContent = String(counts.catalog);
+    }
+    if (counts && counts.errors !== undefined) {
+      const node = byID("nav-errors-count");
+      if (node) node.textContent = String(counts.errors);
+    }
+  }
+
+  function handleRouteChange() {
+    const route = parseHash();
+    state.activeRoute = route;
+    activateSection(route.name);
+    updateNavState(route.name);
+
+    if (route.name === "run-detail" && route.kind && route.id) {
+      // Deep-link into a run.
+      openRunDetail(route.kind, route.id);
+    } else if (route.name === "run-detail" && state.selectedRun) {
+      // Re-enter run-detail with stored selection.
+      openRunDetail(state.selectedRun.kind, state.selectedRun.id);
+    } else if (route.name === "errors") {
+      fetchErrors();
+    } else if (route.name === "catalog" && state.catalogItems.length === 0) {
+      fetchCatalog();
+    } else if (route.name === "runs") {
+      // Refresh runs list each time the screen is opened.
+      fetchRuns();
+    }
+  }
+
+  // ==========================================================================
+  // Tweaks (theme / density / nav)
+  // ==========================================================================
+  function loadTweaks() {
+    try {
+      const raw = window.localStorage.getItem(TWEAK_KEY);
+      if (!raw) return Object.assign({}, TWEAK_DEFAULTS);
+      const parsed = JSON.parse(raw);
+      const merged = Object.assign({}, TWEAK_DEFAULTS, parsed || {});
+      return merged;
+    } catch (_err) {
+      return Object.assign({}, TWEAK_DEFAULTS);
+    }
+  }
+
+  function saveTweaks() {
+    try {
+      window.localStorage.setItem(TWEAK_KEY, JSON.stringify(state.tweaks));
+    } catch (_err) { /* localStorage unavailable */ }
+  }
+
+  function applyTweaks() {
+    document.body.dataset.theme = state.tweaks.theme;
+    document.body.dataset.density = state.tweaks.density;
+    document.body.dataset.nav = state.tweaks.nav;
+    TWEAK_FIELDS.forEach((field) => {
+      document.querySelectorAll(`#tweaks-panel input[name="${field}"]`).forEach((input) => {
+        input.checked = input.value === state.tweaks[field];
+      });
+    });
+  }
+
+  function bindTweaks() {
+    state.tweaks = loadTweaks();
+    applyTweaks();
+    const toggle = byID("tweaks-toggle");
+    const panel = byID("tweaks-panel");
+    const closeBtn = byID("tweaks-close");
+    if (toggle && panel) {
+      toggle.addEventListener("click", () => {
+        const next = !!panel.hidden;
+        panel.hidden = !next;
+        toggle.setAttribute("aria-expanded", next ? "true" : "false");
+      });
+    }
+    if (closeBtn && panel) {
+      closeBtn.addEventListener("click", () => {
+        panel.hidden = true;
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+      });
+    }
+    TWEAK_FIELDS.forEach((field) => {
+      document.querySelectorAll(`#tweaks-panel input[name="${field}"]`).forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!input.checked) return;
+          state.tweaks[field] = input.value;
+          applyTweaks();
+          saveTweaks();
+        });
+      });
+    });
+  }
+
+  // ==========================================================================
+  // Wiring
+  // ==========================================================================
+  function bindNavClicks() {
+    document.querySelectorAll("[data-route]").forEach((node) => {
+      node.addEventListener("click", (event) => {
+        const route = node.dataset.route;
+        if (!route) return;
+        if (node.disabled || node.getAttribute("aria-disabled") === "true") {
+          event.preventDefault();
+          return;
+        }
+        event.preventDefault();
+        navigateTo(route);
+      });
+    });
+  }
+
   function bindEvents() {
     const overviewRefresh = byID("refresh-overview");
     if (overviewRefresh) {
@@ -539,6 +804,10 @@
     const runsRefresh = byID("refresh-runs");
     if (runsRefresh) {
       runsRefresh.addEventListener("click", fetchRuns);
+    }
+    const errorsRefresh = byID("refresh-errors");
+    if (errorsRefresh) {
+      errorsRefresh.addEventListener("click", fetchErrors);
     }
     const runFiltersForm = byID("run-filters");
     if (runFiltersForm) {
@@ -570,15 +839,23 @@
     if (catalogSort) {
       catalogSort.addEventListener("change", refreshCatalogView);
     }
+    window.addEventListener("hashchange", handleRouteChange);
     window.addEventListener("beforeunload", closeRunEvents);
   }
 
   function init() {
+    bindTweaks();
+    bindNavClicks();
     bindEvents();
+    restoreSelectedRun();
+    refreshRunDetailNav();
+    // Initial data fetches — don't block routing.
     fetchOverview();
     fetchRuns();
     fetchCatalog();
-    fetchErrors();
+    fetchOverviewErrors();
+    // Activate section based on initial hash (or default to overview).
+    handleRouteChange();
   }
 
   init();

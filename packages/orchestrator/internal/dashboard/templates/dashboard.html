@@ -4,149 +4,286 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ .Title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      @font-face {
+        font-family: "JetBrainsMono Nerd Font";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
+      }
+      @font-face {
+        font-family: "JetBrainsMono Nerd Font";
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+        src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Ligatures/Medium/JetBrainsMonoNerdFont-Medium.ttf") format("truetype");
+      }
+    </style>
     <link rel="stylesheet" href="{{ .AssetPath }}dashboard.css">
     <script defer src="{{ .AssetPath }}dashboard.js"></script>
   </head>
-  <body>
+  <body data-theme="light" data-density="balanced" data-nav="top">
     <main id="dashboard-app" class="dashboard-shell" data-api-prefix="{{ .APIPrefix }}" data-base-path="{{ .BasePath }}">
-      <header class="dashboard-header">
-        <div>
-          <p class="eyebrow">local read-only dashboard</p>
-          <h1>{{ .Title }}</h1>
-          <p class="lede">Observe orchestrator health, runs, events, budgets, errors, and catalog definitions.</p>
+      <aside class="sidebar" aria-hidden="false">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <span class="brand-name">lazyai</span>
+          <span class="brand-mono">orchestrator</span>
         </div>
-        <div id="status-message" class="status-message" role="status" aria-live="polite">Loading dashboard…</div>
-      </header>
+        <nav class="primary-nav" aria-label="Dashboard sections">
+          <div class="nav-label">observability</div>
+          <button type="button" class="nav-item" data-route="#/overview" data-nav-link="overview">
+            <span class="nav-icon">◇</span>
+            <span class="nav-label-text">Overview</span>
+          </button>
+          <button type="button" class="nav-item" data-route="#/runs" data-nav-link="runs">
+            <span class="nav-icon">▷</span>
+            <span class="nav-label-text">Runs</span>
+            <span class="nav-count" id="nav-runs-count" aria-hidden="true"></span>
+          </button>
+          <button
+            type="button"
+            class="nav-item nav-item-conditional"
+            data-route="#/run-detail"
+            data-nav-link="run-detail"
+            data-nav-run-detail
+            aria-disabled="true"
+            disabled
+            title="Select a run first"
+          >
+            <span class="nav-icon">◐</span>
+            <span class="nav-label-text">Run detail</span>
+            <span class="nav-hint" data-run-detail-hint>Select a run first</span>
+          </button>
+          <button type="button" class="nav-item" data-route="#/catalog" data-nav-link="catalog">
+            <span class="nav-icon">◌</span>
+            <span class="nav-label-text">Catalog</span>
+            <span class="nav-count" id="nav-catalog-count" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="nav-item" data-route="#/errors" data-nav-link="errors">
+            <span class="nav-icon">!</span>
+            <span class="nav-label-text">Errors</span>
+            <span class="nav-count" id="nav-errors-count" aria-hidden="true"></span>
+          </button>
 
-      <section id="overview-panel" class="panel" aria-labelledby="overview-heading">
-        <div class="panel-heading">
-          <h2 id="overview-heading">Overview</h2>
-          <button type="button" class="secondary" id="refresh-overview">Refresh</button>
+          <div class="nav-label nav-label-planned">planned</div>
+          <div class="planned-item" aria-disabled="true">
+            <span class="nav-icon">↯</span>
+            <div class="planned-body">
+              <span class="planned-name">Live activity</span>
+              <span class="planned-note">Planned after global dashboard event stream support.</span>
+            </div>
+          </div>
+          <div class="planned-item" aria-disabled="true">
+            <span class="nav-icon">≡</span>
+            <div class="planned-body">
+              <span class="planned-name">Logs</span>
+              <span class="planned-note">Requires #174 structured logging dashboard contract.</span>
+            </div>
+          </div>
+          <div class="planned-item" aria-disabled="true">
+            <span class="nav-icon">⚙</span>
+            <div class="planned-body">
+              <span class="planned-name">Settings</span>
+              <span class="planned-note">Not scoped; read-only daemon config would require separate approval.</span>
+            </div>
+          </div>
+        </nav>
+        <div class="sidebar-foot">
+          <span class="dot dot-ok"></span>
+          <span class="muted mono tiny" id="sidebar-foot-text">local · read-only</span>
         </div>
-        <div class="cards" aria-label="Daemon summary">
-          <article class="card">
-            <h3>Health</h3>
-            <dl id="health-status" class="kv-list" data-empty="Health has not loaded yet."></dl>
-          </article>
-          <article class="card">
-            <h3>Active runs</h3>
-            <dl id="active-runs" class="kv-list" data-empty="No active run counts reported."></dl>
-          </article>
-          <article class="card">
-            <h3>Run states</h3>
-            <dl id="run-counts" class="kv-list" data-empty="No runs recorded yet."></dl>
-          </article>
-          <article class="card">
-            <h3>Catalog</h3>
-            <dl id="catalog-counts" class="kv-list" data-empty="No catalog definitions found."></dl>
-          </article>
-        </div>
-        <div class="two-column">
-          <section aria-labelledby="recent-runs-heading">
-            <h3 id="recent-runs-heading">Recent runs</h3>
-            <ul id="recent-runs" class="run-list compact" data-empty="No recent runs."></ul>
-          </section>
-          <section aria-labelledby="recent-errors-heading">
-            <h3 id="recent-errors-heading">Recent errors</h3>
-            <ul id="recent-errors" class="error-list" data-empty="No recent errors."></ul>
-          </section>
-        </div>
-      </section>
+      </aside>
 
-      <section id="run-browser" class="panel" aria-labelledby="runs-heading">
-        <div class="panel-heading">
-          <h2 id="runs-heading">Runs</h2>
-          <button type="button" class="secondary" id="refresh-runs">Refresh runs</button>
-        </div>
-        <form id="run-filters" class="toolbar" aria-label="Run filters">
-          <label>Kind
-            <select id="run-kind-filter" name="kind">
-              <option value="">All kinds</option>
-              <option value="chain">Chains</option>
-              <option value="team">Teams</option>
-              <option value="workflow">Workflows</option>
-            </select>
-          </label>
-          <label>State
-            <input id="run-state-filter" name="state" type="search" placeholder="running, completed, failed">
-          </label>
-          <label>Limit
-            <input id="run-limit" name="limit" type="number" min="1" max="200" value="50">
-          </label>
-          <button type="submit">Apply filters</button>
-        </form>
-        <p id="run-list-empty" class="empty-state" hidden>No runs match the current filters.</p>
-        <ul id="run-list" class="run-list" aria-live="polite"></ul>
-      </section>
+      <div class="main">
+        <header class="topbar dashboard-header">
+          <div class="topbar-left">
+            <p class="eyebrow">local read-only dashboard</p>
+            <h1>{{ .Title }}</h1>
+          </div>
+          <div class="topbar-right">
+            <div id="status-message" class="status-message" role="status" aria-live="polite">Loading dashboard…</div>
+            <button type="button" id="tweaks-toggle" class="icon-btn" aria-controls="tweaks-panel" aria-expanded="false">
+              <span class="nav-icon">⚙</span>
+              <span>Tweaks</span>
+            </button>
+          </div>
+        </header>
 
-      <section id="run-detail-panel" class="panel" aria-labelledby="run-detail-heading">
-        <div class="panel-heading">
-          <h2 id="run-detail-heading">Run detail</h2>
-          <span id="run-detail-status" class="muted">Select a run to inspect details.</span>
-        </div>
-        <p id="run-detail-empty" class="empty-state">No run selected.</p>
-        <div class="detail-grid">
-          <section aria-labelledby="run-summary-heading">
-            <h3 id="run-summary-heading">Summary</h3>
-            <dl id="run-summary" class="kv-list"></dl>
-            <pre id="run-state-json" class="json-block" aria-label="Run state JSON"></pre>
-          </section>
-          <section id="budget-panel" aria-labelledby="budget-heading">
-            <h3 id="budget-heading">Budget</h3>
-            <dl id="budget-state" class="kv-list" data-empty="No budget state available."></dl>
-            <dl id="budget-evaluation" class="kv-list" data-empty="No budget evaluation available."></dl>
-          </section>
-          <section aria-labelledby="events-heading">
-            <h3 id="events-heading">Events</h3>
-            <ol id="event-timeline" class="event-timeline" data-empty="No events for this run yet."></ol>
-          </section>
-          <section aria-labelledby="run-errors-heading">
-            <h3 id="run-errors-heading">Errors</h3>
-            <ul id="run-errors" class="error-list" data-empty="No errors for this run."></ul>
-          </section>
-        </div>
-      </section>
+        <nav class="top-tabs" aria-label="Dashboard tabs">
+          <button type="button" class="tab-item" data-route="#/overview" data-tab-link="overview">Overview</button>
+          <button type="button" class="tab-item" data-route="#/runs" data-tab-link="runs">Runs</button>
+          <button type="button" class="tab-item tab-item-conditional" data-route="#/run-detail" data-tab-link="run-detail" data-nav-run-detail aria-disabled="true" disabled title="Select a run first">Run detail</button>
+          <button type="button" class="tab-item" data-route="#/catalog" data-tab-link="catalog">Catalog</button>
+          <button type="button" class="tab-item" data-route="#/errors" data-tab-link="errors">Errors</button>
+        </nav>
 
-      <section id="catalog-browser" class="panel" aria-labelledby="catalog-heading">
-        <div class="panel-heading">
-          <h2 id="catalog-heading">Catalog</h2>
-          <button type="button" class="secondary" id="refresh-catalog">Refresh catalog</button>
+        <section id="overview-panel" class="panel" data-dashboard-section="overview" aria-labelledby="overview-heading">
+          <div class="panel-heading">
+            <h2 id="overview-heading">Overview</h2>
+            <button type="button" class="secondary" id="refresh-overview">Refresh</button>
+          </div>
+          <div class="cards" aria-label="Daemon summary">
+            <article class="card">
+              <h3>Health</h3>
+              <dl id="health-status" class="kv-list" data-empty="Health has not loaded yet."></dl>
+            </article>
+            <article class="card">
+              <h3>Active runs</h3>
+              <dl id="active-runs" class="kv-list" data-empty="No active run counts reported."></dl>
+            </article>
+            <article class="card">
+              <h3>Run states</h3>
+              <dl id="run-counts" class="kv-list" data-empty="No runs recorded yet."></dl>
+            </article>
+            <article class="card">
+              <h3>Catalog</h3>
+              <dl id="catalog-counts" class="kv-list" data-empty="No catalog definitions found."></dl>
+            </article>
+          </div>
+          <div class="two-column">
+            <section aria-labelledby="recent-runs-heading">
+              <h3 id="recent-runs-heading">Recent runs</h3>
+              <ul id="recent-runs" class="run-list compact" data-empty="No recent runs."></ul>
+            </section>
+            <section aria-labelledby="recent-errors-heading">
+              <h3 id="recent-errors-heading">Recent errors</h3>
+              <ul id="recent-errors" class="error-list" data-empty="No recent errors."></ul>
+            </section>
+          </div>
+        </section>
+
+        <section id="run-browser" class="panel" data-dashboard-section="runs" aria-labelledby="runs-heading" hidden>
+          <div class="panel-heading">
+            <h2 id="runs-heading">Runs</h2>
+            <button type="button" class="secondary" id="refresh-runs">Refresh runs</button>
+          </div>
+          <form id="run-filters" class="toolbar" aria-label="Run filters">
+            <label>Kind
+              <select id="run-kind-filter" name="kind">
+                <option value="">All kinds</option>
+                <option value="chain">Chains</option>
+                <option value="team">Teams</option>
+                <option value="workflow">Workflows</option>
+              </select>
+            </label>
+            <label>State
+              <input id="run-state-filter" name="state" type="search" placeholder="running, completed, failed">
+            </label>
+            <label>Limit
+              <input id="run-limit" name="limit" type="number" min="1" max="200" value="50">
+            </label>
+            <button type="submit">Apply filters</button>
+          </form>
+          <p id="run-list-empty" class="empty-state" hidden>No runs match the current filters.</p>
+          <ul id="run-list" class="run-list" aria-live="polite"></ul>
+        </section>
+
+        <section id="run-detail-panel" class="panel" data-dashboard-section="run-detail" aria-labelledby="run-detail-heading" hidden>
+          <div class="panel-heading">
+            <h2 id="run-detail-heading">Run detail</h2>
+            <span id="run-detail-status" class="muted">Select a run to inspect details.</span>
+          </div>
+          <p id="run-detail-empty" class="empty-state">No run selected. <button type="button" class="link-btn" data-route="#/runs">Pick a run from the Runs list →</button></p>
+          <div class="detail-grid">
+            <section aria-labelledby="run-summary-heading">
+              <h3 id="run-summary-heading">Summary</h3>
+              <dl id="run-summary" class="kv-list"></dl>
+              <pre id="run-state-json" class="json-block" aria-label="Run state JSON"></pre>
+            </section>
+            <section id="budget-panel" aria-labelledby="budget-heading">
+              <h3 id="budget-heading">Budget</h3>
+              <dl id="budget-state" class="kv-list" data-empty="No budget state available."></dl>
+              <dl id="budget-evaluation" class="kv-list" data-empty="No budget evaluation available."></dl>
+            </section>
+            <section aria-labelledby="events-heading">
+              <h3 id="events-heading">Events <span class="muted mono tiny">selected run · per-run sse</span></h3>
+              <ol id="event-timeline" class="event-timeline" data-empty="No events for this run yet."></ol>
+            </section>
+            <section aria-labelledby="run-errors-heading">
+              <h3 id="run-errors-heading">Errors</h3>
+              <ul id="run-errors" class="error-list" data-empty="No errors for this run."></ul>
+            </section>
+          </div>
+        </section>
+
+        <section id="catalog-browser" class="panel" data-dashboard-section="catalog" aria-labelledby="catalog-heading" hidden>
+          <div class="panel-heading">
+            <h2 id="catalog-heading">Catalog</h2>
+            <button type="button" class="secondary" id="refresh-catalog">Refresh catalog</button>
+          </div>
+          <form id="catalog-filters" class="toolbar" aria-label="Catalog filters">
+            <label>Kind
+              <select id="catalog-kind-filter" name="kind">
+                <option value="">All kinds</option>
+                <option value="agent">Agents</option>
+                <option value="domain">Domains</option>
+                <option value="mode">Modes</option>
+                <option value="chain">Chains</option>
+                <option value="team">Teams</option>
+                <option value="workflow">Workflows</option>
+              </select>
+            </label>
+            <label>Search
+              <input id="catalog-search" name="search" type="search" placeholder="kind or name">
+            </label>
+            <label>Sort
+              <select id="catalog-sort" name="sort">
+                <option value="name">Name</option>
+                <option value="kind">Kind</option>
+                <option value="updated">Updated</option>
+              </select>
+            </label>
+            <button type="submit">Apply catalog filter</button>
+          </form>
+          <div class="two-column catalog-layout">
+            <section aria-labelledby="catalog-list-heading">
+              <h3 id="catalog-list-heading">Definitions</h3>
+              <ul id="catalog-list" class="catalog-list" data-empty="No catalog definitions found."></ul>
+            </section>
+            <section aria-labelledby="catalog-detail-heading">
+              <h3 id="catalog-detail-heading">Definition detail</h3>
+              <article id="catalog-detail" class="catalog-detail empty-state">Select a catalog definition to inspect metadata and body.</article>
+            </section>
+          </div>
+        </section>
+
+        <section id="errors-panel" class="panel" data-dashboard-section="errors" aria-labelledby="errors-heading" hidden>
+          <div class="panel-heading">
+            <h2 id="errors-heading">Errors</h2>
+            <button type="button" class="secondary" id="refresh-errors">Refresh errors</button>
+          </div>
+          <p class="muted">Recent entries from the orchestrator error journal. Filtering and date range ship in a later slice.</p>
+          <ul id="errors-list" class="error-list" data-empty="No errors. Smooth sailing."></ul>
+        </section>
+      </div>
+
+      <aside id="tweaks-panel" class="tweaks-panel" hidden aria-label="Dashboard tweaks">
+        <div class="tweaks-head">
+          <span class="tweaks-title">Tweaks</span>
+          <button type="button" id="tweaks-close" class="icon-btn" aria-label="Close tweaks">×</button>
         </div>
-        <form id="catalog-filters" class="toolbar" aria-label="Catalog filters">
-          <label>Kind
-            <select id="catalog-kind-filter" name="kind">
-              <option value="">All kinds</option>
-              <option value="agent">Agents</option>
-              <option value="domain">Domains</option>
-              <option value="mode">Modes</option>
-              <option value="chain">Chains</option>
-              <option value="team">Teams</option>
-              <option value="workflow">Workflows</option>
-            </select>
-          </label>
-          <label>Search
-            <input id="catalog-search" name="search" type="search" placeholder="kind or name">
-          </label>
-          <label>Sort
-            <select id="catalog-sort" name="sort">
-              <option value="name">Name</option>
-              <option value="kind">Kind</option>
-              <option value="updated">Updated</option>
-            </select>
-          </label>
-          <button type="submit">Apply catalog filter</button>
-        </form>
-        <div class="two-column catalog-layout">
-          <section aria-labelledby="catalog-list-heading">
-            <h3 id="catalog-list-heading">Definitions</h3>
-            <ul id="catalog-list" class="catalog-list" data-empty="No catalog definitions found."></ul>
-          </section>
-          <section aria-labelledby="catalog-detail-heading">
-            <h3 id="catalog-detail-heading">Definition detail</h3>
-            <article id="catalog-detail" class="catalog-detail empty-state">Select a catalog definition to inspect metadata and body.</article>
-          </section>
-        </div>
-      </section>
+        <fieldset class="tweak-section">
+          <legend>Theme</legend>
+          <label class="tweak-radio"><input type="radio" name="theme" value="light"> Latte (light)</label>
+          <label class="tweak-radio"><input type="radio" name="theme" value="dark"> Macchiato (dark)</label>
+        </fieldset>
+        <fieldset class="tweak-section">
+          <legend>Density</legend>
+          <label class="tweak-radio"><input type="radio" name="density" value="compact"> Compact</label>
+          <label class="tweak-radio"><input type="radio" name="density" value="balanced"> Balanced</label>
+          <label class="tweak-radio"><input type="radio" name="density" value="comfortable"> Comfortable</label>
+        </fieldset>
+        <fieldset class="tweak-section">
+          <legend>Navigation</legend>
+          <label class="tweak-radio"><input type="radio" name="nav" value="top"> Top tabs</label>
+          <label class="tweak-radio"><input type="radio" name="nav" value="sidebar"> Sidebar</label>
+        </fieldset>
+      </aside>
     </main>
   </body>
 </html>

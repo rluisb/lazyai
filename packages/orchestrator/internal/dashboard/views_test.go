@@ -259,6 +259,232 @@ func TestDashboardViewHandlerRejectsUnknownAndNonReadOnlyRoutes(t *testing.T) {
 	}
 }
 
+func TestDashboardViewProvidesNavShellAndPlannedBlock(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+
+	for _, want := range []string{
+		// body data attrs drive theme/density/nav switching
+		`data-theme=`,
+		`data-density=`,
+		`data-nav=`,
+		// JetBrains Mono Nerd Font hookup
+		"JetBrainsMono Nerd Font",
+		// Nav landmark + primary items
+		`aria-label="Dashboard sections"`,
+		`data-route="#/overview"`,
+		`data-route="#/runs"`,
+		`data-route="#/catalog"`,
+		`data-route="#/errors"`,
+		// Run detail nav is conditional ("select first" hint)
+		`data-nav-run-detail`,
+		`Select a run first`,
+		// Errors first-class screen
+		`id="errors-panel"`,
+		`data-dashboard-section="errors"`,
+		`id="errors-list"`,
+		// Other sections expose data-dashboard-section hooks for hash routing
+		`data-dashboard-section="overview"`,
+		`data-dashboard-section="runs"`,
+		`data-dashboard-section="run-detail"`,
+		`data-dashboard-section="catalog"`,
+		// Tweaks toggle exists
+		`id="tweaks-toggle"`,
+		`id="tweaks-panel"`,
+		`name="theme"`,
+		`name="density"`,
+		`name="nav"`,
+		// Planned block — exact inline copy from nav-gating-plan.md
+		`Planned after global dashboard event stream support.`,
+		`Requires #174 structured logging dashboard contract.`,
+		`Not scoped; read-only daemon config would require separate approval.`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard shell missing nav/theme hook %q in body", want)
+		}
+	}
+
+	// Planned items must NOT be clickable: no <a href> or <button> for live/logs/settings routes.
+	for _, forbidden := range []string{
+		`href="#/live"`,
+		`href="#/logs"`,
+		`href="#/settings"`,
+		`data-route="#/live"`,
+		`data-route="#/logs"`,
+		`data-route="#/settings"`,
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("dashboard shell exposes clickable future route %q", forbidden)
+		}
+	}
+}
+
+func TestDashboardJSHashRoutingAndErrorsScreen(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"parseHash",
+		"navigateTo",
+		"activateSection",
+		"updateNavState",
+		"hashchange",
+		`"#/overview"`,
+		`"#/runs"`,
+		`"#/catalog"`,
+		`"#/errors"`,
+		// Run-open path constructs run-detail hash route
+		`#/runs/${`,
+		// Errors screen is hooked up via existing /errors API
+		`fetchJSON("/errors"`,
+		"errors-list",
+		// Tweaks state writes to body data attrs (no DB)
+		"document.body.dataset.theme",
+		"document.body.dataset.density",
+		"document.body.dataset.nav",
+		"localStorage",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing route/tweak/errors contract %q", want)
+		}
+	}
+	// No global SSE / log / settings endpoints
+	for _, forbidden := range []string{
+		`"/events"`,
+		`"#/live"`,
+		`"#/logs"`,
+		`"#/settings"`,
+		`"/logs"`,
+		`"/settings"`,
+		`/api/dashboard/events`,
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("dashboard js references forbidden path %q", forbidden)
+		}
+	}
+}
+
+func TestDashboardViewRunDetailHasHeroTimelineAndBudgetCards(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`id="run-detail-hero"`,
+		`id="run-detail-state-chip"`,
+		`id="run-detail-copy-id"`,
+		`id="run-timeline"`,
+		`id="run-budget-cards"`,
+		`<details `, // collapsibles for raw JSON / execution plan / handoffs
+		`id="run-detail-raw-state"`,
+		`id="run-detail-execution-plan"`,
+		`id="run-detail-handoffs"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard run detail shell missing %q", want)
+		}
+	}
+}
+
+func TestDashboardJSRunDetailRenderersAndCopy(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"renderRunHero",
+		"renderTimeline",
+		"renderBudgetCards",
+		"renderRunStateChip",
+		"navigator.clipboard",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing run-detail renderer %q", want)
+		}
+	}
+}
+
+func TestDashboardCSSRunDetailVisuals(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		".run-hero",
+		".run-timeline",
+		".timeline-node",
+		".timeline-marker",
+		".budget-card",
+		".budget-bar",
+		".budget-bar-fill",
+		"summary",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing run-detail visual %q", want)
+		}
+	}
+}
+
+func TestDashboardCSSCatppuccinAndNavLayout(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		// Theme tokens (Catppuccin Latte default + Macchiato dark)
+		"--ctp-base",
+		"--ctp-mantle",
+		"--ctp-text",
+		"--ctp-peach",
+		"--accent",
+		// Theme/density/nav switching selectors
+		`body[data-theme="dark"]`,
+		`body[data-density="compact"]`,
+		`body[data-density="comfortable"]`,
+		`body[data-nav="sidebar"]`,
+		`body[data-nav="top"]`,
+		// JetBrains Mono Nerd Font font-family
+		"JetBrainsMono Nerd Font",
+		// Nav primitives
+		".nav-item",
+		`[aria-current="page"]`,
+		".planned-item",
+		".nav-hint",
+		// Section visibility for hash routing
+		`[data-dashboard-section]`,
+		`[hidden]`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing nav/theme contract %q", want)
+		}
+	}
+}
+
 func assertContentTypePrefix(t *testing.T, got string, wantPrefix string) {
 	t.Helper()
 	if !strings.HasPrefix(got, wantPrefix) {

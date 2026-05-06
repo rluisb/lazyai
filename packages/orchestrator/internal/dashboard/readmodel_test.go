@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
@@ -77,6 +78,92 @@ func TestReadModelRunListAppliesFiltersBoundsAndCursor(t *testing.T) {
 	}
 	if len(page.Items) != 10 || page.Items[0].ID != "chain-194" || page.NextCursor != "20" {
 		t.Fatalf("cursor page mismatch: %+v", page)
+	}
+}
+
+func TestReadModelRunListAttentionSearchAndHasErrors(t *testing.T) {
+	database := newDashboardTestDB(t)
+	seedRun(t, database, types.RunKindChain, "chain-running", "release", "1", "running", "build", `{}`, "2026-05-05T10:05:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-failed", "release", "1", "failed", "build", `{}`, "2026-05-05T10:04:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-gated", "release", "1", "gated", "build", `{}`, "2026-05-05T10:03:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-paused", "release", "1", "paused", "build", `{}`, "2026-05-05T10:02:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-completed", "launch", "1", "completed", "build", `{}`, "2026-05-05T10:01:00Z")
+	seedRun(t, database, types.RunKindWorkflow, "workflow-await", "ship", "1", "awaiting_recovery", "phase-1", `{}`, "2026-05-05T10:00:00Z")
+	seedError(t, database, "err-failed-1", "chain-failed", types.RunKindChain, "release", "build", "fatal", "boom", "boom", "2026-05-05T10:04:30Z")
+
+	// "recent" attention should match runs updated within the last hour.
+	recentTime := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
+	seedRun(t, database, types.RunKindChain, "chain-recent", "release", "1", "running", "build", `{}`, recentTime)
+
+	model := NewReadModel(database)
+
+	// Attention=running matches only running-state runs.
+	page, err := model.ListRuns(context.Background(), RunListOptions{Attention: "running"})
+	if err != nil {
+		t.Fatalf("attention=running: %v", err)
+	}
+	for _, item := range page.Items {
+		if item.State != "running" {
+			t.Fatalf("attention=running returned non-running run %q (state=%s)", item.ID, item.State)
+		}
+	}
+
+	// Attention=failed matches failed only.
+	page, err = model.ListRuns(context.Background(), RunListOptions{Attention: "failed"})
+	if err != nil {
+		t.Fatalf("attention=failed: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-failed" {
+		t.Fatalf("attention=failed mismatch: %+v", page.Items)
+	}
+
+	// Attention=gated matches gated/paused/awaiting_recovery/waiting_on_child.
+	page, err = model.ListRuns(context.Background(), RunListOptions{Attention: "gated"})
+	if err != nil {
+		t.Fatalf("attention=gated: %v", err)
+	}
+	got := map[string]bool{}
+	for _, item := range page.Items {
+		got[item.ID] = true
+	}
+	for _, want := range []string{"chain-gated", "chain-paused", "workflow-await"} {
+		if !got[want] {
+			t.Fatalf("attention=gated missing %s in %v", want, got)
+		}
+	}
+
+	// Attention=recent only matches runs updated within the last hour.
+	page, err = model.ListRuns(context.Background(), RunListOptions{Attention: "recent"})
+	if err != nil {
+		t.Fatalf("attention=recent: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-recent" {
+		t.Fatalf("attention=recent mismatch: %+v", page.Items)
+	}
+
+	// Search matches against id and definition name (case-insensitive).
+	page, err = model.ListRuns(context.Background(), RunListOptions{Search: "LAUNCH"})
+	if err != nil {
+		t.Fatalf("search by definition name: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-completed" {
+		t.Fatalf("search by definition name mismatch: %+v", page.Items)
+	}
+	page, err = model.ListRuns(context.Background(), RunListOptions{Search: "GATED"})
+	if err != nil {
+		t.Fatalf("search by id: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-gated" {
+		t.Fatalf("search by id mismatch: %+v", page.Items)
+	}
+
+	// HasErrors limits to runs with at least one error journal entry.
+	page, err = model.ListRuns(context.Background(), RunListOptions{HasErrors: true})
+	if err != nil {
+		t.Fatalf("has_errors: %v", err)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-failed" || page.Items[0].ErrorCount != 1 {
+		t.Fatalf("has_errors mismatch: %+v", page.Items)
 	}
 }
 

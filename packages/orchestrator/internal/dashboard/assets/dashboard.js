@@ -7,11 +7,36 @@
   }
 
   const apiPrefix = app.dataset.apiPrefix || "/api/dashboard";
+  const TWEAK_KEY = "lazyai.dashboard.tweaks.v1";
+  const TWEAK_DEFAULTS = { theme: "light", density: "balanced", nav: "top" };
+  const TWEAK_FIELDS = ["theme", "density", "nav"];
+
+  const ROUTES = {
+    OVERVIEW: "#/overview",
+    RUNS: "#/runs",
+    RUN_DETAIL: "#/run-detail",
+    CATALOG: "#/catalog",
+    ERRORS: "#/errors",
+  };
+
+  const SECTION_BY_ROUTE = {
+    overview: "overview",
+    runs: "runs",
+    "run-detail": "run-detail",
+    catalog: "catalog",
+    errors: "errors",
+  };
+
   const state = {
     currentRun: null,
     eventSource: null,
     lastEventID: 0,
     catalogItems: [],
+    selectedRun: null,
+    activeRoute: { name: "overview" },
+    tweaks: Object.assign({}, TWEAK_DEFAULTS),
+    runFilters: { attention: "", hasErrors: false },
+    runs: { items: [], nextCursor: "", totalLoaded: 0 },
   };
 
   function byID(id) {
@@ -153,6 +178,10 @@
     renderKV(byID("catalog-counts"), Object.assign({ Total: overview.catalogCounts && overview.catalogCounts.total }, (overview.catalogCounts && overview.catalogCounts.byKind) || {}), "No catalog definitions found.");
     renderRunCollection(byID("recent-runs"), overview.recentRuns || [], true);
     renderErrorCollection(byID("recent-errors"), overview.recentErrors || []);
+    updateNavCounts({
+      catalog: overview.catalogCounts && overview.catalogCounts.total,
+      errors: (overview.recentErrors || []).length,
+    });
     setStatus("Dashboard data loaded.", "ok");
   }
 
@@ -165,24 +194,93 @@
     }
   }
 
-  function runFilters() {
+  function runFilters(extra) {
     const limitValue = Number.parseInt(byID("run-limit") && byID("run-limit").value, 10);
     const boundedLimit = Number.isFinite(limitValue) ? Math.min(Math.max(limitValue, 1), 200) : 50;
-    return {
+    const params = {
       kind: byID("run-kind-filter") && byID("run-kind-filter").value,
       state: byID("run-state-filter") && byID("run-state-filter").value.trim(),
+      search: ((byID("run-search") && byID("run-search").value) || "").trim(),
       limit: boundedLimit,
     };
+    // attention=budget is handled client-side; everything else goes to the server.
+    if (state.runFilters.attention && state.runFilters.attention !== "budget") {
+      params.attention = state.runFilters.attention;
+    }
+    if (state.runFilters.hasErrors) {
+      params.has_errors = "true";
+    }
+    return Object.assign(params, extra || {});
   }
 
-  async function fetchRuns() {
+  function applyClientAttention(items) {
+    if (state.runFilters.attention !== "budget") {
+      return items;
+    }
+    return items.filter((item) => {
+      const health = String(item.budgetHealth || "").toLowerCase();
+      return health === "warning" || health === "critical" || health === "over";
+    });
+  }
+
+  async function fetchRuns({ append = false } = {}) {
     try {
-      const payload = await fetchJSON("/runs", runFilters());
-      renderRunCollection(byID("run-list"), (payload && payload.items) || [], false);
+      const params = append ? runFilters({ cursor: state.runs.nextCursor }) : runFilters();
+      const payload = await fetchJSON("/runs", params);
+      const incoming = (payload && payload.items) || [];
+      const merged = append ? state.runs.items.concat(incoming) : incoming;
+      state.runs.items = merged;
+      state.runs.nextCursor = (payload && payload.nextCursor) || "";
+      state.runs.totalLoaded = merged.length;
+      const visible = applyClientAttention(merged);
+      renderRunCollection(byID("run-list"), visible, false);
+      renderRunPagination(visible.length, merged.length, !!state.runs.nextCursor);
+      updateNavCounts({ runs: visible.length });
       setStatus("Run list loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("run-list"), err.message);
     }
+  }
+
+  function renderRunPagination(visibleCount, loadedCount, hasMore) {
+    const summary = byID("run-count-summary");
+    if (summary) {
+      const filterNote = state.runFilters.attention === "budget"
+        ? ` · ${visibleCount} match budget chip (client-side)`
+        : "";
+      summary.textContent = `${loadedCount} loaded${filterNote}${hasMore ? " · more available" : ""}`;
+    }
+    const more = byID("run-load-more");
+    if (more) {
+      more.hidden = !hasMore;
+    }
+  }
+
+  function syncAttentionChips() {
+    document.querySelectorAll("[data-attention]").forEach((node) => {
+      const key = node.dataset.attention;
+      node.setAttribute("aria-pressed", state.runFilters.attention === key ? "true" : "false");
+    });
+    document.querySelectorAll("[data-has-errors]").forEach((node) => {
+      node.setAttribute("aria-pressed", state.runFilters.hasErrors ? "true" : "false");
+    });
+  }
+
+  function bindAttentionChips() {
+    document.querySelectorAll("[data-attention]").forEach((node) => {
+      node.addEventListener("click", () => {
+        state.runFilters.attention = node.dataset.attention || "";
+        syncAttentionChips();
+        fetchRuns();
+      });
+    });
+    document.querySelectorAll("[data-has-errors]").forEach((node) => {
+      node.addEventListener("click", () => {
+        state.runFilters.hasErrors = !state.runFilters.hasErrors;
+        syncAttentionChips();
+        fetchRuns();
+      });
+    });
   }
 
   function renderRunCollection(target, runs, compact) {
@@ -212,8 +310,11 @@
     item.append(element("p", { class: "muted", text: `Updated ${formatDate(run.updatedAt)} · errors ${run.errorCount || 0}` }));
     if (!compact) {
       const button = element("button", { type: "button", text: "Open details" });
-      button.addEventListener("click", () => openRunDetail(run.kind, run.id));
+      button.addEventListener("click", () => openRunFromList(run.kind, run.id));
       item.append(button);
+    } else {
+      item.style.cursor = "pointer";
+      item.addEventListener("click", () => openRunFromList(run.kind, run.id));
     }
     return item;
   }
@@ -229,10 +330,18 @@
     return "badge";
   }
 
+  // Open from a run row: update hash → router will activate detail and load data.
+  function openRunFromList(kind, id) {
+    navigateTo(`#/runs/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`);
+  }
+
   async function openRunDetail(kind, id) {
     closeRunEvents();
     state.currentRun = { kind, id };
     state.lastEventID = 0;
+    state.selectedRun = { kind, id };
+    rememberSelectedRun(kind, id);
+    refreshRunDetailNav();
     const empty = byID("run-detail-empty");
     if (empty) {
       empty.hidden = true;
@@ -262,11 +371,7 @@
 
   function renderRunDetail(detail) {
     const summary = detail.summary || {};
-    const status = byID("run-detail-status");
-    if (status) {
-      const bestEffort = summary.kind === "team" || summary.kind === "workflow" ? " · best-effort runtime data" : "";
-      status.textContent = `${text(summary.kind)}/${text(summary.id)}${bestEffort}`;
-    }
+    renderRunHero(summary);
     renderKV(byID("run-summary"), {
       Kind: summary.kind,
       ID: summary.id,
@@ -286,8 +391,252 @@
       stateTarget.textContent = JSON.stringify(detail.state || {}, null, 2);
     }
     renderBudget(detail.budget || null);
+    renderBudgetCards(detail.budget || null);
+    renderTimeline(detail);
     renderEventCollection(byID("event-timeline"), detail.events || []);
     renderErrorCollection(byID("run-errors"), detail.errors || []);
+    renderExecutionPlan(detail.executionPlan || null);
+    renderHandoffs(detail.handoffs || []);
+  }
+
+  // ===== Run detail hero ======================================================
+  const RUN_STATE_GLYPHS = {
+    running: { glyph: "●", cls: "chip-warn" },
+    completed: { glyph: "✓", cls: "chip-ok" },
+    failed: { glyph: "✕", cls: "chip-err" },
+    gated: { glyph: "◇", cls: "chip-gate" },
+    paused: { glyph: "❚❚", cls: "chip-warn" },
+    awaiting_recovery: { glyph: "↻", cls: "chip-warn" },
+    waiting_on_child: { glyph: "↯", cls: "chip-gate" },
+  };
+
+  function renderRunStateChip(stateValue) {
+    const target = byID("run-detail-state-chip");
+    if (!target) return;
+    const key = String(stateValue || "").toLowerCase();
+    const meta = RUN_STATE_GLYPHS[key] || { glyph: "·", cls: "" };
+    target.className = `chip ${meta.cls}`;
+    target.textContent = `${meta.glyph} ${stateValue || "—"}`;
+  }
+
+  function renderRunHero(summary) {
+    const status = byID("run-detail-status");
+    if (status) {
+      const bestEffort = summary.kind === "team" || summary.kind === "workflow" ? " · best-effort runtime data" : "";
+      const definition = summary.definitionName ? `${summary.definitionName} v${summary.definitionVersion || "—"}` : "—";
+      status.textContent = `${definition} · started ${formatDate(summary.createdAt)} · updated ${formatDate(summary.updatedAt)}${bestEffort}`;
+    }
+    const idTarget = byID("run-detail-id");
+    if (idTarget) {
+      idTarget.textContent = summary.kind && summary.id ? `${summary.kind}/${summary.id}` : "—";
+    }
+    const eyebrow = byID("run-detail-eyebrow");
+    if (eyebrow) {
+      eyebrow.textContent = `${text(summary.kind)} run`;
+    }
+    renderRunStateChip(summary.state);
+  }
+
+  // ===== Vertical timeline ====================================================
+  function renderTimeline(detail) {
+    const target = byID("run-timeline");
+    if (!target) return;
+    clear(target);
+    const summary = detail.summary || {};
+    const events = detail.events || [];
+    const eventsByStep = {};
+    events.forEach((event) => {
+      const stepID = (event.data && (event.data.stepId || event.data.taskId || event.data.phaseId)) || "_unscoped";
+      eventsByStep[stepID] = eventsByStep[stepID] || [];
+      eventsByStep[stepID].push(event);
+    });
+
+    let nodes = [];
+    if (summary.kind === "chain" && Array.isArray(detail.steps)) {
+      nodes = detail.steps.map((step) => ({
+        id: step.stepId,
+        title: `Step ${step.order != null ? step.order + 1 : "?"} · ${text(step.stepId)}`,
+        meta: `${text(step.agent)} · ${text(step.stepType)}`,
+        state: step.state,
+        startedAt: step.startedAt,
+        completedAt: step.completedAt,
+        attempts: step.attempts,
+        usage: step.usage,
+        error: step.error,
+      }));
+    } else if (summary.kind === "team" && Array.isArray(detail.tasks)) {
+      nodes = detail.tasks.map((task) => ({
+        id: task.taskId,
+        title: `Task · ${text(task.taskId)}`,
+        meta: `${text(task.role || task.kind)} · ${text(task.agent)}`,
+        state: task.state,
+        startedAt: task.assignedAt || task.claimedAt,
+        completedAt: task.completedAt,
+        attempts: 0,
+        usage: task.usage,
+        error: task.error,
+      }));
+    } else if (summary.kind === "workflow" && Array.isArray(detail.phases)) {
+      nodes = detail.phases.map((phase) => ({
+        id: phase.phaseId,
+        title: `Phase · ${text(phase.phaseId)}`,
+        meta: `${text(phase.kind)}${phase.ref ? ` · ${phase.ref}` : ""}${phase.gate ? ` · gate=${phase.gate}` : ""}`,
+        state: phase.state,
+        startedAt: phase.startedAt,
+        completedAt: phase.completedAt,
+        attempts: 0,
+        error: null,
+      }));
+    }
+
+    if (nodes.length === 0) {
+      target.append(element("li", { class: "empty-state", text: target.dataset.empty || "No timeline data for this run yet." }));
+      return;
+    }
+
+    nodes.forEach((node) => target.append(renderTimelineNode(node, eventsByStep[node.id] || [])));
+  }
+
+  function renderTimelineNode(node, events) {
+    const stateKey = String(node.state || "").toLowerCase();
+    const marker = element("span", { class: "timeline-marker", "data-state": stateKey });
+    if (stateKey === "completed") marker.textContent = "✓";
+    else if (stateKey === "failed") marker.textContent = "✕";
+    else if (stateKey === "running") marker.textContent = "●";
+    else if (stateKey === "gated" || stateKey === "paused") marker.textContent = "◇";
+
+    const titleParts = [
+      element("strong", { text: node.title }),
+      element("span", { class: "chip chip-toggle", "aria-pressed": "true", text: node.state || "—" }),
+    ];
+    if (node.attempts && node.attempts > 1) {
+      titleParts.push(element("span", { class: "timeline-title-meta", text: `attempt ${node.attempts}` }));
+    }
+    const titleRow = element("div", { class: "timeline-title" }, titleParts);
+
+    const metaBits = [];
+    if (node.meta) metaBits.push(node.meta);
+    if (node.startedAt) metaBits.push(`started ${formatDate(node.startedAt)}`);
+    if (node.completedAt) metaBits.push(`done ${formatDate(node.completedAt)}`);
+    if (node.usage && (node.usage.totalTokens || node.usage.costUsd || node.usage.wallClockMs)) {
+      const usageBits = [];
+      if (node.usage.totalTokens) usageBits.push(`${formatNumberCompact(node.usage.totalTokens)} tok`);
+      if (node.usage.costUsd) usageBits.push(`$${node.usage.costUsd.toFixed(3)}`);
+      if (node.usage.wallClockMs) usageBits.push(`${(node.usage.wallClockMs / 1000).toFixed(1)}s`);
+      metaBits.push(usageBits.join(" · "));
+    }
+    const metaRow = element("p", { class: "timeline-title-meta", text: metaBits.join(" · ") || "—" });
+
+    const eventsList = element("ul", { class: "timeline-events" });
+    events.forEach((event) => {
+      eventsList.append(element("li", { class: "timeline-event" }, [
+        element("span", { class: "timeline-event-time", text: formatDate(event.createdAt) }),
+        element("span", { text: event.eventType || "event" }),
+      ]));
+    });
+
+    const body = element("div", { class: "timeline-body" }, [titleRow, metaRow, eventsList]);
+    if (node.error && (node.error.message || node.error.code)) {
+      body.append(element("div", { class: "timeline-error", text: `${text(node.error.code, "error")} · ${text(node.error.message)}` }));
+    }
+    return element("li", { class: "timeline-node" }, [marker, body]);
+  }
+
+  // ===== Budget cards =========================================================
+  function renderBudgetCards(budget) {
+    const target = byID("run-budget-cards");
+    if (!target) return;
+    clear(target);
+    if (!budget || !budget.state) {
+      target.append(element("p", { class: "empty-state", text: target.dataset.empty || "No budget data." }));
+      return;
+    }
+    const dimensions = (budget.evaluation && budget.evaluation.dimensions) || {};
+    const cards = [
+      buildBudgetCard("tokens", budget.state.tokens, dimensions.tokens, formatNumberCompact),
+      buildBudgetCard("cost · usd", budget.state.costUsd, dimensions.costUsd, (n) => `$${n.toFixed(3)}`),
+      buildBudgetCard("wall clock", budget.state.wallClockMs, dimensions.wallClockMs, formatDuration),
+      buildBudgetCard("retries", budget.state.retries, dimensions.retries, (n) => String(n)),
+    ];
+    cards.forEach((card) => card && target.append(card));
+  }
+
+  function buildBudgetCard(label, dim, health, formatter) {
+    if (!dim) return null;
+    const consumed = dim.consumed || 0;
+    const limit = dim.limit || 0;
+    const ratio = limit > 0 ? Math.min(1, consumed / limit) : 0;
+    const healthValue = String(health || "").toLowerCase();
+    const card = element("article", { class: "budget-card", "data-health": healthValue });
+    card.append(element("span", { class: "budget-card-label", text: label }));
+    card.append(element("strong", { class: "budget-card-value", text: formatter(consumed) }));
+    const fill = element("span", { class: "budget-bar-fill", "data-health": healthValue });
+    fill.style.width = `${Math.round(ratio * 100)}%`;
+    const bar = element("div", { class: "budget-bar" }, [fill]);
+    card.append(bar);
+    const limitText = limit > 0 ? `of ${formatter(limit)}` : "no limit";
+    const healthText = healthValue ? `· ${healthValue}` : "";
+    card.append(element("span", { class: "budget-card-foot", text: `${limitText} ${healthText}`.trim() }));
+    return card;
+  }
+
+  function renderExecutionPlan(plan) {
+    const target = byID("run-execution-plan");
+    if (!target) return;
+    if (!plan || Object.keys(plan).length === 0) {
+      target.textContent = target.dataset.empty || "No execution plan attached to this run.";
+      return;
+    }
+    target.textContent = JSON.stringify(plan, null, 2);
+  }
+
+  function renderHandoffs(handoffs) {
+    const target = byID("run-handoffs");
+    if (!target) return;
+    clear(target);
+    if (!handoffs.length) {
+      target.append(element("li", { class: "empty-state", text: target.dataset.empty || "No handoffs recorded." }));
+      return;
+    }
+    handoffs.forEach((doc) => {
+      target.append(element("li", { class: "error-item" }, [
+        element("strong", { text: text(doc.title || doc.handoffType || "handoff") }),
+        element("pre", { class: "json-block", text: JSON.stringify(doc, null, 2) }),
+      ]));
+    });
+  }
+
+  function formatNumberCompact(n) {
+    if (n == null) return "—";
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+    return String(n);
+  }
+
+  function formatDuration(ms) {
+    if (!ms) return "0s";
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const restSec = Math.round(seconds % 60);
+    return restSec ? `${minutes}m ${restSec}s` : `${minutes}m`;
+  }
+
+  function bindCopyHandlers() {
+    const copyBtn = byID("run-detail-copy-id");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        const idTarget = byID("run-detail-id");
+        const idText = idTarget ? idTarget.textContent || "" : "";
+        if (!idText) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(idText).then(
+            () => setStatus("Run id copied to clipboard.", "ok"),
+            () => setStatus("Could not copy to clipboard.", "error"),
+          );
+        }
+      });
+    }
   }
 
   function renderBudget(budget) {
@@ -375,6 +724,7 @@
       const payload = await fetchJSON("/catalog");
       state.catalogItems = (payload && payload.items) || [];
       renderCatalogList(applyCatalogFilters(state.catalogItems));
+      updateNavCounts({ catalog: state.catalogItems.length });
       setStatus("Catalog loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("catalog-list"), err.message);
@@ -437,7 +787,22 @@
     renderCatalogList(applyCatalogFilters(state.catalogItems));
   }
 
+  // First-class Errors screen: bounded recent errors backed by /errors.
   async function fetchErrors() {
+    const target = byID("errors-list");
+    try {
+      const payload = await fetchJSON("/errors", { limit: 50 });
+      const items = (payload && payload.items) || [];
+      renderErrorCollection(target, items);
+      updateNavCounts({ errors: items.length });
+      setStatus("Errors loaded.", "ok");
+    } catch (err) {
+      renderErrorState(target, err.message);
+    }
+  }
+
+  // Also seed Overview's recent-errors panel on first load (without forcing a /errors call).
+  async function fetchOverviewErrors() {
     try {
       const payload = await fetchJSON("/errors", { limit: 25 });
       renderErrorCollection(byID("recent-errors"), (payload && payload.items) || []);
@@ -531,6 +896,215 @@
     );
   }
 
+  // ==========================================================================
+  // Hash routing
+  // ==========================================================================
+  function parseHash() {
+    const raw = (window.location.hash || ROUTES.OVERVIEW).replace(/^#/, "");
+    const parts = raw.split("/").filter(Boolean);
+    if (parts[0] === "runs" && parts[1] && parts[2]) {
+      return { name: "run-detail", kind: decodeURIComponent(parts[1]), id: decodeURIComponent(parts[2]) };
+    }
+    if (parts[0] === "runs") {
+      return { name: "runs" };
+    }
+    if (parts[0] === "run-detail") {
+      // Explicit run-detail route without a selection — show empty state.
+      return { name: "run-detail" };
+    }
+    if (parts[0] === "catalog") {
+      return { name: "catalog" };
+    }
+    if (parts[0] === "errors") {
+      return { name: "errors" };
+    }
+    return { name: "overview" };
+  }
+
+  function navigateTo(hash) {
+    if (window.location.hash === hash) {
+      // Force a re-route even when hash unchanged (e.g., re-clicking active tab).
+      handleRouteChange();
+      return;
+    }
+    window.location.hash = hash;
+  }
+
+  function activateSection(name) {
+    const target = SECTION_BY_ROUTE[name] || "overview";
+    document.querySelectorAll("[data-dashboard-section]").forEach((node) => {
+      node.hidden = node.dataset.dashboardSection !== target;
+    });
+  }
+
+  function updateNavState(name) {
+    const target = SECTION_BY_ROUTE[name] || "overview";
+    document.querySelectorAll("[data-nav-link], [data-tab-link]").forEach((node) => {
+      const linkName = node.dataset.navLink || node.dataset.tabLink;
+      if (linkName === target) {
+        node.setAttribute("aria-current", "page");
+      } else {
+        node.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function refreshRunDetailNav() {
+    const enabled = !!state.selectedRun;
+    document.querySelectorAll("[data-nav-run-detail]").forEach((node) => {
+      if (enabled) {
+        node.removeAttribute("disabled");
+        node.removeAttribute("aria-disabled");
+        node.dataset.route = `#/runs/${encodeURIComponent(state.selectedRun.kind)}/${encodeURIComponent(state.selectedRun.id)}`;
+        node.title = `${state.selectedRun.kind} / ${state.selectedRun.id}`;
+      } else {
+        node.setAttribute("disabled", "true");
+        node.setAttribute("aria-disabled", "true");
+        node.dataset.route = ROUTES.RUN_DETAIL;
+        node.title = "Select a run first";
+      }
+    });
+    const hint = document.querySelector("[data-run-detail-hint]");
+    if (hint) {
+      hint.textContent = enabled ? state.selectedRun.id : "Select a run first";
+    }
+  }
+
+  function rememberSelectedRun(kind, id) {
+    try {
+      window.sessionStorage.setItem("lazyai.dashboard.selectedRun", JSON.stringify({ kind, id }));
+    } catch (_err) { /* sessionStorage unavailable */ }
+  }
+
+  function restoreSelectedRun() {
+    try {
+      const raw = window.sessionStorage.getItem("lazyai.dashboard.selectedRun");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.kind && parsed.id) {
+        state.selectedRun = parsed;
+      }
+    } catch (_err) { /* ignore */ }
+  }
+
+  function updateNavCounts(counts) {
+    if (counts && counts.runs !== undefined) {
+      const node = byID("nav-runs-count");
+      if (node) node.textContent = String(counts.runs);
+    }
+    if (counts && counts.catalog !== undefined && counts.catalog !== null) {
+      const node = byID("nav-catalog-count");
+      if (node) node.textContent = String(counts.catalog);
+    }
+    if (counts && counts.errors !== undefined) {
+      const node = byID("nav-errors-count");
+      if (node) node.textContent = String(counts.errors);
+    }
+  }
+
+  function handleRouteChange() {
+    const route = parseHash();
+    state.activeRoute = route;
+    activateSection(route.name);
+    updateNavState(route.name);
+
+    if (route.name === "run-detail" && route.kind && route.id) {
+      // Deep-link into a run.
+      openRunDetail(route.kind, route.id);
+    } else if (route.name === "run-detail" && state.selectedRun) {
+      // Re-enter run-detail with stored selection.
+      openRunDetail(state.selectedRun.kind, state.selectedRun.id);
+    } else if (route.name === "errors") {
+      fetchErrors();
+    } else if (route.name === "catalog" && state.catalogItems.length === 0) {
+      fetchCatalog();
+    } else if (route.name === "runs") {
+      // Refresh runs list each time the screen is opened.
+      fetchRuns();
+    }
+  }
+
+  // ==========================================================================
+  // Tweaks (theme / density / nav)
+  // ==========================================================================
+  function loadTweaks() {
+    try {
+      const raw = window.localStorage.getItem(TWEAK_KEY);
+      if (!raw) return Object.assign({}, TWEAK_DEFAULTS);
+      const parsed = JSON.parse(raw);
+      const merged = Object.assign({}, TWEAK_DEFAULTS, parsed || {});
+      return merged;
+    } catch (_err) {
+      return Object.assign({}, TWEAK_DEFAULTS);
+    }
+  }
+
+  function saveTweaks() {
+    try {
+      window.localStorage.setItem(TWEAK_KEY, JSON.stringify(state.tweaks));
+    } catch (_err) { /* localStorage unavailable */ }
+  }
+
+  function applyTweaks() {
+    document.body.dataset.theme = state.tweaks.theme;
+    document.body.dataset.density = state.tweaks.density;
+    document.body.dataset.nav = state.tweaks.nav;
+    TWEAK_FIELDS.forEach((field) => {
+      document.querySelectorAll(`#tweaks-panel input[name="${field}"]`).forEach((input) => {
+        input.checked = input.value === state.tweaks[field];
+      });
+    });
+  }
+
+  function bindTweaks() {
+    state.tweaks = loadTweaks();
+    applyTweaks();
+    const toggle = byID("tweaks-toggle");
+    const panel = byID("tweaks-panel");
+    const closeBtn = byID("tweaks-close");
+    if (toggle && panel) {
+      toggle.addEventListener("click", () => {
+        const next = !!panel.hidden;
+        panel.hidden = !next;
+        toggle.setAttribute("aria-expanded", next ? "true" : "false");
+      });
+    }
+    if (closeBtn && panel) {
+      closeBtn.addEventListener("click", () => {
+        panel.hidden = true;
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+      });
+    }
+    TWEAK_FIELDS.forEach((field) => {
+      document.querySelectorAll(`#tweaks-panel input[name="${field}"]`).forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!input.checked) return;
+          state.tweaks[field] = input.value;
+          applyTweaks();
+          saveTweaks();
+        });
+      });
+    });
+  }
+
+  // ==========================================================================
+  // Wiring
+  // ==========================================================================
+  function bindNavClicks() {
+    document.querySelectorAll("[data-route]").forEach((node) => {
+      node.addEventListener("click", (event) => {
+        const route = node.dataset.route;
+        if (!route) return;
+        if (node.disabled || node.getAttribute("aria-disabled") === "true") {
+          event.preventDefault();
+          return;
+        }
+        event.preventDefault();
+        navigateTo(route);
+      });
+    });
+  }
+
   function bindEvents() {
     const overviewRefresh = byID("refresh-overview");
     if (overviewRefresh) {
@@ -540,6 +1114,10 @@
     if (runsRefresh) {
       runsRefresh.addEventListener("click", fetchRuns);
     }
+    const errorsRefresh = byID("refresh-errors");
+    if (errorsRefresh) {
+      errorsRefresh.addEventListener("click", fetchErrors);
+    }
     const runFiltersForm = byID("run-filters");
     if (runFiltersForm) {
       runFiltersForm.addEventListener("submit", (event) => {
@@ -547,6 +1125,19 @@
         fetchRuns();
       });
     }
+    const runSearch = byID("run-search");
+    if (runSearch) {
+      let debounce;
+      runSearch.addEventListener("input", () => {
+        window.clearTimeout(debounce);
+        debounce = window.setTimeout(() => fetchRuns(), 200);
+      });
+    }
+    const loadMore = byID("run-load-more");
+    if (loadMore) {
+      loadMore.addEventListener("click", () => fetchRuns({ append: true }));
+    }
+    bindAttentionChips();
     const catalogRefresh = byID("refresh-catalog");
     if (catalogRefresh) {
       catalogRefresh.addEventListener("click", fetchCatalog);
@@ -570,15 +1161,24 @@
     if (catalogSort) {
       catalogSort.addEventListener("change", refreshCatalogView);
     }
+    window.addEventListener("hashchange", handleRouteChange);
     window.addEventListener("beforeunload", closeRunEvents);
   }
 
   function init() {
+    bindTweaks();
+    bindNavClicks();
     bindEvents();
+    bindCopyHandlers();
+    restoreSelectedRun();
+    refreshRunDetailNav();
+    // Initial data fetches — don't block routing.
     fetchOverview();
     fetchRuns();
     fetchCatalog();
-    fetchErrors();
+    fetchOverviewErrors();
+    // Activate section based on initial hash (or default to overview).
+    handleRouteChange();
   }
 
   init();

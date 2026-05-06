@@ -159,11 +159,24 @@ func (h *Handler) handleRunList(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
+	attention, err := parseOptionalAttention(query.Get("attention"))
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	hasErrors, err := parseOptionalBool(query.Get("has_errors"), "has_errors")
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
 	page, err := h.readModel.ListRuns(r.Context(), RunListOptions{
-		Kind:   kind,
-		State:  query.Get("state"),
-		Limit:  limit,
-		Cursor: query.Get("cursor"),
+		Kind:      kind,
+		State:     query.Get("state"),
+		Search:    query.Get("search"),
+		Attention: attention,
+		HasErrors: hasErrors,
+		Limit:     limit,
+		Cursor:    query.Get("cursor"),
 	})
 	if err != nil {
 		h.handleError(w, err)
@@ -396,6 +409,26 @@ func parseOptionalNonNegativeInt(value, field string) (int, error) {
 func validateOptionalNonNegativeInt(value, field string) error {
 	_, err := parseOptionalNonNegativeInt(value, field)
 	return err
+}
+
+func parseOptionalAttention(value string) (string, error) {
+	switch value {
+	case "", AttentionRunning, AttentionFailed, AttentionGated, AttentionRecent:
+		return value, nil
+	default:
+		return "", fmt.Errorf("attention must be running, failed, gated, or recent")
+	}
+}
+
+func parseOptionalBool(value, field string) (bool, error) {
+	switch value {
+	case "", "false", "0":
+		return false, nil
+	case "true", "1":
+		return true, nil
+	default:
+		return false, fmt.Errorf("%s must be true or false", field)
+	}
 }
 
 func unescapePathSegment(segment string) (string, error) {

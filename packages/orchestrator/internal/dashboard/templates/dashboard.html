@@ -160,7 +160,17 @@
         <section id="run-browser" class="panel" data-dashboard-section="runs" aria-labelledby="runs-heading" hidden>
           <div class="panel-heading">
             <h2 id="runs-heading">Runs</h2>
+            <span id="run-count-summary" class="muted mono tiny" aria-live="polite"></span>
             <button type="button" class="secondary" id="refresh-runs">Refresh runs</button>
+          </div>
+          <div class="attention-bar" role="group" aria-label="Attention filters">
+            <button type="button" class="chip chip-toggle" data-attention="" aria-pressed="true">all</button>
+            <button type="button" class="chip chip-toggle" data-attention="running" aria-pressed="false"><span class="chip-glyph">●</span>running</button>
+            <button type="button" class="chip chip-toggle" data-attention="failed" aria-pressed="false"><span class="chip-glyph">✕</span>failed</button>
+            <button type="button" class="chip chip-toggle" data-attention="gated" aria-pressed="false"><span class="chip-glyph">◇</span>gated</button>
+            <button type="button" class="chip chip-toggle" data-attention="budget" aria-pressed="false"><span class="chip-glyph">⚠</span>budget</button>
+            <button type="button" class="chip chip-toggle" data-attention="recent" aria-pressed="false"><span class="chip-glyph">↻</span>recent</button>
+            <button type="button" class="chip chip-toggle" data-has-errors="1" aria-pressed="false"><span class="chip-glyph">!</span>has errors</button>
           </div>
           <form id="run-filters" class="toolbar" aria-label="Run filters">
             <label>Kind
@@ -174,6 +184,9 @@
             <label>State
               <input id="run-state-filter" name="state" type="search" placeholder="running, completed, failed">
             </label>
+            <label>Search
+              <input id="run-search" name="search" type="search" placeholder="id or definition name">
+            </label>
             <label>Limit
               <input id="run-limit" name="limit" type="number" min="1" max="200" value="50">
             </label>
@@ -181,6 +194,9 @@
           </form>
           <p id="run-list-empty" class="empty-state" hidden>No runs match the current filters.</p>
           <ul id="run-list" class="run-list" aria-live="polite"></ul>
+          <div class="run-pagination">
+            <button type="button" class="secondary" id="run-load-more" hidden>Load more →</button>
+          </div>
         </section>
 
         <section id="run-detail-panel" class="panel" data-dashboard-section="run-detail" aria-labelledby="run-detail-heading" hidden>

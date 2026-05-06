@@ -102,6 +102,67 @@ func TestDashboardHandlerRunsEndpointFiltersBoundsAndValidatesInputs(t *testing.
 	}
 }
 
+func TestDashboardHandlerRunsAttentionSearchHasErrorsParams(t *testing.T) {
+	database := newDashboardTestDB(t)
+	seedRun(t, database, types.RunKindChain, "chain-running", "release", "1", "running", "build", `{}`, "2026-05-05T10:05:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-failed", "release", "1", "failed", "build", `{}`, "2026-05-05T10:04:00Z")
+	seedRun(t, database, types.RunKindChain, "chain-gated", "release", "1", "gated", "build", `{}`, "2026-05-05T10:03:00Z")
+	seedRun(t, database, types.RunKindTeam, "team-launch-running", "launch", "1", "running", "", `{}`, "2026-05-05T10:02:00Z")
+	seedError(t, database, "err-failed", "chain-failed", types.RunKindChain, "release", "build", "fatal", "boom", "boom", "2026-05-05T10:04:30Z")
+
+	handler := newDashboardHTTPHandler(t, database, catalog.NewStore(database))
+
+	cases := []struct {
+		name        string
+		path        string
+		wantStatus  int
+		wantIDs     []string
+		wantErrCode string
+	}{
+		{name: "attention=running", path: "/api/dashboard/runs?attention=running", wantStatus: http.StatusOK, wantIDs: []string{"chain-running", "team-launch-running"}},
+		{name: "attention=failed", path: "/api/dashboard/runs?attention=failed", wantStatus: http.StatusOK, wantIDs: []string{"chain-failed"}},
+		{name: "attention=gated", path: "/api/dashboard/runs?attention=gated", wantStatus: http.StatusOK, wantIDs: []string{"chain-gated"}},
+		{name: "search by definition name", path: "/api/dashboard/runs?search=launch", wantStatus: http.StatusOK, wantIDs: []string{"team-launch-running"}},
+		{name: "search by id substring", path: "/api/dashboard/runs?search=GATED", wantStatus: http.StatusOK, wantIDs: []string{"chain-gated"}},
+		{name: "has_errors=true", path: "/api/dashboard/runs?has_errors=true", wantStatus: http.StatusOK, wantIDs: []string{"chain-failed"}},
+		{name: "has_errors=false is no-op", path: "/api/dashboard/runs?has_errors=false&attention=running", wantStatus: http.StatusOK, wantIDs: []string{"chain-running", "team-launch-running"}},
+		{name: "invalid attention", path: "/api/dashboard/runs?attention=bogus", wantStatus: http.StatusBadRequest, wantErrCode: "invalid_request"},
+		{name: "invalid has_errors", path: "/api/dashboard/runs?has_errors=maybe", wantStatus: http.StatusBadRequest, wantErrCode: "invalid_request"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, tc.path, nil))
+			if response.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d, body=%s", response.Code, tc.wantStatus, response.Body.String())
+			}
+			if tc.wantErrCode != "" {
+				var errResponse DashboardErrorResponse
+				decodeResponse(t, response, &errResponse)
+				if errResponse.Error.Code != tc.wantErrCode {
+					t.Fatalf("error code = %q, want %q", errResponse.Error.Code, tc.wantErrCode)
+				}
+				return
+			}
+			var page RunListResponse
+			decodeResponse(t, response, &page)
+			gotIDs := map[string]bool{}
+			for _, item := range page.Items {
+				gotIDs[item.ID] = true
+			}
+			for _, want := range tc.wantIDs {
+				if !gotIDs[want] {
+					t.Fatalf("missing id %q in response: %+v", want, page.Items)
+				}
+			}
+			if len(page.Items) != len(tc.wantIDs) {
+				t.Fatalf("got %d items, want %d: %+v", len(page.Items), len(tc.wantIDs), page.Items)
+			}
+		})
+	}
+}
+
 func TestDashboardHandlerDetailBudgetCatalogAndErrors(t *testing.T) {
 	database := newDashboardTestDB(t)
 	seedExecutionPlan(t, database, "plan-warning", types.BudgetPolicy{ID: "policy-warning", Scope: "chain", Tokens: &types.BudgetThreshold{Limit: 100, WarnAt: 50}, DefaultActionOnLimit: "pause"})

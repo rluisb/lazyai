@@ -920,6 +920,70 @@ body[data-theme="dark"] .catalog-body {
 }
 
 /* ==========================================================================
+   Attention chips bar (Runs screen)
+   ========================================================================== */
+.attention-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: var(--pad-sm) 0 var(--pad-md);
+  padding-bottom: var(--pad-sm);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.chip {
+  background: var(--panel-soft);
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.chip-toggle[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+body[data-theme="dark"] .chip-toggle[aria-pressed="true"] {
+  color: var(--ctp-peach);
+}
+
+.chip-glyph {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+
+.chip-ok    { color: var(--ok); border-color: var(--ok); }
+.chip-err   { color: var(--danger); border-color: var(--danger); }
+.chip-warn  { color: var(--warning); border-color: var(--warning); }
+.chip-gate  { color: var(--gate); border-color: var(--gate); }
+
+.run-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--pad-md);
+}
+
+#run-count-summary {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 800px) {

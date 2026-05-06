@@ -35,6 +35,8 @@
     selectedRun: null,
     activeRoute: { name: "overview" },
     tweaks: Object.assign({}, TWEAK_DEFAULTS),
+    runFilters: { attention: "", hasErrors: false },
+    runs: { items: [], nextCursor: "", totalLoaded: 0 },
   };
 
   function byID(id) {
@@ -192,26 +194,93 @@
     }
   }
 
-  function runFilters() {
+  function runFilters(extra) {
     const limitValue = Number.parseInt(byID("run-limit") && byID("run-limit").value, 10);
     const boundedLimit = Number.isFinite(limitValue) ? Math.min(Math.max(limitValue, 1), 200) : 50;
-    return {
+    const params = {
       kind: byID("run-kind-filter") && byID("run-kind-filter").value,
       state: byID("run-state-filter") && byID("run-state-filter").value.trim(),
+      search: ((byID("run-search") && byID("run-search").value) || "").trim(),
       limit: boundedLimit,
     };
+    // attention=budget is handled client-side; everything else goes to the server.
+    if (state.runFilters.attention && state.runFilters.attention !== "budget") {
+      params.attention = state.runFilters.attention;
+    }
+    if (state.runFilters.hasErrors) {
+      params.has_errors = "true";
+    }
+    return Object.assign(params, extra || {});
   }
 
-  async function fetchRuns() {
+  function applyClientAttention(items) {
+    if (state.runFilters.attention !== "budget") {
+      return items;
+    }
+    return items.filter((item) => {
+      const health = String(item.budgetHealth || "").toLowerCase();
+      return health === "warning" || health === "critical" || health === "over";
+    });
+  }
+
+  async function fetchRuns({ append = false } = {}) {
     try {
-      const payload = await fetchJSON("/runs", runFilters());
-      const items = (payload && payload.items) || [];
-      renderRunCollection(byID("run-list"), items, false);
-      updateNavCounts({ runs: items.length });
+      const params = append ? runFilters({ cursor: state.runs.nextCursor }) : runFilters();
+      const payload = await fetchJSON("/runs", params);
+      const incoming = (payload && payload.items) || [];
+      const merged = append ? state.runs.items.concat(incoming) : incoming;
+      state.runs.items = merged;
+      state.runs.nextCursor = (payload && payload.nextCursor) || "";
+      state.runs.totalLoaded = merged.length;
+      const visible = applyClientAttention(merged);
+      renderRunCollection(byID("run-list"), visible, false);
+      renderRunPagination(visible.length, merged.length, !!state.runs.nextCursor);
+      updateNavCounts({ runs: visible.length });
       setStatus("Run list loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("run-list"), err.message);
     }
+  }
+
+  function renderRunPagination(visibleCount, loadedCount, hasMore) {
+    const summary = byID("run-count-summary");
+    if (summary) {
+      const filterNote = state.runFilters.attention === "budget"
+        ? ` · ${visibleCount} match budget chip (client-side)`
+        : "";
+      summary.textContent = `${loadedCount} loaded${filterNote}${hasMore ? " · more available" : ""}`;
+    }
+    const more = byID("run-load-more");
+    if (more) {
+      more.hidden = !hasMore;
+    }
+  }
+
+  function syncAttentionChips() {
+    document.querySelectorAll("[data-attention]").forEach((node) => {
+      const key = node.dataset.attention;
+      node.setAttribute("aria-pressed", state.runFilters.attention === key ? "true" : "false");
+    });
+    document.querySelectorAll("[data-has-errors]").forEach((node) => {
+      node.setAttribute("aria-pressed", state.runFilters.hasErrors ? "true" : "false");
+    });
+  }
+
+  function bindAttentionChips() {
+    document.querySelectorAll("[data-attention]").forEach((node) => {
+      node.addEventListener("click", () => {
+        state.runFilters.attention = node.dataset.attention || "";
+        syncAttentionChips();
+        fetchRuns();
+      });
+    });
+    document.querySelectorAll("[data-has-errors]").forEach((node) => {
+      node.addEventListener("click", () => {
+        state.runFilters.hasErrors = !state.runFilters.hasErrors;
+        syncAttentionChips();
+        fetchRuns();
+      });
+    });
   }
 
   function renderRunCollection(target, runs, compact) {
@@ -816,6 +885,19 @@
         fetchRuns();
       });
     }
+    const runSearch = byID("run-search");
+    if (runSearch) {
+      let debounce;
+      runSearch.addEventListener("input", () => {
+        window.clearTimeout(debounce);
+        debounce = window.setTimeout(() => fetchRuns(), 200);
+      });
+    }
+    const loadMore = byID("run-load-more");
+    if (loadMore) {
+      loadMore.addEventListener("click", () => fetchRuns({ append: true }));
+    }
+    bindAttentionChips();
     const catalogRefresh = byID("refresh-catalog");
     if (catalogRefresh) {
       catalogRefresh.addEventListener("click", fetchCatalog);

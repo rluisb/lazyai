@@ -24,12 +24,25 @@ func NewReadModel(database *db.DB) *ReadModel {
 	return &ReadModel{database: database}
 }
 
+// Attention filter values for the Runs screen. "budget" is intentionally
+// not handled server-side — it is filtered client-side using the budgetHealth
+// summary field already returned by ListRuns.
+const (
+	AttentionRunning = "running"
+	AttentionFailed  = "failed"
+	AttentionGated   = "gated"
+	AttentionRecent  = "recent"
+)
+
 // RunListOptions controls run list filtering and pagination.
 type RunListOptions struct {
-	Kind   types.RunKind
-	State  string
-	Limit  int
-	Cursor string
+	Kind      types.RunKind
+	State     string
+	Search    string // case-insensitive substring against run id and definition_name
+	Attention string // running | failed | gated | recent (see Attention* constants)
+	HasErrors bool   // when true, only runs with at least one error_journal entry
+	Limit     int
+	Cursor    string
 }
 
 // ErrorListOptions controls error journal filtering and bounds.
@@ -74,13 +87,53 @@ func (m *ReadModel) Overview(ctx context.Context, health HealthView, catalogCoun
 func (m *ReadModel) ListRuns(ctx context.Context, opts RunListOptions) (RunListResponse, error) {
 	limit := NormalizeLimit(opts.Limit, DefaultRunLimit, MaxRunLimit)
 	offset := parseCursor(opts.Cursor)
+
+	clauses := []string{}
+	args := []any{}
+	if opts.Kind != "" {
+		clauses = append(clauses, "kind = ?")
+		args = append(args, string(opts.Kind))
+	}
+	if opts.State != "" {
+		clauses = append(clauses, "state = ?")
+		args = append(args, opts.State)
+	}
+	if opts.Search != "" {
+		pattern := "%" + likeEscape(opts.Search) + "%"
+		clauses = append(clauses, `(LOWER(id) LIKE LOWER(?) ESCAPE '\' OR LOWER(definition_name) LIKE LOWER(?) ESCAPE '\')`)
+		args = append(args, pattern, pattern)
+	}
+	switch opts.Attention {
+	case AttentionRunning:
+		clauses = append(clauses, "state = 'running'")
+	case AttentionFailed:
+		clauses = append(clauses, "state = 'failed'")
+	case AttentionGated:
+		clauses = append(clauses, "state IN ('gated','paused','awaiting_recovery','waiting_on_child')")
+	case AttentionRecent:
+		clauses = append(clauses, "updated_at >= datetime('now', '-1 hour')")
+	case "":
+		// no attention filter
+	default:
+		return RunListResponse{}, fmt.Errorf("unknown attention filter: %q", opts.Attention)
+	}
+	if opts.HasErrors {
+		clauses = append(clauses, "EXISTS (SELECT 1 FROM error_journal e WHERE e.run_id = runs.id AND e.run_kind = runs.kind)")
+	}
+
+	where := ""
+	if len(clauses) > 0 {
+		where = "WHERE " + strings.Join(clauses, " AND ")
+	}
+
 	query := `
 		SELECT kind, id, definition_name, definition_version, state, current, project_root, state_json, created_at, updated_at
-		FROM (` + runUnionQuery() + `)
-		WHERE (? = '' OR kind = ?) AND (? = '' OR state = ?)
+		FROM (` + runUnionQuery() + `) AS runs
+		` + where + `
 		ORDER BY updated_at DESC, id DESC
 		LIMIT ? OFFSET ?`
-	rows, err := m.database.QueryContext(ctx, query, string(opts.Kind), string(opts.Kind), opts.State, opts.State, limit+1, offset)
+	args = append(args, limit+1, offset)
+	rows, err := m.database.QueryContext(ctx, query, args...)
 	if err != nil {
 		return RunListResponse{}, err
 	}
@@ -101,6 +154,12 @@ func (m *ReadModel) ListRuns(ctx context.Context, opts RunListOptions) (RunListR
 		response.NextCursor = strconv.Itoa(offset + limit)
 	}
 	return response, nil
+}
+
+// likeEscape escapes SQL LIKE wildcards so user search terms cannot inject pattern metacharacters.
+func likeEscape(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(s)
 }
 
 // GetRunDetail returns a read-only detail view for one run.

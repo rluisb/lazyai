@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -199,7 +198,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 
 		data, err := files.ReadFS(opts.LibraryFS, templateRelPath)
 		if err != nil {
-			log.Printf("Warning: could not read root template %s: %v", templateRelPath, err)
+			scaffoldLog.Warn("could not read root template", "path", templateRelPath, "error", err)
 			continue
 		}
 
@@ -231,7 +230,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		destPath, err := memoryDocDestPath(tool, opts.SetupScope, opts.TargetDir, homeDir, outputFile)
 		if err != nil {
 			if errors.Is(err, errMemoryDocScopeUnsupported) {
-				log.Printf("Skipping memory doc for %s at scope %q: not supported", tool, opts.SetupScope)
+				scaffoldLog.Warn("skipping memory doc for unsupported scope", "tool", tool, "scope", opts.SetupScope)
 				continue
 			}
 			return err
@@ -246,7 +245,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		}
 		if action == "skip" {
 			relPath, _ := filepath.Rel(opts.TargetDir, destPath)
-			log.Printf("Skipping existing file: %s", relPath)
+			scaffoldLog.Info("skipping existing file", "path", relPath)
 			continue
 		}
 		if outputFile == "AGENTS.md" && files.FileExists(destPath) {
@@ -256,7 +255,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 			}
 			patched, patch := BuildTargetedAgentsUpdatePatch(outputFile, string(existing), ctx)
 			for _, warning := range patch.Warnings {
-				log.Printf("Warning: targeted %s update: %s", outputFile, warning)
+				scaffoldLog.Warn("targeted update warning", "path", outputFile, "warning", warning)
 			}
 			content = patched
 		}
@@ -266,7 +265,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		}
 		// Signal populate if placeholders remain.
 		if err := writePopulateSignal(opts.TargetDir, content); err != nil {
-			log.Printf("[warn] failed to write populate signal: %v", err)
+			scaffoldLog.Warn("failed to write populate signal", "error", err)
 		}
 
 		hash, _ := files.FileHash(destPath)

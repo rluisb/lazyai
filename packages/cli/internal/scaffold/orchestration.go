@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,7 +85,7 @@ func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, target
 			return err
 		}
 		if action == "skip" {
-			log.Printf("Skipping existing file: %s", relPath)
+			scaffoldLog.Info("skipping existing file", "path", relPath)
 			continue
 		}
 
@@ -94,7 +93,7 @@ func copyOrchestrationTreeFS(libFS fs.FS, sourceRelDir, currentTargetDir, target
 		readRelPath := selectedLibraryOrchestrationSource(libFS, sourceRelPath, features)
 		data, err := files.ReadFS(libFS, readRelPath)
 		if err != nil {
-			log.Printf("Warning: could not read %s: %v", readRelPath, err)
+			scaffoldLog.Warn("could not read library file", "path", readRelPath, "error", err)
 			continue
 		}
 
@@ -156,13 +155,13 @@ func copyOrchestrationTreeDir(sourceDir, currentTargetDir, targetDir, recordSour
 			return err
 		}
 		if action == "skip" {
-			log.Printf("Skipping existing file: %s", relPath)
+			scaffoldLog.Info("skipping existing file", "path", relPath)
 			continue
 		}
 
 		data, err := files.ReadFile(sourcePath)
 		if err != nil {
-			log.Printf("Warning: could not read %s: %v", sourcePath, err)
+			scaffoldLog.Warn("could not read file", "path", sourcePath, "error", err)
 			continue
 		}
 

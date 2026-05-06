@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -27,7 +26,7 @@ func (a *CopilotAdapter) ConfigDir() string { return ".github" }
 
 func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	if !IsScopeSupported(types.ToolIdCopilot, ctx.SetupScope) {
-		log.Printf("[copilot] scope %q not supported; skipping install", ctx.SetupScope)
+		adapterLog.Info("scope not supported; skipping install", "adapter", "copilot", "scope", ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
 	// At global scope, check if copilot CLI or ~/.copilot/ is present.
@@ -37,7 +36,7 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 			// Check if ~/.copilot/ exists in the context's home directory
 			home, err := resolveHomeDir(ctx)
 			if err != nil || !files.DirExists(filepath.Join(home, ".copilot")) {
-				log.Printf("[copilot] copilot CLI or ~/.copilot/ not found; skipping global install")
+				adapterLog.Info("copilot CLI or ~/.copilot/ not found; skipping global install", "adapter", "copilot")
 				return ctx.FileRecords, nil
 			}
 		}
@@ -55,7 +54,7 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	promptsDir := filepath.Join(githubDir, "prompts")
 	_ = files.EnsureDir(promptsDir)
 
-	log.Println("Installing GitHub Copilot tools...")
+	adapterLog.Info("installing tools", "adapter", "copilot")
 
 	selectedSkills := selectionSet(ctx.Selections.Skills)
 	selectedPrompts := selectionSet(ctx.Selections.Prompts)
@@ -429,11 +428,11 @@ func (a *CopilotAdapter) CanRunHeadless() bool { return true }
 func (a *CopilotAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) error {
 	_, err := exec.LookPath("copilot")
 	if err != nil {
-		log.Printf("[copilot] copilot not on PATH, skipping headless init")
+		adapterLog.Info("copilot not on PATH, skipping headless init", "adapter", "copilot")
 		return nil
 	}
 
-	log.Printf("[copilot] running headless init (populate via copilot -p)...")
+	adapterLog.Info("running headless init", "adapter", "copilot", "command", "copilot -p")
 	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
@@ -446,14 +445,14 @@ func (a *CopilotAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) err
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[copilot] headless init completed with warning: %v", err)
+		adapterLog.Warn("headless init completed with warning", "adapter", "copilot", "error", err)
 		if len(output) > 0 {
-			log.Printf("[copilot] output: %s", truncateOutput(string(output), 200))
+			adapterLog.Info("headless init output", "adapter", "copilot", "output", truncateOutput(string(output), 200))
 		}
 		return nil // non-fatal
 	}
 
-	log.Printf("[copilot] headless init completed (%d bytes)", len(output))
+	adapterLog.Info("headless init completed", "adapter", "copilot", "bytes", len(output))
 	return nil
 }
 

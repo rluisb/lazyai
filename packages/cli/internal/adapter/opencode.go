@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,7 +41,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	_ = files.EnsureDir(filepath.Join(ocDir, "commands"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "modes"))
 
-	log.Println("Installing OpenCode tools...")
+	adapterLog.Info("installing tools", "adapter", "opencode")
 
 	jsonPath := filepath.Join(ocDir, "opencode.json")
 	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
@@ -173,7 +172,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	// Install selected plugins via the opencode CLI if the binary is present.
 	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
-		log.Printf("Warning: plugin install failed: %v", err)
+		adapterLog.Warn("plugin install failed", "adapter", "opencode", "error", err)
 	}
 
 	return ctx.FileRecords, nil
@@ -195,11 +194,11 @@ func (a *OpenCodeAdapter) CanRunHeadless() bool { return true }
 func (a *OpenCodeAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) error {
 	_, err := exec.LookPath("opencode")
 	if err != nil {
-		log.Printf("[opencode] opencode not on PATH, skipping headless init")
+		adapterLog.Info("opencode not on PATH, skipping headless init", "adapter", "opencode")
 		return nil
 	}
 
-	log.Printf("[opencode] running headless init (populate via opencode run)...")
+	adapterLog.Info("running headless init", "adapter", "opencode", "command", "opencode run")
 	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
@@ -213,14 +212,14 @@ func (a *OpenCodeAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) er
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("[opencode] headless init completed with warning: %v", err)
+		adapterLog.Warn("headless init completed with warning", "adapter", "opencode", "error", err)
 		if len(output) > 0 {
-			log.Printf("[opencode] output: %s", truncateOutput(string(output), 200))
+			adapterLog.Info("headless init output", "adapter", "opencode", "output", truncateOutput(string(output), 200))
 		}
 		return nil // non-fatal
 	}
 
-	log.Printf("[opencode] headless init completed (%d bytes)", len(output))
+	adapterLog.Info("headless init completed", "adapter", "opencode", "bytes", len(output))
 	return nil
 }
 
@@ -252,7 +251,7 @@ func installOpenCodePlugins(ctx *AdapterContext, run CmdRunner) error {
 			args = []string{"plugin", module}
 		}
 		if out, err := run("opencode", args...); err != nil {
-			log.Printf("Warning: opencode plugin %s failed: %v — %s", module, err, out)
+			adapterLog.Warn("opencode plugin failed", "adapter", "opencode", "plugin", module, "error", err, "output", out)
 		}
 	}
 	return nil

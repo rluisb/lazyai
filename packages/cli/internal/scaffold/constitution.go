@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"io/fs"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -22,7 +21,7 @@ func ScaffoldConstitution(targetDir string, libFS fs.FS, projectName string, fil
 
 	templateRelPath := "constitution/constitution.template.md"
 	if !files.ExistsFS(libFS, templateRelPath) {
-		log.Printf("Warning: constitution template not found at %s, skipping", templateRelPath)
+		scaffoldLog.Warn("constitution template not found", "path", templateRelPath)
 		return nil
 	}
 
@@ -43,7 +42,7 @@ func ScaffoldConstitution(targetDir string, libFS fs.FS, projectName string, fil
 		return err
 	}
 	if action == "skip" {
-		log.Printf("Skipping existing file: %s", relPath)
+		scaffoldLog.Info("skipping existing file", "path", relPath)
 		return nil
 	}
 

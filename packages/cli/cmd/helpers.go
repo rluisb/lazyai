@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +49,7 @@ func openStore(targetDir string) (*db.DB, error) {
 	// Auto-import from JSON if DB is new.
 	imported, err := db.AutoImportJSON(targetDir, database)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  Warning: JSON import failed: %v\n", err)
+		cmdLog.Warn("JSON import failed", "error", err)
 	}
 	if imported {
 		fmt.Println("  Imported existing .ai-setup.json → SQLite")
@@ -324,7 +323,7 @@ func warnAdaptFallbackForUnsupportedTools(tools []types.ToolId) {
 		if tool == types.ToolIdOpenCode {
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "WARN: --existing-setup-policy=adapt is MVP-supported for OpenCode only; preserving existing %s files via absorb behavior\n", tool)
+		cmdLog.Warn("adapt policy unsupported for tool; preserving files via absorb behavior", "tool", tool)
 	}
 }
 
@@ -509,7 +508,7 @@ func mechanicalFill(ctx *scaffold.ScaffoldContext) {
 
 	if filled > 0 {
 		if err := os.WriteFile(agentsPath, []byte(content), 0644); err == nil {
-			log.Printf("[init] mechanical fill: %d placeholders filled from Scout data", filled)
+			cmdLog.Info("mechanical fill completed", "filled", filled)
 		}
 	}
 }

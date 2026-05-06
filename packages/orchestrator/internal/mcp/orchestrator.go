@@ -114,14 +114,17 @@ func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) 
 
 	plan, err := o.compileChainPlan(input)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "start_chain", "chain", input.Chain, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	chainState := state.CreateChainState(plan)
 
 	if err := saveExecutionPlan(o.DB, plan); err != nil {
+		toolLog.Error("tool failed", "tool", "start_chain", "chain", input.Chain, "chainId", chainState.ChainID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	if err := saveChainState(o.DB, o.projectRoot(), chainState); err != nil {
+		toolLog.Error("tool failed", "tool", "start_chain", "chain", input.Chain, "chainId", chainState.ChainID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 
@@ -131,6 +134,7 @@ func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) 
 		"currentStepId":  chainState.CurrentStepID,
 		"state":          chainState.State,
 	})
+	toolLog.Info("tool completed", "tool", "start_chain", "chain", input.Chain, "chainId", chainState.ChainID, "currentStepId", chainState.CurrentStepID)
 
 	return jsonOut(map[string]any{
 		"chainId":         chainState.ChainID,
@@ -152,10 +156,12 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 
 	chainState, err := loadChainState(o.DB, input.ChainID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 
@@ -171,6 +177,7 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 		Output:  input.Output,
 	})
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 
@@ -180,20 +187,21 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 	}
 
 	if err := saveChainState(o.DB, o.projectRoot(), &advanced.StateSnapshot); err != nil {
+		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
+	}
+	nextStepID := ""
+	if advanced.NextStep != nil {
+		nextStepID = advanced.NextStep.StepID
 	}
 
 	o.Events.Publish(advanced.StateSnapshot.ChainID, fmt.Sprintf("chain.%s", advanced.State), map[string]any{
-		"stepId":  input.StepID,
-		"outcome": input.Outcome,
-		"state":   advanced.State,
-		"nextStepId": func() string {
-			if advanced.NextStep == nil {
-				return ""
-			}
-			return advanced.NextStep.StepID
-		}(),
+		"stepId":     input.StepID,
+		"outcome":    input.Outcome,
+		"state":      advanced.State,
+		"nextStepId": nextStepID,
 	})
+	toolLog.Info("tool completed", "tool", "advance_chain", "chainId", advanced.StateSnapshot.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "state", advanced.State, "nextStepId", nextStepID)
 
 	return jsonOut(advanced.AdvanceChainResult), nil
 }
@@ -302,23 +310,28 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	chainState, err := loadChainState(o.DB, input.RunID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	retried, attemptsRemaining, err := state.RetryChainStep(chainState, plan, input.StepID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	budget.IncrementRetries(&retried.Budget, input.StepID)
 	if err := saveChainState(o.DB, o.projectRoot(), retried); err != nil {
+		toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(retried.ChainID, "chain.retrying", map[string]any{
 		"stepId": input.StepID, "attemptsRemaining": attemptsRemaining, "state": retried.State,
 	})
+	toolLog.Info("tool completed", "tool", "retry_step", "runId", retried.ChainID, "stepId", input.StepID, "attemptsRemaining", attemptsRemaining)
 	return jsonOut(map[string]any{
 		"runId": retried.ChainID, "stepId": input.StepID, "state": retried.State,
 		"attemptsRemaining": attemptsRemaining, "budget": retried.Budget,
@@ -335,25 +348,31 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 	}
 	chainState, err := loadChainState(o.DB, input.RunID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	escalatedState, escalatedPlan, err := state.EscalateChainStep(chainState, plan, input.StepID, input.TargetAgent, input.DomainSkill, input.ModeSkill)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	if err := saveExecutionPlan(o.DB, escalatedPlan); err != nil {
+		toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	if err := saveChainState(o.DB, o.projectRoot(), escalatedState); err != nil {
+		toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(escalatedState.ChainID, "chain.escalated", map[string]any{
 		"stepId": input.StepID, "targetAgent": input.TargetAgent, "state": escalatedState.State,
 	})
+	toolLog.Info("tool completed", "tool", "escalate_step", "runId", escalatedState.ChainID, "stepId", input.StepID, "targetAgent", input.TargetAgent)
 	return jsonOut(map[string]any{
 		"runId": escalatedState.ChainID, "stepId": input.StepID, "state": escalatedState.State,
 		"newAssignment": currentChainStepStatus(escalatedPlan, escalatedState),
@@ -370,22 +389,27 @@ func (o *Orchestrator) Handoff(ctx context.Context, req mcp.CallToolRequest) (*m
 	}
 	chainState, err := loadChainState(o.DB, input.RunID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	doc, path, err := createAndSaveChainHandoff(o.DB, chainState, plan, input)
 	if err != nil {
+		toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	if err := saveChainState(o.DB, o.projectRoot(), chainState); err != nil {
+		toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "handoffId", doc.ID, "path", path, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(chainState.ChainID, "chain.handoff", map[string]any{
 		"handoffId": doc.ID, "path": path, "state": chainState.State,
 	})
+	toolLog.Info("tool completed", "tool", "handoff", "runId", chainState.ChainID, "handoffId", doc.ID, "path", path)
 	return jsonOut(map[string]any{"handoffId": doc.ID, "path": path, "summary": doc.Summary, "resumable": doc.Resumable}), nil
 }
 

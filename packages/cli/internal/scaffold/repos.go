@@ -3,7 +3,6 @@ package scaffold
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -86,7 +85,7 @@ func ScaffoldRepoRoots(repos []types.RepoInfo, planningRepoPath string, tools []
 			}
 
 			if err := files.WriteFile(destPath, []byte(content), 0o644); err != nil {
-				log.Printf("Warning: could not write repo root %s: %v", destPath, err)
+				scaffoldLog.Warn("could not write repo root", "path", destPath, "error", err)
 				continue
 			}
 

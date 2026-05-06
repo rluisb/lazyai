@@ -18,10 +18,12 @@ import (
 	"syscall"
 	"time"
 
+	charmlog "charm.land/log/v2"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	orchlog "github.com/rluisb/lazyai/packages/orchestrator/internal/log"
 	orchmcp "github.com/rluisb/lazyai/packages/orchestrator/internal/mcp"
 )
 
@@ -39,11 +41,13 @@ var (
 	globalRoot  string
 	detachFlag  bool
 	idleTimeout time.Duration
+	logLevel    string
+	logFormat   string
 )
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		daemonLogger().Error("command failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -52,6 +56,9 @@ var rootCmd = &cobra.Command{
 	Use:   "lazyai-orchestrator",
 	Short: "Multi-agent orchestration runtime for LazyAI",
 	Long:  `Coordinates chains, teams, and workflows with durable SQLite state and MCP tools.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return applyLoggingEnv(loggingFlagConfigFromCommand(cmd))
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdio(cmd)
 	},
@@ -99,6 +106,8 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd, connectCmd, startCmd, stopCmd, statusCmd)
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "Set log level (debug|info|warn|error)")
+	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "", "Set log format (text|json|logfmt)")
 
 	rootCmd.Flags().StringVar(&projectRoot, "project", "", "Project root path")
 	rootCmd.Flags().StringVar(&scope, "scope", "project", "Scope: project|global|workspace")
@@ -126,6 +135,47 @@ func init() {
 	startCmd.Flags().StringVar(&execMode, "execution-mode", "native", "Execution mode")
 	startCmd.Flags().StringVar(&configPath, "config", "", "Orchestrator config path")
 	startCmd.Flags().DurationVar(&idleTimeout, "idle-timeout", defaultIdleTimeout, "Auto-shutdown idle timeout (0 disables, env: AI_SETUP_ORCHESTRATOR_IDLE_TIMEOUT)")
+}
+
+type loggingFlagConfig struct {
+	LogLevel          string
+	LogLevelExplicit  bool
+	LogFormat         string
+	LogFormatExplicit bool
+}
+
+func loggingFlagConfigFromCommand(cmd *cobra.Command) loggingFlagConfig {
+	if cmd == nil || cmd.Root() == nil {
+		return loggingFlagConfig{}
+	}
+	flags := cmd.Root().PersistentFlags()
+	level, _ := flags.GetString("log-level")
+	format, _ := flags.GetString("log-format")
+	return loggingFlagConfig{
+		LogLevel:          level,
+		LogLevelExplicit:  flags.Changed("log-level"),
+		LogFormat:         format,
+		LogFormatExplicit: flags.Changed("log-format"),
+	}
+}
+
+func applyLoggingEnv(config loggingFlagConfig) error {
+	if config.LogLevelExplicit {
+		if err := os.Setenv("AI_SETUP_LOG_LEVEL", config.LogLevel); err != nil {
+			return err
+		}
+	}
+	if config.LogFormatExplicit {
+		if err := os.Setenv("AI_SETUP_LOG_FORMAT", config.LogFormat); err != nil {
+			return err
+		}
+	}
+	orchlog.Configure("", "")
+	return nil
+}
+
+func daemonLogger() *charmlog.Logger {
+	return orchlog.Default().With("component", "daemon")
 }
 
 // ──────────────────── Implementation ──────────────────────────────
@@ -192,7 +242,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	mux := http.NewServeMux()
-	httpSrv := &http.Server{Addr: addr, Handler: mux}
+	httpSrv := &http.Server{Addr: addr, Handler: mux, ErrorLog: daemonLogger().With("component", "http").StandardLog()}
 	mcpHTTPServer := server.NewStreamableHTTPServer(mcpServer, server.WithStreamableHTTPServer(httpSrv))
 	startedAt := time.Now().UTC().Format(time.RFC3339)
 	var shutdownOnce sync.Once
@@ -202,12 +252,12 @@ func runServe(cmd *cobra.Command, args []string) error {
 	shutdown := func(reason string) {
 		shutdownOnce.Do(func() {
 			go func() {
-				fmt.Printf("Shutting down orchestrator daemon (%s)...\n", reason)
+				daemonLogger().Info("shutting down orchestrator daemon", "reason", reason)
 				clearDiscovery()
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				if err := mcpHTTPServer.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					fmt.Fprintf(os.Stderr, "shutdown error: %v\n", err)
+					daemonLogger().Error("shutdown error", "error", err)
 				}
 			}()
 		})
@@ -266,7 +316,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	writeDiscovery(port, os.Getpid())
 	defer clearDiscovery()
 
-	fmt.Printf("Orchestrator daemon listening on http://127.0.0.1:%d/mcp\n", port)
+	daemonLogger().Info("orchestrator daemon listening", "url", fmt.Sprintf("http://127.0.0.1:%d/mcp", port), "port", port)
 
 	// Handle graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

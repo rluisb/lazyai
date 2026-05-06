@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"io/fs"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -90,12 +89,12 @@ func writeRootFile(dest, content, targetDir, source string, fileRecords *[]types
 
 	action, err := conflict.ApplyStrategy(dest, strategy, perFileOverrides, targetDir)
 	if err != nil || action == "skip" {
-		log.Printf("Skipping root file: %s", relPath)
+		scaffoldLog.Info("skipping root file", "path", relPath)
 		return
 	}
 
 	if err := files.WriteFile(dest, []byte(content), 0o644); err != nil {
-		log.Printf("Error writing root file %s: %v", dest, err)
+		scaffoldLog.Error("error writing root file", "path", dest, "error", err)
 		return
 	}
 

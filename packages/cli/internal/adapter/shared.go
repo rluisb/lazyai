@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +54,7 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 
 	if action == conflict.ActionSkip {
 		if warnOnSkip {
-			log.Printf("Skipping existing file: %s", relPath)
+			adapterLog.Info("skipping existing file", "path", relPath)
 		}
 		return nil
 	}
@@ -71,7 +70,7 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 	sourcePath := src
 
 	if ctx.DryRun {
-		log.Printf("[dry-run] Would create: %s", relPath)
+		adapterLog.Info("dry run would create file", "path", relPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   "dry-run",
@@ -144,7 +143,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 
 	if action == conflict.ActionSkip {
 		if warnOnSkip {
-			log.Printf("Skipping existing file: %s", relPath)
+			adapterLog.Info("skipping existing file", "path", relPath)
 		}
 		return nil
 	}
@@ -156,7 +155,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 	}
 
 	if ctx.DryRun {
-		log.Printf("[dry-run] Would create: %s", relPath)
+		adapterLog.Info("dry run would create file", "path", relPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 			Path:   relPath,
 			Hash:   "dry-run",

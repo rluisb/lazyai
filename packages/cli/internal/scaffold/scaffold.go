@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -124,7 +123,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 			}
 			warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
 			for _, w := range warnings {
-				log.Printf("WARN %s", w)
+				scaffoldLog.Warn("OpenCode install validation warning", "warning", w)
 			}
 			break
 		}
@@ -155,7 +154,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	// Step 11: .gitignore guidance.
 	CheckGitignoreGuidance(ctx.TargetDir, ctx.LocalSecrets)
 
-	log.Printf("Scaffold complete: %d files, %d errors", len(result.Files), len(result.Errors))
+	scaffoldLog.Info("scaffold complete", "files", len(result.Files), "errors", len(result.Errors))
 
 	if len(result.Errors) > 0 {
 		return result, fmt.Errorf("scaffold completed with %d errors", len(result.Errors))

@@ -22,6 +22,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
+	"github.com/rluisb/lazyai/packages/orchestrator/internal/dashboard"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	orchlog "github.com/rluisb/lazyai/packages/orchestrator/internal/log"
 	orchmcp "github.com/rluisb/lazyai/packages/orchestrator/internal/mcp"
@@ -272,38 +273,18 @@ func runServe(cmd *cobra.Command, args []string) error {
 		Shutdown: shutdown,
 	})
 
-	mux.Handle("/mcp", tracker.trackHTTP("mcp", mcpHTTPServer))
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		clients := tracker.snapshot()
-		idleState := idle.status(r.Context())
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(daemonHealth{
-			Status:        "ok",
-			Name:          "lazyai-orchestrator",
-			Port:          port,
-			PID:           os.Getpid(),
-			StartedAt:     startedAt,
-			ProjectRoot:   projectRoot,
-			Scope:         scope,
-			ExecutionMode: string(runtimeConfig.ExecutionMode),
-			ConfigPath:    runtimeConfig.ConfigPath,
-			Clients:       clients,
-			Idle:          idleState,
-			ActiveRuns:    idleState.ActiveRuns,
-		})
-	})
-	mux.HandleFunc("/admin/shutdown", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "shutting_down"})
-		shutdown("admin request")
+	registerServeRoutes(mux, serveRouteConfig{
+		Port:          port,
+		ProjectRoot:   projectRoot,
+		Scope:         scope,
+		RuntimeConfig: runtimeConfig,
+		StartedAt:     startedAt,
+		Database:      database,
+		Orchestrator:  o,
+		Tracker:       tracker,
+		Idle:          idle,
+		MCPHandler:    mcpHTTPServer,
+		Shutdown:      shutdown,
 	})
 
 	listener, err := net.Listen("tcp", addr)
@@ -332,6 +313,87 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return nil
+}
+
+type serveRouteConfig struct {
+	Port          int
+	ProjectRoot   string
+	Scope         string
+	RuntimeConfig orchmcp.RuntimeConfig
+	StartedAt     string
+	Database      *db.DB
+	Orchestrator  *orchmcp.Orchestrator
+	Tracker       *clientTracker
+	Idle          *idleManager
+	MCPHandler    http.Handler
+	Shutdown      func(string)
+}
+
+func registerServeRoutes(mux *http.ServeMux, config serveRouteConfig) {
+	mux.Handle("/mcp", config.Tracker.trackHTTP("mcp", config.MCPHandler))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(config.daemonHealth(r.Context()))
+	})
+	mux.HandleFunc("/admin/shutdown", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "shutting_down"})
+		config.Shutdown("admin request")
+	})
+
+	dashboard.RegisterViewRoutes(mux, dashboard.ViewConfig{})
+	mux.Handle("/api/dashboard/", dashboard.NewHandler(dashboard.HandlerConfig{
+		ReadModel: dashboard.NewReadModel(config.Database),
+		Catalog:   dashboard.NewCatalogAdapter(config.Orchestrator.Catalog),
+		Events:    config.Orchestrator.Events,
+		Health: func(ctx context.Context) dashboard.HealthView {
+			return dashboardHealthView(config.daemonHealth(ctx))
+		},
+	}))
+}
+
+func (config serveRouteConfig) daemonHealth(ctx context.Context) daemonHealth {
+	clients := config.Tracker.snapshot()
+	idleState := config.Idle.status(ctx)
+	return daemonHealth{
+		Status:        "ok",
+		Name:          "lazyai-orchestrator",
+		Port:          config.Port,
+		PID:           os.Getpid(),
+		StartedAt:     config.StartedAt,
+		ProjectRoot:   config.ProjectRoot,
+		Scope:         config.Scope,
+		ExecutionMode: string(config.RuntimeConfig.ExecutionMode),
+		ConfigPath:    config.RuntimeConfig.ConfigPath,
+		Clients:       clients,
+		Idle:          idleState,
+		ActiveRuns:    idleState.ActiveRuns,
+	}
+}
+
+func dashboardHealthView(health daemonHealth) dashboard.HealthView {
+	return dashboard.HealthView{
+		Status:        health.Status,
+		Name:          health.Name,
+		Port:          health.Port,
+		PID:           health.PID,
+		StartedAt:     health.StartedAt,
+		ProjectRoot:   health.ProjectRoot,
+		Scope:         health.Scope,
+		ExecutionMode: health.ExecutionMode,
+		ConfigPath:    health.ConfigPath,
+		Clients:       health.Clients,
+		Idle:          health.Idle,
+		ActiveRuns:    health.ActiveRuns,
+	}
 }
 
 func runConnect(cmd *cobra.Command, args []string) error {

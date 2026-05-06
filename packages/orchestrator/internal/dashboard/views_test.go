@@ -358,18 +358,90 @@ func TestDashboardJSHashRoutingAndErrorsScreen(t *testing.T) {
 			t.Fatalf("dashboard js missing route/tweak/errors contract %q", want)
 		}
 	}
-	// No global SSE / log / settings endpoints
+	// Logs/Settings remain forbidden (no backend); Live activity primary nav stays forbidden
+	// even though the underlying /api/dashboard/events stream now exists — the IA decision
+	// is to surface activity on Overview, not as a primary nav destination.
 	for _, forbidden := range []string{
-		`"/events"`,
 		`"#/live"`,
 		`"#/logs"`,
 		`"#/settings"`,
 		`"/logs"`,
 		`"/settings"`,
-		`/api/dashboard/events`,
 	} {
 		if strings.Contains(body, forbidden) {
 			t.Fatalf("dashboard js references forbidden path %q", forbidden)
+		}
+	}
+}
+
+func TestDashboardViewLiveActivityFeedOnOverview(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`id="live-activity"`,
+		`id="activity-feed"`,
+		`id="activity-pause-toggle"`,
+		`id="activity-status"`,
+		`data-activity-empty`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard shell missing live activity hook %q", want)
+		}
+	}
+}
+
+func TestDashboardJSConsumesGlobalEventStream(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"connectGlobalEvents",
+		"disconnectGlobalEvents",
+		"appendActivityEvent",
+		"handleGlobalEvent",
+		"showToastForEvent",
+		"scheduleOverviewRefresh",
+		`"/events"`,
+		"activity-feed",
+		"activity-pause-toggle",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing global-events contract %q", want)
+		}
+	}
+}
+
+func TestDashboardCSSActivityFeedVisuals(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		".activity-feed",
+		".activity-item",
+		".activity-item-glyph",
+		".activity-item.entering",
+		".toasts",
+		".toast",
+		"@keyframes",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing activity feed visual %q", want)
 		}
 	}
 }

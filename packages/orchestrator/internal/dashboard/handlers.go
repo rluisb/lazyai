@@ -78,6 +78,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.handleErrors(w, r)
+	case "events":
+		if len(segments) != 1 {
+			h.writeError(w, http.StatusNotFound, "not_found", "dashboard API route not found")
+			return
+		}
+		h.handleGlobalEvents(w, r)
 	default:
 		h.writeError(w, http.StatusNotFound, "not_found", "dashboard API route not found")
 	}

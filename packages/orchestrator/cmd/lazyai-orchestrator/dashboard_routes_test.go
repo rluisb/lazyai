@@ -81,6 +81,15 @@ func TestServeRoutesMountDashboardAndPreserveDaemonRoutes(t *testing.T) {
 		t.Fatalf("overview health mismatch: %+v", overview.Health)
 	}
 
+	eventsResponse := httptest.NewRecorder()
+	mux.ServeHTTP(eventsResponse, httptest.NewRequest(http.MethodGet, "/api/dashboard/events", nil))
+	if eventsResponse.Code != http.StatusOK {
+		t.Fatalf("GET /api/dashboard/events status = %d body=%s", eventsResponse.Code, eventsResponse.Body.String())
+	}
+	if !strings.HasPrefix(eventsResponse.Header().Get("Content-Type"), "application/json") {
+		t.Fatalf("GET /api/dashboard/events content-type = %q", eventsResponse.Header().Get("Content-Type"))
+	}
+
 	mcpResponse := httptest.NewRecorder()
 	mux.ServeHTTP(mcpResponse, httptest.NewRequest(http.MethodPost, "/mcp", nil))
 	if mcpResponse.Code != http.StatusNoContent || mcpResponse.Header().Get("X-Test-Route") != "mcp" {

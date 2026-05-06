@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -177,6 +178,82 @@ func TestDashboardHandlerDetailBudgetCatalogAndErrors(t *testing.T) {
 	handler.ServeHTTP(badVersionResponse, httptest.NewRequest(http.MethodGet, "/api/dashboard/catalog/chain/release?version=bad", nil))
 	if badVersionResponse.Code != http.StatusBadRequest {
 		t.Fatalf("bad version status = %d body=%s", badVersionResponse.Code, badVersionResponse.Body.String())
+	}
+}
+
+func TestDashboardHandlerCatalogDetailQueryRouteSupportsSlashNamesAndLegacyRoute(t *testing.T) {
+	database := newDashboardTestDB(t)
+	store := catalog.NewStore(database)
+	createCatalogVersion(t, store, "agent", "agents/platform/reviewer", map[string]any{"owner": "platform"}, "agent body", true)
+	createCatalogVersion(t, store, "chain", "release", map[string]any{"owner": "ops"}, "chain body", true)
+
+	handler := newDashboardHTTPHandler(t, database, store)
+
+	queryPath := "/api/dashboard/catalog/detail?kind=agent&name=" + url.QueryEscape("agents/platform/reviewer") + "&version=1"
+	queryResponse := httptest.NewRecorder()
+	handler.ServeHTTP(queryResponse, httptest.NewRequest(http.MethodGet, queryPath, nil))
+	if queryResponse.Code != http.StatusOK {
+		t.Fatalf("query detail status = %d body=%s", queryResponse.Code, queryResponse.Body.String())
+	}
+	var queryDetail CatalogDetail
+	decodeResponse(t, queryResponse, &queryDetail)
+	if queryDetail.Kind != "agent" || queryDetail.Name != "agents/platform/reviewer" || queryDetail.Version != 1 || queryDetail.Body != "agent body" {
+		t.Fatalf("query detail mismatch: %+v", queryDetail)
+	}
+
+	legacyResponse := httptest.NewRecorder()
+	handler.ServeHTTP(legacyResponse, httptest.NewRequest(http.MethodGet, "/api/dashboard/catalog/chain/release", nil))
+	if legacyResponse.Code != http.StatusOK {
+		t.Fatalf("legacy detail status = %d body=%s", legacyResponse.Code, legacyResponse.Body.String())
+	}
+	var legacyDetail CatalogDetail
+	decodeResponse(t, legacyResponse, &legacyDetail)
+	if legacyDetail.Kind != "chain" || legacyDetail.Name != "release" || legacyDetail.Body != "chain body" {
+		t.Fatalf("legacy detail mismatch: %+v", legacyDetail)
+	}
+}
+
+func TestDashboardHandlerCatalogDetailQueryRouteValidatesInputs(t *testing.T) {
+	database := newDashboardTestDB(t)
+	store := catalog.NewStore(database)
+	createCatalogVersion(t, store, "chain", "release", map[string]any{"owner": "ops"}, "body", true)
+	handler := newDashboardHTTPHandler(t, database, store)
+
+	for _, path := range []string{
+		"/api/dashboard/catalog/detail?name=release",
+		"/api/dashboard/catalog/detail?kind=chain",
+		"/api/dashboard/catalog/detail?kind=bogus&name=release",
+		"/api/dashboard/catalog/detail?kind=chain&name=release&version=-1",
+		"/api/dashboard/catalog/detail?kind=chain&name=release&version=bad",
+	} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("%s status = %d body=%s", path, response.Code, response.Body.String())
+		}
+		var errResponse DashboardErrorResponse
+		decodeResponse(t, response, &errResponse)
+		if errResponse.Error.Code != "invalid_request" || errResponse.Error.Message == "" {
+			t.Fatalf("%s error mismatch: %+v", path, errResponse)
+		}
+	}
+}
+
+func TestDashboardHandlerCatalogDetailQueryRouteReportsNoActiveVersion(t *testing.T) {
+	database := newDashboardTestDB(t)
+	store := catalog.NewStore(database)
+	createCatalogVersion(t, store, "agent", "draft-agent", map[string]any{"description": "Draft"}, "agent body", false)
+	handler := newDashboardHTTPHandler(t, database, store)
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/dashboard/catalog/detail?kind=agent&name=draft-agent", nil))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("no-active detail status = %d body=%s", response.Code, response.Body.String())
+	}
+	var errResponse DashboardErrorResponse
+	decodeResponse(t, response, &errResponse)
+	if errResponse.Error.Code != "not_found" || !strings.Contains(errResponse.Error.Message, "agent/draft-agent") {
+		t.Fatalf("no-active detail error mismatch: %+v", errResponse)
 	}
 }
 

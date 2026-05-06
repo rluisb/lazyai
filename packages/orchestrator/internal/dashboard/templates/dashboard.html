@@ -116,9 +116,22 @@
           <label>Kind
             <select id="catalog-kind-filter" name="kind">
               <option value="">All kinds</option>
+              <option value="agent">Agents</option>
+              <option value="domain">Domains</option>
+              <option value="mode">Modes</option>
               <option value="chain">Chains</option>
               <option value="team">Teams</option>
               <option value="workflow">Workflows</option>
+            </select>
+          </label>
+          <label>Search
+            <input id="catalog-search" name="search" type="search" placeholder="kind or name">
+          </label>
+          <label>Sort
+            <select id="catalog-sort" name="sort">
+              <option value="name">Name</option>
+              <option value="kind">Kind</option>
+              <option value="updated">Updated</option>
             </select>
           </label>
           <button type="submit">Apply catalog filter</button>

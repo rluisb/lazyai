@@ -199,6 +199,10 @@ func (h *Handler) handleCatalog(w http.ResponseWriter, r *http.Request, segments
 		h.handleCatalogList(w, r)
 		return
 	}
+	if len(segments) == 2 && segments[1] == "detail" {
+		h.handleCatalogDetailQuery(w, r)
+		return
+	}
 	if len(segments) != 3 {
 		h.writeError(w, http.StatusNotFound, "not_found", "dashboard API route not found")
 		return
@@ -208,12 +212,45 @@ func (h *Handler) handleCatalog(w http.ResponseWriter, r *http.Request, segments
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog kind is required")
 		return
 	}
+	if !isCatalogKind(kind) {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog kind must be agent, domain, mode, chain, team, or workflow")
+		return
+	}
 	name, err := unescapePathSegment(segments[2])
 	if err != nil || name == "" {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog name is required")
 		return
 	}
 	version, err := parseOptionalNonNegativeInt(r.URL.Query().Get("version"), "version")
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	detail, err := h.catalog.GetCatalogDetail(r.Context(), kind, name, version)
+	if err != nil {
+		h.handleError(w, err)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, detail)
+}
+
+func (h *Handler) handleCatalogDetailQuery(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	kind := query.Get("kind")
+	if kind == "" {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog kind is required")
+		return
+	}
+	if !isCatalogKind(kind) {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog kind must be agent, domain, mode, chain, team, or workflow")
+		return
+	}
+	name := query.Get("name")
+	if name == "" {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "catalog name is required")
+		return
+	}
+	version, err := parseOptionalNonNegativeInt(query.Get("version"), "version")
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
 		return
@@ -333,6 +370,15 @@ func parseRunKind(value string) (types.RunKind, bool) {
 		return types.RunKind(value), true
 	default:
 		return "", false
+	}
+}
+
+func isCatalogKind(value string) bool {
+	switch types.CatalogKind(value) {
+	case types.KindAgent, types.KindDomain, types.KindMode, types.KindChain, types.KindTeam, types.KindWorkflow:
+		return true
+	default:
+		return false
 	}
 }
 

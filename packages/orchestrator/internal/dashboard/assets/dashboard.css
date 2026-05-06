@@ -39,6 +39,11 @@ button {
   padding: 0.55rem 0.8rem;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 button.secondary {
   background: var(--accent-soft);
   color: var(--accent);
@@ -78,8 +83,15 @@ button.secondary {
 h1,
 h2,
 h3,
+h4,
+h5,
 p {
   margin-top: 0;
+}
+
+h4,
+h5 {
+  margin-bottom: 0.5rem;
 }
 
 .lede,
@@ -92,6 +104,8 @@ p {
   border-radius: 999px;
   background: var(--panel);
   color: var(--muted);
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 0.45rem 0.75rem;
 }
 
@@ -111,6 +125,7 @@ p {
   border: 1px solid var(--border);
   border-radius: 0.85rem;
   box-shadow: 0 1px 2px rgb(16 24 40 / 6%);
+  min-width: 0;
 }
 
 .panel {
@@ -121,6 +136,7 @@ p {
 .cards,
 .detail-grid,
 .two-column {
+  align-items: start;
   display: grid;
   gap: 1rem;
 }
@@ -139,32 +155,45 @@ p {
 }
 
 .toolbar {
+  align-items: end;
   justify-content: flex-start;
   margin: 0.75rem 0;
 }
 
 .toolbar label {
   display: grid;
+  flex: 1 1 12rem;
   gap: 0.25rem;
+  min-width: 12rem;
+}
+
+.toolbar button {
+  align-self: end;
 }
 
 input,
 select {
   border: 1px solid var(--border);
   border-radius: 0.45rem;
+  max-width: 100%;
   padding: 0.45rem 0.55rem;
+  width: 100%;
 }
 
 .kv-list {
   display: grid;
   gap: 0.4rem 0.75rem;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   margin: 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .kv-list dt {
   color: var(--muted);
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .kv-list dd {
@@ -175,7 +204,8 @@ select {
 
 .run-list,
 .error-list,
-.catalog-list {
+.catalog-list,
+.catalog-kind-items {
   display: grid;
   gap: 0.6rem;
   list-style: none;
@@ -193,7 +223,23 @@ select {
 .event-timeline li {
   border: 1px solid var(--border);
   border-radius: 0.65rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 0.75rem;
+}
+
+.catalog-kind-group {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.catalog-item.no-active {
+  border-color: #f7c46c;
+}
+
+.warning {
+  color: var(--warning);
 }
 
 .run-item button,
@@ -235,7 +281,9 @@ select {
   border-radius: 0.65rem;
   color: #edf2f7;
   max-height: 28rem;
+  max-width: 100%;
   overflow: auto;
+  overflow-wrap: anywhere;
   padding: 0.85rem;
   white-space: pre-wrap;
 }
@@ -243,8 +291,15 @@ select {
 .event-timeline {
   display: grid;
   gap: 0.6rem;
+  list-style: none;
   margin: 0;
-  padding-left: 1.25rem;
+  padding: 0;
+}
+
+.catalog-detail,
+.detail-grid > section,
+.two-column > section {
+  min-width: 0;
 }
 
 .catalog-detail {
@@ -256,6 +311,58 @@ select {
   flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0.5rem 0;
+}
+
+@media (max-width: 800px) {
+  .dashboard-shell {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+  }
+
+  .cards,
+  .detail-grid,
+  .two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-shell {
+    padding: 0.75rem;
+  }
+
+  .panel,
+  .card {
+    padding: 0.75rem;
+  }
+
+  .status-message {
+    border-radius: 0.65rem;
+  }
+
+  .toolbar label,
+  .toolbar button {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  .kv-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-header,
+  .panel-heading,
+  .run-item-header,
+  .catalog-item-header {
+    align-items: flex-start;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

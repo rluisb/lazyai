@@ -62,6 +62,116 @@ func TestDashboardViewHandlerServesShellWithSemanticHooks(t *testing.T) {
 	}
 }
 
+func TestDashboardViewCatalogControlsExposeAllKindsSearchAndSort(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`<option value="agent">Agents</option>`,
+		`<option value="domain">Domains</option>`,
+		`<option value="mode">Modes</option>`,
+		`<option value="chain">Chains</option>`,
+		`<option value="team">Teams</option>`,
+		`<option value="workflow">Workflows</option>`,
+		`id="catalog-search"`,
+		`name="search"`,
+		`id="catalog-sort"`,
+		`name="sort"`,
+		`value="name"`,
+		`value="kind"`,
+		`value="updated"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard catalog controls missing %q in:\n%s", want, body)
+		}
+	}
+}
+
+func TestDashboardViewCatalogAssetContracts(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`fetchJSON("/catalog/detail"`,
+		"catalog-search",
+		"catalog-sort",
+		"applyCatalogFilters",
+		"groupCatalogItems",
+		"catalog-kind-group",
+		"No active version",
+		"Definition has no active version",
+		"button.disabled = true",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing catalog contract %q", want)
+		}
+	}
+	for _, forbidden := range []string{"catalog/create", "catalog/delete", "catalog/deactivate", "data-action=\"delete"} {
+		if strings.Contains(strings.ToLower(body), forbidden) {
+			t.Fatalf("dashboard js contains write/admin affordance %q", forbidden)
+		}
+	}
+}
+
+func TestDashboardViewCSSLayoutAssetContracts(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"@media (max-width: 800px)",
+		"@media (max-width: 480px)",
+		"align-items: start;",
+		"h4,\nh5",
+		"list-style: none;",
+		"min-width: 12rem;",
+		"overflow-wrap: anywhere;",
+		"minmax(0, 1fr)",
+		"max-width: 100%;",
+		"button:disabled",
+		".catalog-kind-items",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing layout contract %q", want)
+		}
+	}
+}
+
+func TestDashboardViewLayoutStatusAccessibilityHooks(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		`id="status-message" class="status-message" role="status" aria-live="polite"`,
+		`<form id="catalog-filters" class="toolbar" aria-label="Catalog filters">`,
+		`<ul id="catalog-list" class="catalog-list" data-empty="No catalog definitions found.">`,
+		`<article id="catalog-detail" class="catalog-detail empty-state"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard shell missing layout/accessibility hook %q", want)
+		}
+	}
+}
+
 func TestDashboardViewHandlerServesEmbeddedAssets(t *testing.T) {
 	handler := NewViewHandler(ViewConfig{})
 

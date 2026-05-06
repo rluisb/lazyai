@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
@@ -30,6 +31,40 @@ func TestCatalogAdapterListsDefinitionsWithVersionCountsAndKindFilter(t *testing
 	}
 	if len(chains) != 1 || chains[0].Kind != "chain" || chains[0].Name != "release" {
 		t.Fatalf("chain summaries mismatch: %+v", chains)
+	}
+}
+
+func TestCatalogAdapterListsAllKnownCatalogKinds(t *testing.T) {
+	database := newDashboardTestDB(t)
+	store := catalog.NewStore(database)
+	for _, kind := range catalogKindStrings() {
+		createCatalogVersion(t, store, kind, kind+"-definition", map[string]any{"kind": kind}, kind+" body", true)
+	}
+
+	adapter := NewCatalogAdapter(store)
+	all, err := adapter.ListCatalog(context.Background(), "")
+	if err != nil {
+		t.Fatalf("list all catalog kinds: %v", err)
+	}
+	seen := map[string]bool{}
+	for _, item := range all {
+		seen[item.Kind] = true
+		if item.ActiveVersion == nil || *item.ActiveVersion != 1 {
+			t.Fatalf("%s active version mismatch: %+v", item.Kind, item)
+		}
+	}
+	for _, kind := range catalogKindStrings() {
+		if !seen[kind] {
+			t.Fatalf("catalog list missing kind %q in %+v", kind, all)
+		}
+
+		filtered, err := adapter.ListCatalog(context.Background(), kind)
+		if err != nil {
+			t.Fatalf("list %s catalog: %v", kind, err)
+		}
+		if len(filtered) != 1 || filtered[0].Kind != kind || filtered[0].Name != kind+"-definition" {
+			t.Fatalf("%s filtered summaries mismatch: %+v", kind, filtered)
+		}
 	}
 }
 
@@ -75,6 +110,40 @@ func TestCatalogAdapterReturnsNotFoundForMissingDefinition(t *testing.T) {
 	}
 }
 
+func TestCatalogAdapterReturnsNotFoundForDefinitionWithoutActiveVersion(t *testing.T) {
+	database := newDashboardTestDB(t)
+	store := catalog.NewStore(database)
+	createCatalogVersion(t, store, "agent", "draft-agent", map[string]any{"description": "Draft"}, "agent body", false)
+
+	adapter := NewCatalogAdapter(store)
+	_, err := adapter.GetCatalogDetail(context.Background(), "agent", "draft-agent", 0)
+	if !IsNotFound(err) {
+		t.Fatalf("expected not-found error for no active version, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "agent/draft-agent") {
+		t.Fatalf("not-found error should identify definition, got %q", err.Error())
+	}
+
+	versioned, err := adapter.GetCatalogDetail(context.Background(), "agent", "draft-agent", 1)
+	if err != nil {
+		t.Fatalf("versioned detail should still be available: %v", err)
+	}
+	if versioned.ActiveVersion != nil || versioned.Version != 1 {
+		t.Fatalf("versioned no-active detail mismatch: %+v", versioned)
+	}
+}
+
+func catalogKindStrings() []string {
+	return []string{
+		string(types.KindAgent),
+		string(types.KindDomain),
+		string(types.KindMode),
+		string(types.KindChain),
+		string(types.KindTeam),
+		string(types.KindWorkflow),
+	}
+}
+
 func createCatalogVersion(t *testing.T, store *catalog.Store, kind, name string, frontmatter map[string]any, body string, active bool) {
 	t.Helper()
 	result, err := store.CreateVersion(catalog.CreateVersionInput{
@@ -90,8 +159,5 @@ func createCatalogVersion(t *testing.T, store *catalog.Store, kind, name string,
 	}
 	if result.Version == 0 || result.Checksum == "" {
 		t.Fatalf("unexpected create result: %+v", result)
-	}
-	if kind != string(types.KindChain) && kind != string(types.KindTeam) {
-		t.Fatalf("test helper used unexpected kind %q", kind)
 	}
 }

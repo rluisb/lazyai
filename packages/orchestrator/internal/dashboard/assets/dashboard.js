@@ -11,6 +11,7 @@
     currentRun: null,
     eventSource: null,
     lastEventID: 0,
+    catalogItems: [],
   };
 
   function byID(id) {
@@ -371,13 +372,69 @@
 
   async function fetchCatalog() {
     try {
-      const kind = byID("catalog-kind-filter") && byID("catalog-kind-filter").value;
-      const payload = await fetchJSON("/catalog", { kind });
-      renderCatalogList((payload && payload.items) || []);
+      const payload = await fetchJSON("/catalog");
+      state.catalogItems = (payload && payload.items) || [];
+      renderCatalogList(applyCatalogFilters(state.catalogItems));
       setStatus("Catalog loaded.", "ok");
     } catch (err) {
       renderErrorState(byID("catalog-list"), err.message);
     }
+  }
+
+  function catalogFilters() {
+    return {
+      kind: byID("catalog-kind-filter") && byID("catalog-kind-filter").value,
+      search: ((byID("catalog-search") && byID("catalog-search").value) || "").trim().toLowerCase(),
+      sort: (byID("catalog-sort") && byID("catalog-sort").value) || "name",
+    };
+  }
+
+  function applyCatalogFilters(items) {
+    const filters = catalogFilters();
+    return (items || [])
+      .filter((item) => !filters.kind || item.kind === filters.kind)
+      .filter((item) => {
+        if (!filters.search) {
+          return true;
+        }
+        return `${item.kind || ""} ${item.name || ""}`.toLowerCase().includes(filters.search);
+      })
+      .slice()
+      .sort((left, right) => compareCatalogItems(left, right, filters.sort));
+  }
+
+  function compareCatalogItems(left, right, sortKey) {
+    if (sortKey === "updated") {
+      const updated = String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""));
+      if (updated !== 0) {
+        return updated;
+      }
+    } else if (sortKey === "kind") {
+      const kind = String(left.kind || "").localeCompare(String(right.kind || ""));
+      if (kind !== 0) {
+        return kind;
+      }
+    }
+    const name = String(left.name || "").localeCompare(String(right.name || ""));
+    if (name !== 0) {
+      return name;
+    }
+    return String(left.kind || "").localeCompare(String(right.kind || ""));
+  }
+
+  function groupCatalogItems(items) {
+    return (items || []).reduce((groups, item) => {
+      const kind = item.kind || "unknown";
+      if (!groups[kind]) {
+        groups[kind] = [];
+      }
+      groups[kind].push(item);
+      return groups;
+    }, {});
+  }
+
+  function refreshCatalogView() {
+    renderCatalogList(applyCatalogFilters(state.catalogItems));
   }
 
   async function fetchErrors() {
@@ -396,24 +453,48 @@
       renderEmptyState(target, target.dataset.empty || "No catalog definitions found.");
       return;
     }
-    items.forEach((item) => {
-      const button = element("button", { type: "button", text: "Open definition" });
-      button.addEventListener("click", () => openCatalogDetail(item.kind, item.name));
-      target.append(element("li", { class: "catalog-item" }, [
-        element("div", { class: "catalog-item-header" }, [
-          element("strong", { text: `${item.kind}/${item.name}` }),
-          element("span", { class: "badge", text: `v${text(item.activeVersion, "—")}` }),
-        ]),
-        element("p", { class: "muted", text: `${item.totalVersions || 0} versions · updated ${formatDate(item.updatedAt)}` }),
-        button,
+    const groups = groupCatalogItems(items);
+    Object.keys(groups).sort().forEach((kind) => {
+      const groupList = element("ul", { class: "catalog-kind-items" });
+      groups[kind].forEach((item) => groupList.append(renderCatalogListItem(item)));
+      target.append(element("li", { class: "catalog-kind-group" }, [
+        element("h4", { text: labelize(kind) }),
+        groupList,
       ]));
     });
   }
 
+  function renderCatalogListItem(item) {
+    const button = element("button", { type: "button", text: "Open definition" });
+    const noActive = item.activeVersion === undefined || item.activeVersion === null;
+    if (noActive) {
+      button.disabled = true;
+      button.title = "Definition has no active version";
+      button.textContent = "No active version";
+    } else {
+      button.addEventListener("click", () => openCatalogDetail(item.kind, item.name));
+    }
+    const children = [
+      element("div", { class: "catalog-item-header" }, [
+        element("strong", { text: `${item.kind}/${item.name}` }),
+        element("span", { class: "badge", text: `v${text(item.activeVersion, "—")}` }),
+      ]),
+      element("p", { class: "muted", text: `${item.totalVersions || 0} versions · updated ${formatDate(item.updatedAt)}` }),
+    ];
+    if (noActive) {
+      children.push(element("p", { class: "muted warning", text: "Definition has no active version; select an explicit version outside this active-detail view." }));
+    }
+    children.push(button);
+    return element("li", { class: noActive ? "catalog-item no-active" : "catalog-item" }, children);
+  }
+
   async function openCatalogDetail(kind, name, version) {
     try {
-      const params = version ? { version } : {};
-      const detail = await fetchJSON(`/catalog/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`, params);
+      const params = { kind, name };
+      if (version) {
+        params.version = version;
+      }
+      const detail = await fetchJSON("/catalog/detail", params);
       renderCatalogDetail(detail || {});
       setStatus(`Loaded catalog ${kind}/${name}.`, "ok");
     } catch (err) {
@@ -474,8 +555,20 @@
     if (catalogFiltersForm) {
       catalogFiltersForm.addEventListener("submit", (event) => {
         event.preventDefault();
-        fetchCatalog();
+        refreshCatalogView();
       });
+    }
+    const catalogKind = byID("catalog-kind-filter");
+    if (catalogKind) {
+      catalogKind.addEventListener("change", refreshCatalogView);
+    }
+    const catalogSearch = byID("catalog-search");
+    if (catalogSearch) {
+      catalogSearch.addEventListener("input", refreshCatalogView);
+    }
+    const catalogSort = byID("catalog-sort");
+    if (catalogSort) {
+      catalogSort.addEventListener("change", refreshCatalogView);
     }
     window.addEventListener("beforeunload", closeRunEvents);
   }

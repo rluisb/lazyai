@@ -49,6 +49,7 @@ func TestDashboardHandlerOverviewAndMethodRejection(t *testing.T) {
 		"/api/dashboard/catalog",
 		"/api/dashboard/catalog/chain/release",
 		"/api/dashboard/errors",
+		"/api/dashboard/events",
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, nil))

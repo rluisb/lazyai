@@ -18,9 +18,16 @@ type Event struct {
 }
 
 // Bus provides channel-based pub/sub for run events.
+//
+// It supports two subscription modes:
+//   - Per-run subscribers (Subscribe/Unsubscribe), which only see events for one run.
+//   - Global subscribers (SubscribeAll/UnsubscribeAll), which see every event published.
+//
+// Both modes use non-blocking sends; slow consumers drop events rather than block publishers.
 type Bus struct {
 	mu          sync.RWMutex
 	subscribers map[string][]chan Event
+	globalSubs  []chan Event
 	database    *db.DB
 }
 
@@ -32,7 +39,7 @@ func NewBus(database *db.DB) *Bus {
 	}
 }
 
-// Publish emits an event to all subscribers of a run and persists it.
+// Publish emits an event to per-run and global subscribers, and persists it.
 func (b *Bus) Publish(runID, eventType string, data map[string]any) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	dataJSON, _ := json.Marshal(data)
@@ -57,20 +64,24 @@ func (b *Bus) Publish(runID, eventType string, data map[string]any) {
 		default:
 		}
 	}
+	for _, ch := range b.globalSubs {
+		select {
+		case ch <- event:
+		default:
+		}
+	}
 }
 
-// Subscribe registers a subscriber channel for a run.
-// Returns past events from DB.
+// Subscribe registers a per-run subscriber channel and returns past events from the DB.
 func (b *Bus) Subscribe(runID string, ch chan Event) []Event {
 	b.mu.Lock()
 	b.subscribers[runID] = append(b.subscribers[runID], ch)
 	b.mu.Unlock()
 
-	// Replay past events
 	return b.Replay(runID, 0)
 }
 
-// Unsubscribe removes a subscriber channel.
+// Unsubscribe removes a per-run subscriber channel.
 func (b *Bus) Unsubscribe(runID string, ch chan Event) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -84,14 +95,35 @@ func (b *Bus) Unsubscribe(runID string, ch chan Event) {
 	}
 }
 
-// RemoveAll removes all subscribers for a run.
+// RemoveAll removes all per-run subscribers for a run.
 func (b *Bus) RemoveAll(runID string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	delete(b.subscribers, runID)
 }
 
-// Replay returns events from the database since a given event ID.
+// SubscribeAll registers a global subscriber that receives every event published
+// across all runs. Returns no replay; callers that need history should call ReplayAll.
+func (b *Bus) SubscribeAll(ch chan Event) []Event {
+	b.mu.Lock()
+	b.globalSubs = append(b.globalSubs, ch)
+	b.mu.Unlock()
+	return nil
+}
+
+// UnsubscribeAll removes a global subscriber channel.
+func (b *Bus) UnsubscribeAll(ch chan Event) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for i, s := range b.globalSubs {
+		if s == ch {
+			b.globalSubs = append(b.globalSubs[:i], b.globalSubs[i+1:]...)
+			return
+		}
+	}
+}
+
+// Replay returns events for a single run since a given event ID, ordered by id ASC.
 func (b *Bus) Replay(runID string, sinceID int) []Event {
 	var query string
 	var args []any
@@ -109,6 +141,39 @@ func (b *Bus) Replay(runID string, sinceID int) []Event {
 	}
 	defer rows.Close()
 
+	return scanEvents(rows)
+}
+
+// ReplayAll returns events across all runs since a given event ID, ordered by id ASC,
+// capped at the provided limit. limit <= 0 returns no events.
+func (b *Bus) ReplayAll(sinceID, limit int) []Event {
+	if limit <= 0 {
+		return nil
+	}
+	var query string
+	var args []any
+	if sinceID > 0 {
+		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events WHERE id > ? ORDER BY id ASC LIMIT ?`
+		args = []any{sinceID, limit}
+	} else {
+		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events ORDER BY id ASC LIMIT ?`
+		args = []any{limit}
+	}
+
+	rows, err := b.database.Query(query, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	return scanEvents(rows)
+}
+
+// scanEvents reads rows from a `SELECT id, run_id, event_type, event_json, created_at` query.
+func scanEvents(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+}) []Event {
 	var events []Event
 	for rows.Next() {
 		var e Event

@@ -10,6 +10,82 @@ import (
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 )
 
+// handleGlobalEvents serves /api/dashboard/events with optional since_id replay
+// followed (over SSE) by a live stream of events across all runs. Without an
+// SSE-accepting client it returns a bounded JSON snapshot.
+func (h *Handler) handleGlobalEvents(w http.ResponseWriter, r *http.Request) {
+	if h.events == nil {
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "dashboard event bus is not configured")
+		return
+	}
+	sinceID, err := parseOptionalNonNegativeInt(r.URL.Query().Get("since_id"), "since_id")
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	limit, err := parseOptionalNonNegativeInt(r.URL.Query().Get("limit"), "limit")
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+	limit = NormalizeLimit(limit, DefaultEventLimit, MaxEventLimit)
+
+	if acceptsSSE(r.Header.Get("Accept")) {
+		h.streamGlobalEvents(w, r, sinceID, limit)
+		return
+	}
+	replay := busEventsToDashboard(h.events.ReplayAll(sinceID, limit))
+	h.writeJSON(w, http.StatusOK, RunEventsResponse{Items: replay})
+}
+
+func (h *Handler) streamGlobalEvents(w http.ResponseWriter, r *http.Request, sinceID, limit int) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "streaming is not supported by this response writer")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+
+	ch := make(chan events.Event, 64)
+	h.events.SubscribeAll(ch)
+	defer h.events.UnsubscribeAll(ch)
+
+	// Replay first so the client can reconcile against persisted state.
+	lastReplayedID := sinceID
+	for _, event := range busEventsToDashboard(h.events.ReplayAll(sinceID, limit)) {
+		if err := writeSSEEvent(w, event); err != nil {
+			return
+		}
+		if event.ID > lastReplayedID {
+			lastReplayedID = event.ID
+		}
+		flusher.Flush()
+	}
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case event := <-ch:
+			converted := dashboardEventFromBus(event)
+			// Skip events that the replay already delivered. New live events have
+			// id 0 in the bus (the bus does not round-trip through the DB before
+			// fanout), so we always forward those.
+			if converted.ID > 0 && converted.ID <= lastReplayedID {
+				continue
+			}
+			if err := writeSSEEvent(w, converted); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
 func (h *Handler) handleRunEvents(w http.ResponseWriter, r *http.Request, kind types.RunKind, id string) {
 	if h.readModel == nil || h.events == nil {
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "dashboard event dependencies are not configured")

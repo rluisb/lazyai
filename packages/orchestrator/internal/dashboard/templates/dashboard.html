@@ -150,11 +150,22 @@
               <h3 id="recent-runs-heading">Recent runs</h3>
               <ul id="recent-runs" class="run-list compact" data-empty="No recent runs."></ul>
             </section>
-            <section aria-labelledby="recent-errors-heading">
-              <h3 id="recent-errors-heading">Recent errors</h3>
-              <ul id="recent-errors" class="error-list" data-empty="No recent errors."></ul>
+            <section id="live-activity" aria-labelledby="live-activity-heading">
+              <div class="activity-head">
+                <h3 id="live-activity-heading">Live activity <span class="muted mono tiny">global · sse</span></h3>
+                <button type="button" id="activity-pause-toggle" class="icon-btn" aria-pressed="false" title="Pause live updates">
+                  <span class="nav-icon">❚❚</span>
+                  <span class="activity-pause-label">pause</span>
+                </button>
+              </div>
+              <p id="activity-status" class="muted mono tiny" aria-live="polite">connecting…</p>
+              <ul id="activity-feed" class="activity-feed" data-activity-empty="No activity yet. Events from any run will appear here."></ul>
             </section>
           </div>
+          <section class="overview-errors-row" aria-labelledby="recent-errors-heading">
+            <h3 id="recent-errors-heading">Recent errors</h3>
+            <ul id="recent-errors" class="error-list" data-empty="No recent errors."></ul>
+          </section>
         </section>
 
         <section id="run-browser" class="panel" data-dashboard-section="runs" aria-labelledby="runs-heading" hidden>

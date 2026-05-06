@@ -37,7 +37,52 @@
     tweaks: Object.assign({}, TWEAK_DEFAULTS),
     runFilters: { attention: "", hasErrors: false },
     runs: { items: [], nextCursor: "", totalLoaded: 0 },
+    activity: {
+      source: null,
+      paused: false,
+      lastEventID: 0,
+      reconnectTimer: null,
+      reconnectAttempts: 0,
+      overviewRefreshTimer: null,
+      runsRefreshTimer: null,
+      seenIDs: new Set(),
+    },
   };
+
+  const ACTIVITY_FEED_CAP = 50;
+  const ACTIVITY_LEVEL_BY_TYPE = {
+    run_started: "info",
+    run_completed: "ok",
+    run_failed: "err",
+    step_started: "info",
+    step_completed: "ok",
+    step_failed: "err",
+    task_started: "info",
+    task_completed: "ok",
+    task_failed: "err",
+    phase_started: "info",
+    phase_completed: "ok",
+    phase_failed: "err",
+    handoff_created: "warn",
+    budget_updated: "info",
+    error_recorded: "err",
+  };
+  const ACTIVITY_GLYPH_BY_LEVEL = { info: "·", ok: "✓", warn: "↯", err: "✕" };
+  const ACTIVITY_TOAST_TYPES = new Set([
+    "run_failed",
+    "step_failed",
+    "task_failed",
+    "phase_failed",
+    "error_recorded",
+    "handoff_created",
+  ]);
+  const RUN_STATE_CHANGE_TYPES = new Set([
+    "run_started",
+    "run_completed",
+    "run_failed",
+    "phase_started",
+    "phase_completed",
+  ]);
 
   function byID(id) {
     return document.getElementById(id);
@@ -1165,11 +1210,244 @@
     window.addEventListener("beforeunload", closeRunEvents);
   }
 
+  // ==========================================================================
+  // Live activity feed (global SSE)
+  // ==========================================================================
+  function setActivityStatus(message) {
+    const target = byID("activity-status");
+    if (target) {
+      target.textContent = message;
+    }
+  }
+
+  function renderActivityEmpty() {
+    const target = byID("activity-feed");
+    if (!target) return;
+    if (target.children.length === 0) {
+      const empty = element("li", { class: "activity-empty", text: target.dataset.activityEmpty || "No activity yet." });
+      target.append(empty);
+    }
+  }
+
+  function dropActivityEmpty() {
+    const target = byID("activity-feed");
+    if (!target) return;
+    target.querySelectorAll(".activity-empty").forEach((node) => node.remove());
+  }
+
+  function appendActivityEvent(event) {
+    const target = byID("activity-feed");
+    if (!target) return;
+    if (event.id && state.activity.seenIDs.has(event.id)) return;
+    if (event.id) state.activity.seenIDs.add(event.id);
+    if (event.id && event.id > state.activity.lastEventID) {
+      state.activity.lastEventID = event.id;
+    }
+
+    dropActivityEmpty();
+
+    const level = ACTIVITY_LEVEL_BY_TYPE[event.eventType] || "info";
+    const glyph = ACTIVITY_GLYPH_BY_LEVEL[level] || "·";
+    const item = element("li", { class: "activity-item entering" }, [
+      element("span", { class: "activity-item-time", text: formatActivityTime(event.createdAt) }),
+      element("span", { class: "activity-item-glyph", "data-level": level, text: glyph }),
+      activityMessage(event),
+      element("span", { class: "activity-item-run", text: shortRunID(event.runId) }),
+    ]);
+    target.insertBefore(item, target.firstChild);
+    window.setTimeout(() => item.classList.remove("entering"), 240);
+
+    while (target.children.length > ACTIVITY_FEED_CAP) {
+      target.lastElementChild.remove();
+    }
+  }
+
+  function activityMessage(event) {
+    const span = element("span", { class: "activity-item-msg" });
+    const ev = element("span", { class: "activity-event", text: event.eventType || "event" });
+    span.append(ev);
+    const data = event.data || {};
+    const detail = data.stepId || data.taskId || data.phaseId || data.code || data.message;
+    if (detail) {
+      span.append(element("span", { text: ` · ${detail}` }));
+    }
+    return span;
+  }
+
+  function shortRunID(runID) {
+    if (!runID) return "";
+    if (runID.length <= 8) return runID;
+    return `…${runID.slice(-8)}`;
+  }
+
+  function formatActivityTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toTimeString().slice(0, 8);
+  }
+
+  function showToastForEvent(event) {
+    if (!ACTIVITY_TOAST_TYPES.has(event.eventType)) return;
+    if (event.eventType === "handoff_created") {
+      pushToast({ kind: "warn", title: "Handoff created", msg: shortRunID(event.runId), glyph: "↯" });
+      return;
+    }
+    const data = event.data || {};
+    const title = event.eventType.replace(/_/g, " ");
+    const msg = data.message || data.code || `${shortRunID(event.runId)}${data.stepId ? " · " + data.stepId : ""}`;
+    pushToast({ kind: "err", title, msg, glyph: "✕" });
+  }
+
+  function pushToast({ kind = "info", title, msg, glyph = "·", duration = 6000 }) {
+    let host = document.querySelector(".toasts");
+    if (!host) {
+      host = element("div", { class: "toasts" });
+      document.body.append(host);
+    }
+    const toast = element("div", { class: `toast t-${kind}` });
+    const closeBtn = element("button", { class: "toast-close", "aria-label": "dismiss", text: "×" });
+    closeBtn.addEventListener("click", () => removeToast(toast));
+    toast.append(
+      element("span", { class: "toast-glyph", text: glyph }),
+      element("div", { class: "toast-body" }, [
+        element("span", { class: "toast-title", text: title || "" }),
+        msg ? element("span", { class: "toast-msg", text: msg }) : document.createComment("no-msg"),
+      ]),
+      closeBtn,
+    );
+    host.append(toast);
+    window.setTimeout(() => removeToast(toast), duration);
+  }
+
+  function removeToast(toast) {
+    if (!toast || !toast.parentNode) return;
+    toast.classList.add("leaving");
+    window.setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 220);
+  }
+
+  function scheduleOverviewRefresh() {
+    if (state.activity.overviewRefreshTimer) return;
+    state.activity.overviewRefreshTimer = window.setTimeout(() => {
+      state.activity.overviewRefreshTimer = null;
+      fetchOverview();
+    }, 600);
+  }
+
+  function scheduleRunsRefresh() {
+    if (state.activity.runsRefreshTimer) return;
+    state.activity.runsRefreshTimer = window.setTimeout(() => {
+      state.activity.runsRefreshTimer = null;
+      fetchRuns();
+    }, 600);
+  }
+
+  function handleGlobalEvent(event) {
+    appendActivityEvent(event);
+    showToastForEvent(event);
+    if (RUN_STATE_CHANGE_TYPES.has(event.eventType)) {
+      scheduleOverviewRefresh();
+      scheduleRunsRefresh();
+    }
+  }
+
+  function connectGlobalEvents() {
+    if (!("EventSource" in window)) {
+      setActivityStatus("EventSource unsupported · activity feed unavailable");
+      return;
+    }
+    if (state.activity.paused) {
+      setActivityStatus("paused");
+      return;
+    }
+    disconnectGlobalEvents({ silent: true });
+
+    const url = buildURL("/events", { since_id: state.activity.lastEventID, limit: 100 });
+    const source = new EventSource(url);
+    state.activity.source = source;
+
+    source.onopen = () => {
+      state.activity.reconnectAttempts = 0;
+      setActivityStatus("live · listening for events across all runs");
+    };
+    const onMessage = (sseEvent) => {
+      try {
+        const parsed = JSON.parse(sseEvent.data);
+        handleGlobalEvent(parsed);
+      } catch (_err) {
+        // Ignore unparseable frames; the next event will recover.
+      }
+    };
+    source.onmessage = onMessage;
+    Object.keys(ACTIVITY_LEVEL_BY_TYPE).forEach((type) => {
+      source.addEventListener(type, onMessage);
+    });
+    source.onerror = () => {
+      setActivityStatus("reconnecting…");
+      disconnectGlobalEvents({ silent: true });
+      const attempt = ++state.activity.reconnectAttempts;
+      const backoff = Math.min(15000, 500 * Math.pow(2, attempt));
+      state.activity.reconnectTimer = window.setTimeout(connectGlobalEvents, backoff);
+    };
+
+    renderActivityEmpty();
+  }
+
+  function disconnectGlobalEvents({ silent = false } = {}) {
+    if (state.activity.source) {
+      try { state.activity.source.close(); } catch (_err) { /* ignore */ }
+      state.activity.source = null;
+    }
+    if (state.activity.reconnectTimer) {
+      window.clearTimeout(state.activity.reconnectTimer);
+      state.activity.reconnectTimer = null;
+    }
+    if (!silent) setActivityStatus("paused");
+  }
+
+  function setActivityPaused(paused) {
+    state.activity.paused = paused;
+    const toggle = byID("activity-pause-toggle");
+    if (toggle) {
+      toggle.setAttribute("aria-pressed", paused ? "true" : "false");
+      const label = toggle.querySelector(".activity-pause-label");
+      if (label) label.textContent = paused ? "resume" : "pause";
+      toggle.title = paused ? "Resume live updates" : "Pause live updates";
+    }
+    const feed = byID("activity-feed");
+    if (feed) feed.dataset.paused = paused ? "true" : "false";
+    if (paused) {
+      disconnectGlobalEvents();
+    } else {
+      connectGlobalEvents();
+    }
+    try {
+      window.localStorage.setItem("lazyai.dashboard.activityPaused", paused ? "1" : "0");
+    } catch (_err) { /* ignore */ }
+  }
+
+  function bindActivityFeed() {
+    try {
+      state.activity.paused = window.localStorage.getItem("lazyai.dashboard.activityPaused") === "1";
+    } catch (_err) { /* ignore */ }
+    const toggle = byID("activity-pause-toggle");
+    if (toggle) {
+      toggle.addEventListener("click", () => setActivityPaused(!state.activity.paused));
+    }
+    setActivityPaused(state.activity.paused);
+    if (!state.activity.paused) connectGlobalEvents();
+    renderActivityEmpty();
+    window.addEventListener("beforeunload", () => disconnectGlobalEvents({ silent: true }));
+  }
+
   function init() {
     bindTweaks();
     bindNavClicks();
     bindEvents();
     bindCopyHandlers();
+    bindActivityFeed();
     restoreSelectedRun();
     refreshRunDetailNav();
     // Initial data fetches — don't block routing.

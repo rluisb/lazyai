@@ -41,27 +41,9 @@ func init() {
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
 	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in AGENTS.md)")
 	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in AGENTS.md)")
-	initCmd.Flags().String("project-overview", "", "Project overview for generated AGENTS.md")
-	initCmd.Flags().String("naming-conventions", "", "Naming conventions for generated AGENTS.md")
-	initCmd.Flags().String("error-handling", "", "Error handling conventions for generated AGENTS.md")
-	initCmd.Flags().String("api-conventions", "", "API response conventions for generated AGENTS.md")
-	initCmd.Flags().String("import-order", "", "Import ordering conventions for generated AGENTS.md")
-	initCmd.Flags().String("protected-branch", "", "Protected branch name for generated AGENTS.md")
-	initCmd.Flags().String("test-command", "", "Test command for generated AGENTS.md")
-	initCmd.Flags().String("lint-command", "", "Lint command for generated AGENTS.md")
-	initCmd.Flags().String("build-command", "", "Build command for generated AGENTS.md")
-	initCmd.Flags().Int("coverage-threshold", 0, "Coverage threshold percentage (1-100; default 80)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
 	initCmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
-	initCmd.Flags().String("memory-path", "", "Project memory path (default: specs/memory)")
-	initCmd.Flags().Bool("enable-obsidian", false, "Enable Obsidian integration")
-	initCmd.Flags().String("obsidian-vault-path", "", "Obsidian vault path")
-	initCmd.Flags().Bool("enable-qmd", false, "Enable qmd markdown retrieval")
-	initCmd.Flags().String("qmd-index-path", "", "Project-local qmd index path")
-	initCmd.Flags().Bool("enable-codegraph", false, "Enable codegraph analysis")
-	initCmd.Flags().String("codegraph-data-path", "", "Project-local codegraph data path")
-	initCmd.Flags().Bool("enable-graphify", false, "Enable graphify knowledge graph analysis")
-	initCmd.Flags().String("graphify-data-path", "", "Project-local graphify data path")
+	initCmd.Flags().String("memory-path", "", "Project memory path (default: .specify/memory)")
 	initCmd.Flags().Bool("reversa", false, "Analyze existing code with Scout/Reversa to auto-populate project details")
 	initCmd.Flags().Bool("no-reversa", false, "Skip Scout/Reversa analysis and leave project details explicit/manual")
 	rootCmd.AddCommand(initCmd)
@@ -77,14 +59,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 	branchPattern, _ := cmd.Flags().GetString("branch-pattern")
 	commitPattern, _ := cmd.Flags().GetString("commit-pattern")
 	memoryPath, _ := cmd.Flags().GetString("memory-path")
-	enableObsidian, _ := cmd.Flags().GetBool("enable-obsidian")
-	obsidianVaultPath, _ := cmd.Flags().GetString("obsidian-vault-path")
-	enableQmd, _ := cmd.Flags().GetBool("enable-qmd")
-	qmdIndexPath, _ := cmd.Flags().GetString("qmd-index-path")
-	enableCodegraph, _ := cmd.Flags().GetBool("enable-codegraph")
-	codegraphDataPath, _ := cmd.Flags().GetString("codegraph-data-path")
-	enableGraphify, _ := cmd.Flags().GetBool("enable-graphify")
-	graphifyDataPath, _ := cmd.Flags().GetString("graphify-data-path")
 	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -92,16 +66,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
-	projectOverview, _ := cmd.Flags().GetString("project-overview")
-	namingConventions, _ := cmd.Flags().GetString("naming-conventions")
-	errorHandling, _ := cmd.Flags().GetString("error-handling")
-	apiConventions, _ := cmd.Flags().GetString("api-conventions")
-	importOrder, _ := cmd.Flags().GetString("import-order")
-	protectedBranch, _ := cmd.Flags().GetString("protected-branch")
-	testCommand, _ := cmd.Flags().GetString("test-command")
-	lintCommand, _ := cmd.Flags().GetString("lint-command")
-	buildCommand, _ := cmd.Flags().GetString("build-command")
-	coverageThreshold, _ := cmd.Flags().GetInt("coverage-threshold")
 	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
 	existingSetupPolicyStr, _ := cmd.Flags().GetString("existing-setup-policy")
 	useReversa, err := resolveReversaFlagChoice(cmd)
@@ -135,16 +99,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLILocalSecrets:        localSecrets,
 		CLIOrg:                 orgName,
 		CLITeam:                teamName,
-		CLIProjectOverview:     projectOverview,
-		CLINamingConventions:   namingConventions,
-		CLIErrorHandling:       errorHandling,
-		CLIApiConventions:      apiConventions,
-		CLIImportOrder:         importOrder,
-		CLIProtectedBranch:     protectedBranch,
-		CLITestCommand:         testCommand,
-		CLILintCommand:         lintCommand,
-		CLIBuildCommand:        buildCommand,
-		CLICoverageThreshold:   coverageThreshold,
 		CLIEnableServers:       enableServersStr,
 		HomeDir:                homeDir,
 		TargetDir:              targetDir,
@@ -156,14 +110,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLIBranch:              branchPattern,
 		CLICommit:              commitPattern,
 		CLIMemoryPath:          memoryPath,
-		CLIEnableObsidian:      enableObsidian,
-		CLIObsidianVaultPath:   obsidianVaultPath,
-		CLIEnableQmd:           enableQmd,
-		CLIQmdIndexPath:        qmdIndexPath,
-		CLIEnableCodegraph:     enableCodegraph,
-		CLICodegraphDataPath:   codegraphDataPath,
-		CLIEnableGraphify:      enableGraphify,
-		CLIGraphifyDataPath:    graphifyDataPath,
 		CLIExistingSetupPolicy: existingSetupPolicy,
 		CLIUseReversa:          useReversa,
 	}
@@ -427,20 +373,10 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	}
 
 	phase2 := &wizard.Phase2Result{
-		Preset:            presetLevel,
-		Features:          &features,
-		GitConv:           &gitConvs,
-		ProjectOverview:   config.CLIProjectOverview,
-		NamingConventions: config.CLINamingConventions,
-		ErrorHandling:     config.CLIErrorHandling,
-		APIConventions:    config.CLIApiConventions,
-		ImportOrder:       config.CLIImportOrder,
-		ProtectedBranch:   config.CLIProtectedBranch,
-		TestCommand:       config.CLITestCommand,
-		LintCommand:       config.CLILintCommand,
-		BuildCommand:      config.CLIBuildCommand,
-		CoverageThreshold: config.CLICoverageThreshold,
-		UseReversa:        config.CLIUseReversa,
+		Preset:     presetLevel,
+		Features:   &features,
+		GitConv:    &gitConvs,
+		UseReversa: config.CLIUseReversa,
 	}
 
 	// Build WizardResult with pre-computed phases.
@@ -449,14 +385,14 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		Phase2: phase2,
 		Phase5: &wizard.Phase5Result{
 			MemoryPath:        config.CLIMemoryPath,
-			EnableObsidian:    config.CLIEnableObsidian,
-			ObsidianVaultPath: config.CLIObsidianVaultPath,
-			EnableQmd:         config.CLIEnableQmd,
-			QmdIndexPath:      config.CLIQmdIndexPath,
-			EnableCodegraph:   config.CLIEnableCodegraph,
-			CodegraphDataPath: config.CLICodegraphDataPath,
-			EnableGraphify:    config.CLIEnableGraphify,
-			GraphifyDataPath:  config.CLIGraphifyDataPath,
+			EnableObsidian:    true,
+			ObsidianVaultPath: "",
+			EnableQmd:         true,
+			QmdIndexPath:      "",
+			EnableCodegraph:   true,
+			CodegraphDataPath: ".codegraph/",
+			EnableGraphify:    true,
+			GraphifyDataPath:  "graphify-out",
 		},
 	}
 

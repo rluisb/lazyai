@@ -358,8 +358,18 @@
       button.addEventListener("click", () => openRunFromList(run.kind, run.id));
       item.append(button);
     } else {
+      // Compact rows act as buttons for both pointer and keyboard users.
+      item.setAttribute("role", "button");
+      item.tabIndex = 0;
+      item.setAttribute("aria-label", `Open run ${text(run.kind)} ${text(run.id)}`);
       item.style.cursor = "pointer";
       item.addEventListener("click", () => openRunFromList(run.kind, run.id));
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openRunFromList(run.kind, run.id);
+        }
+      });
     }
     return item;
   }

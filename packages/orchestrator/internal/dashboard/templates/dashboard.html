@@ -27,6 +27,7 @@
     <script defer src="{{ .AssetPath }}dashboard.js"></script>
   </head>
   <body data-theme="light" data-density="balanced" data-nav="top">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <main id="dashboard-app" class="dashboard-shell" data-api-prefix="{{ .APIPrefix }}" data-base-path="{{ .BasePath }}">
       <aside class="sidebar" aria-hidden="false">
         <div class="brand">
@@ -99,7 +100,7 @@
         </div>
       </aside>
 
-      <div class="main">
+      <div id="main-content" class="main" tabindex="-1">
         <header class="topbar dashboard-header">
           <div class="topbar-left">
             <p class="eyebrow">local read-only dashboard</p>
@@ -153,7 +154,7 @@
             <section id="live-activity" aria-labelledby="live-activity-heading">
               <div class="activity-head">
                 <h3 id="live-activity-heading">Live activity <span class="muted mono tiny">global · sse</span></h3>
-                <button type="button" id="activity-pause-toggle" class="icon-btn" aria-pressed="false" title="Pause live updates">
+                <button type="button" id="activity-pause-toggle" class="icon-btn" aria-pressed="false" aria-label="Pause or resume live activity" title="Pause live updates">
                   <span class="nav-icon">❚❚</span>
                   <span class="activity-pause-label">pause</span>
                 </button>

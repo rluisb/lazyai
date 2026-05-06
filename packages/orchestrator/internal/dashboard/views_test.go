@@ -374,6 +374,79 @@ func TestDashboardJSHashRoutingAndErrorsScreen(t *testing.T) {
 	}
 }
 
+func TestDashboardViewAccessibilityHardening(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard shell status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		// Skip-to-content link for keyboard users
+		`class="skip-link"`,
+		`href="#main-content"`,
+		// Main column has the skip target id
+		`id="main-content"`,
+		// Activity pause toggle has an explicit aria-label
+		`id="activity-pause-toggle"`,
+		`aria-label="Pause or resume live activity"`,
+		// Tweaks toggle keeps an accessible name
+		`id="tweaks-toggle"`,
+		// Live region on activity status
+		`id="activity-status"`,
+		`aria-live="polite"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard shell missing a11y hook %q", want)
+		}
+	}
+}
+
+func TestDashboardJSRunRowsKeyboardAccessible(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.js", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard js status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	// Compact run rows must expose a keyboard-activatable affordance, not only mouse click.
+	for _, want := range []string{
+		`role`,
+		`tabIndex`,
+		`keydown`,
+		`"Enter"`,
+		`" "`, // space activates buttons
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard js missing keyboard-a11y marker %q", want)
+		}
+	}
+}
+
+func TestDashboardCSSReducedMotionAndSkipLink(t *testing.T) {
+	handler := NewViewHandler(ViewConfig{})
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/dashboard/assets/dashboard.css", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("dashboard css status = %d body=%s", response.Code, response.Body.String())
+	}
+	body := response.Body.String()
+	for _, want := range []string{
+		"@media (prefers-reduced-motion: reduce)",
+		".skip-link",
+		".skip-link:focus",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("dashboard css missing a11y rule %q", want)
+		}
+	}
+}
+
 func TestDashboardViewLiveActivityFeedOnOverview(t *testing.T) {
 	handler := NewViewHandler(ViewConfig{})
 

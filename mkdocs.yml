@@ -97,6 +97,7 @@ nav:
   - Development:
       - Contributing: development/contributing.md
       - Release Process: development/release.md
+      - Dashboard QA Checklist: development/dashboard-qa-checklist.md
   - Migration:
       - ai-setup to LazyAI: migration/ai-setup-to-lazyai.md
   - Troubleshooting:

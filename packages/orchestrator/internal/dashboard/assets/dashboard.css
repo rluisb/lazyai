@@ -141,6 +141,34 @@ body[data-density="comfortable"] {
   display: none !important;
 }
 
+/* Skip-to-content link — visible only when focused. */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0.5rem;
+  background: var(--accent);
+  color: var(--ctp-base);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  text-decoration: none;
+  z-index: 100;
+  transition: top 120ms ease;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+/* When the main column receives programmatic focus from the skip link,
+   suppress the inner outline since the link itself already shows focus. */
+#main-content:focus {
+  outline: none;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -1523,6 +1551,28 @@ body[data-theme="dark"] .chip-toggle[aria-pressed="true"] {
   to {
     opacity: 0;
     transform: translateY(8px);
+  }
+}
+
+/* ==========================================================================
+   Reduced-motion preference — disable arrival/exit animations and transitions
+   so vestibular-sensitive users don't see slides, fades, or rotates. State
+   changes still happen instantly; only the motion is removed.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .activity-item.entering {
+    background: transparent;
+  }
+  .skip-link {
+    transition: none;
   }
 }
 

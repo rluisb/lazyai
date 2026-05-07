@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body { margin: 0; padding: 18px 22px; font-family: var(--font-mono); font-size: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid; }
+.chip.def { color: var(--lz-text); border-color: var(--lz-dimmed); }
+.chip.p { color: #7D56F4; border-color: #7D56F4; }
+.chip.s { color: #4ECDC4; border-color: #4ECDC4; }
+.chip.ok { color: #2ECC71; border-color: #2ECC71; }
+.chip.w { color: #F1C40F; border-color: #F1C40F; }
+.chip.e { color: #E74C3C; border-color: #E74C3C; }
+.chip.c { color: #E8912D; border-color: #E8912D; }
+.kbd { font-family: var(--font-mono); font-weight: 700; color: var(--lz-highlight); background: var(--lz-bg-code); border: 1px solid var(--lz-dimmed); border-bottom-width: 2px; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+.row + .row { margin-top: 12px; }
+</style></head><body>
+<div class="row">
+  <span class="chip p">project</span>
+  <span class="chip s">workspace</span>
+  <span class="chip def">global</span>
+  <span class="chip ok">✓ installed</span>
+  <span class="chip w">⚠ modified</span>
+  <span class="chip e">✗ missing</span>
+  <span class="chip c">⚡ conflict</span>
+</div>
+<div class="row">
+  <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd><span style="color:var(--lz-dimmed)">navigate</span>
+  <kbd class="kbd">enter</kbd><span style="color:var(--lz-dimmed)">select</span>
+  <kbd class="kbd">q</kbd><span style="color:var(--lz-dimmed)">quit</span>
+</div>
+</body></html>

@@ -151,8 +151,8 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write the generated files.
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render(fmt.Sprintf("✨ Created %s: %s", artifactType, artifactName)))
@@ -165,7 +165,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		if !force {
 			if _, err := os.Stat(absPath); err == nil {
 				fmt.Printf("  %s %s (already exists, use --force to overwrite)\n",
-					lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Render("⚠"),
+					lipgloss.NewStyle().Foreground(theme.Warning).Render("⚠"),
 					f.Path)
 				continue
 			}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 )
@@ -36,9 +37,9 @@ func GetMcpNextSteps(activeServers map[string]adapter.McpServer) string {
 		return ""
 	}
 
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	bulletStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	textStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F8F8F2"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	bulletStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	textStyle := lipgloss.NewStyle().Foreground(theme.Text)
 
 	var sb strings.Builder
 	sb.WriteString(headerStyle.Render("🚀 Next Steps: MCP Server Configuration"))
@@ -46,7 +47,7 @@ func GetMcpNextSteps(activeServers map[string]adapter.McpServer) string {
 
 	if hasEnv {
 		sb.WriteString(fmt.Sprintf("  %s %s\n", bulletStyle.Render("•"), textStyle.Render("Fill in any required environment variables (e.g. ${API_KEY}) in your .ai/mcp.json.")))
-		sb.WriteString(fmt.Sprintf("    %s\n\n", lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C")).Render("Run 'lazyai-cli compile' again if you update variables that tools need at compile time.")))
+		sb.WriteString(fmt.Sprintf("    %s\n\n", lipgloss.NewStyle().Foreground(theme.Dimmed).Render("Run 'lazyai-cli compile' again if you update variables that tools need at compile time.")))
 	}
 
 	if len(hints) > 0 {

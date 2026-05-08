@@ -35,19 +35,11 @@ import (
 // (cmd/init.go) + FR-010 (huh) migrations of #190's first wave. Subsequent
 // PRs lower these counts as each cmd file is migrated; an entry going to 0
 // MUST be removed from this map (the test enforces it).
-// Files cleared in #190's first wave: cmd/init.go (5791cad), cmd/add.go,
-// cmd/compile.go, cmd/doctor.go, cmd/info.go, cmd/status.go (this commit).
-// FR-009 closed across all 6 high-traffic commands named in the issue.
-//
-// Remaining (deferred to followup PRs per #190's footer): cmd/create.go,
-// cmd/eject.go, cmd/list.go, cmd/mcp_hints.go, cmd/server.go.
-var expectedRemainingHardcodedColorSites = map[string]int{
-	"cmd/create.go":    3,
-	"cmd/eject.go":     3,
-	"cmd/list.go":      5,
-	"cmd/mcp_hints.go": 4,
-	"cmd/server.go":    20,
-}
+// Empty — every cmd file has been migrated to theme tokens. The lint is now
+// a hard "zero violations" assertion. Adding a new entry to this map is the
+// way to allowlist a deferred file in a future PR; removing the last entry
+// (this state) is the goal.
+var expectedRemainingHardcodedColorSites = map[string]int{}
 
 func TestLintNoHardcodedColors(t *testing.T) {
 	root := cliRoot(t)
@@ -66,8 +58,16 @@ func TestLintNoHardcodedColors(t *testing.T) {
 	)
 	cmd.Dir = root // glob patterns are relative to the search root (cwd)
 	out, err := cmd.Output()
+	// rg exits 1 when no matches — that is the success case for this lint.
+	// Only treat exit-2-or-higher (or any error with stderr output but no
+	// stdout) as a real failure.
 	if err != nil && len(out) == 0 {
-		t.Fatalf("rg failed: %v", err)
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			// no matches — clean
+			out = nil
+		} else {
+			t.Fatalf("rg failed: %v", err)
+		}
 	}
 
 	found := make(map[string]int)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -165,11 +166,11 @@ func outputListJSON(groups []artifactGroup) error {
 }
 
 func outputListStyled(groups []artifactGroup, verbose bool) error {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	countStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	bulletStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	countStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	bulletStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	pathStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	typeEmoji := map[string]string{
 		"agents":        "🤖",

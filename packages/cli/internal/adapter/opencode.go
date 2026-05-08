@@ -103,7 +103,12 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		},
 		WarnOnSkip: true,
 		Transform: func(content []byte) []byte {
-			return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+			out, err := RewriteAgentForOpenCode(content, ctx, "")
+			if err != nil {
+				adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
+				return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+			}
+			return out
 		},
 		IncludeFile: func(file string) bool {
 			name := fileID(file)
@@ -117,7 +122,11 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	// (opencode's default_agent typically points here), so mode=primary.
 	if IsOrchestratorEnabled(ctx) {
 		raw := GetOrchestratorAgentContent(ctx)
-		content := BuildOpenCodeAgentFrontmatter(raw, OpenCodeAgentOpts{Mode: "primary"})
+		content, err := RewriteAgentForOpenCode(raw, ctx, "primary")
+		if err != nil {
+			adapterLog.Warn("opencode orchestrator rewrite fell back to baseline", "adapter", "opencode", "error", err)
+			content = BuildOpenCodeAgentFrontmatter(raw, OpenCodeAgentOpts{Mode: "primary"})
+		}
 		if err := CopyWithRecord("agents/orchestrator.md",
 			filepath.Join(ocDir, "agents", "orchestrator.md"),
 			ctx, true,

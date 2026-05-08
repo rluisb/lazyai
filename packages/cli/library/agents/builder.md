@@ -1,6 +1,9 @@
 ---
 name: Builder
-model: sonnet
+tier: balanced
+temperature: 0.7
+thinking: low
+risk: 3
 tools: filesystem ripgrep memory codegraph
 techniques: [tdd, structured-output]
 consumes: [tasks.md, task-harness.md, constitution.md]

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	aierror "github.com/rluisb/lazyai/packages/cli/internal/error"
@@ -228,11 +229,11 @@ func runServerList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
 	boldStyle := lipgloss.NewStyle().Bold(true)
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	yellowStyle := lipgloss.NewStyle().Foreground(theme.Warning)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("🔌 MCP Servers"))
@@ -319,7 +320,7 @@ func runServerAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	if currentSet[name] {
-		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
 		fmt.Println()
 		fmt.Printf("  %s %s is already enabled.\n", headerStyle.Render("ℹ"), name)
 		fmt.Println()
@@ -327,9 +328,9 @@ func runServerAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	warnStyle := lipgloss.NewStyle().Foreground(theme.Warning)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render(fmt.Sprintf("🔌 Enabling MCP server: %s", name)))
@@ -358,7 +359,7 @@ func runServerAdd(cmd *cobra.Command, args []string) error {
 		greenStyle.Render("✓"), name, len(newServers))
 	fmt.Println()
 	fmt.Printf("  Run %s to regenerate per-tool configs.\n",
-		lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5")).Render("lazyai-cli compile"))
+		lipgloss.NewStyle().Foreground(theme.Secondary).Render("lazyai-cli compile"))
 	fmt.Println()
 
 	return nil
@@ -405,7 +406,7 @@ func runServerRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	if !currentSet[name] {
-		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
 		fmt.Println()
 		fmt.Printf("  %s %s is not currently enabled.\n", headerStyle.Render("ℹ"), name)
 		fmt.Println()
@@ -413,8 +414,8 @@ func runServerRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render(fmt.Sprintf("🔌 Disabling MCP server: %s", name)))
@@ -438,7 +439,7 @@ func runServerRemove(cmd *cobra.Command, args []string) error {
 		greenStyle.Render("✓"), name, len(newServers))
 	fmt.Println()
 	fmt.Printf("  Run %s to regenerate per-tool configs.\n",
-		lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5")).Render("lazyai-cli compile"))
+		lipgloss.NewStyle().Foreground(theme.Secondary).Render("lazyai-cli compile"))
 	fmt.Println()
 
 	return nil
@@ -483,7 +484,7 @@ func runServerDoctor(cmd *cobra.Command, args []string) error {
 			enc.SetIndent("", "  ")
 			return enc.Encode(map[string]any{"reports": []ServerHealthReport{}})
 		}
-		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+		headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
 		fmt.Println()
 		fmt.Printf("  %s No enabled MCP servers to check.\n", headerStyle.Render("ℹ"))
 		fmt.Println()
@@ -527,12 +528,12 @@ func runServerDoctor(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4672"))
-	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	redStyle := lipgloss.NewStyle().Foreground(theme.Error)
+	yellowStyle := lipgloss.NewStyle().Foreground(theme.Warning)
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("🩺 Server Doctor"))

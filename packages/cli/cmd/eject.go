@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
@@ -54,9 +55,9 @@ func runEject(cmd *cobra.Command, args []string) error {
 	numFiles := len(storeData.Files)
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	warnStyle := lipgloss.NewStyle().Foreground(theme.Warning)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("🚀 Ejecting from LazyAI"))

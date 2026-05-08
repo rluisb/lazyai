@@ -15,6 +15,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -77,6 +78,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+
 
 	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
 	if !fileExists(mcpConfigPath) {
@@ -143,15 +145,42 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	// Get adapter registry
 	reg := adapter.NewRegistry()
 
+	// Validate that every library agent resolves to a model on every selected
+	// tool, using the same models.Resolve adapters call at write time. Issues
+	// warn by default and block only with --strict-contracts. Skipped when
+	// --validate-contracts=false. Provider auth defaults to a live probe;
+	// callers who pre-populate configured providers via the wizard can pass
+	// the configured set in a future enhancement.
+	if validateContracts && len(tools) > 0 {
+		libFS := getContractLibraryFS()
+		// Prefer the stored provider selection from the wizard. If empty
+		// (legacy stores or first-run before wizard), pass nil so the
+		// validator falls back to a live auth probe.
+		var configuredProviders []string
+		if storeData != nil && len(storeData.Selections.OpenCodeProviders) > 0 {
+			configuredProviders = storeData.Selections.OpenCodeProviders
+		}
+		agentIssues, err := compiler.ValidateAgentResolutions(libFS, tools, configuredProviders)
+		if err != nil {
+			cmdLog.Warn("agent resolution check failed", "error", err)
+		} else if len(agentIssues) > 0 {
+			cmdLog.Warn("agent resolution warnings",
+				"issues", "\n"+compiler.FormatAgentValidationIssues(agentIssues))
+			if strictContracts {
+				return fmt.Errorf("agent resolution failed; pass --validate-contracts=false to override")
+			}
+		}
+	}
+
 	// Track new file records from compilation
 	newFileRecords := []types.TrackedFile{}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	cyanStyle := lipgloss.NewStyle().Foreground(theme.Secondary)
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("⚙️  Compile MCP Config"))

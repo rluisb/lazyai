@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	aierror "github.com/rluisb/lazyai/packages/cli/internal/error"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -76,12 +77,12 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 	valueStyle := lipgloss.NewStyle()
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
-	redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4672"))
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	yellowStyle := lipgloss.NewStyle().Foreground(theme.Warning)
+	redStyle := lipgloss.NewStyle().Foreground(theme.Error)
 
 	artifactType := classifyPath(found.Path)
 

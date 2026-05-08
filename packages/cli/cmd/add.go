@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
@@ -63,7 +64,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&toolStrs)
 
-		if err := huh.NewForm(huh.NewGroup(toolSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(toolSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		tools = make([]types.ToolId, len(toolStrs))
@@ -88,7 +89,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&agentStrs)
 
-		if err := huh.NewForm(huh.NewGroup(agentSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(agentSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		agents = agentStrs
@@ -113,7 +114,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&skillStrs)
 
-		if err := huh.NewForm(huh.NewGroup(skillSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(skillSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		skills = skillStrs
@@ -179,12 +180,13 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 		Strategy:         types.ConflictStrategyAlign,
 		Agents:           storeData.Selections.Agents,
 		Skills:           storeData.Selections.Skills,
-		Prompts:          storeData.Selections.Prompts,
-		ChatModes:        storeData.Selections.ChatModes,
-		OpenCodeCommands: storeData.Selections.OpenCodeCommands,
-		OpenCodeModes:    storeData.Selections.OpenCodeModes,
-		OpenCodePlugins:  storeData.Selections.OpenCodePlugins,
-		Templates:        storeData.Selections.Templates,
+		Prompts:           storeData.Selections.Prompts,
+		ChatModes:         storeData.Selections.ChatModes,
+		OpenCodeCommands:  storeData.Selections.OpenCodeCommands,
+		OpenCodeModes:     storeData.Selections.OpenCodeModes,
+		OpenCodePlugins:   storeData.Selections.OpenCodePlugins,
+		OpenCodeProviders: storeData.Selections.OpenCodeProviders,
+		Templates:         storeData.Selections.Templates,
 		Rules:            storeData.Selections.Rules,
 		Infra:            storeData.Selections.Infra,
 		SpecsDirs:        preset.SpecsDirsForPreset(presetLevel),
@@ -203,29 +205,30 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 	}
 
 	// Print summary.
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	bulletStyle := lipgloss.NewStyle().Foreground(theme.Success)
 
 	fmt.Println()
-	fmt.Println(headerStyle.Render("✅ Artifacts added!"))
+	// Replaces the prior `✅ Artifacts added!` (✅ is an emoji — off-design;
+	// canonical glyph is ✓ per the lazyai-design-system skill).
+	fmt.Println(headerStyle.Render(theme.GlyphSuccess + " Artifacts added!"))
 	fmt.Println()
 	if len(newTools) > 0 {
-		fmt.Printf("  %s Tools: %v\n", greenStyle.Render("•"), newTools)
+		fmt.Printf("  %s Tools: %v\n", bulletStyle.Render(theme.GlyphBullet), newTools)
 	}
 	if len(newAgents) > 0 {
-		fmt.Printf("  %s Agents: %v\n", greenStyle.Render("•"), newAgents)
+		fmt.Printf("  %s Agents: %v\n", bulletStyle.Render(theme.GlyphBullet), newAgents)
 	}
 	if len(newSkills) > 0 {
-		fmt.Printf("  %s Skills: %v\n", greenStyle.Render("•"), newSkills)
+		fmt.Printf("  %s Skills: %v\n", bulletStyle.Render(theme.GlyphBullet), newSkills)
 	}
-	fmt.Printf("  %s Files updated: %d\n", greenStyle.Render("•"), len(result.Files))
+	fmt.Printf("  %s Files updated: %d\n", bulletStyle.Render(theme.GlyphBullet), len(result.Files))
 
 	if len(result.Errors) > 0 {
-		warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
 		fmt.Println()
-		fmt.Println(warnStyle.Render(fmt.Sprintf("⚠ %d warnings:", len(result.Errors))))
+		theme.Warnf(os.Stderr, "%d warnings:", len(result.Errors))
 		for _, e := range result.Errors {
-			fmt.Printf("  • %v\n", e)
+			fmt.Printf("  %s %v\n", theme.GlyphBullet, e)
 		}
 	}
 	fmt.Println()

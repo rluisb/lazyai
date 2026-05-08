@@ -7,7 +7,7 @@ description: |
   that lives around the LazyAI product: docs pages, slide decks, marketing
   pages, terminal mockups, or recreating the TUI itself.
 
-  Built from rluisb/lazyai @ packages/cli/tui/theme/theme.go. Catppuccin
+  Built from rluisb/lazyai @ packages/cli/internal/theme/theme.go. Catppuccin
   Mocha-derived dark palette, JetBrains Mono for everything terminal, Inter
   for prose. Status communication is always glyph + colour together
   (✓ ⚠ ✗ ⚡ ○) — never colour alone.

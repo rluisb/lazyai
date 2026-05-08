@@ -3,7 +3,7 @@ displayName: RPI Research Scout
 description: >
   Research-only agent for the RPI workflow. Maps affected code, identifies
   patterns, flags unknowns. Cannot write code or execute commands.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - read
   - grep

@@ -4,7 +4,7 @@ description: >
   Research and map the codebase. Finds patterns, understands architecture, and
   gathers evidence for decisions. Read-only exploration with comprehensive
   reporting.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - "*"
 promptParts:

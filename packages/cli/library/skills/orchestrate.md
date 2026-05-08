@@ -9,32 +9,50 @@ trigger: /orchestrate
 
 Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a task asks to start a chain, coordinate a team, check run status/budget, or recover a failed step. Do not load for single-agent work.
 
-## MCP Tools (9)
+## MCP Tools (20+)
 
-| Tool | Purpose |
-|------|---------|
-| `list_catalog` | Discover chains, teams, workflows, domains, modes |
-| `compose_agent` | Merge base + domain + mode → runtime prompt |
-| `start_chain` | Begin a compiled chain; returns `chainId` and first step |
-| `advance_chain` | Record step outcome; returns next step or `done` |
-| `get_status` | Current chain state, step history, progress |
-| `get_budget` | Remaining tokens and spend so far |
-| `retry_step` | Re-run a failed step (if retries remain) |
-| `escalate_step` | Reassign a step to a different agent |
-| `handoff` | Persist a resumable handoff document |
+| Tool | Run kinds | Purpose |
+|------|-----------|---------|
+| `list_catalog` | all | Discover chains, teams, workflows, domains, modes |
+| `compose_agent` | all | Merge base + domain + mode → runtime `ComposedAgentSpec` |
+| `start_chain` | chain | Begin a compiled chain; returns `chainId` and first step |
+| `advance_chain` | chain | Record step outcome; returns next step, gate, recovery, or `done` |
+| `build_team` | team | Compile and start a team run; returns `teamId` |
+| `assign_team_task` | team | Assign or claim a task within a team |
+| `complete_team_task` | team | Complete a team task with outcome, result, usage, error |
+| `start_workflow` | workflow | Compile and start a workflow run; returns `workflowId` |
+| `advance_workflow` | workflow | Advance a running workflow; handles child completion, gate decisions, and recovery |
+| `get_status` | all | Current state, step history, progress for any run kind |
+| `get_budget` | all | Remaining tokens and spend so far |
+| `subscribe_run` | all | Subscribe to run events via SSE |
+| `enqueue_job` | all | Enqueue a background job for deferred execution |
+| `get_job` | all | Poll job status by ID |
+| `list_jobs` | all | List queued or completed jobs |
+| `retry_step` | all | Retry a failed step (if retries remain) — use `"chain"`, `"team"`, or `"workflow"` for `kind` |
+| `escalate_step` | all | Reassign a step to a different agent |
+| `handoff` | all | Persist a resumable handoff document |
+| `catalog_list` | admin | List all catalog entries with kind/name/source |
+| `catalog_get_version` | admin | Get a specific version of a catalog entry |
+| `catalog_create_version` | admin | Upload a new version of a catalog entry |
+| `catalog_set_active` | admin | Set the active version for a catalog entry |
+| `invoke_agent` | all | Directly invoke an agent with a prompt |
 
-## Canonical flow
+## Canonical flows
 
-1. **Discover** — `list_catalog({ kinds: ["chain"] })` (or `["team"]`, `["domain"]`, `["mode"]`) to confirm the target exists and to surface options to the user.
-2. **Budget gate** — call `get_budget` on a sentinel run or show an estimate from the chain definition. Present cost range to the user and wait for explicit confirmation. Never skip.
+The orchestrator supports three run kinds: **chain**, **team**, and **workflow**. Each has its own flow.
+
+### Chain flow
+
+1. **Discover** — `list_catalog({ kinds: ["chain"] })` to confirm the target exists and surface options.
+2. **Budget gate** — call `get_budget` on a sentinel run or show an estimate from the chain definition. Present cost range and wait for explicit confirmation. Never skip.
 3. **Classify dispatch** — before chain/wave dispatch, apply prompt-level Cupcake-signal-aware AFK/HITL awareness:
-    - `plan_attested = true` means `src/ writes` can be AFK when other approvals/dependencies are satisfied.
-    - `plan_attested = false` means `src/ writes` are HITL.
-    - `gate_attested = false` means commits >20 lines are HITL.
-    - Hard blocks like push to main/force push are always HITL.
-    - Read-only/spec writes are AFK.
-    This classification is prompt-level awareness only and does not change `ChainState`, `StepState`, `get_status`, approval outcomes, runtime state, Cupcake Rego, or pre-commit behavior.
-4. **vocabulary alignment before dispatch** — when the task depends on project vocabulary, check accepted terms and `KNOWLEDGE_MAP.md` before dispatch. If a terminology decision is unresolved, pause as HITL instead of guessing. This is prompt-level guidance only; do not add runtime terminology infrastructure, new state, or persistence.
+   - `plan_attested = true` means `src/` writes can be AFK when other approvals/dependencies are satisfied.
+   - `plan_attested = false` means `src/` writes are HITL.
+   - `gate_attested = false` means commits >20 lines are HITL.
+   - Hard blocks like push to main/force push are always HITL.
+   - Read-only/spec writes are AFK.
+   This classification is prompt-level awareness only and does not change `ChainState`, `StepState`, `get_status`, approval outcomes, runtime state, Cupcake Rego, or pre-commit behavior.
+4. **Vocabulary alignment before dispatch** — when the task depends on project vocabulary, check accepted terms and `KNOWLEDGE_MAP.md` before dispatch. If a terminology decision is unresolved, pause as HITL instead of guessing.
 5. **Start** — `start_chain({ chain, task, domainSkill?, modeSkill?, context? })`. Capture `chainId` and the first step.
 6. **Loop**
    - Dispatch the agent named by the current step, using the composed prompt from `compose_agent` if the step needs domain/mode layering.
@@ -42,28 +60,32 @@ Procedure for driving the `@ai-setup/orchestrator` MCP server. Load this when a 
    - Repeat until the returned state is `done`.
 7. **Observe** — between steps, call `get_status` when the user asks for progress, or `get_budget` to confirm spend is on track.
 
+### Team flow
+
+1. **Discover** — `list_catalog({ kinds: ["team"] })` to confirm the team definition exists.
+2. **Budget gate** — same pattern as chain; present cost estimate to the user and wait for confirmation.
+3. **Start** — `build_team({ team, task })`. Capture `teamId`.
+4. **Loop** — for each ready member task:
+   - Call `assign_team_task({ teamId, taskId, assignee })` to assign or claim the task.
+   - Call `complete_team_task({ teamId, taskId, outcome, result, usage? })` when the member finishes.
+   - Repeat until all member tasks are done and synthesis completes.
+5. **Observe** — `get_status({ runId, kind: "team" })` for team state and per-member progress.
+
+### Workflow flow
+
+1. **Discover** — `list_catalog({ kinds: ["workflow"] })` to confirm the workflow definition exists.
+2. **Budget gate** — same pattern as chain and team.
+3. **Start** — `start_workflow({ workflow, task })`. Capture `workflowId`.
+4. **Loop**
+   - Call `advance_workflow({ workflowId, phaseId, outcome })` after each phase completes.
+   - Repeat until the workflow reaches a terminal phase.
+5. **Observe** — `get_status({ runId, kind: "workflow" })` for workflow phase progress.
+
 ## Lifecycle reporting vocabulary
 
-Use lifecycle labels in status reports, handoff notes, recovery summaries, and completion reports so humans and downstream agents can interpret progress consistently. This is report vocabulary only: it does not add runtime per-agent state tracking and does not imply runtime state-machine support. Do not change `ChainState`, `StepState`, persistence, or `get_status` behavior for these labels.
+Use lifecycle labels in status reports, handoff notes, recovery summaries, and completion reports so humans and downstream agents can interpret progress consistently. This is report vocabulary only: it does not add runtime per-agent state tracking and does not imply runtime state-machine support.
 
 **Lifecycle label values:** `loading_context`, `planning`, `awaiting_approval`, `executing`, `verifying`, `blocked`, `handoff`, `done`, `error`.
-
-- **Status reports:** write `Lifecycle label: <label>` plus current step, evidence collected, blocker/approval state, and next action.
-- **Handoff:** use `Lifecycle label: handoff` and include objective, current chain/step, files/artifacts, verification evidence, blockers, and next safe action.
-- **Recovery summaries:** use `Lifecycle label: error` for the failure, then `blocked`, `awaiting_approval`, `executing`, or `handoff` for the selected recovery path.
-- **Completion:** use `Lifecycle label: done` only after the approved task or chain step has evidence for its acceptance criteria; otherwise report `blocked` or `awaiting_approval`.
-
-## StructuredFeedback Relay
-
-When a human gate rejection, review-request change, agent report, or approved T021 rejected-gate output includes `StructuredFeedback`, relay it to the next assigned agent as bounded prompt context:
-
-1. Preserve the feedback source (`requestedBy`), verdict, summary, and `targetPhaseOrStep`.
-2. Separate required changes from suggestions; list required changes first with priority, evidence/location, target phase, target task/file, recommended next action, and whether each item blocks progress.
-3. If feedback is free-form but clearly actionable, synthesize a bounded `StructuredFeedback` summary for the handoff message without changing runtime state or approval semantics.
-4. If a rejected/request_changes decision lacks required changes, priority, evidence, target phase/task, or action detail, pause and ask the human for clarification; do not guess or invent fixes.
-5. Treat suggestions as optional context unless the human explicitly marks them as required changes.
-
-T021 runtime support is limited to existing rejected-gate output carrying `structuredFeedback`. Do not claim broader runtime feedback persistence or propagation, new approval outcomes, a new gate engine, measurement hooks, or automated feedback handling.
 
 ## Recovery patterns
 
@@ -78,20 +100,33 @@ Use the Safe Auto-Recovery Policy before calling recovery tools. This guidance i
 
 | Pattern | Trigger | Call |
 |---------|---------|------|
-| Retry | Transient failure, retries remain | `retry_step({ runId, kind: "chain", stepId, reason })` |
-| Fix & Resume | User fixed the issue manually | `advance_chain` on the failed step with `outcome: "success"` |
-| Escalate | Wrong approach / wrong agent | `escalate_step({ runId, kind: "chain", stepId, targetAgent, reason })` |
-| Handoff | Context exhausted or fundamental block | `handoff({ runId, kind: "chain", summary, includeArtifacts: true })` |
+| Retry | Transient failure, retries remain | `retry_step({ runId, kind, stepId, reason })` — use `"chain"`, `"team"`, or `"workflow"` for `kind` |
+| Fix & Resume | User fixed the issue manually | `advance_chain` / `advance_workflow` on the failed step with `outcome: "success"` |
+| Escalate | Wrong approach / wrong agent | `escalate_step({ runId, kind, stepId, targetAgent, reason })` |
+| Handoff | Context exhausted or fundamental block | `handoff({ runId, kind, summary, includeArtifacts: true })` |
 
-After any failure, report to the user before acting: chain, step, agent, exact error, what succeeded so far, recommended pattern and why, failure cause/evidence, retry limit, and idempotency/safety check.
+After any failure, report to the user before acting: run kind, step/phase/task ID, agent, exact error, what succeeded so far, recommended pattern and why.
+
+## Background job patterns
+
+For long-running or deferrable work, use the job queue:
+
+1. **Enqueue** — `enqueue_job({ jobType, payload })` to submit work. Returns a `jobId`.
+2. **Check** — poll `get_job({ jobId })` for `"pending"`, `"claimed"`, `"completed"`, or `"failed"` status.
+3. **List** — `list_jobs({ status? })` to audit queued or completed jobs.
+
+Enqueue jobs for work that does not need to block the current run — e.g., sending notifications, generating large artifacts, running post-synthesis reports.
 
 ## When NOT to orchestrate
 
 - Single-agent task — call the agent directly.
-- No catalog entry matches — ask the user before inventing a chain or team.
+- No catalog entry matches — ask the user before inventing a chain, team, or workflow.
+- **No team definition matches** — do not start a team run if `list_catalog({ kinds: ["team"] })` returns empty.
+- **No workflow definition matches** — do not start a workflow run if `list_catalog({ kinds: ["workflow"] })` returns empty.
 - User explicitly wants manual step-by-step control.
 
 ## Integration
 - Primary agent: Orchestrator
 - MCP server: `@ai-setup/orchestrator` (stdio)
 - Output: chain artifacts written by the runtime to `.ai/orchestration/state/`
+- Run events: use `subscribe_run` to receive real-time SSE event streams for long-running chain, team, or workflow executions.

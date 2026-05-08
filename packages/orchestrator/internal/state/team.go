@@ -51,6 +51,7 @@ func CreateTeamState(def *types.TeamDefinition, plan *types.ExecutionPlan) *type
 		TeamID:            uuid.NewString(),
 		DefinitionName:    def.Name,
 		DefinitionVersion: def.Version,
+		ExecutionPlanID:   plan.ID,
 		State:             types.TeamRunning,
 		Task:              plan.Task,
 		Tasks:             tasks,

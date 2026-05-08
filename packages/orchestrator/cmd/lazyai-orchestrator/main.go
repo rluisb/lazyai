@@ -26,6 +26,7 @@ import (
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	orchlog "github.com/rluisb/lazyai/packages/orchestrator/internal/log"
 	orchmcp "github.com/rluisb/lazyai/packages/orchestrator/internal/mcp"
+	"github.com/rluisb/lazyai/packages/orchestrator/internal/queue"
 )
 
 const (
@@ -241,6 +242,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 	)
 	o.RegisterTools(mcpServer)
 
+	// Start background queue worker
+	w := &queue.Worker{
+		DB:              database,
+		Queue:           o.Queue,
+		PollInterval:    2 * time.Second,
+		ReclaimInterval: 30 * time.Second,
+		ReclaimTimeoutMs: 60000,
+	}
+	// Register a no-op handler that logs job types; real handlers can be registered by the MCP layer
+	w.RegisterHandler("noop", &noopJobHandler{})
+	workerCtx, workerStop := context.WithCancel(context.Background())
+	go w.Start(workerCtx)
+
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	mux := http.NewServeMux()
 	httpSrv := &http.Server{Addr: addr, Handler: mux, ErrorLog: daemonLogger().With("component", "http").StandardLog()}
@@ -254,6 +268,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 		shutdownOnce.Do(func() {
 			go func() {
 				daemonLogger().Info("shutting down orchestrator daemon", "reason", reason)
+				workerStop()
 				clearDiscovery()
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
@@ -803,4 +818,13 @@ func requestShutdown(port int) error {
 func init() {
 	// Ensure server.ServeStdio exists by using the mcp-go API
 	_ = server.ServeStdio
+}
+
+// noopJobHandler is a placeholder handler that logs and immediately succeeds.
+// Real job handlers are registered by the MCP layer or future workers.
+type noopJobHandler struct{}
+
+func (h *noopJobHandler) Handle(ctx context.Context, job *queue.Job) error {
+	daemonLogger().Info("noop job handled", "jobId", job.ID, "jobType", job.JobType)
+	return nil
 }

@@ -34,6 +34,7 @@ func CreateWorkflowState(def *types.WorkflowDefinition, plan *types.ExecutionPla
 		WorkflowID:        uuid.NewString(),
 		DefinitionName:    def.Name,
 		DefinitionVersion: def.Version,
+		ExecutionPlanID:   plan.ID,
 		State:             types.WorkflowRunning,
 		Task:              plan.Task,
 		EntryPhaseID:      def.Entry,

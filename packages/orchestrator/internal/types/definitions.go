@@ -531,6 +531,7 @@ type TeamState struct {
 	TeamID            string             `json:"teamId"`
 	DefinitionName    string             `json:"definitionName"`
 	DefinitionVersion string             `json:"definitionVersion"`
+	ExecutionPlanID   string             `json:"executionPlanId,omitempty"`
 	State             TeamLifecycleState `json:"state"`
 	Task              string             `json:"task"`
 	Tasks             []TeamTaskState    `json:"tasks"`
@@ -583,6 +584,7 @@ type WorkflowState struct {
 	WorkflowID        string                 `json:"workflowId"`
 	DefinitionName    string                 `json:"definitionName"`
 	DefinitionVersion string                 `json:"definitionVersion"`
+	ExecutionPlanID   string                 `json:"executionPlanId,omitempty"`
 	State             WorkflowLifecycleState `json:"state"`
 	Task              string                 `json:"task"`
 	EntryPhaseID      string                 `json:"entryPhaseId"`

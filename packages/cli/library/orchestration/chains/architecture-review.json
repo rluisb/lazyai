@@ -1,0 +1,57 @@
+{
+  "kind": "chain",
+  "name": "architecture-review",
+  "description": "Architecture review using Ousterhout deep-module methodology — explore shallow modules, surface candidates, grill design decisions, update domain language inline, and create ADRs for load-bearing choices.",
+  "version": "1.0.0",
+  "entry": "explore",
+  "domain_skill_injection": "all_steps",
+  "mode_skill_injection": "builder_steps_only",
+  "steps": [
+    {
+      "id": "explore",
+      "agent": "scout",
+      "skills": ["research", "improve-architecture"],
+      "description": "Explore the codebase area organically, applying the deletion test to identify shallow modules, tight seams, and untested boundaries.",
+      "transitions": {
+        "success": "present-candidates",
+        "failure": {
+          "retry": 1,
+          "then": "done"
+        }
+      }
+    },
+    {
+      "id": "present-candidates",
+      "agent": "planner",
+      "skills": ["improve-architecture"],
+      "description": "Present numbered deepening candidates: problem, solution in plain English, benefits in locality and leverage terms. Flag any ADR conflicts.",
+      "gate": "user_approval",
+      "transitions": {
+        "approved": "grill",
+        "rejected": "done"
+      }
+    },
+    {
+      "id": "grill",
+      "agent": "planner",
+      "skills": ["improve-architecture"],
+      "description": "Walk the design tree with the user: constraints, dependencies, deepened module shape, seam behind the interface, surviving tests. Update CONTEXT.md and offer ADRs inline.",
+      "transitions": {
+        "success": "document",
+        "failure": {
+          "retry": 1,
+          "then": "present-candidates"
+        }
+      }
+    },
+    {
+      "id": "document",
+      "agent": "documenter",
+      "skills": ["memory-write"],
+      "description": "Summarize: candidates accepted, rejected with reasons, ADRs created, CONTEXT.md updates made.",
+      "transitions": {
+        "success": "done"
+      }
+    }
+  ]
+}

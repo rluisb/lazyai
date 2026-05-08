@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	reviewviewer "github.com/rluisb/lazyai/packages/cli/internal/diffreview"
@@ -182,7 +183,7 @@ func (huhInlineDiffReviewPrompter) PromptReview(c conflict.Conflict, index, tota
 		).
 		Value(&actionValue)
 
-	if err := huh.NewForm(huh.NewGroup(selectAction).Title("Conflict Resolution")).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectAction).Title("Conflict Resolution")).Run(); err != nil {
 		return "", err
 	}
 

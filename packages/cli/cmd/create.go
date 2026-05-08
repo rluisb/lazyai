@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
@@ -58,7 +59,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 			).
 			Value(&typeValue)
 
-		if err := huh.NewForm(huh.NewGroup(typeSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(typeSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		artifactType = typeValue
@@ -75,7 +76,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 				return nil
 			})
 
-		if err := huh.NewForm(huh.NewGroup(nameInput)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(nameInput)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		artifactName = nameValue
@@ -130,7 +131,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 					Placeholder(q.Default).
 					Value(&answer)
 
-				if err := huh.NewForm(huh.NewGroup(input)).Run(); err != nil {
+				if err := theme.NewForm(huh.NewGroup(input)).Run(); err != nil {
 					return fmt.Errorf("cancelled: %w", err)
 				}
 				config.Answers[q.Key] = answer

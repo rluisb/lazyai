@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
@@ -63,7 +64,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&toolStrs)
 
-		if err := huh.NewForm(huh.NewGroup(toolSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(toolSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		tools = make([]types.ToolId, len(toolStrs))
@@ -88,7 +89,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&agentStrs)
 
-		if err := huh.NewForm(huh.NewGroup(agentSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(agentSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		agents = agentStrs
@@ -113,7 +114,7 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 			).
 			Value(&skillStrs)
 
-		if err := huh.NewForm(huh.NewGroup(skillSelect)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(skillSelect)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		skills = skillStrs

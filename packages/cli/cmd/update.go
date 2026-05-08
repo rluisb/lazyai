@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
@@ -113,7 +114,7 @@ func runUpdateInteractive(
 			Title("Overwrite local changes without prompting?").
 			Value(&forceConfirm)
 
-		if err := huh.NewForm(huh.NewGroup(forcePrompt)).Run(); err != nil {
+		if err := theme.NewForm(huh.NewGroup(forcePrompt)).Run(); err != nil {
 			return fmt.Errorf("cancelled: %w", err)
 		}
 		force = forceConfirm
@@ -129,7 +130,7 @@ func runUpdateInteractive(
 		Title("Proceed with update?").
 		Value(&proceed)
 
-	if err := huh.NewForm(huh.NewGroup(confirmPrompt)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(confirmPrompt)).Run(); err != nil {
 		return fmt.Errorf("cancelled: %w", err)
 	}
 

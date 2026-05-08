@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -67,7 +68,7 @@ func runPhase3Interactive(conflicts []conflict.Conflict, reviewer DiffReviewClie
 		).
 		Value(&strategyValue)
 
-	form := huh.NewForm(huh.NewGroup(strategySelect).Title("Conflict Resolution"))
+	form := theme.NewForm(huh.NewGroup(strategySelect).Title("Conflict Resolution"))
 	if err := form.Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 3 cancelled: %w", err)
 	}

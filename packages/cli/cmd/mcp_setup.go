@@ -14,6 +14,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -119,11 +120,11 @@ func runMcpSetup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Styled output helpers.
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	cyanStyle := lipgloss.NewStyle().Foreground(theme.Secondary)
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	yellowStyle := lipgloss.NewStyle().Foreground(theme.Warning)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("🔧 MCP Setup"))
@@ -341,7 +342,7 @@ func mcpConfigOutputPath(toolID types.ToolId, scope types.SetupScope, targetDir 
 // printMcpSetupNextSteps prints context-specific next steps.
 func printMcpSetupNextSteps(toolIDs []types.ToolId) {
 	boldStyle := lipgloss.NewStyle().Bold(true)
-	cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5"))
+	cyanStyle := lipgloss.NewStyle().Foreground(theme.Secondary)
 
 	// Determine which tools were configured.
 	hasOpenCode := false

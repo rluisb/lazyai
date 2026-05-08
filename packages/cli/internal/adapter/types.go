@@ -49,6 +49,12 @@ type AdapterContext struct {
 	PerFileOverrides map[string]types.ConflictStrategy
 	// Selections controls which agents, skills, and prompts to install.
 	Selections AdapterSelections
+	// ConfiguredProviders is the set of provider IDs (e.g., "openai",
+	// "ollama-cloud") the user has authenticated for OpenCode-style
+	// multi-provider tools. Populated by the wizard from auth.DetectAll
+	// results. Adapters that don't honour ConfiguredProviders leave it
+	// untouched.
+	ConfiguredProviders []string
 }
 
 // AdapterSelections holds the user's selections for which items to install.

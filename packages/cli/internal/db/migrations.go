@@ -47,6 +47,11 @@ var migrations = []struct {
 		Up:      migrationUp007,
 		Down:    migrationDown007,
 	},
+	{
+		Version: 8,
+		Up:      migrationUp008,
+		Down:    migrationDown008,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -304,4 +309,16 @@ ALTER TABLE config DROP COLUMN apiConventions;
 ALTER TABLE config DROP COLUMN errorHandling;
 ALTER TABLE config DROP COLUMN namingConventions;
 ALTER TABLE config DROP COLUMN projectOverview;
+`
+
+// migration 008 — add opencode_providers column. Persists which provider
+// auths the user wants OpenCode-side agents to draw models from
+// (e.g., ["openai", "ollama-cloud"]). Empty list means "no preference set"
+// — adapters fall back to live auth.DetectAll at install time.
+const migrationUp008 = `
+ALTER TABLE selections ADD COLUMN opencode_providers TEXT NOT NULL DEFAULT '[]';
+`
+
+const migrationDown008 = `
+ALTER TABLE selections DROP COLUMN opencode_providers;
 `

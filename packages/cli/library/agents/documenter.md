@@ -1,6 +1,9 @@
 ---
 name: Documenter
-model: sonnet
+tier: balanced
+temperature: 0.3
+thinking: none
+risk: 2
 tools: filesystem memory ripgrep qmd
 techniques: [structured-output, few-shot]
 ---

@@ -1,6 +1,9 @@
 ---
 name: Scout
-model: sonnet
+tier: balanced
+temperature: 0.2
+thinking: none
+risk: 1
 tools: ripgrep filesystem memory codegraph qmd graphify gh
 techniques: [few-shot, structured-output]
 produces_for: [speckit-specify, speckit-plan, spike]

@@ -67,6 +67,10 @@ type ScaffoldContext struct {
 	OpenCodeModes []types.OpenCodeModeId
 	// OpenCodePlugins lists opencode plugin npm module names to install.
 	OpenCodePlugins []string
+	// OpenCodeProviders lists provider IDs the user authenticated against
+	// (e.g., "openai", "ollama-cloud") for OpenCode-side agent model
+	// resolution. Empty means "auto-probe at install time".
+	OpenCodeProviders []string
 	// Templates lists template IDs to install.
 	Templates []types.TemplateId
 	// Rules lists rule IDs to install.

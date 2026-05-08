@@ -86,7 +86,8 @@ func (t *Table) Render() string {
 	// Render separator.
 	separators := make([]string, len(t.headers))
 	for i := range t.headers {
-		separators[i] = theme.DimStyle().Render(strings.Repeat("─", t.colWidths[i]))
+		// Use the canonical horizontal-rule glyph constant (FR-014).
+		separators[i] = theme.DimStyle().Render(strings.Repeat(theme.GlyphHRule, t.colWidths[i]))
 	}
 	separatorLine := strings.Join(separators, "  ")
 

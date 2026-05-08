@@ -1,6 +1,9 @@
 ---
 name: Planner
-model: opus
+tier: frontier
+temperature: 0.5
+thinking: high
+risk: 5
 tools: memory qmd
 techniques: [chain-of-thought, react, decision-protocol, self-consistency]
 consumes: [constitution.md, spec.md, scout-research]

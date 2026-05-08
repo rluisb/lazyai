@@ -187,13 +187,25 @@ func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContex
 	return nil
 }
 
-// copyCopilotAgents copies agent files from library/copilot/agents/ to the target agents directory.
+// copyCopilotAgents copies agent files from library/copilot/agents/ to the
+// target agents directory, rewriting each yaml's model: line based on the
+// tier declared in the source-of-truth library/agents/<name>.md. Agents
+// without a matching .md (Copilot-only authoring) keep their hand-pinned
+// model.
 func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string) error {
 	return CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "copilot/agents",
 		ToDestPath: func(file string) string {
 			return filepath.Join(agentsDir, filepath.Base(file))
+		},
+		Transform: func(content []byte) []byte {
+			out, err := RewriteCopilotAgent(content, ctx)
+			if err != nil {
+				adapterLog.Warn("copilot agent model rewrite fell back to verbatim copy", "adapter", "copilot", "error", err)
+				return content
+			}
+			return out
 		},
 	})
 }

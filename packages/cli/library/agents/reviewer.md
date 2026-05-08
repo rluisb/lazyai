@@ -1,6 +1,9 @@
 ---
 name: Reviewer
-model: opus
+tier: frontier
+temperature: 0.1
+thinking: high
+risk: 5
 tools: ripgrep memoria memory codegraph qmd
 techniques: [llm-as-judge, dual-agent, self-consistency, structured-output]
 consumes: [spec.md, plan.md, tasks.md, task-harness.md, state.md, implementation]

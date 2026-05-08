@@ -137,8 +137,10 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	}
 
 	// Plugin selections come from Phase5 regardless of preset.
+	var opencodeProviders []string
 	if result.Phase5 != nil {
 		opencodePlugins = result.Phase5.OpenCodePlugins
+		opencodeProviders = result.Phase5.OpenCodeProviders
 	}
 
 	// Resolve library directory and FS.
@@ -204,6 +206,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		OpenCodeCommands:    opencodeCommands,
 		OpenCodeModes:       opencodeModes,
 		OpenCodePlugins:     opencodePlugins,
+		OpenCodeProviders:   opencodeProviders,
 		Templates:           templates,
 		Rules:               rules,
 		Infra:               infra,
@@ -364,6 +367,7 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
 	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes
 	storeData.Selections.OpenCodePlugins = ctx.OpenCodePlugins
+	storeData.Selections.OpenCodeProviders = ctx.OpenCodeProviders
 	storeData.Selections.Infra = ctx.Infra
 	storeData.Selections.Features = ctx.Features
 	storeData.Selections.GitConventions = ctx.GitConventions

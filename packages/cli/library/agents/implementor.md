@@ -1,6 +1,9 @@
 ---
 name: Implementor
-model: sonnet
+tier: balanced
+temperature: 0.1
+thinking: low
+risk: 3
 tools: filesystem ripgrep memory codegraph
 techniques: [tdd, chain-of-thought, structured-output]
 consumes: [task-harness.md, task.md, context.md]

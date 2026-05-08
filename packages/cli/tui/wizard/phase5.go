@@ -1,10 +1,13 @@
 package wizard
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 
 	"charm.land/huh/v2"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/auth"
 )
 
 type phase5StepInfo struct {
@@ -28,6 +31,12 @@ type Phase5Result struct {
 	EnableGraphify    bool
 	GraphifyDataPath  string
 	OpenCodePlugins   []string
+	// OpenCodeProviders are the provider IDs (e.g., "openai", "ollama-cloud")
+	// the user has authenticated and chosen to expose to OpenCode-side agents
+	// at install time. Empty when OpenCode isn't selected; otherwise
+	// populated from auth.DetectAll filtered against the OpenCode catalog's
+	// deny rules (Anthropic excluded).
+	OpenCodeProviders []string
 }
 
 // RunPhase5 runs the optional tooling phase.
@@ -68,9 +77,16 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 
 	// Plugin step is shown only when opencode is selected AND binary is on PATH.
 	showPlugins := opencodeSelected && opencodeBinaryPresent()
+	// Provider step also gates on opencode selection — same condition as
+	// plugins. Providers are derived from a live auth probe so they only
+	// make sense when the OpenCode adapter is part of this run.
+	showProviders := opencodeSelected
 
 	currentStep := 1
 	maxStep := phase5TotalSteps(showPlugins)
+	if showProviders {
+		maxStep++
+	}
 	for currentStep >= 1 && currentStep <= maxStep {
 		switch currentStep {
 		case 1:
@@ -95,10 +111,29 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 			}
 			state.OpenCodePlugins = plugins
 			currentStep++
+		case 3:
+			if !showProviders {
+				currentStep++
+				continue
+			}
+			providers, action, err := askOpenCodeProviders(state.OpenCodeProviders)
+			if err != nil {
+				return nil, action, err
+			}
+			if action == PhaseBack {
+				if showPlugins {
+					currentStep = 2
+				} else {
+					currentStep = 1
+				}
+				continue
+			}
+			state.OpenCodeProviders = providers
+			currentStep++
 		}
 	}
 
-	return buildPhase5Result(
+	result := buildPhase5Result(
 		state.MemoryPath,
 		state.EnableObsidian,
 		state.ObsidianVaultPath,
@@ -109,7 +144,9 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 		state.EnableGraphify,
 		state.GraphifyDataPath,
 		state.OpenCodePlugins,
-	), PhaseContinue, nil
+	)
+	result.OpenCodeProviders = state.OpenCodeProviders
+	return result, PhaseContinue, nil
 }
 
 func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, enableGraphify bool, graphifyDataPath string, opencodePlugins []string) *Phase5Result {
@@ -223,4 +260,101 @@ var opencodePluginURLs = []string{
 	"https://github.com/JRedeker/opencode-shell-strategy",
 	"https://github.com/boxpositron/envsitter-guard",
 	"https://github.com/kdcokenny/opencode-background-agents",
+}
+
+// askOpenCodeProviders runs a live auth probe, filters out providers OpenCode
+// rejects (anthropic), and presents the remaining set as a multiselect. The
+// answer flows into Phase5Result.OpenCodeProviders and from there into
+// AdapterContext.ConfiguredProviders so models.Resolve picks only from
+// providers the user has actually authenticated.
+//
+// Falls through quietly when no eligible provider is detected — the
+// adapter still has the live-probe fallback at install time, so this isn't
+// a hard requirement.
+func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
+	probeCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	detected := auth.DetectAll(probeCtx)
+	eligible := filterOpenCodeEligible(detected)
+	if len(eligible) == 0 {
+		return nil, PhaseContinue, nil
+	}
+
+	options := make([]huh.Option[string], 0, len(eligible)+1)
+	for _, p := range eligible {
+		options = append(options, huh.NewOption(opencodeProviderLabel(p), string(p)))
+	}
+	options = append(options, huh.NewOption("↩ Back", "__phase5_back__"))
+
+	selected := append([]string(nil), current...)
+	if len(selected) == 0 {
+		// Default: pre-select every detected eligible provider.
+		for _, p := range eligible {
+			selected = append(selected, string(p))
+		}
+	}
+
+	field := huh.NewMultiSelect[string]().
+		Title("OpenCode Providers").
+		Description("Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy.").
+		Options(options...).
+		Value(&selected)
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
+	}
+
+	filtered := selected[:0]
+	wantBack := false
+	for _, s := range selected {
+		if s == "__phase5_back__" {
+			wantBack = true
+			continue
+		}
+		filtered = append(filtered, s)
+	}
+	if wantBack {
+		return nil, PhaseBack, nil
+	}
+	return filtered, PhaseContinue, nil
+}
+
+// filterOpenCodeEligible drops providers blocked by OpenCodeCatalog
+// (currently just "anthropic"). Importing models here would create a cycle
+// with auth, so the deny list is hard-coded; if the catalog gains another
+// hard-deny provider, update both this function and OpenCodeCatalog.
+func filterOpenCodeEligible(detected []auth.ProviderID) []auth.ProviderID {
+	out := make([]auth.ProviderID, 0, len(detected))
+	for _, p := range detected {
+		if p == auth.ProviderAnthropic {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+func opencodeProviderLabel(p auth.ProviderID) string {
+	for _, def := range auth.Probes {
+		if def.ID == p {
+			return def.Label + "  (" + string(p) + ")"
+		}
+	}
+	return string(p)
+}
+
+// opencodeProviderHuhOptions runs auth.DetectAll, drops disallowed providers
+// (anthropic), and returns huh options for the wizard's combined-form path.
+// The dynamic OptionsFunc reruns this when the tool selection changes — but
+// since it ignores its own args and returns based on current detection,
+// the result is stable per process run.
+func opencodeProviderHuhOptions() []huh.Option[string] {
+	probeCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	detected := auth.DetectAll(probeCtx)
+	eligible := filterOpenCodeEligible(detected)
+	out := make([]huh.Option[string], 0, len(eligible))
+	for _, p := range eligible {
+		out = append(out, huh.NewOption(opencodeProviderLabel(p), string(p)))
+	}
+	return out
 }

@@ -295,18 +295,18 @@ func normalizeCoverageThreshold(value int) int {
 func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 	var templatesJSON, rulesJSON, agentsJSON, skillsJSON, promptsJSON string
 	var commandsJSON, chatmodesJSON string
-	var opencodeCommandsJSON, opencodeModesJSON, opencodePluginsJSON string
+	var opencodeCommandsJSON, opencodeModesJSON, opencodePluginsJSON, opencodeProvidersJSON string
 	var infraJSON, constitutionJSON, featuresJSON, gitConventionsJSON, preset string
 
 	err := s.db.QueryRow(`
 		SELECT templates, rules, agents, skills, prompts, infra, constitution,
 		       features, git_conventions, preset, commands, chatmodes,
-		       opencode_commands, opencode_modes, opencode_plugins
+		       opencode_commands, opencode_modes, opencode_plugins, opencode_providers
 		FROM selections WHERE id = 1`,
 	).Scan(&templatesJSON, &rulesJSON, &agentsJSON, &skillsJSON, &promptsJSON,
 		&infraJSON, &constitutionJSON, &featuresJSON, &gitConventionsJSON, &preset,
 		&commandsJSON, &chatmodesJSON,
-		&opencodeCommandsJSON, &opencodeModesJSON, &opencodePluginsJSON)
+		&opencodeCommandsJSON, &opencodeModesJSON, &opencodePluginsJSON, &opencodeProvidersJSON)
 	if err != nil {
 		return nil, fmt.Errorf("query selections: %w", err)
 	}
@@ -370,21 +370,26 @@ func (s *Store) ReadSelections() (*types.WizardSelections, error) {
 	if err := json.Unmarshal([]byte(opencodePluginsJSON), &opencodePlugins); err != nil {
 		return nil, fmt.Errorf("unmarshal opencode_plugins: %w", err)
 	}
+	var opencodeProviders []string
+	if err := json.Unmarshal([]byte(opencodeProvidersJSON), &opencodeProviders); err != nil {
+		return nil, fmt.Errorf("unmarshal opencode_providers: %w", err)
+	}
 
 	return &types.WizardSelections{
-		Templates:        templates,
-		Rules:            rules,
-		Agents:           agents,
-		Skills:           skills,
-		Prompts:          prompts,
-		ChatModes:        chatmodes,
-		OpenCodeCommands: opencodeCommands,
-		OpenCodeModes:    opencodeModes,
-		OpenCodePlugins:  opencodePlugins,
-		Infra:            infra,
-		Constitution:     constitution,
-		Features:         &features,
-		GitConventions:   &gitConventions,
+		Templates:         templates,
+		Rules:             rules,
+		Agents:            agents,
+		Skills:            skills,
+		Prompts:           prompts,
+		ChatModes:         chatmodes,
+		OpenCodeCommands:  opencodeCommands,
+		OpenCodeModes:     opencodeModes,
+		OpenCodePlugins:   opencodePlugins,
+		OpenCodeProviders: opencodeProviders,
+		Infra:             infra,
+		Constitution:      constitution,
+		Features:          &features,
+		GitConventions:    &gitConventions,
 	}, nil
 }
 
@@ -455,6 +460,10 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 	if err != nil {
 		return fmt.Errorf("marshal opencode_plugins: %w", err)
 	}
+	opencodeProvidersJSON, err := json.Marshal(s.OpenCodeProviders)
+	if err != nil {
+		return fmt.Errorf("marshal opencode_providers: %w", err)
+	}
 
 	preset := "standard"
 
@@ -462,13 +471,14 @@ func writeSelections(exec sqlExecutor, s *types.WizardSelections) error {
 		INSERT OR REPLACE INTO selections
 			(id, templates, rules, agents, skills, prompts, infra, constitution,
 			 features, git_conventions, preset, commands, chatmodes,
-			 opencode_commands, opencode_modes, opencode_plugins)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 opencode_commands, opencode_modes, opencode_plugins, opencode_providers)
+		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		string(templatesJSON), string(rulesJSON), string(agentsJSON), string(skillsJSON),
 		string(promptsJSON), string(infraJSON), string(constitutionJSON),
 		string(featuresJSON), string(gitConventionsJSON), preset,
 		string(commandsJSON), string(chatmodesJSON),
-		string(opencodeCommandsJSON), string(opencodeModesJSON), string(opencodePluginsJSON))
+		string(opencodeCommandsJSON), string(opencodeModesJSON), string(opencodePluginsJSON),
+		string(opencodeProvidersJSON))
 	return err
 }
 

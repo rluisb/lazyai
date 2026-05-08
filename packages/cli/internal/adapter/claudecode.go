@@ -86,7 +86,11 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	adapterLog.Info("installing tools", "adapter", "claude-code")
 
-	// Copy agents.
+	// Copy agents. Source frontmatter declares an abstract tier (frontier/
+	// balanced/speed); RewriteAgentForClaudeCode resolves it to the
+	// appropriate Anthropic alias (opus/sonnet/haiku) and emits a Claude
+	// Code-shaped frontmatter (drops tier/thinking/risk — Claude Code
+	// ignores them).
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "agents",
@@ -97,6 +101,14 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		IncludeFile: func(file string) bool {
 			return fileID(file) != "orchestrator"
 		},
+		Transform: func(content []byte) []byte {
+			out, err := RewriteAgentForClaudeCode(content, ctx)
+			if err != nil {
+				adapterLog.Warn("claude-code agent rewrite fell back to verbatim copy", "adapter", "claude-code", "error", err)
+				return content
+			}
+			return out
+		},
 	}); err != nil {
 		return nil, err
 	}
@@ -104,7 +116,12 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	// Orchestrator agent if enabled. Spec 012 / Task 002: ship at all scopes;
 	// the previous `!isGlobal` gate silently skipped it at global scope.
 	if IsOrchestratorEnabled(ctx) {
-		content := GetOrchestratorAgentContent(ctx)
+		raw := GetOrchestratorAgentContent(ctx)
+		content, err := RewriteAgentForClaudeCode(raw, ctx)
+		if err != nil {
+			adapterLog.Warn("claude-code orchestrator rewrite fell back to verbatim copy", "adapter", "claude-code", "error", err)
+			content = raw
+		}
 		if err := CopyWithRecord("agents/orchestrator.md",
 			filepath.Join(claudeDir, "agents", "orchestrator.md"),
 			ctx, false,

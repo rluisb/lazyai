@@ -35,8 +35,9 @@ type WizardState struct {
 	AnalyzeExistingCode bool
 
 	// Phase 5
-	MemoryPath      string
-	OpenCodePlugins []string
+	MemoryPath        string
+	OpenCodePlugins   []string
+	OpenCodeProviders []string
 }
 
 func initWizardState(defaults *WizardResult) *WizardState {
@@ -133,6 +134,9 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
+		}
+		if len(defaults.Phase5.OpenCodeProviders) > 0 {
+			s.OpenCodeProviders = defaults.Phase5.OpenCodeProviders
 		}
 	}
 
@@ -321,6 +325,17 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		).WithHideFunc(func() bool {
 			return !containsString(state.Tools, "opencode") || !opencodeBinaryPresent()
 		}),
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				TitleFunc(func() string { return "OpenCode Providers" }, &state.Tools).
+				DescriptionFunc(func() string {
+					return "Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy."
+				}, &state.Tools).
+				OptionsFunc(opencodeProviderHuhOptions, &state.Tools).
+				Value(&state.OpenCodeProviders),
+		).WithHideFunc(func() bool {
+			return !containsString(state.Tools, "opencode")
+		}),
 	}
 
 	return theme.NewForm(groups...)
@@ -379,6 +394,7 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		"graphify-out",
 		state.OpenCodePlugins,
 	)
+	p5.OpenCodeProviders = state.OpenCodeProviders
 
 	return p1, p2, p5
 }

@@ -1,6 +1,9 @@
 ---
 name: Red-Team
-model: opus
+tier: frontier
+temperature: 0.7
+thinking: high
+risk: 4
 tools: ripgrep filesystem codegraph
 techniques: [dual-agent, chain-of-thought, adversarial]
 consumes: [spec.md, plan.md, implementation]

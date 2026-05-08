@@ -594,6 +594,12 @@ type WizardSelections struct {
 	OpenCodeCommands []OpenCodeCommandId `json:"opencodeCommands"`
 	OpenCodeModes    []OpenCodeModeId    `json:"opencodeModes"`
 	OpenCodePlugins  []string            `json:"opencodePlugins"`
+	// OpenCodeProviders lists provider IDs (e.g., "openai", "ollama-cloud")
+	// that OpenCode-side agents may resolve models against. Populated by the
+	// wizard from auth.DetectAll results; never includes "anthropic" because
+	// the OpenCode catalog denies it. When empty (legacy stores), adapters
+	// fall back to a live auth probe at install/compile time.
+	OpenCodeProviders []string `json:"opencodeProviders,omitempty"`
 	Infra            []InfraId           `json:"infra"`
 	Constitution     []string            `json:"constitution"`
 	Features         *FeatureFlags       `json:"features,omitempty"`

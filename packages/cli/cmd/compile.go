@@ -79,6 +79,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+
 	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
 	if !fileExists(mcpConfigPath) {
 		// Also try .ai/mcp.jsonc
@@ -143,6 +144,33 @@ func runCompile(cmd *cobra.Command, args []string) error {
 
 	// Get adapter registry
 	reg := adapter.NewRegistry()
+
+	// Validate that every library agent resolves to a model on every selected
+	// tool, using the same models.Resolve adapters call at write time. Issues
+	// warn by default and block only with --strict-contracts. Skipped when
+	// --validate-contracts=false. Provider auth defaults to a live probe;
+	// callers who pre-populate configured providers via the wizard can pass
+	// the configured set in a future enhancement.
+	if validateContracts && len(tools) > 0 {
+		libFS := getContractLibraryFS()
+		// Prefer the stored provider selection from the wizard. If empty
+		// (legacy stores or first-run before wizard), pass nil so the
+		// validator falls back to a live auth probe.
+		var configuredProviders []string
+		if storeData != nil && len(storeData.Selections.OpenCodeProviders) > 0 {
+			configuredProviders = storeData.Selections.OpenCodeProviders
+		}
+		agentIssues, err := compiler.ValidateAgentResolutions(libFS, tools, configuredProviders)
+		if err != nil {
+			cmdLog.Warn("agent resolution check failed", "error", err)
+		} else if len(agentIssues) > 0 {
+			cmdLog.Warn("agent resolution warnings",
+				"issues", "\n"+compiler.FormatAgentValidationIssues(agentIssues))
+			if strictContracts {
+				return fmt.Errorf("agent resolution failed; pass --validate-contracts=false to override")
+			}
+		}
+	}
 
 	// Track new file records from compilation
 	newFileRecords := []types.TrackedFile{}

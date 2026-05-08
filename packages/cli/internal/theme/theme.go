@@ -36,6 +36,22 @@ var (
 
 	// Orange is used for conflict indicators.
 	Orange = lipgloss.Color("#E8912D")
+
+	// Text2 is a slightly dim secondary foreground. Mirrors `--lz-text-2`
+	// in the design-system CSS.
+	Text2 = lipgloss.Color("#BAC2DE")
+
+	// Bg2 is a deeper recessed background. Mirrors `--lz-bg-2` in the
+	// design-system CSS.
+	Bg2 = lipgloss.Color("#181825")
+
+	// BgCode is the inline-code / table-stripe background. Mirrors
+	// `--lz-bg-code` in the design-system CSS.
+	BgCode = lipgloss.Color("#313244")
+
+	// BgCard is the slightly-lifted card surface. Mirrors `--lz-bg-card`
+	// in the design-system CSS.
+	BgCard = lipgloss.Color("#232334")
 )
 
 // ─── Reusable styles ────────────────────────────────────────────────────────
@@ -85,7 +101,7 @@ var (
 
 	codeStyle = lipgloss.NewStyle().
 			Foreground(Text).
-			Background(lipgloss.Color("#313244")).
+			Background(BgCode).
 			Padding(0, 1)
 
 	installedStyle = lipgloss.NewStyle().

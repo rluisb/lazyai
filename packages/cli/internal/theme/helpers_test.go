@@ -2,6 +2,8 @@ package theme
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -126,5 +128,59 @@ func TestNoColorOnBufferIsAlwaysPlain(t *testing.T) {
 	Errorf(&buf, "boom")
 	if ansiPattern.MatchString(buf.String()) {
 		t.Errorf("NO_COLOR=1 + bytes.Buffer should produce zero ANSI; got %q", buf.String())
+	}
+}
+
+// TestHelpersOsStdoutPipedIsPlain verifies SC-001 end-to-end: when a real
+// `os.Stdout` is redirected through `os.Pipe()` (the runtime equivalent of
+// `lazyai-cli foo | cat`), every Print helper produces plain UTF-8 with no
+// ANSI escape sequences. This complements the `bytes.Buffer` tests above
+// by exercising the actual `os.File` path that real pipes use, not the
+// memory-buffer shortcut.
+//
+// Without this test, the SC-001 contract was only checked at the
+// `bytes.Buffer` level. A regression in colorprofile's TTY detection for
+// pipe-fd writers (where the *os.File IS a real fd, just not a terminal)
+// would slip through. This locks down the real-world piping path.
+func TestHelpersOsStdoutPipedIsPlain(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	defer r.Close()
+
+	oldStdout := os.Stdout
+	os.Stdout = w
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
+	// Drain in a goroutine so the writer doesn't block on a full pipe.
+	captured := make(chan string, 1)
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		captured <- buf.String()
+	}()
+
+	Infof(os.Stdout, "info from %s", "stdout")
+	Successf(os.Stdout, "success!")
+	Warnf(os.Stdout, "watch out")
+	Errorf(os.Stdout, "broken")
+	Conflictf(os.Stdout, "merge conflict")
+	Pendingf(os.Stdout, "still working")
+
+	w.Close() // flushes the pipe so the drain goroutine can finish
+	out := <-captured
+
+	if ansiPattern.MatchString(out) {
+		t.Errorf("piped os.Stdout output contains ANSI escapes: %q", out)
+	}
+
+	// Sanity: every glyph rendered as plain UTF-8.
+	for _, glyph := range []string{
+		GlyphBullet, GlyphSuccess, GlyphWarn, GlyphError, GlyphConflict, GlyphPending,
+	} {
+		if !strings.Contains(out, glyph) {
+			t.Errorf("piped output missing glyph %q; got %q", glyph, out)
+		}
 	}
 }

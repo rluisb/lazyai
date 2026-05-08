@@ -2,6 +2,7 @@ package wizard
 
 import (
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -337,7 +338,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		}),
 	}
 
-	return huh.NewForm(groups...)
+	return theme.NewForm(groups...)
 }
 
 func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Result) {

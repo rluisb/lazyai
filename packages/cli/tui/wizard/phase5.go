@@ -8,6 +8,7 @@ import (
 	"charm.land/huh/v2"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/auth"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 type phase5StepInfo struct {
@@ -192,7 +193,7 @@ func askMemoryPath(defaultValue string, info phase5StepInfo) (string, PhaseActio
 		huh.NewInput().Title(info.Title()).Description("Project-local default for bootstrap and housekeeping.").Placeholder(".specify/memory").Value(&memoryPath),
 	)
 
-	if err := huh.NewForm(group).Run(); err != nil {
+	if err := theme.NewForm(group).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 
@@ -228,7 +229,7 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 
@@ -299,7 +300,7 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 		Description("Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy.").
 		Options(options...).
 		Value(&selected)
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 

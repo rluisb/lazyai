@@ -6,7 +6,7 @@ import (
 
 	"charm.land/huh/v2"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // Phase4Result holds the confirmation outcome from the final wizard phase.
@@ -98,7 +98,7 @@ func runPhase4Interactive(plan *InstallPlan) (*Phase4Result, PhaseAction, error)
 		).
 		Value(&confirmValue)
 
-	form := huh.NewForm(huh.NewGroup(confirmSelect).Title("Review & Confirm"))
+	form := theme.NewForm(huh.NewGroup(confirmSelect).Title("Review & Confirm"))
 	if err := form.Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 4 cancelled: %w", err)
 	}

@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 	"github.com/rluisb/lazyai/packages/cli/tui/components"
 	"github.com/rluisb/lazyai/packages/cli/tui/wizard"
@@ -513,23 +513,8 @@ func printInitNextSteps(ctx *scaffold.ScaffoldContext) {
 	}
 	remaining := strings.Count(string(data), "\x3c!-- fill-in:")
 	if remaining > 0 {
-		fmt.Println(successStyle().Render(fmt.Sprintf("Next: Run /init or /populate in your AI tool to fill %d remaining placeholder(s).", remaining)))
+		theme.Successf(os.Stdout, "Next: Run /init or /populate in your AI tool to fill %d remaining placeholder(s).", remaining)
 	} else {
-		fmt.Println(successStyle().Render("All placeholders filled! Your AGENTS.md is ready."))
+		theme.Successf(os.Stdout, "All placeholders filled! Your AGENTS.md is ready.")
 	}
-}
-
-// headerStyle returns a bold styled header with the primary color.
-func headerStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-}
-
-// successStyle returns a green colored style for success indicators.
-func successStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-}
-
-// warningStyle returns an orange colored style for warnings.
-func warningStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
 }

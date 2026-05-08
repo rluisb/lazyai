@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -284,7 +285,7 @@ func askScope(current types.SetupScope, info phase1StepInfo) (types.SetupScope, 
 		).
 		Value(&scopeValue)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 
@@ -298,7 +299,7 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 		Options(appendPhase1BackOption(toolOptionsForScope(scope))...).
 		Value(&selectedTools)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selectedTools, phase1BackValue) {
@@ -364,7 +365,7 @@ func askProjectName(current string, defaults *Phase1Result, scope types.SetupSco
 		Value(&nameValue).
 		Validate(validateProjectName)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 
@@ -383,7 +384,7 @@ func askCliTools(current []string, info phase1StepInfo) ([]string, PhaseAction, 
 	field.Value(&selected)
 	field.Options(appendPhase1BackOption(cliToolOptionsFromCatalogForSelect())...)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -404,7 +405,7 @@ func askSkills(current []types.SkillId, info phase1StepInfo) ([]types.SkillId, P
 		Options(appendPhase1BackOption(skillOptions())...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -425,7 +426,7 @@ func askAgents(current []types.AgentId, info phase1StepInfo) ([]types.AgentId, P
 		Options(appendPhase1BackOption(agentOptions())...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -448,7 +449,7 @@ func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseActio
 		).
 		Value(&presetValue)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if presetValue == phase1BackValue {
@@ -466,7 +467,7 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 	field.Value(&selected)
 	field.Options(appendPhase1BackOption(mcpServerOptionsForSelect())...)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -500,7 +501,7 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 		).
 		Value(&decision)
 
-	if err := huh.NewForm(huh.NewGroup(orgField, teamField, decisionField)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(orgField, teamField, decisionField)).Run(); err != nil {
 		return "", "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if decision == phase1BackValue {

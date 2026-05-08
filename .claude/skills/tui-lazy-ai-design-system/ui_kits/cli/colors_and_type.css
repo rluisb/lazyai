@@ -1,5 +1,5 @@
 /* LazyAI Design System — design tokens
- * Source of truth: rluisb/lazyai @ packages/cli/tui/theme/theme.go
+ * Source of truth: rluisb/lazyai @ packages/cli/internal/theme/theme.go
  * Every --lz-* color maps 1:1 to a lipgloss.Color in the upstream Go file.
  */
 

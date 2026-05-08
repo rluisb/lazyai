@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -381,7 +382,7 @@ func askPreset(current types.PresetLevel, info phase2StepInfo) (types.PresetLeve
 		).
 		Value(&presetValue)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -399,7 +400,7 @@ func askFeatures(current *types.FeatureFlags, info phase2StepInfo) ([]string, Ph
 		Options(appendPhase2BackOption(featureOptions)...).
 		Value(&selectedFeatures)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if containsString(selectedFeatures, phase2BackValue) {
@@ -420,7 +421,7 @@ func askBranchPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Options(appendPhase2BackOption(branchPatternOptions)...).
 		Value(&branchPattern)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if branchPattern == phase2BackValue {
@@ -439,7 +440,7 @@ func askBranchPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Placeholder(types.DefaultGitConventions().BranchPattern).
 		Value(&customBranch)
 
-	if err := huh.NewForm(huh.NewGroup(input).Title(info.Title())).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(input).Title(info.Title())).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -460,7 +461,7 @@ func askCommitPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Options(appendPhase2BackOption(commitPatternOptions)...).
 		Value(&commitPattern)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if commitPattern == phase2BackValue {
@@ -479,7 +480,7 @@ func askCommitPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Placeholder(types.DefaultGitConventions().CommitPattern).
 		Value(&customCommit)
 
-	if err := huh.NewForm(huh.NewGroup(input).Title(info.Title())).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(input).Title(info.Title())).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -495,7 +496,7 @@ func askRequireTicket(current bool, info phase2StepInfo) (bool, PhaseAction, err
 		Title(info.Title()).
 		Value(&requireTicket)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return false, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -519,7 +520,7 @@ func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.Chat
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -547,7 +548,7 @@ func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo)
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -574,7 +575,7 @@ func askOpenCodeModes(current []types.OpenCodeModeId, info phase2StepInfo) ([]ty
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 

@@ -3,7 +3,7 @@ package components
 import (
 	"strings"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // TreeNode represents a node in the display tree.
@@ -35,10 +35,11 @@ func statusToIndicator(status string) string {
 func renderNode(node TreeNode, indent int, isLast bool, prefix string) string {
 	var sb strings.Builder
 
-	// Build the connector.
-	connector := "├── "
+	// Build the connector. Uses canonical glyph constants from theme so the
+	// tree component stays in sync with the design-system contract (FR-015).
+	connector := theme.GlyphTreeBranch + " "
 	if isLast {
-		connector = "└── "
+		connector = theme.GlyphTreeLast + " "
 	}
 
 	// Build the display line.
@@ -69,7 +70,7 @@ func renderNode(node TreeNode, indent int, isLast bool, prefix string) string {
 		if isLast {
 			childPrefix += "    "
 		} else {
-			childPrefix += "│   "
+			childPrefix += theme.GlyphTreeVertical + "   "
 		}
 	} else {
 		// Root level — no vertical prefix yet.

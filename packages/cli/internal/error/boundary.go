@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // IsDebugEnabled returns true if debug/verbose mode is active.
@@ -44,17 +46,24 @@ func HandleError(err error) {
 	// Extract message
 	message := err.Error()
 
-	// 2. User-facing errors → show message (no stack), exit 1
+	// 2. User-facing errors → show message (no stack), exit 1.
+	// Renders `✗ <msg>` in the design-system error color via theme.Errorf
+	// (FR-007). Pre-refactor used the ❌ emoji which violated the no-emoji
+	// rule of the lazyai-design-system skill.
 	if isAiSetupError && aiErr.IsUserError() {
-		fmt.Fprintf(os.Stderr, "\n❌  %s\n\n", message)
+		fmt.Fprintln(os.Stderr)
+		theme.Errorf(os.Stderr, "%s", message)
+		fmt.Fprintln(os.Stderr)
 		if debug {
 			fmt.Fprintf(os.Stderr, "Debug context: %v\n", aiErr.Context)
 		}
 		os.Exit(1)
 	}
 
-	// 3. AiSetupError system errors → show message, debug adds code + context + cause
-	fmt.Fprintf(os.Stderr, "\n❌  %s\n\n", message)
+	// 3. AiSetupError system errors → show message, debug adds code + context + cause.
+	fmt.Fprintln(os.Stderr)
+	theme.Errorf(os.Stderr, "%s", message)
+	fmt.Fprintln(os.Stderr)
 	if debug {
 		if isAiSetupError {
 			fmt.Fprintf(os.Stderr, "Error code: %s\n", aiErr.Code)

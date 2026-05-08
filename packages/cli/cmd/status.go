@@ -15,6 +15,7 @@ import (
 	aierror "github.com/rluisb/lazyai/packages/cli/internal/error"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/manifest"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -97,13 +98,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Styled output
 	boldStyle := lipgloss.NewStyle().Bold(true)
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 	valueStyle := lipgloss.NewStyle()
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4672"))
-	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	redStyle := lipgloss.NewStyle().Foreground(theme.Error)
+	yellowStyle := lipgloss.NewStyle().Foreground(theme.Warning)
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	fmt.Println()
 	fmt.Println(boldStyle.Render("lazyai-cli status"))
@@ -185,7 +186,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	if missing > 0 || modified > 0 {
-		cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5"))
+		cyanStyle := lipgloss.NewStyle().Foreground(theme.Secondary)
 		fmt.Printf("  Run %s for details\n", cyanStyle.Render("lazyai-cli doctor"))
 	} else {
 		fmt.Printf("  %s\n", greenStyle.Render("✓ Setup is healthy"))
@@ -282,16 +283,16 @@ func formatHealthBar(healthy, total int) string {
 	}
 	empty := barWidth - filled
 
-	barColor := lipgloss.Color("#04B575") // green
+	barColor := theme.Success // green
 	if percent < 90 {
-		barColor = lipgloss.Color("#FFA500") // yellow
+		barColor = theme.Warning // yellow
 	}
 	if percent < 70 {
-		barColor = lipgloss.Color("#FF4672") // red
+		barColor = theme.Error // red
 	}
 
 	barStyle := lipgloss.NewStyle().Foreground(barColor)
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	filledStr := barStyle.Render(strings.Repeat("━", filled))
 	emptyStr := dimStyle.Render(strings.Repeat("━", empty))

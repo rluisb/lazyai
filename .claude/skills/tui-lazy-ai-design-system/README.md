@@ -13,7 +13,7 @@ This system codifies that look so anyone — including an AI agent — can produ
 Everything here was extracted from a single source repo (no Figma, no separate brand book). If you want to verify or extend, read these files directly:
 
 - **Repo:** [`github.com/rluisb/lazyai`](https://github.com/rluisb/lazyai) (default branch `main`)
-- **TUI palette + style functions:** `packages/cli/tui/theme/theme.go` — *the* canonical color and component vocabulary
+- **TUI palette + style functions:** `packages/cli/internal/theme/theme.go` — *the* canonical color and component vocabulary (moved from `tui/theme/` per #190 / ADR-001 so non-TUI callers in `cmd/` and `internal/` can import it without a name lie)
 - **Diff viewer palette (subset):** `packages/diffviewer/theme.go`
 - **Reusable TUI components:** `packages/cli/tui/components/{spinner.go, summary.go, table.go, tree.go}`
 - **Wizard flow + form labels (voice reference):** `packages/cli/tui/wizard/interactive.go`
@@ -97,7 +97,7 @@ A senior engineer writing internal tooling for other senior engineers — terse,
 
 ### Color
 
-The palette is **Catppuccin Mocha-derived**, lifted directly from `packages/cli/tui/theme/theme.go`. Every CSS variable in `colors_and_type.css` corresponds 1:1 to a `lipgloss.Color` constant in Go.
+The palette is **Catppuccin Mocha-derived**, lifted directly from `packages/cli/internal/theme/theme.go`. Every CSS variable in `colors_and_type.css` corresponds 1:1 to a `lipgloss.Color` constant in Go. Bidirectional parity is enforced by `internal/theme/tokens_csstest_test.go` — a token added on either side without the matching declaration on the other fails CI (FR-002, FR-017).
 
 | Token | Hex | Role |
 |---|---|---|
@@ -109,9 +109,12 @@ The palette is **Catppuccin Mocha-derived**, lifted directly from `packages/cli/
 | `--lz-orange` | `#E8912D` | Conflict · always paired with `⚡` |
 | `--lz-highlight` | `#89B4FA` | Keyboard shortcuts, key badges, table headers. |
 | `--lz-text` | `#CDD6F4` | Default foreground. |
+| `--lz-text-2` | `#BAC2DE` | Slightly dim secondary foreground. |
 | `--lz-dimmed` | `#6C7086` | De-emphasized text, separators, pending state. |
 | `--lz-bg` | `#1E1E2E` | Default canvas. |
+| `--lz-bg-2` | `#181825` | Deeper recessed background. |
 | `--lz-bg-code` | `#313244` | Inline code background, table row stripe. |
+| `--lz-bg-card` | `#232334` | Slightly lifted card surface. |
 
 **Rules**
 

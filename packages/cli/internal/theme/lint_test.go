@@ -35,17 +35,18 @@ import (
 // (cmd/init.go) + FR-010 (huh) migrations of #190's first wave. Subsequent
 // PRs lower these counts as each cmd file is migrated; an entry going to 0
 // MUST be removed from this map (the test enforces it).
+// Files cleared in #190's first wave: cmd/init.go (5791cad), cmd/add.go,
+// cmd/compile.go, cmd/doctor.go, cmd/info.go, cmd/status.go (this commit).
+// FR-009 closed across all 6 high-traffic commands named in the issue.
+//
+// Remaining (deferred to followup PRs per #190's footer): cmd/create.go,
+// cmd/eject.go, cmd/list.go, cmd/mcp_hints.go, cmd/server.go.
 var expectedRemainingHardcodedColorSites = map[string]int{
-	"cmd/add.go":       3,
-	"cmd/compile.go":   5,
 	"cmd/create.go":    3,
-	"cmd/doctor.go":    7,
 	"cmd/eject.go":     3,
-	"cmd/info.go":      5,
 	"cmd/list.go":      5,
 	"cmd/mcp_hints.go": 4,
 	"cmd/server.go":    20,
-	"cmd/status.go":    11,
 }
 
 func TestLintNoHardcodedColors(t *testing.T) {

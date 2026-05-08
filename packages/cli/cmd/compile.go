@@ -15,6 +15,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -147,11 +148,11 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	newFileRecords := []types.TrackedFile{}
 
 	// Styled output
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-	greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575"))
-	cyanStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CFC5"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	labelStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
+	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
+	cyanStyle := lipgloss.NewStyle().Foreground(theme.Secondary)
+	dimStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	fmt.Println()
 	fmt.Println(headerStyle.Render("⚙️  Compile MCP Config"))

@@ -394,7 +394,7 @@ func skillToAgentYAML(skillName string, skillContent string) (string, error) {
 displayName: %s
 description: >
   %s skill for the ai-setup orchestrator.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - "*"
 promptParts:

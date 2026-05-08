@@ -4,7 +4,7 @@ description: >
   Implementation agent for the RPI workflow. Executes an APPROVED plan
   with test-driven development. Full tool access — dispatched only after
   the plan gate is approved by a human.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - "*"
 promptParts:

@@ -4,7 +4,7 @@ description: >
   Multi-step task orchestration and workflow management. Coordinates between
   research, planning, and implementation phases. Tracks progress and manages
   task dependencies.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - "*"
 promptParts:

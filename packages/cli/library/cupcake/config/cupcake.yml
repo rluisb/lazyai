@@ -98,7 +98,7 @@ post_write_hooks:
 
 watchdog:
   enabled: false  # Enable for teams using Copilot who want post-hoc review
-  model: claude-sonnet-4.5
+  model: claude-sonnet-4.6
   triggers:
     - pull_request_opened
     - commit_pushed

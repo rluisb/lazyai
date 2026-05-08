@@ -4,7 +4,7 @@ description: >
   Code review and quality checks. Audits for correctness, style conformance,
   test coverage, and alignment with project standards. Identifies gaps and
   improvement opportunities.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - "*"
 promptParts:

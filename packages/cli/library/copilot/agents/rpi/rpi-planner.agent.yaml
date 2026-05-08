@@ -3,7 +3,7 @@ displayName: RPI Planner
 description: >
   Planning-only agent for the RPI workflow. Creates plan.md and tasks.md
   in the specs/ directory. Cannot modify source code or execute commands.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 tools:
   - read
   - grep

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // SummaryBox renders a styled summary of an operation (e.g. post-install

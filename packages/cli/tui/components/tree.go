@@ -3,7 +3,7 @@ package components
 import (
 	"strings"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // TreeNode represents a node in the display tree.

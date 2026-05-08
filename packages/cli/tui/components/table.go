@@ -5,7 +5,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // Table creates a lipgloss-styled table for CLI output.

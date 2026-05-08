@@ -6,7 +6,7 @@ import (
 
 	"charm.land/huh/v2"
 
-	"github.com/rluisb/lazyai/packages/cli/tui/theme"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 // Phase4Result holds the confirmation outcome from the final wizard phase.

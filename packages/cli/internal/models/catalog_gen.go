@@ -74,17 +74,6 @@ var allModels = []modelEntry{
 	{"ollama-cloud", "deepseek-v4-pro", true, false, 1_048_576},
 	{"ollama-cloud", "glm-4.7", true, false, 202_752},
 
-	// opencode — bundled provider; exposes a curated multi-vendor mix
-	// (Claude entries here are filtered out by DenyNamePatterns)
-	{"opencode", "gpt-5.5", true, false, 1_050_000},
-	{"opencode", "gpt-5.4", true, false, 1_050_000},
-	{"opencode", "gpt-5.4-mini", true, false, 400_000},
-	{"opencode", "glm-4.7", true, false, 204_800},
-	{"opencode", "kimi-k2.6", true, false, 262_144},
-	{"opencode", "minimax-m2.7", true, false, 204_800},
-	{"opencode", "claude-sonnet-4-6", true, true, 1_000_000}, // listed but DenyNamePatterns blocks it
-	{"opencode", "claude-opus-4-7", true, true, 1_000_000},   // ditto
-
 	// opencode-go — curated subset, mostly OSS
 	{"opencode-go", "glm-5", true, false, 202_752},
 	{"opencode-go", "kimi-k2.6", true, false, 262_144},

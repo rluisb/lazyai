@@ -14,6 +14,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
+	"github.com/rluisb/lazyai/packages/cli/internal/models"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -307,7 +308,7 @@ func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, de
 	}
 
 	// Transform skill to agent YAML format
-	transformed, err := skillToAgentYAML(src, string(data))
+	transformed, err := skillToAgentYAML(ctx, src, string(data))
 	if err != nil {
 		return err
 	}
@@ -357,7 +358,7 @@ func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS
 	}
 
 	// Transform skill to agent YAML format
-	transformed, err := skillToAgentYAML(src, string(data))
+	transformed, err := skillToAgentYAML(ctx, src, string(data))
 	if err != nil {
 		return err
 	}
@@ -376,8 +377,18 @@ func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS
 	return nil
 }
 
-// skillToAgentYAML transforms a skill markdown file into Copilot agent YAML format.
-func skillToAgentYAML(skillName string, skillContent string) (string, error) {
+// skillToAgentYAML transforms a skill markdown file into Copilot agent YAML
+// format. The model field is resolved against `CopilotCatalog` based on the
+// skill's optional tier annotation (defaults to Balanced if absent),
+// replacing the hardcoded `model: claude-sonnet-*` value that previously
+// required a manual bulk-edit on every Anthropic version bump (#199 Bug 2
+// long-term fix).
+//
+// Skills opt into Frontier or Speed tier by adding `tier: frontier`
+// (and optional `risk:`/`temperature:`/`thinking:`) to their frontmatter.
+// Skills with no tier annotation get Balanced — which currently resolves
+// to `claude-sonnet-4.6` via `CopilotCatalog.Balanced[0]`.
+func skillToAgentYAML(ctx *AdapterContext, skillName string, skillContent string) (string, error) {
 	_, body := frontmatter.SplitYamlFrontmatter(skillContent)
 	body = strings.TrimSpace(body)
 	if body == "" {
@@ -389,12 +400,19 @@ func skillToAgentYAML(skillName string, skillContent string) (string, error) {
 	basename := filepath.Base(skillName)
 	skillID := strings.TrimSuffix(basename, filepath.Ext(basename))
 
+	spec := skillSpecOrDefault([]byte(skillContent), skillID)
+	rc := resolveCtxFor(types.ToolIdCopilot, ctx)
+	res, err := models.Resolve(spec, rc)
+	if err != nil {
+		return "", fmt.Errorf("copilot skill %s resolve: %w", skillID, err)
+	}
+
 	// Build agent YAML
 	yaml := fmt.Sprintf(`name: %s
 displayName: %s
 description: >
   %s skill for the ai-setup orchestrator.
-model: claude-sonnet-4.6
+model: %s
 tools:
   - "*"
 promptParts:
@@ -404,9 +422,40 @@ promptParts:
   includeCustomAgentInstructions: false
 prompt: |
 %s
-`, skillID, toDisplayName(skillID), skillID, indentLines(body, "  "))
+`, skillID, toDisplayName(skillID), skillID, res.Field, indentLines(body, "  "))
 
 	return yaml, nil
+}
+
+// skillSpecOrDefault parses tier metadata from a skill's frontmatter, or
+// returns a Balanced default when the skill is unannotated. This is the
+// "opt-in tier override" path: skills can opt into Frontier/Speed by
+// declaring `tier:` (and optional `risk:`/`temperature:`/`thinking:`) in
+// their frontmatter; skills without those annotations default to Balanced
+// (which resolves to `claude-sonnet-4.6` via `CopilotCatalog.Balanced[0]`).
+//
+// Note: `frontmatter.ParseAgentSpec` errors when `tier:` is empty; the
+// helper swallows that error and returns the Balanced default — so no
+// skill-source migration is required for existing skills.
+func skillSpecOrDefault(content []byte, skillID string) models.AgentSpec {
+	raw, err := frontmatter.ParseAgentSpec(content)
+	if err != nil || raw.Tier == "" {
+		return models.AgentSpec{
+			Name:        skillID,
+			Tier:        models.TierBalanced,
+			Temperature: 0.1,
+			Thinking:    models.ThinkingLow,
+			Risk:        3,
+		}
+	}
+	return models.AgentSpec{
+		Name:        raw.Name,
+		Tier:        models.Tier(raw.Tier),
+		Temperature: raw.Temperature,
+		Thinking:    models.Thinking(raw.Thinking),
+		Risk:        raw.Risk,
+		Multimodal:  raw.Multimodal,
+	}
 }
 
 // toDisplayName converts "foo-bar" to "Foo Bar".

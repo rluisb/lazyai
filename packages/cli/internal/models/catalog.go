@@ -17,23 +17,29 @@ var ClaudeCodeCatalog = Catalog{
 
 // OpenCodeCatalog spans every provider an OpenCode user might authenticate
 // against, in preference order. Anthropic is denied by provider; Claude
-// models routed via any other provider (e.g., opencode/claude-*) are denied
-// by name pattern. Resolve further filters by ConfiguredProviders so that a
-// user with only `codex login` doesn't get an ollama-cloud reference written.
+// models routed via any other provider are denied by name pattern. Resolve
+// further filters by ConfiguredProviders so that a user with only `codex
+// login` doesn't get an ollama-cloud reference written.
+//
+// Note: an `opencode/*` provider prefix used to appear here for a
+// "bundled-mix" route, but real-world OpenCode configs (verified against
+// `~/.config/opencode/agents/`) use only `openai/`, `google/`,
+// `ollama-cloud/`, and `github-copilot/`. The `opencode/*` entries were
+// invented and have been removed (#199 Bug 1).
 var OpenCodeCatalog = Catalog{
 	Format: FormatProviderSlug,
 	Frontier: []string{
 		"openai/gpt-5.5",
 		"github-copilot/gpt-5.5",
 		"google/gemini-3.1-pro-preview",
-		"opencode/gpt-5.5",
 		"ollama-cloud/gpt-oss:120b",
 	},
 	Balanced: []string{
 		"openai/gpt-5.4-mini",
 		"github-copilot/gpt-5.4-mini",
+		"ollama-cloud/kimi-k2.6:cloud",
 		"ollama-cloud/minimax-m2.7",
-		"opencode/glm-4.7",
+		"ollama-cloud/glm-4.7",
 		"google/gemini-3-flash-preview",
 	},
 	Speed: []string{

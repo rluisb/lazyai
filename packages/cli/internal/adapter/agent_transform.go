@@ -33,6 +33,13 @@ func agentSpecToModelsSpec(raw frontmatter.AgentSpecRaw) models.AgentSpec {
 // adapter context did not pre-populate ConfiguredProviders (wizard not run,
 // upgrade path), we fall back to a live auth probe so the resolver still
 // has a sensible answer for OpenCode's RequireConfigured filter.
+//
+// For the OpenCode target, `opencode` is treated as a meta-provider: a user
+// who has successfully run `opencode auth list` can reach openai / google /
+// ollama-cloud / github-copilot models through OpenCode's bundled UI
+// without separately authenticating each provider's CLI. Without that
+// expansion, an OpenCode-only user would hit `ErrNoEligibleModel` after
+// the catalog's invented `opencode/*` entries were removed in #199 Bug 1.
 func resolveCtxFor(tool types.ToolId, ctx *AdapterContext) models.ResolveCtx {
 	cat := models.CatalogFor(tool)
 	rc := models.ResolveCtx{Catalog: cat}
@@ -41,14 +48,47 @@ func resolveCtxFor(tool types.ToolId, ctx *AdapterContext) models.ResolveCtx {
 	}
 	if len(ctx.ConfiguredProviders) > 0 {
 		rc.ConfiguredProviders = ctx.ConfiguredProviders
-		return rc
+	} else {
+		probeCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		for _, p := range auth.DetectAll(probeCtx) {
+			rc.ConfiguredProviders = append(rc.ConfiguredProviders, string(p))
+		}
 	}
-	probeCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	for _, p := range auth.DetectAll(probeCtx) {
-		rc.ConfiguredProviders = append(rc.ConfiguredProviders, string(p))
+	if tool == types.ToolIdOpenCode {
+		rc.ConfiguredProviders = expandOpenCodeMetaProvider(rc.ConfiguredProviders)
 	}
 	return rc
+}
+
+// opencodeBundledProviders lists the upstream providers OpenCode's bundled
+// UI can route through. Authenticating `opencode auth list` is treated as
+// implicit access to any of these via OpenCode's mediation.
+var opencodeBundledProviders = []string{"openai", "google", "ollama-cloud", "github-copilot"}
+
+// expandOpenCodeMetaProvider treats the `opencode` provider ID as a
+// meta-provider: when present in the configured set, ensure the bundled
+// providers are present too so the resolver doesn't filter every candidate
+// out for an OpenCode-only user.
+func expandOpenCodeMetaProvider(configured []string) []string {
+	hasOpenCode := false
+	have := make(map[string]bool, len(configured))
+	for _, p := range configured {
+		have[p] = true
+		if p == "opencode" {
+			hasOpenCode = true
+		}
+	}
+	if !hasOpenCode {
+		return configured
+	}
+	for _, p := range opencodeBundledProviders {
+		if !have[p] {
+			configured = append(configured, p)
+			have[p] = true
+		}
+	}
+	return configured
 }
 
 // RewriteAgentForClaudeCode transforms a library agent (.md with tier-based
@@ -64,10 +104,14 @@ func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, erro
 	return rewriteAgentForTarget(source, types.ToolIdClaudeCode, ctx, claudeCodeFrontmatter)
 }
 
-// RewriteAgentForOpenCode runs the existing BuildOpenCodeAgentFrontmatter
-// pipeline but populates the previously-empty Model slot with the result of
-// Resolve against the OpenCode catalog (which excludes Claude on every
-// provider via DenyProviders + DenyNamePatterns).
+// RewriteAgentForOpenCode transforms a library agent into the canonical
+// OpenCode frontmatter shape (#199 Bug 1). It resolves the model against
+// `OpenCodeCatalog` and `auth.DetectAll`-discovered providers, then emits
+// the rich frontmatter (`name`, `model`, `description`, `reasoningEffort`,
+// `textVerbosity`, `mode`, `temperature`, `steps`) observed in real-world
+// `~/.config/opencode/agents/` configs. The body's Claude-centric
+// `## Model` editorial paragraph is stripped (it would otherwise contradict
+// the resolved provider/model pair).
 func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([]byte, error) {
 	raw, err := frontmatter.ParseAgentSpec(source)
 	if err != nil {
@@ -78,11 +122,78 @@ func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([
 	if err != nil {
 		return nil, fmt.Errorf("opencode resolve %s: %w", raw.Name, err)
 	}
-	out := BuildOpenCodeAgentFrontmatter(source, OpenCodeAgentOpts{
-		Mode:  mode,
-		Model: res.Field,
+	cleaned := stripModelSection(source)
+	out := BuildOpenCodeAgentFrontmatter(cleaned, OpenCodeAgentOpts{
+		Name:            raw.Name,
+		Model:           res.Field,
+		Mode:            mode, // empty → defaults to "subagent" inside Build...
+		Temperature:     raw.Temperature,
+		ReasoningEffort: opencodeReasoningEffort(raw.Thinking),
+		TextVerbosity:   opencodeTextVerbosity(raw.Risk),
+		Steps:           opencodeStepsFor(raw.Tier),
+		// Tools and Permission deliberately left nil: MCP servers belong in
+		// .mcp.json, not in the agent's `tools:` field. OpenCode's tool
+		// gates default to all-allowed when the key is absent — matches
+		// today's effective behavior.
 	})
 	return prependFallbackComment(out, res.FallbackChain), nil
+}
+
+// modelSectionRe matches the Claude-centric `## Model\n<paragraph>\n\n`
+// editorial section inserted in the source `library/agents/*.md` files.
+// It exists to give human readers context about Claude tier selection;
+// for non-Claude targets the resolved provider/model contradicts that
+// commentary, so the section is stripped (#199 Bug 1).
+var modelSectionRe = regexp.MustCompile(`(?m)^## Model\n[\s\S]+?(?:\n\n|\z)`)
+
+// stripModelSection removes the `## Model\n…\n\n` paragraph from a markdown
+// document while preserving any frontmatter and the rest of the body
+// verbatim. Safe to call when no such section exists (returns input
+// unchanged).
+func stripModelSection(source []byte) []byte {
+	return modelSectionRe.ReplaceAll(source, []byte(""))
+}
+
+// opencodeReasoningEffort maps the source `thinking:` annotation to
+// OpenCode's `reasoningEffort` enum. "none" maps to omit (returns "").
+func opencodeReasoningEffort(thinking string) string {
+	switch strings.ToLower(thinking) {
+	case "high":
+		return "high"
+	case "medium":
+		return "medium"
+	case "low":
+		return "low"
+	case "minimal":
+		return "minimal"
+	}
+	return ""
+}
+
+// opencodeTextVerbosity derives `textVerbosity` from the source `risk:`
+// annotation. High-risk roles (planning, review) prefer terse output to
+// avoid overwhelming the orchestrator with noise; lower-risk roles get the
+// medium default.
+func opencodeTextVerbosity(risk int) string {
+	if risk >= 4 {
+		return "low"
+	}
+	return "medium"
+}
+
+// opencodeStepsFor returns a per-tier max-iteration cap. Values mirror the
+// canonical configs at `~/.config/opencode/agents/`: planner=16, scout=10,
+// implementor=25. Frontier roles get more steps; speed roles get fewer.
+func opencodeStepsFor(tier string) int {
+	switch strings.ToLower(tier) {
+	case "frontier":
+		return 16
+	case "balanced":
+		return 20
+	case "speed":
+		return 10
+	}
+	return 0
 }
 
 // rewriteAgentForTarget is the shared core for all targets that emit a YAML

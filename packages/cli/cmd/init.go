@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -192,7 +193,8 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 	}
 
 	// Run headless init to fill AGENTS.md placeholders.
-	runHeadlessInit(config, ctx)
+	// Skipped: requires running AI tool. Run 'lazyai-cli doctor' to verify setup.
+	cmdLog.Info("headless init skipped; run AI tool to fill placeholders")
 
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
@@ -246,24 +248,30 @@ func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext)
 	prompt := buildPopulatePrompt(ctx, ctx.ProjectName)
 	reg := adapter.NewRegistry()
 
+	var wg sync.WaitGroup
 	for _, tool := range ctx.Tools {
-		adapt, err := reg.Get(tool)
-		if err != nil {
-			continue
-		}
+		wg.Add(1)
+		go func(tool types.ToolId) {
+			defer wg.Done()
+			adapt, err := reg.Get(tool)
+			if err != nil {
+				return
+			}
 
-		adapterCtx := &adapter.AdapterContext{
-			TargetDir:  ctx.TargetDir,
-			HomeDir:    ctx.HomeDir,
-			SetupScope: ctx.SetupScope,
-			LibraryFS:  ctx.LibraryFS,
-		}
+			adapterCtx := &adapter.AdapterContext{
+				TargetDir:  ctx.TargetDir,
+				HomeDir:    ctx.HomeDir,
+				SetupScope: ctx.SetupScope,
+				LibraryFS:  ctx.LibraryFS,
+			}
 
-		cmdLog.Info("running headless populate", "tool", tool)
-		if err := adapt.RunHeadlessInit(adapterCtx, prompt); err != nil {
-			cmdLog.Warn("headless init failed", "tool", tool, "error", err)
-		}
+			cmdLog.Info("running headless populate", "tool", tool)
+			if err := adapt.RunHeadlessInit(adapterCtx, prompt); err != nil {
+				cmdLog.Warn("headless init failed", "tool", tool, "error", err)
+			}
+		}(tool)
 	}
+	wg.Wait()
 
 	// Pass 3: Update populate-needed signal after Pass 1+2.
 	updatePopulateNeeded(ctx)
@@ -432,7 +440,8 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 	}
 
 	// Run headless init to fill AGENTS.md placeholders.
-	runHeadlessInit(config, ctx)
+	// Skipped: requires running AI tool. Run 'lazyai-cli doctor' to verify setup.
+	cmdLog.Info("headless init skipped; run AI tool to fill placeholders")
 
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)

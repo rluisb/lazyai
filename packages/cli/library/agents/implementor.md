@@ -1,5 +1,6 @@
 ---
 name: Implementor
+output: implementation
 tier: balanced
 temperature: 0.1
 thinking: low

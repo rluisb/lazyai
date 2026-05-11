@@ -1,5 +1,6 @@
 ---
 name: Scout
+output: scout-research
 tier: balanced
 temperature: 0.2
 thinking: none

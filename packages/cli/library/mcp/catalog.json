@@ -79,15 +79,7 @@
       "requiresInstall": false,
       "setupHint": "Install required browser binaries by running: npx playwright install"
     },
-    "context7": {
-      "description": "Library documentation lookup",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": { "Authorization": "Bearer ${CONTEXT7_API_KEY}" },
-      "tools": ["resolve-library-id", "query-docs"],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Get your API key at https://context7.com and set CONTEXT7_API_KEY"
-    },
+
     "atlassian": {
       "description": "Jira and Confluence read-only access (search issues, read pages via OAuth)",
       "command": "npx",
@@ -97,16 +89,7 @@
       "requiresInstall": false,
       "setupHint": "Authenticate via browser by running: npx mcp-remote@latest https://mcp.atlassian.com/v1/mcp"
     },
-    "brave-search": {
-      "description": "Web search via Brave Search API",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-      "env": { "BRAVE_API_KEY": "${BRAVE_API_KEY}" },
-      "tools": ["brave_web_search"],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Get your Free API key at https://brave.com/search/api/ and set BRAVE_API_KEY"
-    },
+
     "fetch": {
       "description": "HTTP fetch for web content retrieval",
       "command": "npx",

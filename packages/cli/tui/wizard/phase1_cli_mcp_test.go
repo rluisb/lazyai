@@ -35,9 +35,9 @@ func TestDefaultMcpServersForPreset(t *testing.T) {
 	}
 
 	full := defaultMcpServersForPreset(McpPresetFull)
-	// Full includes all catalog servers (14 after Spec 022 / E3).
-	if len(full) < 14 {
-		t.Fatalf("full count = %d, want at least 14 (includes graphify + obsidian from Spec 022/E3)", len(full))
+	// Full includes all catalog servers (12 after removing context7, brave-search).
+	if len(full) < 12 {
+		t.Fatalf("full count = %d, want at least 12 (includes graphify + obsidian from Spec 022/E3)", len(full))
 	}
 	if full[0] != "atlassian" || full[len(full)-1] != "ripgrep" {
 		t.Fatalf("full ordering = %#v, want sorted catalog IDs", full)

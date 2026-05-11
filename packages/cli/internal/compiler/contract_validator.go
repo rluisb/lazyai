@@ -69,7 +69,10 @@ func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 
 			fm, _, err := frontmatter.ExtractFrontmatter(data)
 			if err != nil || len(fm) == 0 {
-				continue
+				fm = extractContractFields(data)
+				if len(fm) == 0 {
+					continue
+				}
 			}
 
 			contract := parseSkillContract(source, fm)
@@ -82,6 +85,117 @@ func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 
 	sort.Slice(contracts, func(i, j int) bool { return contracts[i].Source < contracts[j].Source })
 	return contracts, nil
+}
+
+func extractContractFields(data []byte) map[string]any {
+	// Contract validation only needs a small, flat subset of skill frontmatter.
+	// Some library files contain prose-like YAML elsewhere; recover these fields
+	// so one malformed metadata section does not make real skill names disappear.
+	frontmatterLines, ok := frontmatterLines(data)
+	if !ok {
+		return nil
+	}
+
+	fm := make(map[string]any)
+	for i := 0; i < len(frontmatterLines); i++ {
+		line := frontmatterLines[i]
+		if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			continue
+		}
+
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+
+		switch key {
+		case "name", "output":
+			if value != "" {
+				fm[key] = trimYAMLScalar(value)
+			}
+		case "consumes", "produces_for", "mcp_tools":
+			items := parseContractList(value)
+			if value == "" {
+				items, i = parseIndentedContractList(frontmatterLines, i)
+			}
+			if len(items) > 0 {
+				fm[key] = items
+			}
+		}
+	}
+	return fm
+}
+
+func frontmatterLines(data []byte) ([]string, bool) {
+	content := strings.ReplaceAll(string(data), "\r\n", "\n")
+	lines := strings.Split(content, "\n")
+
+	start := 0
+	for start < len(lines) && strings.TrimSpace(lines[start]) == "" {
+		start++
+	}
+	if start >= len(lines) || strings.TrimSpace(lines[start]) != "---" {
+		return nil, false
+	}
+
+	for end := start + 1; end < len(lines); end++ {
+		if strings.TrimSpace(lines[end]) == "---" {
+			return lines[start+1 : end], true
+		}
+	}
+	return nil, false
+}
+
+func parseIndentedContractList(lines []string, keyIndex int) ([]string, int) {
+	var items []string
+	i := keyIndex + 1
+	for ; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			break
+		}
+		if strings.HasPrefix(trimmed, "-") {
+			item := trimYAMLScalar(strings.TrimSpace(strings.TrimPrefix(trimmed, "-")))
+			if item != "" {
+				items = append(items, item)
+			}
+		}
+	}
+	return items, i - 1
+}
+
+func parseContractList(value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		value = strings.TrimSuffix(strings.TrimPrefix(value, "["), "]")
+	}
+	parts := strings.Split(value, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := trimYAMLScalar(part)
+		if item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
+}
+
+func trimYAMLScalar(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	return strings.TrimSpace(value)
 }
 
 func parseSkillContract(source string, fm map[string]any) SkillContract {
@@ -133,6 +247,33 @@ func stringSliceFromFrontmatter(value any) []string {
 	}
 }
 
+// cleanContractTarget strips parenthetical annotations from produces_for targets.
+// Frontmatter entries like "memory-write (if ADR created)" should resolve to
+// "memory-write".
+func cleanContractTarget(target string) string {
+	if idx := strings.Index(target, "("); idx > 0 {
+		return strings.TrimSpace(target[:idx])
+	}
+	return strings.TrimSpace(target)
+}
+
+func isContractReference(target string) bool {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		return false
+	}
+	return !strings.ContainsAny(target, " \t/.")
+}
+
+func isExternalContractSink(target string) bool {
+	switch strings.ToLower(strings.TrimSpace(target)) {
+	case "constitution", "memory", "github", "plan-gate":
+		return true
+	default:
+		return false
+	}
+}
+
 // ValidateChain cross-checks skill/agent contracts using the TypeScript
 // compiler contract-validator semantics.
 func ValidateChain(contracts []SkillContract) []ContractIssue {
@@ -140,7 +281,8 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 	byName := make(map[string]SkillContract)
 
 	for _, contract := range contracts {
-		if _, exists := byName[contract.Name]; exists {
+		normalizedName := strings.ToLower(contract.Name)
+		if _, exists := byName[normalizedName]; exists {
 			issues = append(issues, ContractIssue{
 				Source:   contract.Source,
 				Severity: ContractSeverityError,
@@ -148,7 +290,7 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 				Message:  fmt.Sprintf("skill/agent name %q is declared in multiple files (last: %s)", contract.Name, contract.Source),
 			})
 		}
-		byName[contract.Name] = contract
+		byName[normalizedName] = contract
 	}
 
 	producers := make(map[string]string)
@@ -160,7 +302,12 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 
 	for _, contract := range contracts {
 		for _, target := range contract.ProducesFor {
-			if _, exists := byName[target]; !exists {
+			cleaned := cleanContractTarget(target)
+			if !isContractReference(cleaned) || isExternalContractSink(cleaned) {
+				continue
+			}
+			normalizedTarget := strings.ToLower(cleaned)
+			if _, exists := byName[normalizedTarget]; !exists {
 				issues = append(issues, ContractIssue{
 					Source:   contract.Source,
 					Severity: ContractSeverityWarn,
@@ -171,10 +318,10 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 		}
 
 		for _, artifact := range contract.Consumes {
-			if _, exists := producers[artifact]; exists {
+			if !isContractReference(artifact) {
 				continue
 			}
-			if strings.HasPrefix(artifact, ".") || strings.Contains(artifact, "/") {
+			if _, exists := producers[artifact]; exists {
 				continue
 			}
 			issues = append(issues, ContractIssue{
@@ -198,23 +345,52 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 	consumedBy := make(map[string]bool)
 	for _, contract := range contracts {
 		for _, target := range contract.ProducesFor {
-			consumedBy[target] = true
+			cleaned := cleanContractTarget(target)
+			if !isContractReference(cleaned) {
+				continue
+			}
+			consumedBy[strings.ToLower(cleaned)] = true
 		}
 	}
 
 	rootSkills := map[string]bool{
-		"speckit-constitution": true,
-		"rpi":                  true,
-		"bugfix":               true,
-		"spike":                true,
-		"proof-of-concept":     true,
-		"housekeeping":         true,
+		"speckit-constitution":          true,
+		"rpi":                           true,
+		"bugfix":                        true,
+		"spike":                         true,
+		"proof-of-concept":              true,
+		"housekeeping":                  true,
+		"implement":                     true,
+		"iterate":                       true,
+		"orchestrate":                   true,
+		"parallel-execution":            true,
+		"plan":                          true,
+		"research":                      true,
+		"self-improve":                  true,
+		"memory-write":                  true,
+		"tdd-loop":                      true,
+		"diagnose":                      true,
+		"anti-speculation":              true,
+		"chain-verify":                  true,
+		"review":                        true,
+		"red-team-plan":                 true,
+		"github-pr-review":              true,
+		"impact-check":                  true,
+		"populate":                      true,
+		"dynamic-compose":               true,
+		"chain-customize":               true,
+		"catalog-manage":                true,
+		"speckit-implement":             true,
+		"improve-codebase-architecture": true,
+		"extract-standards":             true,
+		"process-audit":                 true,
 	}
 	for _, contract := range contracts {
 		if !strings.HasPrefix(contract.Source, "skills/") {
 			continue
 		}
-		if consumedBy[contract.Name] || rootSkills[contract.Name] {
+		normalizedName := strings.ToLower(contract.Name)
+		if consumedBy[normalizedName] || rootSkills[normalizedName] {
 			continue
 		}
 		issues = append(issues, ContractIssue{

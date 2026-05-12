@@ -116,6 +116,435 @@ func TestStartChainUnknownDefinitionDoesNotCreateRunState(t *testing.T) {
 	}
 }
 
+func TestStartChainAcceptsContextShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		context        any
+		wantTextPrefix string
+		wantHost       types.HostCli
+		wantPrompt     string
+	}{
+		{name: "omitted", context: sentinelOmit, wantHost: types.HostOpenCode},
+		{name: "null", context: nil, wantHost: types.HostOpenCode},
+		{name: "empty_string", context: "", wantHost: types.HostOpenCode},
+		{
+			name: "object",
+			context: map[string]any{
+				"cliTool":     "claude-code",
+				"rootContext": map[string]any{"prompt": "be careful"},
+			},
+			wantHost:   types.HostClaudeCode,
+			wantPrompt: "be careful",
+		},
+		{
+			name:       "stringified_json",
+			context:    `{"cliTool":"claude-code","rootContext":{"prompt":"be careful"}}`,
+			wantHost:   types.HostClaudeCode,
+			wantPrompt: "be careful",
+		},
+		{name: "invalid_string", context: "not-json", wantTextPrefix: "Invalid start_chain"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			createSimpleChainCatalog(t, orchestrator)
+
+			args := map[string]any{
+				"chain": "simple-chain",
+				"task":  "ship the feature",
+			}
+			if s, ok := tc.context.(string); !ok || s != sentinelOmit {
+				args["context"] = tc.context
+			}
+
+			result, err := orchestrator.StartChain(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("start chain returned transport error: %v", err)
+			}
+
+			if tc.wantTextPrefix != "" {
+				text := decodeToolText(t, result)
+				if !strings.HasPrefix(text, tc.wantTextPrefix) {
+					t.Fatalf("expected text to start with %q, got %q", tc.wantTextPrefix, text)
+				}
+				if count := countRows(t, orchestrator.DB, "chain_runs"); count != 0 {
+					t.Fatalf("expected no chain run rows for invalid context, got %d", count)
+				}
+				return
+			}
+
+			var started struct {
+				ChainID         string `json:"chainId"`
+				State           string `json:"state"`
+				ExecutionPlanID string `json:"executionPlanId"`
+			}
+			decodeToolResult(t, result, &started)
+			if started.ChainID == "" || started.ExecutionPlanID == "" {
+				t.Fatalf("expected chain id and plan id, got %+v", started)
+			}
+
+			plan, err := loadExecutionPlan(orchestrator.DB, started.ExecutionPlanID)
+			if err != nil {
+				t.Fatalf("load execution plan: %v", err)
+			}
+			if plan.Cli.Host != tc.wantHost {
+				t.Fatalf("expected Cli.Host=%q, got %q", tc.wantHost, plan.Cli.Host)
+			}
+			switch tc.wantPrompt {
+			case "":
+				if plan.RootContext != nil {
+					t.Fatalf("expected nil RootContext, got %+v", plan.RootContext)
+				}
+			default:
+				if plan.RootContext == nil || plan.RootContext.Prompt != tc.wantPrompt {
+					t.Fatalf("expected RootContext.Prompt=%q, got %+v", tc.wantPrompt, plan.RootContext)
+				}
+			}
+		})
+	}
+}
+
+func TestAdvanceChainAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validOutput := map[string]any{
+		"summary":  "researched",
+		"status":   "done",
+		"findings": []any{},
+	}
+	validUsage := map[string]any{"totalTokens": 50}
+
+	cases := []struct {
+		name           string
+		output         any
+		usage          any
+		wantTextPrefix string
+		wantTokens     int
+	}{
+		{name: "object_object", output: validOutput, usage: validUsage, wantTokens: 50},
+		{name: "stringified_output", output: `{"summary":"researched","status":"done","findings":[]}`, usage: validUsage, wantTokens: 50},
+		{name: "stringified_usage", output: validOutput, usage: `{"totalTokens":50}`, wantTokens: 50},
+		{name: "empty_string_output", output: "", usage: validUsage, wantTokens: 50},
+		{name: "empty_string_usage", output: validOutput, usage: "", wantTokens: 0},
+		{name: "null_both", output: nil, usage: nil, wantTokens: 0},
+		{name: "omitted_both", output: sentinelOmit, usage: sentinelOmit, wantTokens: 0},
+		{name: "invalid_output", output: "not-json", usage: sentinelOmit, wantTextPrefix: "Invalid advance_chain output"},
+		{name: "invalid_usage", output: validOutput, usage: "not-json", wantTextPrefix: "Invalid advance_chain usage"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			createSimpleChainCatalog(t, orchestrator)
+			started := startSimpleChain(t, orchestrator)
+
+			args := map[string]any{
+				"chainId": started.ChainID,
+				"stepId":  "research",
+				"outcome": "success",
+			}
+			if s, ok := tc.output.(string); !ok || s != sentinelOmit {
+				args["output"] = tc.output
+			}
+			if s, ok := tc.usage.(string); !ok || s != sentinelOmit {
+				args["usage"] = tc.usage
+			}
+
+			result, err := orchestrator.AdvanceChain(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("advance chain transport error: %v", err)
+			}
+
+			if tc.wantTextPrefix != "" {
+				gotText := decodeToolText(t, result)
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected text to start with %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+
+			var advanced struct {
+				State    string `json:"state"`
+				NextStep struct {
+					StepID string `json:"stepId"`
+				} `json:"nextStep"`
+				Budget struct {
+					Tokens struct {
+						Consumed int `json:"consumed"`
+					} `json:"tokens"`
+				} `json:"budget"`
+			}
+			decodeToolResult(t, result, &advanced)
+			if advanced.State != "running" || advanced.NextStep.StepID != "implement" {
+				t.Fatalf("unexpected advance result: %+v", advanced)
+			}
+			if advanced.Budget.Tokens.Consumed != tc.wantTokens {
+				t.Fatalf("expected tokens=%d, got %d", tc.wantTokens, advanced.Budget.Tokens.Consumed)
+			}
+		})
+	}
+}
+
+func TestBuildTeamAcceptsBudgetShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		budget         any
+		wantTextPrefix string
+	}{
+		{name: "object", budget: map[string]any{"id": "default", "scope": "team", "defaultActionOnLimit": "warn"}},
+		{name: "stringified", budget: `{"id":"default","scope":"team","defaultActionOnLimit":"warn"}`},
+		{name: "empty_string", budget: ""},
+		{name: "null", budget: nil},
+		{name: "omitted", budget: sentinelOmit},
+		{name: "invalid", budget: "not-json", wantTextPrefix: "Invalid build_team budget"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"team": "missing-team",
+				"task": "do work",
+			}
+			if s, ok := tc.budget.(string); !ok || s != sentinelOmit {
+				args["budget"] = tc.budget
+			}
+			result, err := orchestrator.BuildTeam(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("build team transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid build_team input") || strings.HasPrefix(gotText, "Invalid build_team budget") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestCompleteTeamTaskAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validResult := map[string]any{"summary": "done"}
+	validUsage := map[string]any{"totalTokens": 5}
+	validError := map[string]any{"category": "validation", "code": "X", "message": "fail", "stepId": "s", "agent": "a", "skills": []any{}}
+
+	cases := []struct {
+		name           string
+		result         any
+		usage          any
+		errorArg       any
+		wantTextPrefix string
+	}{
+		{name: "all_object", result: validResult, usage: validUsage, errorArg: validError},
+		{name: "stringified_result", result: `{"summary":"done"}`, usage: sentinelOmit, errorArg: sentinelOmit},
+		{name: "stringified_usage", result: sentinelOmit, usage: `{"totalTokens":5}`, errorArg: sentinelOmit},
+		{name: "stringified_error", result: sentinelOmit, usage: sentinelOmit, errorArg: `{"category":"validation","code":"X","message":"fail","stepId":"s","agent":"a","skills":[]}`},
+		{name: "empty_strings", result: "", usage: "", errorArg: ""},
+		{name: "all_null", result: nil, usage: nil, errorArg: nil},
+		{name: "all_omitted", result: sentinelOmit, usage: sentinelOmit, errorArg: sentinelOmit},
+		{name: "invalid_result", result: "not-json", usage: sentinelOmit, errorArg: sentinelOmit, wantTextPrefix: "Invalid complete_team_task result"},
+		{name: "invalid_usage", result: sentinelOmit, usage: "not-json", errorArg: sentinelOmit, wantTextPrefix: "Invalid complete_team_task usage"},
+		{name: "invalid_error", result: sentinelOmit, usage: sentinelOmit, errorArg: "not-json", wantTextPrefix: "Invalid complete_team_task error"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"teamId":  "missing-team",
+				"taskId":  "missing-task",
+				"outcome": "success",
+			}
+			if s, ok := tc.result.(string); !ok || s != sentinelOmit {
+				args["result"] = tc.result
+			}
+			if s, ok := tc.usage.(string); !ok || s != sentinelOmit {
+				args["usage"] = tc.usage
+			}
+			if s, ok := tc.errorArg.(string); !ok || s != sentinelOmit {
+				args["error"] = tc.errorArg
+			}
+			result, err := orchestrator.CompleteTeamTask(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("complete team task transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid complete_team_task input") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task result") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task usage") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task error") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestStartWorkflowAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validBudget := map[string]any{"id": "default", "scope": "workflow", "defaultActionOnLimit": "warn"}
+	validContext := map[string]any{"cliTool": "claude-code", "rootContext": map[string]any{"prompt": "x"}}
+
+	cases := []struct {
+		name           string
+		budget         any
+		contextArg     any
+		wantTextPrefix string
+	}{
+		{name: "object_both", budget: validBudget, contextArg: validContext},
+		{name: "stringified_budget", budget: `{"id":"default","scope":"workflow","defaultActionOnLimit":"warn"}`, contextArg: sentinelOmit},
+		{name: "stringified_context", budget: sentinelOmit, contextArg: `{"cliTool":"claude-code","rootContext":{"prompt":"x"}}`},
+		{name: "empty_strings", budget: "", contextArg: ""},
+		{name: "all_null", budget: nil, contextArg: nil},
+		{name: "all_omitted", budget: sentinelOmit, contextArg: sentinelOmit},
+		{name: "invalid_budget", budget: "not-json", contextArg: sentinelOmit, wantTextPrefix: "Invalid start_workflow budget"},
+		{name: "invalid_context", budget: sentinelOmit, contextArg: "not-json", wantTextPrefix: "Invalid start_workflow context"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"workflow": "missing-workflow",
+				"task":     "do work",
+			}
+			if s, ok := tc.budget.(string); !ok || s != sentinelOmit {
+				args["budget"] = tc.budget
+			}
+			if s, ok := tc.contextArg.(string); !ok || s != sentinelOmit {
+				args["context"] = tc.contextArg
+			}
+			result, err := orchestrator.StartWorkflow(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("start workflow transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid start_workflow input") ||
+				strings.HasPrefix(gotText, "Invalid start_workflow budget") ||
+				strings.HasPrefix(gotText, "Invalid start_workflow context") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestAdvanceWorkflowAcceptsRecoveryShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validRecovery := map[string]any{"type": "skip", "reason": "noop"}
+
+	cases := []struct {
+		name           string
+		recovery       any
+		wantTextPrefix string
+	}{
+		{name: "object", recovery: validRecovery},
+		{name: "stringified", recovery: `{"type":"skip","reason":"noop"}`},
+		{name: "empty_string", recovery: ""},
+		{name: "null", recovery: nil},
+		{name: "omitted", recovery: sentinelOmit},
+		{name: "invalid", recovery: "not-json", wantTextPrefix: "Invalid advance_workflow recovery"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{"workflowId": "missing-workflow"}
+			if s, ok := tc.recovery.(string); !ok || s != sentinelOmit {
+				args["recovery"] = tc.recovery
+			}
+			result, err := orchestrator.AdvanceWorkflow(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("advance workflow transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid advance_workflow input") ||
+				strings.HasPrefix(gotText, "Invalid advance_workflow recovery") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestEnqueueJobAcceptsPayloadShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		payload        any
+		wantPayload    map[string]any
+		wantTextPrefix string
+	}{
+		{name: "object", payload: map[string]any{"key": "value"}, wantPayload: map[string]any{"key": "value"}},
+		{name: "stringified", payload: `{"key":"value"}`, wantPayload: map[string]any{"key": "value"}},
+		{name: "empty_string", payload: "", wantPayload: nil},
+		{name: "null", payload: nil, wantPayload: nil},
+		{name: "omitted", payload: sentinelOmit, wantPayload: nil},
+		{name: "invalid", payload: "not-json", wantTextPrefix: "Invalid enqueue_job payload"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{"jobType": "test-job"}
+			if s, ok := tc.payload.(string); !ok || s != sentinelOmit {
+				args["payload"] = tc.payload
+			}
+			result, err := orchestrator.EnqueueJob(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("enqueue job transport error: %v", err)
+			}
+			if tc.wantTextPrefix != "" {
+				gotText := decodeToolText(t, result)
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			var job struct {
+				ID      string         `json:"id"`
+				Payload map[string]any `json:"payload"`
+			}
+			decodeToolResult(t, result, &job)
+			if job.ID == "" {
+				t.Fatalf("expected job id, got %+v", job)
+			}
+			if !reflect.DeepEqual(job.Payload, tc.wantPayload) {
+				t.Fatalf("expected payload %+v, got %+v", tc.wantPayload, job.Payload)
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

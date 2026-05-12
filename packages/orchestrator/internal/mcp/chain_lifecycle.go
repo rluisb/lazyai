@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -60,6 +61,34 @@ type handoffInput struct {
 
 func bindArguments(req mcp.CallToolRequest, target any) error {
 	return req.BindArguments(target)
+}
+
+// decodeOptionalJSONArg decodes a JSON-payload MCP argument into dest, tolerating
+// the three caller shapes that arise during the migration from string-typed
+// schemas to object-typed schemas: the structured value directly, a stringified
+// JSON payload (legacy WithString contract), or the empty/null/omitted no-op.
+//
+// dest must be a non-nil pointer. The helper is a no-op when raw is empty, JSON
+// null, or an empty/whitespace string. Once every known caller is on the typed
+// schema this shim can be deleted.
+func decodeOptionalJSONArg(raw json.RawMessage, dest any) error {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	payload := trimmed
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return err
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil
+		}
+		payload = []byte(s)
+	}
+	return json.Unmarshal(payload, dest)
 }
 
 func runIDFromRequest(req mcp.CallToolRequest) string {

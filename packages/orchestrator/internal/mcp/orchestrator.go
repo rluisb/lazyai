@@ -57,29 +57,148 @@ func NewOrchestrator(database *db.DB, scope *ScopeContext, options ...Orchestrat
 }
 
 func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
-	s.AddTool(mcp.Tool{Name: "list_catalog", Description: "List orchestration catalog definitions."}, o.ListCatalog)
-	s.AddTool(mcp.Tool{Name: "compose_agent", Description: "Compose a runtime agent prompt."}, o.ComposeAgent)
-	s.AddTool(mcp.Tool{Name: "start_chain", Description: "Compile and start a chain execution plan."}, o.StartChain)
-	s.AddTool(mcp.Tool{Name: "advance_chain", Description: "Advance a running chain."}, o.AdvanceChain)
-	s.AddTool(mcp.Tool{Name: "build_team", Description: "Compile and start a team run."}, o.BuildTeam)
-	s.AddTool(mcp.Tool{Name: "assign_team_task", Description: "Assign or claim a team task."}, o.AssignTeamTask)
-	s.AddTool(mcp.Tool{Name: "complete_team_task", Description: "Complete a team task."}, o.CompleteTeamTask)
-	s.AddTool(mcp.Tool{Name: "start_workflow", Description: "Compile and start a workflow run."}, o.StartWorkflow)
-	s.AddTool(mcp.Tool{Name: "advance_workflow", Description: "Advance a running workflow."}, o.AdvanceWorkflow)
-	s.AddTool(mcp.Tool{Name: "get_status", Description: "Get runtime status for a run."}, o.GetStatus)
-	s.AddTool(mcp.Tool{Name: "get_budget", Description: "Get tracked budget state."}, o.GetBudget)
-	s.AddTool(mcp.Tool{Name: "retry_step", Description: "Retry a failed step."}, o.RetryStep)
-	s.AddTool(mcp.Tool{Name: "escalate_step", Description: "Escalate a step."}, o.EscalateStep)
-	s.AddTool(mcp.Tool{Name: "handoff", Description: "Persist a resumable handoff document."}, o.Handoff)
-	s.AddTool(mcp.Tool{Name: "catalog_list", Description: "List versioned catalog definitions."}, o.CatalogList)
-	s.AddTool(mcp.Tool{Name: "catalog_get_version", Description: "Get catalog definition version."}, o.CatalogGetVersion)
-	s.AddTool(mcp.Tool{Name: "catalog_create_version", Description: "Create immutable version."}, o.CatalogCreateVersion)
-	s.AddTool(mcp.Tool{Name: "catalog_set_active", Description: "Move active version pointer."}, o.CatalogSetActive)
-	s.AddTool(mcp.Tool{Name: "subscribe_run", Description: "Subscribe to run events."}, o.SubscribeRun)
-	s.AddTool(mcp.Tool{Name: "invoke_agent", Description: "Resolve and compose agent invocation."}, o.InvokeAgent)
-	s.AddTool(mcp.Tool{Name: "enqueue_job", Description: "Enqueue background job."}, o.EnqueueJob)
-	s.AddTool(mcp.Tool{Name: "get_job", Description: "Get job status."}, o.GetJob)
-	s.AddTool(mcp.Tool{Name: "list_jobs", Description: "List queued jobs."}, o.ListJobs)
+	s.AddTool(mcp.NewTool("list_catalog",
+		mcp.WithDescription("List orchestration catalog definitions."),
+		mcp.WithString("kinds", mcp.Description("Filter by kinds (e.g. chain, team, workflow)")),
+	), o.ListCatalog)
+	s.AddTool(mcp.NewTool("compose_agent",
+		mcp.WithDescription("Compose a runtime agent prompt."),
+		mcp.WithString("base", mcp.Required(), mcp.Description("Base agent name")),
+		mcp.WithString("domainSkill", mcp.Description("Optional domain skill")),
+		mcp.WithString("modeSkill", mcp.Description("Optional mode skill")),
+	), o.ComposeAgent)
+	s.AddTool(mcp.NewTool("start_chain",
+		mcp.WithDescription("Compile and start a chain execution plan."),
+		mcp.WithString("chain", mcp.Required(), mcp.Description("Chain definition name")),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description for the chain")),
+		mcp.WithString("domainSkill", mcp.Description("Optional domain skill")),
+		mcp.WithString("modeSkill", mcp.Description("Optional mode skill")),
+		mcp.WithString("context", mcp.Description("Optional execution context JSON")),
+	), o.StartChain)
+	s.AddTool(mcp.NewTool("advance_chain",
+		mcp.WithDescription("Advance a running chain."),
+		mcp.WithString("chainId", mcp.Required(), mcp.Description("Chain run ID")),
+		mcp.WithString("stepId", mcp.Required(), mcp.Description("Current step ID")),
+		mcp.WithString("outcome", mcp.Required(), mcp.Description("Step outcome (success/failed/skipped)")),
+		mcp.WithString("output", mcp.Description("Step output data (JSON)")),
+		mcp.WithString("usage", mcp.Description("Token/cost usage JSON")),
+	), o.AdvanceChain)
+	s.AddTool(mcp.NewTool("build_team",
+		mcp.WithDescription("Compile and start a team run."),
+		mcp.WithString("team", mcp.Required(), mcp.Description("Team definition name")),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description for the team")),
+		mcp.WithString("budget", mcp.Description("Optional budget policy JSON")),
+	), o.BuildTeam)
+	s.AddTool(mcp.NewTool("assign_team_task",
+		mcp.WithDescription("Assign or claim a team task."),
+		mcp.WithString("teamId", mcp.Required(), mcp.Description("Team run ID")),
+		mcp.WithString("taskId", mcp.Required(), mcp.Description("Task ID to assign")),
+		mcp.WithString("assignee", mcp.Description("Assignee agent name")),
+		mcp.WithBoolean("claim", mcp.Description("Claim the task if true")),
+	), o.AssignTeamTask)
+	s.AddTool(mcp.NewTool("complete_team_task",
+		mcp.WithDescription("Complete a team task."),
+		mcp.WithString("teamId", mcp.Required(), mcp.Description("Team run ID")),
+		mcp.WithString("taskId", mcp.Required(), mcp.Description("Task ID to complete")),
+		mcp.WithString("outcome", mcp.Required(), mcp.Description("Task outcome (success/failed)")),
+		mcp.WithString("result", mcp.Description("Task result data (JSON)")),
+		mcp.WithString("usage", mcp.Description("Token/cost usage JSON")),
+		mcp.WithString("error", mcp.Description("Error details if failed (JSON)")),
+	), o.CompleteTeamTask)
+	s.AddTool(mcp.NewTool("start_workflow",
+		mcp.WithDescription("Compile and start a workflow run."),
+		mcp.WithString("workflow", mcp.Required(), mcp.Description("Workflow definition name")),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description for the workflow")),
+		mcp.WithString("domainSkill", mcp.Description("Optional domain skill")),
+		mcp.WithString("modeSkill", mcp.Description("Optional mode skill")),
+		mcp.WithString("budget", mcp.Description("Optional budget policy JSON")),
+		mcp.WithString("context", mcp.Description("Optional execution context JSON")),
+	), o.StartWorkflow)
+	s.AddTool(mcp.NewTool("advance_workflow",
+		mcp.WithDescription("Advance a running workflow."),
+		mcp.WithString("workflowId", mcp.Required(), mcp.Description("Workflow run ID")),
+		mcp.WithString("outcome", mcp.Description("Phase outcome")),
+		mcp.WithString("recovery", mcp.Description("Recovery decision JSON")),
+	), o.AdvanceWorkflow)
+	s.AddTool(mcp.NewTool("get_status",
+		mcp.WithDescription("Get runtime status for a run."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID (chainId/teamId/workflowId)")),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Run kind (chain/team/workflow)")),
+	), o.GetStatus)
+	s.AddTool(mcp.NewTool("get_budget",
+		mcp.WithDescription("Get tracked budget state."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID")),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Run kind (chain/team/workflow)")),
+	), o.GetBudget)
+	s.AddTool(mcp.NewTool("retry_step",
+		mcp.WithDescription("Retry a failed step."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID")),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Run kind (chain/team/workflow)")),
+		mcp.WithString("stepId", mcp.Required(), mcp.Description("Step/task ID to retry")),
+		mcp.WithString("reason", mcp.Description("Reason for retry")),
+	), o.RetryStep)
+	s.AddTool(mcp.NewTool("escalate_step",
+		mcp.WithDescription("Escalate a step to a different agent."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID")),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Run kind (chain/team/workflow)")),
+		mcp.WithString("stepId", mcp.Required(), mcp.Description("Step/task ID to escalate")),
+		mcp.WithString("targetAgent", mcp.Required(), mcp.Description("Target agent name")),
+		mcp.WithString("domainSkill", mcp.Description("Optional domain skill")),
+		mcp.WithString("modeSkill", mcp.Description("Optional mode skill")),
+		mcp.WithString("reason", mcp.Description("Reason for escalation")),
+	), o.EscalateStep)
+	s.AddTool(mcp.NewTool("handoff",
+		mcp.WithDescription("Persist a resumable handoff document."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID")),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Run kind (chain/team/workflow)")),
+		mcp.WithString("summary", mcp.Description("Handoff summary")),
+		mcp.WithString("recipient", mcp.Description("Target recipient agent")),
+		mcp.WithBoolean("includeArtifacts", mcp.Description("Include artifacts in handoff")),
+	), o.Handoff)
+	s.AddTool(mcp.NewTool("catalog_list",
+		mcp.WithDescription("List versioned catalog definitions."),
+		mcp.WithString("kind", mcp.Description("Filter by definition kind")),
+	), o.CatalogList)
+	s.AddTool(mcp.NewTool("catalog_get_version",
+		mcp.WithDescription("Get catalog definition version."),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Definition kind")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Definition name")),
+	), o.CatalogGetVersion)
+	s.AddTool(mcp.NewTool("catalog_create_version",
+		mcp.WithDescription("Create immutable version."),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Definition kind")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Definition name")),
+		mcp.WithString("body", mcp.Required(), mcp.Description("Definition body (JSON/YAML)")),
+	), o.CatalogCreateVersion)
+	s.AddTool(mcp.NewTool("catalog_set_active",
+		mcp.WithDescription("Move active version pointer."),
+		mcp.WithString("kind", mcp.Required(), mcp.Description("Definition kind")),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Definition name")),
+		mcp.WithInteger("version", mcp.Description("Version number to activate")),
+	), o.CatalogSetActive)
+	s.AddTool(mcp.NewTool("subscribe_run",
+		mcp.WithDescription("Subscribe to run events."),
+		mcp.WithString("runId", mcp.Required(), mcp.Description("Run ID to subscribe to")),
+	), o.SubscribeRun)
+	s.AddTool(mcp.NewTool("invoke_agent",
+		mcp.WithDescription("Resolve and compose agent invocation."),
+		mcp.WithString("agent", mcp.Required(), mcp.Description("Agent name")),
+		mcp.WithString("task", mcp.Required(), mcp.Description("Task description")),
+		mcp.WithString("cliTool", mcp.Description("Optional CLI tool override")),
+	), o.InvokeAgent)
+	s.AddTool(mcp.NewTool("enqueue_job",
+		mcp.WithDescription("Enqueue background job."),
+		mcp.WithString("jobType", mcp.Required(), mcp.Description("Job type identifier")),
+		mcp.WithString("payload", mcp.Description("Job payload JSON")),
+	), o.EnqueueJob)
+	s.AddTool(mcp.NewTool("get_job",
+		mcp.WithDescription("Get job status."),
+		mcp.WithString("jobId", mcp.Required(), mcp.Description("Job ID")),
+	), o.GetJob)
+	s.AddTool(mcp.NewTool("list_jobs",
+		mcp.WithDescription("List queued jobs."),
+		mcp.WithString("status", mcp.Description("Filter by status (pending/claimed/completed/failed)")),
+	), o.ListJobs)
 }
 
 // ───────────────── Tool implementations ─────────────────
@@ -104,9 +223,26 @@ func (o *Orchestrator) ComposeAgent(ctx context.Context, req mcp.CallToolRequest
 }
 
 func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.StartChainInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		Chain       string              `json:"chain"`
+		Task        string              `json:"task"`
+		DomainSkill string              `json:"domainSkill,omitempty"`
+		ModeSkill   string              `json:"modeSkill,omitempty"`
+		Budget      *types.BudgetPolicy `json:"budget,omitempty"`
+		Context     json.RawMessage     `json:"context,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid start_chain input: %v", err)), nil
+	}
+	input := types.StartChainInput{
+		Chain:       raw.Chain,
+		Task:        raw.Task,
+		DomainSkill: raw.DomainSkill,
+		ModeSkill:   raw.ModeSkill,
+		Budget:      raw.Budget,
+	}
+	if err := decodeStartChainContext(raw.Context, &input.Context); err != nil {
+		return text(fmt.Sprintf("Invalid start_chain context: %v", err)), nil
 	}
 	if input.Chain == "" || input.Task == "" {
 		return text("Missing required: chain, task"), nil

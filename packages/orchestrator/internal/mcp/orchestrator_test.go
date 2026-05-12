@@ -116,6 +116,97 @@ func TestStartChainUnknownDefinitionDoesNotCreateRunState(t *testing.T) {
 	}
 }
 
+func TestStartChainAcceptsContextShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		context        any
+		wantTextPrefix string
+		wantHost       types.HostCli
+		wantPrompt     string
+	}{
+		{name: "omitted", context: sentinelOmit, wantHost: types.HostOpenCode},
+		{name: "null", context: nil, wantHost: types.HostOpenCode},
+		{name: "empty_string", context: "", wantHost: types.HostOpenCode},
+		{
+			name: "object",
+			context: map[string]any{
+				"cliTool":     "claude-code",
+				"rootContext": map[string]any{"prompt": "be careful"},
+			},
+			wantHost:   types.HostClaudeCode,
+			wantPrompt: "be careful",
+		},
+		{
+			name:       "stringified_json",
+			context:    `{"cliTool":"claude-code","rootContext":{"prompt":"be careful"}}`,
+			wantHost:   types.HostClaudeCode,
+			wantPrompt: "be careful",
+		},
+		{name: "invalid_string", context: "not-json", wantTextPrefix: "Invalid start_chain"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			createSimpleChainCatalog(t, orchestrator)
+
+			args := map[string]any{
+				"chain": "simple-chain",
+				"task":  "ship the feature",
+			}
+			if s, ok := tc.context.(string); !ok || s != sentinelOmit {
+				args["context"] = tc.context
+			}
+
+			result, err := orchestrator.StartChain(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("start chain returned transport error: %v", err)
+			}
+
+			if tc.wantTextPrefix != "" {
+				text := decodeToolText(t, result)
+				if !strings.HasPrefix(text, tc.wantTextPrefix) {
+					t.Fatalf("expected text to start with %q, got %q", tc.wantTextPrefix, text)
+				}
+				if count := countRows(t, orchestrator.DB, "chain_runs"); count != 0 {
+					t.Fatalf("expected no chain run rows for invalid context, got %d", count)
+				}
+				return
+			}
+
+			var started struct {
+				ChainID         string `json:"chainId"`
+				State           string `json:"state"`
+				ExecutionPlanID string `json:"executionPlanId"`
+			}
+			decodeToolResult(t, result, &started)
+			if started.ChainID == "" || started.ExecutionPlanID == "" {
+				t.Fatalf("expected chain id and plan id, got %+v", started)
+			}
+
+			plan, err := loadExecutionPlan(orchestrator.DB, started.ExecutionPlanID)
+			if err != nil {
+				t.Fatalf("load execution plan: %v", err)
+			}
+			if plan.Cli.Host != tc.wantHost {
+				t.Fatalf("expected Cli.Host=%q, got %q", tc.wantHost, plan.Cli.Host)
+			}
+			switch tc.wantPrompt {
+			case "":
+				if plan.RootContext != nil {
+					t.Fatalf("expected nil RootContext, got %+v", plan.RootContext)
+				}
+			default:
+				if plan.RootContext == nil || plan.RootContext.Prompt != tc.wantPrompt {
+					t.Fatalf("expected RootContext.Prompt=%q, got %+v", tc.wantPrompt, plan.RootContext)
+				}
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

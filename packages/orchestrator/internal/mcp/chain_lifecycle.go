@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -60,6 +61,35 @@ type handoffInput struct {
 
 func bindArguments(req mcp.CallToolRequest, target any) error {
 	return req.BindArguments(target)
+}
+
+// decodeStartChainContext bridges the start_chain MCP tool's string-typed `context`
+// schema and types.StartChainInput.Context. Callers may legitimately send the field
+// omitted, as JSON null, as the structured object, or as a stringified-JSON payload
+// (which the schema's "Optional execution context JSON" description implies). The
+// empty string is treated as omitted to absorb the default value MCP clients emit
+// for declared WithString fields.
+func decodeStartChainContext(raw json.RawMessage, dest **struct {
+	CliTool     types.HostCli          `json:"cliTool,omitempty"`
+	RootContext types.RootContextLayer `json:"rootContext,omitempty"`
+}) error {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return nil
+	}
+	payload := trimmed
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return err
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil
+		}
+		payload = []byte(s)
+	}
+	return json.Unmarshal(payload, dest)
 }
 
 func runIDFromRequest(req mcp.CallToolRequest) string {

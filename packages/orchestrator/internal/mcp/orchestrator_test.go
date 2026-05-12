@@ -396,6 +396,105 @@ func TestCompleteTeamTaskAcceptsJSONArgShapes(t *testing.T) {
 	}
 }
 
+func TestStartWorkflowAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validBudget := map[string]any{"id": "default", "scope": "workflow", "defaultActionOnLimit": "warn"}
+	validContext := map[string]any{"cliTool": "claude-code", "rootContext": map[string]any{"prompt": "x"}}
+
+	cases := []struct {
+		name           string
+		budget         any
+		contextArg     any
+		wantTextPrefix string
+	}{
+		{name: "object_both", budget: validBudget, contextArg: validContext},
+		{name: "stringified_budget", budget: `{"id":"default","scope":"workflow","defaultActionOnLimit":"warn"}`, contextArg: sentinelOmit},
+		{name: "stringified_context", budget: sentinelOmit, contextArg: `{"cliTool":"claude-code","rootContext":{"prompt":"x"}}`},
+		{name: "empty_strings", budget: "", contextArg: ""},
+		{name: "all_null", budget: nil, contextArg: nil},
+		{name: "all_omitted", budget: sentinelOmit, contextArg: sentinelOmit},
+		{name: "invalid_budget", budget: "not-json", contextArg: sentinelOmit, wantTextPrefix: "Invalid start_workflow budget"},
+		{name: "invalid_context", budget: sentinelOmit, contextArg: "not-json", wantTextPrefix: "Invalid start_workflow context"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"workflow": "missing-workflow",
+				"task":     "do work",
+			}
+			if s, ok := tc.budget.(string); !ok || s != sentinelOmit {
+				args["budget"] = tc.budget
+			}
+			if s, ok := tc.contextArg.(string); !ok || s != sentinelOmit {
+				args["context"] = tc.contextArg
+			}
+			result, err := orchestrator.StartWorkflow(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("start workflow transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid start_workflow input") ||
+				strings.HasPrefix(gotText, "Invalid start_workflow budget") ||
+				strings.HasPrefix(gotText, "Invalid start_workflow context") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestAdvanceWorkflowAcceptsRecoveryShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validRecovery := map[string]any{"type": "skip", "reason": "noop"}
+
+	cases := []struct {
+		name           string
+		recovery       any
+		wantTextPrefix string
+	}{
+		{name: "object", recovery: validRecovery},
+		{name: "stringified", recovery: `{"type":"skip","reason":"noop"}`},
+		{name: "empty_string", recovery: ""},
+		{name: "null", recovery: nil},
+		{name: "omitted", recovery: sentinelOmit},
+		{name: "invalid", recovery: "not-json", wantTextPrefix: "Invalid advance_workflow recovery"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{"workflowId": "missing-workflow"}
+			if s, ok := tc.recovery.(string); !ok || s != sentinelOmit {
+				args["recovery"] = tc.recovery
+			}
+			result, err := orchestrator.AdvanceWorkflow(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("advance workflow transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid advance_workflow input") ||
+				strings.HasPrefix(gotText, "Invalid advance_workflow recovery") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

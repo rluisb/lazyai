@@ -111,14 +111,14 @@ func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
 		mcp.WithString("task", mcp.Required(), mcp.Description("Task description for the workflow")),
 		mcp.WithString("domainSkill", mcp.Description("Optional domain skill")),
 		mcp.WithString("modeSkill", mcp.Description("Optional mode skill")),
-		mcp.WithString("budget", mcp.Description("Optional budget policy JSON")),
-		mcp.WithString("context", mcp.Description("Optional execution context JSON")),
+		mcp.WithObject("budget", mcp.Description("Optional budget policy (object; stringified JSON accepted for legacy clients).")),
+		mcp.WithObject("context", mcp.Description("Optional execution context (object; stringified JSON accepted for legacy clients).")),
 	), o.StartWorkflow)
 	s.AddTool(mcp.NewTool("advance_workflow",
 		mcp.WithDescription("Advance a running workflow."),
 		mcp.WithString("workflowId", mcp.Required(), mcp.Description("Workflow run ID")),
 		mcp.WithString("outcome", mcp.Description("Phase outcome")),
-		mcp.WithString("recovery", mcp.Description("Recovery decision JSON")),
+		mcp.WithObject("recovery", mcp.Description("Recovery decision (object; stringified JSON accepted for legacy clients).")),
 	), o.AdvanceWorkflow)
 	s.AddTool(mcp.NewTool("get_status",
 		mcp.WithDescription("Get runtime status for a run."),
@@ -480,9 +480,28 @@ func (o *Orchestrator) CompleteTeamTask(ctx context.Context, req mcp.CallToolReq
 }
 
 func (o *Orchestrator) StartWorkflow(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.StartWorkflowInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		Workflow    string          `json:"workflow"`
+		Task        string          `json:"task"`
+		DomainSkill string          `json:"domainSkill,omitempty"`
+		ModeSkill   string          `json:"modeSkill,omitempty"`
+		Budget      json.RawMessage `json:"budget,omitempty"`
+		Context     json.RawMessage `json:"context,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid start_workflow input: %v", err)), nil
+	}
+	input := types.StartWorkflowInput{
+		Workflow:    raw.Workflow,
+		Task:        raw.Task,
+		DomainSkill: raw.DomainSkill,
+		ModeSkill:   raw.ModeSkill,
+	}
+	if err := decodeOptionalJSONArg(raw.Budget, &input.Budget); err != nil {
+		return text(fmt.Sprintf("Invalid start_workflow budget: %v", err)), nil
+	}
+	if err := decodeOptionalJSONArg(raw.Context, &input.Context); err != nil {
+		return text(fmt.Sprintf("Invalid start_workflow context: %v", err)), nil
 	}
 	if input.Workflow == "" || input.Task == "" {
 		return text("Missing required: workflow, task"), nil
@@ -503,9 +522,17 @@ func (o *Orchestrator) StartWorkflow(ctx context.Context, req mcp.CallToolReques
 }
 
 func (o *Orchestrator) AdvanceWorkflow(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.AdvanceWorkflowInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		WorkflowID string          `json:"workflowId"`
+		Outcome    string          `json:"outcome,omitempty"`
+		Recovery   json.RawMessage `json:"recovery,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid advance_workflow input: %v", err)), nil
+	}
+	input := types.AdvanceWorkflowInput{WorkflowID: raw.WorkflowID, Outcome: raw.Outcome}
+	if err := decodeOptionalJSONArg(raw.Recovery, &input.Recovery); err != nil {
+		return text(fmt.Sprintf("Invalid advance_workflow recovery: %v", err)), nil
 	}
 	if input.WorkflowID == "" {
 		return text("Missing required: workflowId"), nil

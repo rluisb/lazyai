@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.0] - 2026-05-04
+## [0.3.0] - 2026-05-12
+
+### Added
+- **Orchestrator Dashboard**: Embedded dashboard MVP with global event streams, run details, budget cards, and Catppuccin theming.
+- **Design System**: Comprehensive refactor of the CLI to use the new Catppuccin-based design system for logs, errors, and interactive forms.
+- **Automated Initialization**: Simplified install wizard and automated AI tool initialization after scaffolding.
+- **Doctor Diagnostics**: Added a diagnostic to detect and help remove stale `ai-setup-orchestrator` MCP entries.
+- **New Skills**: Adopted `diagnose` and `improve-codebase-architecture` skills.
+- **Open Source Readiness**: Auto-generate `llm.txt` from curated docs on every MkDocs build and added community infrastructure.
 
 ### Changed
 - **Breaking:** Project renamed from `ai-setup` to `LazyAI`. Binary names, Go module paths, and GitHub org all updated.
@@ -10,6 +18,8 @@ All notable changes to this project will be documented in this file.
 - Go module path changed from `github.com/ricardoborges-teachable/ai-setup` to `github.com/rluisb/lazyai`.
 - Installation is Go-only via `go install`. npm/npx distribution has been removed.
 - All Teachable/org references removed from source, specs, and documentation.
+- **Copilot**: Bumped `claude-sonnet-4.5` to `4.6` across agent sources.
+- **Security**: Hardened RPI human gates to prevent auto-mode bypasses.
 
 ### Migration
 - See [Migration from ai-setup to LazyAI](docs/migration/ai-setup-to-lazyai.md) for the full checklist.

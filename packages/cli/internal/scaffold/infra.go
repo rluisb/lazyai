@@ -13,7 +13,7 @@ import (
 
 // ScaffoldInfra installs infrastructure files (pre-commit hook, compliance,
 // CODEOWNERS, KNOWLEDGE_MAP). Ported from src/scaffold/infra.ts.
-func ScaffoldInfra(targetDir string, libFS fs.FS, projectName string, infra []types.InfraId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+func ScaffoldInfra(targetDir string, setupScope types.SetupScope, libFS fs.FS, projectName string, infra []types.InfraId, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
 	if len(infra) == 0 {
 		return nil
 	}
@@ -28,28 +28,34 @@ func ScaffoldInfra(targetDir string, libFS fs.FS, projectName string, infra []ty
 	}
 
 	// Process compliance.md.
-	for _, id := range infra {
-		if id == types.InfraIdCompliance {
-			if err := scaffoldCompliance(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
-				return err
+	if setupScope != types.SetupScopeGlobal {
+		for _, id := range infra {
+			if id == types.InfraIdCompliance {
+				if err := scaffoldCompliance(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	// Process KNOWLEDGE_MAP.
-	for _, id := range infra {
-		if id == types.InfraIdKnowledgeMap {
-			if err := scaffoldKnowledgeMap(targetDir, libFS, projectName, fileRecords, strategy, perFileOverrides); err != nil {
-				return err
+	if setupScope != types.SetupScopeGlobal {
+		for _, id := range infra {
+			if id == types.InfraIdKnowledgeMap {
+				if err := scaffoldKnowledgeMap(targetDir, libFS, projectName, fileRecords, strategy, perFileOverrides); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	// Process CODEOWNERS.
-	for _, id := range infra {
-		if id == types.InfraIdCodeowners {
-			if err := scaffoldCodeowners(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
-				return err
+	if setupScope != types.SetupScopeGlobal {
+		for _, id := range infra {
+			if id == types.InfraIdCodeowners {
+				if err := scaffoldCodeowners(targetDir, libFS, fileRecords, strategy, perFileOverrides); err != nil {
+					return err
+				}
 			}
 		}
 	}

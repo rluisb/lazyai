@@ -17,6 +17,8 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		Directories: []string{},
 		Errors:      []error{},
 	}
+	planningPath := planningRoot(ctx)
+	toolRoot := workspaceToolRoot(ctx)
 
 	fileRecords := &result.Files
 	libFS := ctx.LibraryFS
@@ -25,12 +27,14 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 1: Constitution files.
-	if err := ScaffoldConstitution(ctx.TargetDir, libFS, ctx.ProjectName, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
-		result.Errors = append(result.Errors, fmt.Errorf("constitution: %w", err))
+	if planningPath != "" {
+		if err := ScaffoldConstitution(planningPath, libFS, ctx.ProjectName, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+			result.Errors = append(result.Errors, fmt.Errorf("constitution: %w", err))
+		}
 	}
 
 	// Step 2: MCP configuration.
-	if err := ScaffoldMcp(ctx.TargetDir, ctx.LibraryDir, libFS, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	if err := ScaffoldMcp(toolRoot, ctx.LibraryDir, libFS, ctx.CLITools, ctx.EnableServers, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("mcp: %w", err))
 	}
 
@@ -40,27 +44,38 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	// Step 4: Specs directory structure.
-	if err := ScaffoldSpecs(ctx.TargetDir, ctx.SetupScope, libFS, ctx.SpecsDirs, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
-		result.Errors = append(result.Errors, fmt.Errorf("specs: %w", err))
+	if planningPath != "" {
+		if err := ScaffoldSpecs(planningPath, ctx.SetupScope, libFS, ctx.SpecsDirs, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+			result.Errors = append(result.Errors, fmt.Errorf("specs: %w", err))
+		}
 	}
 
-	if err := ScaffoldHousekeeping(ctx.TargetDir, ctx.Housekeeping); err != nil {
-		result.Errors = append(result.Errors, fmt.Errorf("housekeeping: %w", err))
+	if planningPath != "" {
+		if err := ScaffoldHousekeeping(planningPath, ctx.Housekeeping); err != nil {
+			result.Errors = append(result.Errors, fmt.Errorf("housekeeping: %w", err))
+		}
 	}
 
 	// Step 5: Templates and rules.
-	if err := ScaffoldTemplatesRules(ctx.TargetDir, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.CoverageThreshold); err != nil {
-		result.Errors = append(result.Errors, fmt.Errorf("templates-rules: %w", err))
+	if planningPath != "" {
+		if err := ScaffoldTemplatesRules(planningPath, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.CoverageThreshold); err != nil {
+			result.Errors = append(result.Errors, fmt.Errorf("templates-rules: %w", err))
+		}
 	}
 
 	// Step 6: Infrastructure files.
-	if err := ScaffoldInfra(ctx.TargetDir, libFS, ctx.ProjectName, ctx.Infra, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
+	infraPath := ctx.TargetDir
+	if planningPath != "" {
+		infraPath = planningPath
+	}
+	if err := ScaffoldInfra(infraPath, ctx.SetupScope, libFS, ctx.ProjectName, ctx.Infra, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 		result.Errors = append(result.Errors, fmt.Errorf("infra: %w", err))
 	}
 
 	// Step 7: Compiled root files.
 	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
 		TargetDir:           ctx.TargetDir,
+		WorkspaceRoot:       ctx.WorkspaceRoot,
 		HomeDir:             ctx.HomeDir,
 		LibraryFS:           libFS,
 		Tools:               ctx.Tools,
@@ -116,10 +131,11 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	for _, tool := range ctx.Tools {
 		if tool == types.ToolIdOpenCode {
 			adapterCtx := &adapter.AdapterContext{
-				TargetDir:  ctx.TargetDir,
-				HomeDir:    ctx.HomeDir,
-				SetupScope: ctx.SetupScope,
-				LibraryFS:  ctx.LibraryFS,
+				TargetDir:     ctx.TargetDir,
+				HomeDir:       ctx.HomeDir,
+				SetupScope:    ctx.SetupScope,
+				WorkspaceRoot: ctx.WorkspaceRoot,
+				LibraryFS:     ctx.LibraryFS,
 			}
 			warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
 			for _, w := range warnings {
@@ -136,11 +152,6 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 
 	// Step 10: Workspace-specific: repo roots and ledgers.
 	if ctx.SetupScope == types.SetupScopeWorkspace && len(ctx.Repos) > 0 {
-		planningPath := ctx.PlanningRepoPath
-		if planningPath == "" {
-			planningPath = ctx.TargetDir
-		}
-
 		repoResults := ScaffoldRepoRoots(ctx.Repos, planningPath, ctx.Tools, ctx.Strategy, ctx.PerFileOverrides)
 		for _, records := range repoResults {
 			result.Files = append(result.Files, records...)
@@ -161,4 +172,24 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 
 	return result, nil
+}
+
+func workspaceToolRoot(ctx *ScaffoldContext) string {
+	if ctx == nil {
+		return ""
+	}
+	if ctx.SetupScope == types.SetupScopeWorkspace && ctx.WorkspaceRoot != "" {
+		return ctx.WorkspaceRoot
+	}
+	return ctx.TargetDir
+}
+
+func planningRoot(ctx *ScaffoldContext) string {
+	if ctx == nil || ctx.SetupScope == types.SetupScopeGlobal {
+		return ""
+	}
+	if ctx.PlanningRepoPath != "" {
+		return ctx.PlanningRepoPath
+	}
+	return ctx.TargetDir
 }

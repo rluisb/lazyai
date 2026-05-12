@@ -180,6 +180,63 @@ func TestBuildScaffoldContextDefaultsSkippedCoverageTo80(t *testing.T) {
 	}
 }
 
+func TestBuildScaffoldContextWorkspaceUsesTargetAsPlanningRepoAndFlagAsWorkspaceRoot(t *testing.T) {
+	planningRepo := t.TempDir()
+	workspaceRoot := t.TempDir()
+	useReversa := false
+	config := &wizard.WizardConfig{
+		Interactive:      false,
+		HomeDir:          testRepoRoot(t),
+		TargetDir:        planningRepo,
+		CLIScope:         types.SetupScopeWorkspace,
+		CLITools:         []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:        types.PresetLevelMinimal,
+		CLIName:          "workspace-test",
+		CLIWorkspaceRoot: workspaceRoot,
+		CLIUseReversa:    &useReversa,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: config.CLIName},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset, UseReversa: &useReversa},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.PlanningRepoPath != planningRepo {
+		t.Fatalf("PlanningRepoPath = %q, want target planning repo %q", ctx.PlanningRepoPath, planningRepo)
+	}
+	if ctx.WorkspaceRoot != workspaceRoot {
+		t.Fatalf("WorkspaceRoot = %q, want CLI workspace root %q", ctx.WorkspaceRoot, workspaceRoot)
+	}
+}
+
+func TestBuildScaffoldContextGlobalClearsPlanningAndWorkspaceRoots(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeGlobal,
+		CLITools:    []types.ToolId{types.ToolIdClaudeCode},
+		CLIPreset:   types.PresetLevelMinimal,
+		CLIName:     "global-test",
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: config.CLIName},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.PlanningRepoPath != "" || ctx.WorkspaceRoot != "" {
+		t.Fatalf("global roots = planning %q workspace %q, want both empty", ctx.PlanningRepoPath, ctx.WorkspaceRoot)
+	}
+}
+
 func TestBuildScaffoldContextNoReversaSkipsScoutPopulation(t *testing.T) {
 	dir := t.TempDir()
 	writeGoProjectForReversaTest(t, dir)

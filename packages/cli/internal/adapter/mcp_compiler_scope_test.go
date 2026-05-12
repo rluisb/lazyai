@@ -23,6 +23,16 @@ func writeCanonicalMcp(t *testing.T, targetDir string) {
 	}
 }
 
+func assertFileOnlyAt(t *testing.T, wantPath, leakPath string) {
+	t.Helper()
+	if !files.FileExists(wantPath) {
+		t.Fatalf("expected file at %q, not found", wantPath)
+	}
+	if files.FileExists(leakPath) {
+		t.Fatalf("expected no file at %q", leakPath)
+	}
+}
+
 // TestCompileMCPForTool_ScopeParity asserts that each (tool, scope) pair writes
 // to the expected on-disk path via ResolveToolRoot — not a project-relative
 // fallback. Copilot × global and Claude × global skip cleanly.
@@ -117,6 +127,50 @@ func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 						}
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestCompileMCPForTool_WorkspaceUsesWorkspaceRootForCanonicalAndToolOutputs(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	planningRepo := filepath.Join(workspaceRoot, "planning")
+	if err := os.MkdirAll(planningRepo, 0o755); err != nil {
+		t.Fatalf("create planning repo: %v", err)
+	}
+	writeCanonicalMcp(t, workspaceRoot)
+
+	for _, tc := range []struct {
+		name     string
+		tool     types.ToolId
+		wantRel  string
+		leakRel  string
+		recordID string
+	}{
+		{name: "opencode", tool: types.ToolIdOpenCode, wantRel: ".opencode/opencode.jsonc", leakRel: ".opencode/opencode.jsonc", recordID: ".opencode"},
+		{name: "claude", tool: types.ToolIdClaudeCode, wantRel: ".mcp.json", leakRel: ".mcp.json", recordID: ".mcp.json"},
+		{name: "copilot", tool: types.ToolIdCopilot, wantRel: ".vscode/mcp.json", leakRel: ".vscode/mcp.json", recordID: ".vscode/mcp.json"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			records, err := CompileMCPForTool(tc.tool, CompileContext{
+				TargetDir:     planningRepo,
+				WorkspaceRoot: workspaceRoot,
+				HomeDir:       t.TempDir(),
+				SetupScope:    types.SetupScopeWorkspace,
+			})
+			if err != nil {
+				t.Fatalf("CompileMCPForTool: %v", err)
+			}
+
+			assertFileOnlyAt(t, filepath.Join(workspaceRoot, tc.wantRel), filepath.Join(planningRepo, tc.leakRel))
+			foundRecord := false
+			for _, rec := range records {
+				if strings.Contains(filepath.ToSlash(rec.Path), tc.recordID) {
+					foundRecord = true
+				}
+			}
+			if !foundRecord {
+				t.Fatalf("expected record containing %q, got %#v", tc.recordID, records)
 			}
 		})
 	}

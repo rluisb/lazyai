@@ -19,6 +19,7 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 	for _, a := range adapters {
 		adapterCtx := &adapter.AdapterContext{
 			TargetDir:           ctx.TargetDir,
+			WorkspaceRoot:       ctx.WorkspaceRoot,
 			SetupScope:          ctx.SetupScope,
 			HomeDir:             ctx.HomeDir,
 			LibraryDir:          ctx.LibraryDir,

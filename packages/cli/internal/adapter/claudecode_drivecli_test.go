@@ -78,3 +78,47 @@ func TestClaudeAdapter_DriveCLI_CallsClaudeBinary(t *testing.T) {
 		t.Errorf("expected 'mcp get' or 'mcp add-json' in stub args, got: %s", contents)
 	}
 }
+
+func TestClaudeAdapter_DriveCLI_WorkspaceUsesWorkspaceRootForMCPRegistration(t *testing.T) {
+	ctx, _, _ := newScopeTestContext(t, types.SetupScopeWorkspace)
+	planningRepo := t.TempDir()
+	workspaceRoot := t.TempDir()
+	ctx.TargetDir = planningRepo
+	ctx.WorkspaceRoot = workspaceRoot
+	ctx.DriveCLI = true
+
+	stubDir := t.TempDir()
+	recordFile := filepath.Join(stubDir, "claude-cwd.txt")
+	stubScript := fmt.Sprintf("#!/bin/sh\npwd >> %s\nexit 1\n", recordFile)
+	stubPath := filepath.Join(stubDir, "claude")
+	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	aiDir := filepath.Join(workspaceRoot, ".ai")
+	if err := files.EnsureDir(aiDir); err != nil {
+		t.Fatal(err)
+	}
+	mcpJSON := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem"]}}}`
+	if err := files.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	origPATH := os.Getenv("PATH")
+	t.Setenv("PATH", stubDir+string(os.PathListSeparator)+origPATH)
+
+	adapter := &ClaudeCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	data, err := files.ReadFile(recordFile)
+	if err != nil {
+		t.Fatalf("expected claude CLI to be called using workspace canonical MCP: %v", err)
+	}
+	for _, got := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if got != workspaceRoot {
+			t.Fatalf("claude CLI working dir = %q, want workspace root %q", got, workspaceRoot)
+		}
+	}
+}

@@ -85,10 +85,9 @@ type CompileContext struct {
 	// `.claude/settings.local.json` instead of the committed `.mcp.json`.
 	LocalSecrets bool
 	// WorkspaceRoot is the canonical workspace root directory. At workspace
-	// scope this equals TargetDir (the planning repo); at project scope it
-	// is empty. Spec 022 / E2.3: propagation logic uses WorkspaceRoot +
-	// Repos to write per-repo tool configs without colliding with the
-	// planning-repo write.
+	// scope this may differ from TargetDir (the planning repo); at project scope
+	// it is empty. Spec 022 / E2.3: propagation logic uses WorkspaceRoot + Repos
+	// to write per-repo tool configs without colliding with the planning-repo write.
 	WorkspaceRoot string
 	// Repos lists the per-repo subdirectories the workspace owns. Empty
 	// outside workspace scope. Each repo's Path is relative to

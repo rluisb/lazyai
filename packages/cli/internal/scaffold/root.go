@@ -59,14 +59,21 @@ type targetedFieldSpec struct {
 // combination is not supported (e.g. Copilot × global).
 //
 // Placement rules:
-//   - project / workspace: <targetDir>/<outputFile> (Copilot's .github/ prefix
-//     preserved).
+//   - project: <targetDir>/<outputFile> (Copilot's .github/ prefix preserved).
+//   - workspace: <workspaceRoot>/<outputFile> when provided, otherwise targetDir
+//     for backward compatibility.
 //   - global: under the tool's global root, using the bare basename of
 //     outputFile — Copilot × global is unsupported.
-func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, homeDir, outputFile string) (string, error) {
+func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, workspaceRoot, homeDir, outputFile string) (string, error) {
 	switch scope {
-	case types.SetupScopeProject, types.SetupScopeWorkspace, "":
+	case types.SetupScopeProject, "":
 		return filepath.Join(targetDir, outputFile), nil
+	case types.SetupScopeWorkspace:
+		root := targetDir
+		if workspaceRoot != "" {
+			root = workspaceRoot
+		}
+		return filepath.Join(root, outputFile), nil
 	case types.SetupScopeGlobal:
 		if tool == types.ToolIdCopilot {
 			return "", errMemoryDocScopeUnsupported
@@ -227,7 +234,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 		}
 
 		homeDir := opts.HomeDir
-		destPath, err := memoryDocDestPath(tool, opts.SetupScope, opts.TargetDir, homeDir, outputFile)
+		destPath, err := memoryDocDestPath(tool, opts.SetupScope, opts.TargetDir, opts.WorkspaceRoot, homeDir, outputFile)
 		if err != nil {
 			if errors.Is(err, errMemoryDocScopeUnsupported) {
 				scaffoldLog.Warn("skipping memory doc for unsupported scope", "tool", tool, "scope", opts.SetupScope)
@@ -239,12 +246,13 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 			return err
 		}
 
-		action, err := conflict.ApplyStrategy(destPath, opts.Strategy, opts.PerFileOverrides, opts.TargetDir)
+		recordRoot := opts.recordRoot()
+		action, err := conflict.ApplyStrategy(destPath, opts.Strategy, opts.PerFileOverrides, recordRoot)
 		if err != nil {
 			return err
 		}
 		if action == "skip" {
-			relPath, _ := filepath.Rel(opts.TargetDir, destPath)
+			relPath, _ := filepath.Rel(recordRoot, destPath)
 			scaffoldLog.Info("skipping existing file", "path", relPath)
 			continue
 		}
@@ -264,12 +272,12 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 			return err
 		}
 		// Signal populate if placeholders remain.
-		if err := writePopulateSignal(opts.TargetDir, content); err != nil {
+		if err := writePopulateSignal(recordRoot, content); err != nil {
 			scaffoldLog.Warn("failed to write populate signal", "error", err)
 		}
 
 		hash, _ := files.FileHash(destPath)
-		relPath, _ := filepath.Rel(opts.TargetDir, destPath)
+		relPath, _ := filepath.Rel(recordRoot, destPath)
 		if relPath == "" || strings.HasPrefix(relPath, "..") {
 			// Global-scope destinations live outside TargetDir — record the
 			// absolute path so downstream tooling can find the file.
@@ -491,7 +499,7 @@ func appendClaudeAgentsReference(opts ScaffoldCompiledRootOptions) error {
 		return nil
 	}
 
-	claudePath := filepath.Join(opts.TargetDir, "CLAUDE.md")
+	claudePath := filepath.Join(opts.recordRoot(), "CLAUDE.md")
 	if !files.FileExists(claudePath) {
 		return nil
 	}
@@ -516,6 +524,7 @@ func appendClaudeAgentsReference(opts ScaffoldCompiledRootOptions) error {
 // ScaffoldCompiledRootOptions holds the options for compiling root files.
 type ScaffoldCompiledRootOptions struct {
 	TargetDir        string
+	WorkspaceRoot    string
 	HomeDir          string
 	LibraryFS        fs.FS
 	Tools            []types.ToolId
@@ -558,6 +567,13 @@ type ScaffoldCompiledRootOptions struct {
 	CodebaseMap         []compiler.CodebaseMapEntry
 	// Referenced repos for workspace scope.
 	Repos []types.RepoInfo
+}
+
+func (opts ScaffoldCompiledRootOptions) recordRoot() string {
+	if opts.SetupScope == types.SetupScopeWorkspace && opts.WorkspaceRoot != "" {
+		return opts.WorkspaceRoot
+	}
+	return opts.TargetDir
 }
 
 func buildRootFragmentContext(opts ScaffoldCompiledRootOptions, features types.FeatureFlags) compiler.FragmentContext {

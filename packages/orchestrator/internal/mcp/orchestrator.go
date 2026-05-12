@@ -80,8 +80,8 @@ func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
 		mcp.WithString("chainId", mcp.Required(), mcp.Description("Chain run ID")),
 		mcp.WithString("stepId", mcp.Required(), mcp.Description("Current step ID")),
 		mcp.WithString("outcome", mcp.Required(), mcp.Description("Step outcome (success/failed/skipped)")),
-		mcp.WithString("output", mcp.Description("Step output data (JSON)")),
-		mcp.WithString("usage", mcp.Description("Token/cost usage JSON")),
+		mcp.WithObject("output", mcp.Description("Step output data (object; stringified JSON accepted for legacy clients).")),
+		mcp.WithObject("usage", mcp.Description("Token/cost usage (object; stringified JSON accepted for legacy clients).")),
 	), o.AdvanceChain)
 	s.AddTool(mcp.NewTool("build_team",
 		mcp.WithDescription("Compile and start a team run."),
@@ -241,7 +241,7 @@ func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) 
 		ModeSkill:   raw.ModeSkill,
 		Budget:      raw.Budget,
 	}
-	if err := decodeStartChainContext(raw.Context, &input.Context); err != nil {
+	if err := decodeOptionalJSONArg(raw.Context, &input.Context); err != nil {
 		return text(fmt.Sprintf("Invalid start_chain context: %v", err)), nil
 	}
 	if input.Chain == "" || input.Task == "" {
@@ -282,9 +282,26 @@ func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) 
 }
 
 func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.AdvanceChainInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		ChainID string          `json:"chainId"`
+		StepID  string          `json:"stepId"`
+		Outcome string          `json:"outcome"`
+		Output  json.RawMessage `json:"output,omitempty"`
+		Usage   json.RawMessage `json:"usage,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid advance_chain input: %v", err)), nil
+	}
+	input := types.AdvanceChainInput{
+		ChainID: raw.ChainID,
+		StepID:  raw.StepID,
+		Outcome: raw.Outcome,
+	}
+	if err := decodeOptionalJSONArg(raw.Output, &input.Output); err != nil {
+		return text(fmt.Sprintf("Invalid advance_chain output: %v", err)), nil
+	}
+	if err := decodeOptionalJSONArg(raw.Usage, &input.Usage); err != nil {
+		return text(fmt.Sprintf("Invalid advance_chain usage: %v", err)), nil
 	}
 	if input.ChainID == "" || input.StepID == "" || input.Outcome == "" {
 		return text("Missing: chainId, stepId, outcome"), nil

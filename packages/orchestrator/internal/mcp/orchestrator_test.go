@@ -207,6 +207,87 @@ func TestStartChainAcceptsContextShapes(t *testing.T) {
 	}
 }
 
+func TestAdvanceChainAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validOutput := map[string]any{
+		"summary":  "researched",
+		"status":   "done",
+		"findings": []any{},
+	}
+	validUsage := map[string]any{"totalTokens": 50}
+
+	cases := []struct {
+		name           string
+		output         any
+		usage          any
+		wantTextPrefix string
+		wantTokens     int
+	}{
+		{name: "object_object", output: validOutput, usage: validUsage, wantTokens: 50},
+		{name: "stringified_output", output: `{"summary":"researched","status":"done","findings":[]}`, usage: validUsage, wantTokens: 50},
+		{name: "stringified_usage", output: validOutput, usage: `{"totalTokens":50}`, wantTokens: 50},
+		{name: "empty_string_output", output: "", usage: validUsage, wantTokens: 50},
+		{name: "empty_string_usage", output: validOutput, usage: "", wantTokens: 0},
+		{name: "null_both", output: nil, usage: nil, wantTokens: 0},
+		{name: "omitted_both", output: sentinelOmit, usage: sentinelOmit, wantTokens: 0},
+		{name: "invalid_output", output: "not-json", usage: sentinelOmit, wantTextPrefix: "Invalid advance_chain output"},
+		{name: "invalid_usage", output: validOutput, usage: "not-json", wantTextPrefix: "Invalid advance_chain usage"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			createSimpleChainCatalog(t, orchestrator)
+			started := startSimpleChain(t, orchestrator)
+
+			args := map[string]any{
+				"chainId": started.ChainID,
+				"stepId":  "research",
+				"outcome": "success",
+			}
+			if s, ok := tc.output.(string); !ok || s != sentinelOmit {
+				args["output"] = tc.output
+			}
+			if s, ok := tc.usage.(string); !ok || s != sentinelOmit {
+				args["usage"] = tc.usage
+			}
+
+			result, err := orchestrator.AdvanceChain(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("advance chain transport error: %v", err)
+			}
+
+			if tc.wantTextPrefix != "" {
+				gotText := decodeToolText(t, result)
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected text to start with %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+
+			var advanced struct {
+				State    string `json:"state"`
+				NextStep struct {
+					StepID string `json:"stepId"`
+				} `json:"nextStep"`
+				Budget struct {
+					Tokens struct {
+						Consumed int `json:"consumed"`
+					} `json:"tokens"`
+				} `json:"budget"`
+			}
+			decodeToolResult(t, result, &advanced)
+			if advanced.State != "running" || advanced.NextStep.StepID != "implement" {
+				t.Fatalf("unexpected advance result: %+v", advanced)
+			}
+			if advanced.Budget.Tokens.Consumed != tc.wantTokens {
+				t.Fatalf("expected tokens=%d, got %d", tc.wantTokens, advanced.Budget.Tokens.Consumed)
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

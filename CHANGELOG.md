@@ -2,14 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.0] - 2026-05-12
+## [1.1.0] - 2026-05-12
 
 ### Added
 - **Orchestrator Dashboard**: Embedded dashboard MVP with global event streams, run details, budget cards, and Catppuccin theming.
 - **Design System**: Comprehensive refactor of the CLI to use the new Catppuccin-based design system for logs, errors, and interactive forms.
 - **Automated Initialization**: Simplified install wizard and automated AI tool initialization after scaffolding.
-- **New Skills**: Adopted `diagnose` and `improve-codebase-architecture` skills.
-- **Open Source Readiness**: Auto-generate `llm.txt` from curated docs on every MkDocs build and added community infrastructure.
+- **Doctor Diagnostics**: Added a diagnostic to detect and help remove stale `ai-setup-orchestrator` MCP entries.
+- **New Skills**: Adopted `diagnose` and `improve-codebase-architecture` skills from mattpocock/skills.
+- **Auth Command**: Added `auth list` command.
+- **Atlassian MCP**: Switched Atlassian scaffold to remote authv2 endpoint.
+- **Open Source Readiness**: Auto-generate `llm.txt` from curated docs on every MkDocs build and added community infrastructure (DCO, issue templates).
+
+### Changed
+- **Copilot**: Bumped `claude-sonnet-4.5` to `4.6` across agent sources.
+- **Security**: Hardened RPI human gates to prevent auto-mode bypasses.
+- Renamed `--non-interactive` flag to `--no-interactive`.
+- Added structured logging across Go packages.
+- Migrated orchestrator MCP tool schemas to typed schemas for reliability.
+
+### Fixed
+- Fixed OpenCode frontmatter + Copilot skill tier resolver.
+- Fixed workspace artifact routing to correct roots.
+- Fixed Claude Code agent description frontmatter emission on install.
+- Fixed contract validator false positives.
+
+## [1.0.0] - 2026-05-04
 
 ### Changed
 - **Breaking:** Project renamed from `ai-setup` to `LazyAI`. Binary names, Go module paths, and GitHub org all updated.
@@ -17,8 +35,6 @@ All notable changes to this project will be documented in this file.
 - Go module path changed from `github.com/ricardoborges-teachable/ai-setup` to `github.com/rluisb/lazyai`.
 - Installation is Go-only via `go install`. npm/npx distribution has been removed.
 - All Teachable/org references removed from source, specs, and documentation.
-- **Copilot**: Bumped `claude-sonnet-4.5` to `4.6` across agent sources.
-- **Security**: Hardened RPI human gates to prevent auto-mode bypasses.
 
 ### Migration
 - See [Migration from ai-setup to LazyAI](docs/migration/ai-setup-to-lazyai.md) for the full checklist.

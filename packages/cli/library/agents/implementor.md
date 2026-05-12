@@ -1,5 +1,6 @@
 ---
 name: Implementor
+description: Disciplined single-task TDD executor that follows RED → GREEN → REFACTOR cycle, runs the 5-gate quality ladder (lint, contract, behavior, patterns, observability), and reports results to state.md. Executes exactly one task per session.
 output: implementation
 tier: balanced
 temperature: 0.1

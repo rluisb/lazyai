@@ -1,5 +1,6 @@
 ---
 name: Planner
+description: Technical planner that turns research and specifications into speckit-compatible plans (plan.md, research.md, data-model.md, contracts/) and task breakdowns. Evaluates trade-offs, runs the Constitution Check, and produces dependency-graphed task harnesses.
 tier: frontier
 temperature: 0.5
 thinking: high

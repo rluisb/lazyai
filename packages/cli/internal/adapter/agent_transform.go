@@ -232,6 +232,9 @@ func claudeCodeFrontmatter(spec frontmatter.AgentSpecRaw, modelField string, fal
 	if spec.Name != "" {
 		fmt.Fprintf(&b, "name: %s\n", spec.Name)
 	}
+	if spec.Description != "" {
+		fmt.Fprintf(&b, "description: %s\n", spec.Description)
+	}
 	fmt.Fprintf(&b, "model: %s\n", modelField)
 	fmt.Fprintf(&b, "temperature: %s\n", formatFloat(spec.Temperature))
 	b.WriteString("---\n")

@@ -87,7 +87,7 @@ func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
 		mcp.WithDescription("Compile and start a team run."),
 		mcp.WithString("team", mcp.Required(), mcp.Description("Team definition name")),
 		mcp.WithString("task", mcp.Required(), mcp.Description("Task description for the team")),
-		mcp.WithString("budget", mcp.Description("Optional budget policy JSON")),
+		mcp.WithObject("budget", mcp.Description("Optional budget policy (object; stringified JSON accepted for legacy clients).")),
 	), o.BuildTeam)
 	s.AddTool(mcp.NewTool("assign_team_task",
 		mcp.WithDescription("Assign or claim a team task."),
@@ -101,9 +101,9 @@ func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
 		mcp.WithString("teamId", mcp.Required(), mcp.Description("Team run ID")),
 		mcp.WithString("taskId", mcp.Required(), mcp.Description("Task ID to complete")),
 		mcp.WithString("outcome", mcp.Required(), mcp.Description("Task outcome (success/failed)")),
-		mcp.WithString("result", mcp.Description("Task result data (JSON)")),
-		mcp.WithString("usage", mcp.Description("Token/cost usage JSON")),
-		mcp.WithString("error", mcp.Description("Error details if failed (JSON)")),
+		mcp.WithObject("result", mcp.Description("Task result data (object; stringified JSON accepted for legacy clients).")),
+		mcp.WithObject("usage", mcp.Description("Token/cost usage (object; stringified JSON accepted for legacy clients).")),
+		mcp.WithObject("error", mcp.Description("Error details if failed (object; stringified JSON accepted for legacy clients).")),
 	), o.CompleteTeamTask)
 	s.AddTool(mcp.NewTool("start_workflow",
 		mcp.WithDescription("Compile and start a workflow run."),
@@ -360,9 +360,17 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 }
 
 func (o *Orchestrator) BuildTeam(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.BuildTeamInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		Team   string          `json:"team"`
+		Task   string          `json:"task"`
+		Budget json.RawMessage `json:"budget,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid build_team input: %v", err)), nil
+	}
+	input := types.BuildTeamInput{Team: raw.Team, Task: raw.Task}
+	if err := decodeOptionalJSONArg(raw.Budget, &input.Budget); err != nil {
+		return text(fmt.Sprintf("Invalid build_team budget: %v", err)), nil
 	}
 	if input.Team == "" || input.Task == "" {
 		return text("Missing required: team, task"), nil
@@ -428,9 +436,26 @@ func (o *Orchestrator) AssignTeamTask(ctx context.Context, req mcp.CallToolReque
 }
 
 func (o *Orchestrator) CompleteTeamTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var input types.CompleteTaskInput
-	if err := bindArguments(req, &input); err != nil {
+	var raw struct {
+		TeamID  string          `json:"teamId"`
+		TaskID  string          `json:"taskId"`
+		Outcome string          `json:"outcome"`
+		Result  json.RawMessage `json:"result,omitempty"`
+		Usage   json.RawMessage `json:"usage,omitempty"`
+		Error   json.RawMessage `json:"error,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
 		return text(fmt.Sprintf("Invalid complete_team_task input: %v", err)), nil
+	}
+	input := types.CompleteTaskInput{TeamID: raw.TeamID, TaskID: raw.TaskID, Outcome: raw.Outcome}
+	if err := decodeOptionalJSONArg(raw.Result, &input.Result); err != nil {
+		return text(fmt.Sprintf("Invalid complete_team_task result: %v", err)), nil
+	}
+	if err := decodeOptionalJSONArg(raw.Usage, &input.Usage); err != nil {
+		return text(fmt.Sprintf("Invalid complete_team_task usage: %v", err)), nil
+	}
+	if err := decodeOptionalJSONArg(raw.Error, &input.Error); err != nil {
+		return text(fmt.Sprintf("Invalid complete_team_task error: %v", err)), nil
 	}
 	if input.TeamID == "" || input.TaskID == "" || input.Outcome == "" {
 		return text("Missing required: teamId, taskId, outcome"), nil

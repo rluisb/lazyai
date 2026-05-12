@@ -288,6 +288,114 @@ func TestAdvanceChainAcceptsJSONArgShapes(t *testing.T) {
 	}
 }
 
+func TestBuildTeamAcceptsBudgetShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		budget         any
+		wantTextPrefix string
+	}{
+		{name: "object", budget: map[string]any{"id": "default", "scope": "team", "defaultActionOnLimit": "warn"}},
+		{name: "stringified", budget: `{"id":"default","scope":"team","defaultActionOnLimit":"warn"}`},
+		{name: "empty_string", budget: ""},
+		{name: "null", budget: nil},
+		{name: "omitted", budget: sentinelOmit},
+		{name: "invalid", budget: "not-json", wantTextPrefix: "Invalid build_team budget"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"team": "missing-team",
+				"task": "do work",
+			}
+			if s, ok := tc.budget.(string); !ok || s != sentinelOmit {
+				args["budget"] = tc.budget
+			}
+			result, err := orchestrator.BuildTeam(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("build team transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid build_team input") || strings.HasPrefix(gotText, "Invalid build_team budget") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
+func TestCompleteTeamTaskAcceptsJSONArgShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	validResult := map[string]any{"summary": "done"}
+	validUsage := map[string]any{"totalTokens": 5}
+	validError := map[string]any{"category": "validation", "code": "X", "message": "fail", "stepId": "s", "agent": "a", "skills": []any{}}
+
+	cases := []struct {
+		name           string
+		result         any
+		usage          any
+		errorArg       any
+		wantTextPrefix string
+	}{
+		{name: "all_object", result: validResult, usage: validUsage, errorArg: validError},
+		{name: "stringified_result", result: `{"summary":"done"}`, usage: sentinelOmit, errorArg: sentinelOmit},
+		{name: "stringified_usage", result: sentinelOmit, usage: `{"totalTokens":5}`, errorArg: sentinelOmit},
+		{name: "stringified_error", result: sentinelOmit, usage: sentinelOmit, errorArg: `{"category":"validation","code":"X","message":"fail","stepId":"s","agent":"a","skills":[]}`},
+		{name: "empty_strings", result: "", usage: "", errorArg: ""},
+		{name: "all_null", result: nil, usage: nil, errorArg: nil},
+		{name: "all_omitted", result: sentinelOmit, usage: sentinelOmit, errorArg: sentinelOmit},
+		{name: "invalid_result", result: "not-json", usage: sentinelOmit, errorArg: sentinelOmit, wantTextPrefix: "Invalid complete_team_task result"},
+		{name: "invalid_usage", result: sentinelOmit, usage: "not-json", errorArg: sentinelOmit, wantTextPrefix: "Invalid complete_team_task usage"},
+		{name: "invalid_error", result: sentinelOmit, usage: sentinelOmit, errorArg: "not-json", wantTextPrefix: "Invalid complete_team_task error"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{
+				"teamId":  "missing-team",
+				"taskId":  "missing-task",
+				"outcome": "success",
+			}
+			if s, ok := tc.result.(string); !ok || s != sentinelOmit {
+				args["result"] = tc.result
+			}
+			if s, ok := tc.usage.(string); !ok || s != sentinelOmit {
+				args["usage"] = tc.usage
+			}
+			if s, ok := tc.errorArg.(string); !ok || s != sentinelOmit {
+				args["error"] = tc.errorArg
+			}
+			result, err := orchestrator.CompleteTeamTask(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("complete team task transport error: %v", err)
+			}
+			gotText := decodeToolText(t, result)
+			if tc.wantTextPrefix != "" {
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			if strings.HasPrefix(gotText, "Invalid complete_team_task input") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task result") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task usage") ||
+				strings.HasPrefix(gotText, "Invalid complete_team_task error") {
+				t.Fatalf("expected decode to succeed, got %q", gotText)
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

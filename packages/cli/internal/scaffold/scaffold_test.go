@@ -65,6 +65,9 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"root/AGENTS.template.md": &fstest.MapFile{
 			Data: []byte("# {{PROJECT_NAME}}\n\nProject agents."),
 		},
+		"root/copilot-instructions.template.md": &fstest.MapFile{
+			Data: []byte("# Copilot Instructions\n\nUse workspace instructions."),
+		},
 		// Orchestration minimal structure
 		"orchestration/chains/feature.json": &fstest.MapFile{
 			Data: []byte(`{"name":"feature","steps":[]}`),
@@ -199,6 +202,69 @@ func TestScaffoldAll_DoesNotCreateSpecsAgentsFiles(t *testing.T) {
 	}
 	if fileExistsInDir(targetDir, "specs/bugfixes/AGENTS.md") {
 		t.Fatal("expected specs/bugfixes/AGENTS.md to not be created")
+	}
+}
+
+func TestScaffoldAll_WorkspaceRoutesPlanningArtifactsToPlanningRepoAndToolsToWorkspaceRoot(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	planningRepo := filepath.Join(workspaceRoot, "bee-gone")
+	if err := os.MkdirAll(planningRepo, 0o755); err != nil {
+		t.Fatalf("create planning repo: %v", err)
+	}
+
+	ctx, _ := minimalScaffoldContext(t, []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot})
+	ctx.TargetDir = planningRepo
+	ctx.SetupScope = types.SetupScopeWorkspace
+	ctx.PlanningRepoPath = planningRepo
+	ctx.WorkspaceRoot = workspaceRoot
+
+	if _, err := ScaffoldAll(ctx); err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	for _, rel := range []string{".specify", "specs", "KNOWLEDGE_MAP.md", "CODEOWNERS"} {
+		if !fileExistsInDir(planningRepo, rel) {
+			t.Fatalf("expected planning artifact %s under planning repo", rel)
+		}
+		if fileExistsInDir(workspaceRoot, rel) {
+			t.Fatalf("planning artifact %s must not be created at workspace root", rel)
+		}
+	}
+	for _, rel := range []string{
+		".ai/mcp.json",
+		".mcp.json",
+		".opencode/agents/builder.md",
+		".claude/agents/builder.md",
+		"AGENTS.md",
+		".github/copilot-instructions.md",
+	} {
+		if !fileExistsInDir(workspaceRoot, rel) {
+			t.Fatalf("expected workspace-level tool artifact %s under workspace root", rel)
+		}
+		if fileExistsInDir(planningRepo, rel) {
+			t.Fatalf("workspace-level tool artifact %s must not be created under planning repo", rel)
+		}
+	}
+}
+
+func TestScaffoldAll_GlobalSkipsProjectPlanningArtifactsButInstallsGlobalTools(t *testing.T) {
+	ctx, targetDir := minimalScaffoldContext(t, []types.ToolId{types.ToolIdClaudeCode})
+	homeDir := t.TempDir()
+	ctx.SetupScope = types.SetupScopeGlobal
+	ctx.HomeDir = homeDir
+	ctx.PlanningRepoPath = ""
+
+	if _, err := ScaffoldAll(ctx); err != nil {
+		t.Fatalf("ScaffoldAll failed: %v", err)
+	}
+
+	for _, rel := range []string{".specify", "specs", "KNOWLEDGE_MAP.md", "CODEOWNERS"} {
+		if fileExistsInDir(targetDir, rel) {
+			t.Fatalf("global scope must not create project planning artifact %s", rel)
+		}
+	}
+	if !fileExistsInDir(homeDir, ".claude/agents/builder.md") {
+		t.Fatal("expected global Claude Code artifacts under HomeDir")
 	}
 }
 

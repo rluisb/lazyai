@@ -58,6 +58,7 @@ type WizardConfig struct {
 	CLIFeatures            []string
 	CLIBranch              string
 	CLICommit              string
+	CLIWorkspaceRoot       string
 	CLICliTools            []string
 	CLIEnableServers       []string
 	CLIMemoryPath          string

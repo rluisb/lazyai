@@ -168,6 +168,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		warnAdaptFallbackForUnsupportedTools(result.Phase1.Tools)
 	}
 
+	planningRepoPath, workspaceRoot := scaffoldRootsForScope(result.Phase1.Scope, config.TargetDir, config.CLIWorkspaceRoot)
+
 	ctx := &scaffold.ScaffoldContext{
 		TargetDir:           config.TargetDir,
 		LibraryDir:          libDir,
@@ -212,11 +214,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		Infra:               infra,
 		SpecsDirs:           specsDirs,
 		Housekeeping:        housekeepingFromResult(result),
-		PlanningRepoPath:    config.HomeDir,
-	}
-
-	if config.HomeDir == "" {
-		ctx.PlanningRepoPath, _ = os.UserHomeDir()
+		WorkspaceRoot:       workspaceRoot,
+		PlanningRepoPath:    planningRepoPath,
 	}
 
 	// Run deterministic Scout to populate mechanical placeholders when enabled.
@@ -300,6 +299,24 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	return ctx, nil
 }
 
+func scaffoldRootsForScope(scope types.SetupScope, targetDir, cliWorkspaceRoot string) (planningRepoPath string, workspaceRoot string) {
+	switch scope {
+	case types.SetupScopeWorkspace:
+		if cliWorkspaceRoot != "" {
+			workspaceRoot = cliWorkspaceRoot
+		} else {
+			workspaceRoot = targetDir
+		}
+		return targetDir, workspaceRoot
+	case types.SetupScopeProject:
+		return targetDir, ""
+	case types.SetupScopeGlobal:
+		return "", ""
+	default:
+		return targetDir, ""
+	}
+}
+
 func shouldUseReversa(result *wizard.WizardResult, config *wizard.WizardConfig) bool {
 	if config != nil && config.CLIUseReversa != nil {
 		return *config.CLIUseReversa
@@ -343,7 +360,9 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Config.EnableServers = ctx.EnableServers
 	storeData.Config.ProjectName = ctx.ProjectName
 	storeData.Config.TargetDir = ctx.TargetDir
+	storeData.Config.WorkspaceRoot = ctx.WorkspaceRoot
 	storeData.Config.PlanningDir = ctx.PlanningDir
+	storeData.Config.PlanningRepoPath = ctx.PlanningRepoPath
 	storeData.Config.Repos = ctx.Repos
 	storeData.Config.Housekeeping = ctx.Housekeeping
 	storeData.Config.ProjectOverview = ctx.ProjectOverview

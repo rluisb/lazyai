@@ -41,6 +41,47 @@ func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 	}
 }
 
+func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	planningRepo := t.TempDir()
+	seedStoreData(t, planningRepo, func(data *types.StoreData) {
+		data.Config.SetupScope = types.SetupScopeWorkspace
+		data.Config.TargetDir = planningRepo
+		data.Config.PlanningRepoPath = planningRepo
+		data.Config.WorkspaceRoot = workspaceRoot
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot}
+	})
+	writeCanonicalMCPConfig(t, workspaceRoot)
+
+	cmd := newCompileCommand(planningRepo, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	if _, _ = captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile: %v", err)
+		}
+	}); false {
+	}
+
+	for _, path := range []string{
+		filepath.Join(workspaceRoot, ".opencode", "opencode.jsonc"),
+		filepath.Join(workspaceRoot, ".mcp.json"),
+		filepath.Join(workspaceRoot, ".vscode", "mcp.json"),
+	} {
+		if !fileExists(path) {
+			t.Fatalf("expected workspace output %q to be generated", path)
+		}
+	}
+	for _, path := range []string{
+		filepath.Join(planningRepo, ".opencode", "opencode.jsonc"),
+		filepath.Join(planningRepo, ".mcp.json"),
+		filepath.Join(planningRepo, ".vscode", "mcp.json"),
+	} {
+		if fileExists(path) {
+			t.Fatalf("did not expect planning repo output %q", path)
+		}
+	}
+}
+
 func TestCompileMissingConfigReturnsError(t *testing.T) {
 	dir := t.TempDir()
 	cmd := newCompileCommand(dir, "", false)

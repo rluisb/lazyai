@@ -53,6 +53,7 @@ func init() {
 func runInit(cmd *cobra.Command, args []string) error {
 	// Parse flags.
 	scopeStr, _ := cmd.Flags().GetString("scope")
+	workspaceRoot, _ := cmd.Flags().GetString("workspace-root")
 	toolsStr, _ := cmd.Flags().GetStringSlice("tools")
 	presetStr, _ := cmd.Flags().GetString("preset")
 	featuresStr, _ := cmd.Flags().GetStringSlice("features")
@@ -110,6 +111,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLIFeatures:            featuresStr,
 		CLIBranch:              branchPattern,
 		CLICommit:              commitPattern,
+		CLIWorkspaceRoot:       workspaceRoot,
 		CLIMemoryPath:          memoryPath,
 		CLIExistingSetupPolicy: existingSetupPolicy,
 		CLIUseReversa:          useReversa,
@@ -259,10 +261,11 @@ func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext)
 			}
 
 			adapterCtx := &adapter.AdapterContext{
-				TargetDir:  ctx.TargetDir,
-				HomeDir:    ctx.HomeDir,
-				SetupScope: ctx.SetupScope,
-				LibraryFS:  ctx.LibraryFS,
+				TargetDir:     ctx.TargetDir,
+				HomeDir:       ctx.HomeDir,
+				SetupScope:    ctx.SetupScope,
+				WorkspaceRoot: ctx.WorkspaceRoot,
+				LibraryFS:     ctx.LibraryFS,
 			}
 
 			cmdLog.Info("running headless populate", "tool", tool)
@@ -500,7 +503,7 @@ func compileMCPForInit(ctx *scaffold.ScaffoldContext, result *scaffold.ScaffoldR
 			HomeDir:       ctx.HomeDir,
 			SetupScope:    ctx.SetupScope,
 			LocalSecrets:  ctx.LocalSecrets,
-			WorkspaceRoot: ctx.TargetDir,
+			WorkspaceRoot: ctx.WorkspaceRoot,
 			Repos:         ctx.Repos,
 		}
 		records, err := adapt.CompileMCP(compileCtx)

@@ -1,21 +1,21 @@
 # Plan: 182-workspace-scope-fix
 
-**Feature ID:** 182
-**Spec:** N/A (bugfix)
-**Date:** 2026-05-11
-**Status:** Draft
-**Owner:** TBD
-**Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
+**Feature ID:** 182  
+**Spec:** GitHub issue #182  
+**Date:** 2026-05-11  
+**Status:** Draft — awaiting human approval for implementation  
+**Owner:** AI-assisted  
+**Constitution:** Repository AGENTS.md process gates
 
-> **Purpose.** Fix workspace scope scaffolding so planning artifacts (`.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS`) land in the designated documentation/planning repo instead of the workspace root. Also fix global scope to avoid generating meaningless project-scoped artifacts.
+> **Purpose.** Fix workspace-scope scaffolding so planning artifacts (`.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS`) land in the planning/documentation repo while AI tool configs stay at the workspace root. Also prevent global scope from creating project-specific planning artifacts.
 
 ---
 
 ## Summary
 
-When installing with workspace scope, `ScaffoldAll()` passes `ctx.TargetDir` (the workspace root) to every scaffold function. Tool configs correctly route to `WorkspaceRoot` via `adapter.ResolveToolRoot()`, but planning artifacts all land at the workspace root instead of the documentation repo. The `PlanningRepoPath` field exists but defaults to `config.HomeDir` (wrong) and is only used in Step 10 as an afterthought.
+Issue #182 is caused by workspace scope collapsing two different roots into one path. Existing adapter contracts already describe the intended model: in workspace scope, `TargetDir` is the planning repo and `WorkspaceRoot` is the workspace root where tool configs live. The current init/scaffold path does not consistently preserve that split: `ScaffoldAll()` routes planning artifacts through `ctx.TargetDir` without scope guards, `buildScaffoldContext()` sets `PlanningRepoPath` to `HomeDir`, `runInit()` declares but does not read `--workspace-root`, and store persistence omits `WorkspaceRoot` / `PlanningRepoPath`.
 
-The fix introduces a `PlanningTargetDir` concept that routes planning steps to the documentation repo for workspace scope, and adds scope-gating to skip project-scoped files in global scope.
+The implementation should use existing fields (`TargetDir`, `WorkspaceRoot`, `PlanningRepoPath`) rather than inventing a second planning concept. Route planning/project artifacts through a single planning target helper, pass `WorkspaceRoot` into adapters/MCP compile, and skip project-specific artifacts for global scope.
 
 ---
 
@@ -23,13 +23,14 @@ The fix introduces a `PlanningTargetDir` concept that routes planning steps to t
 
 | Aspect | Decision | Rationale |
 |---|---|---|
-| Language(s) | Go 1.26 | Existing codebase |
-| Framework(s) | None (standard library + existing scaffold package) | No new dependencies |
-| Storage | N/A | Filesystem-only changes |
-| Deployment | N/A | CLI binary |
-| Telemetry | N/A | No new telemetry |
+| Language(s) | Go 1.26 | Existing CLI implementation |
+| Framework(s) | Cobra + internal scaffold/adapter packages | Existing command/scaffold architecture |
+| Storage | Existing SQLite store fields | `types.Config` and DB already have `workspace_root` and `planning_repo_path` |
+| Deployment | CLI binary | No runtime service changes |
+| Telemetry | Existing logs only | No new telemetry required |
 
 **External dependencies (new):** None.
+
 **External dependencies (rejected):** None.
 
 ---
@@ -38,173 +39,215 @@ The fix introduces a `PlanningTargetDir` concept that routes planning steps to t
 
 | Article | Verdict | Justification |
 |---|---|---|
-| I — Library-First | PASS | Uses existing scaffold functions and types; no new libraries needed. |
-| II — Test-First (NON-NEGOTIABLE) | PASS | Tests written first for workspace + global scope routing. Each scaffold function gets a test verifying correct target directory. |
-| III — Docs as Source of Truth | PASS | This plan documents the fix approach; issue #182 body documents the bug. |
-| IV — Anti-Speculation (YAGNI) | PASS | Only fixes the documented bug. No new features, no refactoring beyond what's needed. |
-| V — Simplicity Over Abstraction | PASS | Adds one field (`PlanningTargetDir`) to `ScaffoldContext` and routes existing functions through it. No new abstractions. |
-| VI — Anti-Overengineering (NON-NEGOTIABLE) | PASS | Minimal changes: 1 new field, 4-6 function signature updates, scope guards in 2 functions. |
+| I — Library-First | PASS | Uses existing scaffold, adapter, and store primitives. |
+| II — Test-First (NON-NEGOTIABLE) | PASS | Add regression tests for workspace routing and global-scope skipping before production edits. |
+| III — Docs as Source of Truth | PASS | This plan documents the issue-specific implementation path; issue #182 remains the behavior contract. |
+| IV — Anti-Speculation (YAGNI) | PASS | Does not add a full docs-repo picker; only wires existing `--workspace-root`/planning-root model and scope guards. |
+| V — Simplicity Over Abstraction | PASS | Reuses existing `PlanningRepoPath` and `WorkspaceRoot` instead of adding `PlanningTargetDir`. |
+| VI — Anti-Overengineering (NON-NEGOTIABLE) | PASS | Changes are limited to routing, persistence, and focused tests. |
 
-**Verdict:** APPROVED
+**Verdict:** PASS — implementation still requires explicit human approval after this plan.
 
 ---
 
 ## Project Structure
 
-```
+```text
 packages/cli/
-├── internal/scaffold/
-│   ├── types.go                          ← modified (add PlanningTargetDir)
-│   ├── scaffold.go                       ← modified (route steps through PlanningTargetDir)
-│   ├── infra.go                          ← modified (add SetupScope param, global guard)
-│   ├── constitution.go                   ← modified (accept planningDir param)
-│   ├── specs.go                          ← modified (accept planningDir param)
-│   └── *_test.go                         ← new/modified (workspace + global scope tests)
 ├── cmd/
-│   └── helpers.go                        ← modified (wire PlanningRepoPath from wizard selection)
-└── internal/types/
-    └── types.go                          ← possibly modified (if SetupScope needs new helpers)
+│   ├── init.go                         ← read --workspace-root, pass split roots to context/compile
+│   ├── helpers.go                      ← derive and persist WorkspaceRoot / PlanningRepoPath
+│   ├── init_test.go                    ← context wiring regression tests
+│   └── helpers_store_test.go           ← store persistence regression test
+└── internal/scaffold/
+    ├── artifacts.go                    ← pass WorkspaceRoot to adapters
+    ├── scaffold.go                     ← route planning/project artifacts and repo ledgers through planning root
+    ├── infra.go                        ← add scope guard for global project-specific files
+    └── scaffold_test.go                ← workspace/global scaffold regression tests
 ```
 
 ---
 
-## Root Cause Analysis
+## Data Model
 
-### Problem 1: Single `TargetDir` for dual-path concerns
+No schema migration is required.
 
-`ScaffoldContext` has one `TargetDir` used for everything. In workspace scope:
-- Tool configs (`.claude/`, `.opencode/`, `.github/`) → should go to `WorkspaceRoot` ✅ (already works via `adapter.ResolveToolRoot()`)
-- Planning artifacts (`.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS`) → should go to documentation repo ❌ (currently goes to `TargetDir` = workspace root)
+Existing fields already support the fix:
 
-### Problem 2: `PlanningRepoPath` defaults to `config.HomeDir`
+| Entity | Storage | Fields | Notes |
+|---|---|---|---|
+| Config | SQLite config table / `types.Config` | `target_dir`, `workspace_root`, `planning_repo_path` | Already present in migrations/store read/write |
+| ScaffoldContext | In-memory | `TargetDir`, `PlanningRepoPath` | Add `WorkspaceRoot` to match adapter/compile contracts |
 
-At `cmd/helpers.go:215`: `PlanningRepoPath: config.HomeDir` — this is wrong. It should be the documentation repo path selected during the wizard.
+**Migrations:** None.
 
-### Problem 3: No scope-gating on infra files
-
-`ScaffoldInfra` takes only `targetDir` with no `SetupScope` parameter. It unconditionally writes `KNOWLEDGE_MAP.md`, `CODEOWNERS`, etc. even in global scope where they have no meaningful content.
+**Backfill / data movement:** None required.
 
 ---
 
-## Fix Design
+## Internal Contracts
 
-### Step 1: Add `PlanningTargetDir` to `ScaffoldContext`
+| Contract | Producer | Consumer | Shape |
+|---|---|---|---|
+| Workspace planning root | `buildScaffoldContext` | `ScaffoldAll`, repo ledgers | `planningRoot(ctx)` returns `ctx.PlanningRepoPath` for workspace when set, otherwise `ctx.TargetDir`; returns empty for global planning-only steps. |
+| Workspace tool root | `runInit` / `buildScaffoldContext` | adapters, MCP compile | `ctx.WorkspaceRoot` is set from `--workspace-root` for workspace scope, defaulting to `ctx.TargetDir` for backward compatibility. |
+| Global project-artifact guard | `ScaffoldAll` / `ScaffoldInfra` | constitution/specs/infra scaffolding | Global scope skips `.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS`, and compliance/project specs. |
 
-```go
-type ScaffoldContext struct {
-    // ... existing fields ...
-    
-    // PlanningTargetDir is where planning artifacts (.specify/, specs/, 
-    // KNOWLEDGE_MAP.md, CODEOWNERS) are installed. For project scope, 
-    // equals TargetDir. For workspace scope, equals the documentation 
-    // repo path. For global scope, empty (artifacts skipped).
-    PlanningTargetDir string
-}
-```
+---
 
-### Step 2: Wire `PlanningTargetDir` in `buildScaffoldContext`
+## Phases & Milestones
 
-In `cmd/helpers.go`, set `PlanningTargetDir` based on scope:
-- **Project scope:** `PlanningTargetDir = config.TargetDir`
-- **Workspace scope:** `PlanningTargetDir = <documentation repo path from wizard>`
-- **Global scope:** `PlanningTargetDir = ""` (signals skip)
-
-The wizard already collects the documentation repo path. It just needs to be wired to `PlanningTargetDir` instead of `PlanningRepoPath`.
-
-### Step 3: Route planning steps through `PlanningTargetDir`
-
-Update `ScaffoldAll()` in `scaffold.go`:
-
-| Step | Function | Current param | New param |
-|------|----------|---------------|-----------|
-| 1 | `ScaffoldConstitution` | `ctx.TargetDir` | `planningDir(ctx)` |
-| 4 | `ScaffoldSpecs` | `ctx.TargetDir` | `planningDir(ctx)` |
-| 6 | `ScaffoldInfra` | `ctx.TargetDir` | `planningDir(ctx)` + `ctx.SetupScope` |
-
-Where `planningDir(ctx)` returns `ctx.PlanningTargetDir` if set, else `ctx.TargetDir` (backward compat).
-
-### Step 4: Add scope-gating to `ScaffoldInfra`
-
-Add `SetupScope` parameter to `ScaffoldInfra`. In global scope, skip:
-- `KNOWLEDGE_MAP.md`
-- `CODEOWNERS`
-- `compliance.md`
-
-Keep in global scope:
-- Pre-commit hook (if applicable)
-
-### Step 5: Update `ScaffoldConstitution` and `ScaffoldSpecs` signatures
-
-Both functions currently take `targetDir string`. Add a `planningDir string` parameter (or change the first parameter to be the planning directory). The simplest approach: change the `targetDir` parameter to mean "planning directory" for these functions, since that's what they actually need.
-
-### Step 6: Update `ScaffoldCompiledRoot` planning directory
-
-`ScaffoldCompiledRoot` already has a `PlanningDir` field in its options struct. Ensure it receives `PlanningTargetDir` for workspace scope.
+| Phase | Goal | Exit criterion |
+|---|---|---|
+| 1 — Regression tests | Capture #182 failures before code changes | Tests fail under current behavior for workspace planning-root routing and global project-artifact skipping. |
+| 2 — Root wiring | Preserve workspace root vs planning repo in init context/store | `buildScaffoldContext` and store tests pass for workspace split roots. |
+| 3 — Scaffold routing | Route planning artifacts to planning root and tool artifacts to workspace root | Workspace scaffold test shows `.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS` in planning repo; `.opencode/`, `.claude/`, `.github/`, MCP outputs at workspace root. |
+| 4 — Global guard | Suppress project-specific artifacts in global scope | Global scaffold test shows no project specs/knowledge/codeowners in target dir, while global tool outputs still work. |
+| 5 — Verification | Run targeted Go tests | `go test ./cmd ./internal/scaffold ./internal/adapter` passes from `packages/cli`. |
 
 ---
 
 ## Task Breakdown
 
-### Task 1: Add `PlanningTargetDir` field and helper function
-- Add `PlanningTargetDir string` to `ScaffoldContext` in `types.go`
-- Add `func planningDir(ctx *ScaffoldContext) string` helper in `scaffold.go`
-- **File:** `packages/cli/internal/scaffold/types.go`, `packages/cli/internal/scaffold/scaffold.go`
+### T1 — Add failing workspace scaffold regression test
 
-### Task 2: Wire `PlanningTargetDir` in `buildScaffoldContext`
-- Update `cmd/helpers.go` to set `PlanningTargetDir` based on scope
-- For workspace scope: use the documentation repo path from wizard result
-- For project scope: use `config.TargetDir`
-- For global scope: leave empty
-- **File:** `packages/cli/cmd/helpers.go`
+**File:** `packages/cli/internal/scaffold/scaffold_test.go`
 
-### Task 3: Route `ScaffoldConstitution` through planning directory
-- Update `ScaffoldConstitution` call in `ScaffoldAll` to use `planningDir(ctx)`
-- Update `ScaffoldConstitution` function signature if needed
-- **File:** `packages/cli/internal/scaffold/scaffold.go`, `packages/cli/internal/scaffold/constitution.go`
+Test setup:
+- `workspaceRoot := t.TempDir()`
+- `planningRepo := filepath.Join(workspaceRoot, "bee-gone")`
+- `ctx.SetupScope = workspace`
+- `ctx.TargetDir = planningRepo`
+- `ctx.PlanningRepoPath = planningRepo`
+- `ctx.WorkspaceRoot = workspaceRoot`
+- selected tools include OpenCode/Claude as needed
 
-### Task 4: Route `ScaffoldSpecs` through planning directory
-- Update `ScaffoldSpecs` call in `ScaffoldAll` to use `planningDir(ctx)`
-- **File:** `packages/cli/internal/scaffold/scaffold.go`, `packages/cli/internal/scaffold/specs.go`
+Done when:
+- Test expects `.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, `CODEOWNERS` under `planningRepo`.
+- Test expects `.opencode/` / `.claude/` under `workspaceRoot`.
+- Test expects those planning artifacts not to be created at `workspaceRoot`.
 
-### Task 5: Add scope-gating to `ScaffoldInfra`
-- Add `scope types.SetupScope` parameter to `ScaffoldInfra`
-- Skip `KNOWLEDGE_MAP.md`, `CODEOWNERS`, `compliance.md` in global scope
-- Update call in `ScaffoldAll` to pass `ctx.SetupScope`
-- **File:** `packages/cli/internal/scaffold/infra.go`, `packages/cli/internal/scaffold/scaffold.go`
+### T2 — Add failing global scaffold regression test
 
-### Task 6: Update `ScaffoldCompiledRoot` planning directory
-- Ensure `PlanningDir` in `ScaffoldCompiledRootOptions` receives `planningDir(ctx)`
-- **File:** `packages/cli/internal/scaffold/scaffold.go`
+**File:** `packages/cli/internal/scaffold/scaffold_test.go`
 
-### Task 7: Tests — workspace scope routing
-- Test that workspace scope routes planning artifacts to `PlanningTargetDir`
-- Test that tool configs still route to `WorkspaceRoot`
-- **File:** `packages/cli/internal/scaffold/scaffold_test.go`
+Done when:
+- Global scope does not create `.specify/`, `specs/`, `KNOWLEDGE_MAP.md`, or `CODEOWNERS` in the project/current dir.
+- Global tool artifacts still resolve through `HomeDir` where supported.
 
-### Task 8: Tests — global scope gating
-- Test that global scope skips `KNOWLEDGE_MAP.md`, `CODEOWNERS`, `specs/`
-- Test that global scope still creates tool configs at global paths
-- **File:** `packages/cli/internal/scaffold/scaffold_test.go`
+### T3 — Add context/store wiring tests
+
+**Files:**
+- `packages/cli/cmd/init_test.go`
+- `packages/cli/cmd/helpers_store_test.go`
+
+Done when:
+- `buildScaffoldContext` sets workspace `PlanningRepoPath` to the planning repo/current target dir, not `HomeDir`.
+- `buildScaffoldContext` sets `WorkspaceRoot` from config/flag for workspace scope.
+- `writeStoreFromScaffoldResult` persists `WorkspaceRoot` and `PlanningRepoPath`.
+
+### T4 — Wire workspace root flag and scaffold context
+
+**Files:**
+- `packages/cli/cmd/init.go`
+- `packages/cli/cmd/helpers.go`
+- `packages/cli/internal/scaffold/types.go`
+
+Implementation notes:
+- Read existing `--workspace-root` flag in `runInit`.
+- Add `CLIWorkspaceRoot` to `wizard.WizardConfig` if needed.
+- Add `WorkspaceRoot` to `scaffold.ScaffoldContext`.
+- For workspace scope:
+  - `TargetDir` remains the planning repo/current dir.
+  - `PlanningRepoPath` defaults to `TargetDir` unless explicitly provided later by UX.
+  - `WorkspaceRoot` defaults to `--workspace-root`, falling back to `TargetDir` for backward compatibility.
+- For project scope: `PlanningRepoPath = TargetDir`, `WorkspaceRoot = ""`.
+- For global scope: `PlanningRepoPath = ""`, `WorkspaceRoot = ""`.
+
+### T5 — Route adapters and MCP compile to workspace root
+
+**Files:**
+- `packages/cli/internal/scaffold/artifacts.go`
+- `packages/cli/cmd/init.go`
+
+Done when:
+- Adapter `Install` receives `WorkspaceRoot: ctx.WorkspaceRoot`.
+- `compileMCPForInit` receives `WorkspaceRoot: ctx.WorkspaceRoot` instead of always `ctx.TargetDir`.
+
+### T6 — Route planning artifacts and repo ledgers to planning root
+
+**File:** `packages/cli/internal/scaffold/scaffold.go`
+
+Done when:
+- `ScaffoldConstitution`, `ScaffoldSpecs`, and `ScaffoldInfra` use `planningRoot(ctx)` where appropriate.
+- Workspace repo roots and ledgers use the same planning root.
+- Global scope skips planning-only steps when planning root is empty.
+
+### T7 — Add scope guard to infra scaffolding
+
+**File:** `packages/cli/internal/scaffold/infra.go`
+
+Done when:
+- `ScaffoldInfra` receives `setupScope` or equivalent scope signal.
+- Global scope skips project-specific infra (`Compliance`, `KnowledgeMap`, `Codeowners`).
+- Pre-commit remains a no-op unless a real `.git` exists.
+
+### T8 — Targeted verification
+
+**Command:** from `packages/cli`
+
+```bash
+go test ./cmd ./internal/scaffold ./internal/adapter
+```
+
+Done when:
+- Targeted tests pass.
+- No unrelated root checkout files are modified.
 
 ---
 
-## Risks
+## Risks & Mitigations
 
-| Risk | Level | Mitigation |
-|---|---|---|
-| Wizard doesn't expose documentation repo path to `buildScaffoldContext` | Medium | Inspect wizard result structure; may need to thread the value through an additional field. |
-| Existing tests assume `TargetDir` for all scaffold steps | Medium | Update test fixtures to use `PlanningTargetDir` where appropriate. |
-| `ScaffoldRepoRoots` (Step 10) already uses `PlanningRepoPath` | Low | This is correct behavior; just ensure `PlanningTargetDir` and `PlanningRepoPath` are consistent. |
-
----
-
-## Dependencies
-
-- None. This is a self-contained bugfix.
+| Risk | Likelihood | Impact | Mitigation | Owner |
+|---|---|---|---|---|
+| `--workspace-root` semantics differ from existing expectations | M | M | Keep fallback to `TargetDir` when absent; document that split-root workspace mode requires `--workspace-root` or future interactive UX. | implementer |
+| Existing tests assume project-scope target behavior | M | L | Only adjust tests that use workspace/global scope; project scope remains unchanged. | implementer |
+| Tracked file paths become ambiguous across roots | M | M | Preserve relative paths for planning-root files; existing adapter global/workspace tracking patterns remain unchanged. | implementer |
+| Headless populate still reads `AGENTS.md` from planning repo while tool AGENTS may be at workspace root | L | M | Leave headless behavior unchanged unless regression exposes failure; #182 scope is scaffold placement. | implementer |
 
 ---
 
-## Open Questions
+## Complexity Tracking
 
-1. **Wizard result structure:** Does the wizard result already contain the documentation repo path, or does it need to be extracted from the repo selection step?
-2. **`PlanningRepoPath` vs `PlanningTargetDir`:** Should these be unified into one field, or kept separate? (Recommendation: unify — they serve the same purpose.)
+| Item | Simpler alternative | Why complexity is justified | Cost |
+|---|---|---|---|
+| Add `WorkspaceRoot` to `ScaffoldContext` | Reuse `TargetDir` for all roots | Existing adapter contracts already require separate planning/tool roots in workspace scope. | Small API surface change |
+| Add planning root helper | Inline `if workspace` checks | Centralizes root fallback and avoids repeated inconsistent logic. | Small helper to maintain |
+
+---
+
+## Out of Scope
+
+- Interactive documentation-repo picker — no current wizard field exists; this plan preserves current-dir-as-planning-repo and wires existing `--workspace-root`.
+- New database migration — relevant fields already exist.
+- Reworking workspace repo discovery or `RepoInfo` semantics.
+- Changing Copilot skill/agent conversion behavior.
+- Fixing orchestrator MCP schemas (already handled separately in root checkout).
+
+---
+
+## Downstream Contract
+
+| Produces for | Filename |
+|---|---|
+| implementation | this plan |
+| review | targeted tests + diff |
+
+---
+
+## Approvals
+
+| Role | Name | Date | Verdict |
+|---|---|---|---|
+| Author | AI-assisted | 2026-05-11 | Draft |
+| Human gate | Pending | 2026-05-11 | pending implementation approval |

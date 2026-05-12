@@ -79,16 +79,6 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-
-	mcpConfigPath := filepath.Join(dir, ".ai", "mcp.json")
-	if !fileExists(mcpConfigPath) {
-		// Also try .ai/mcp.jsonc
-		mcpConfigPath = filepath.Join(dir, ".ai", "mcp.jsonc")
-		if !fileExists(mcpConfigPath) {
-			return fmt.Errorf("no MCP config found at .ai/mcp.json. Run 'lazyai-cli init' first")
-		}
-	}
-
 	// Open the store database (similar to helpers.go openStore)
 	dbPath := filepath.Join(dir, ".ai-setup.db")
 	database, err := db.Open(dbPath)
@@ -121,6 +111,19 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			storeData = &defaults
 		} else {
 			return fmt.Errorf("reading store data: %w", err)
+		}
+	}
+
+	mcpRoot := dir
+	if storeData.Config.SetupScope == types.SetupScopeWorkspace && storeData.Config.WorkspaceRoot != "" {
+		mcpRoot = storeData.Config.WorkspaceRoot
+	}
+	mcpConfigPath := filepath.Join(mcpRoot, ".ai", "mcp.json")
+	if !fileExists(mcpConfigPath) {
+		// Also try .ai/mcp.jsonc
+		mcpConfigPath = filepath.Join(mcpRoot, ".ai", "mcp.jsonc")
+		if !fileExists(mcpConfigPath) {
+			return fmt.Errorf("no MCP config found at .ai/mcp.json. Run 'lazyai-cli init' first")
 		}
 	}
 
@@ -245,7 +248,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			LocalSecrets: localSecrets,
 		}
 		if storeData.Config.SetupScope == types.SetupScopeWorkspace {
-			compileCtx.WorkspaceRoot = dir
+			compileCtx.WorkspaceRoot = storeData.Config.WorkspaceRoot
 			compileCtx.Repos = storeData.Config.Repos
 		}
 
@@ -287,7 +290,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 				HomeDir:       homeDir,
 				SetupScope:    types.SetupScopeWorkspace,
 				LocalSecrets:  localSecrets,
-				WorkspaceRoot: dir,
+				WorkspaceRoot: mcpRoot,
 				Repos:         storeData.Config.Repos,
 			}
 			propagated, err := adapter.PropagateMcpToRepos(reg, propagatedCtx)
@@ -318,7 +321,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	if !dryRun {
-		if catalog := adapter.ReadCanonicalMcp(dir); catalog != nil {
+		if catalog := adapter.ReadCanonicalMcp(mcpRoot); catalog != nil {
 			PrintMcpNextSteps(adapter.GetEnabledServers(catalog))
 		}
 	}

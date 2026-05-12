@@ -19,15 +19,17 @@ func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testi
 	features := types.DefaultFeatureFlags()
 	gitConventions := types.DefaultGitConventions()
 	ctx := &scaffold.ScaffoldContext{
-		TargetDir:      dir,
-		Tools:          []types.ToolId{types.ToolIdOpenCode},
-		CLITools:       []string{"gh"},
-		EnableServers:  []string{"filesystem", "orchestrator"},
-		ProjectName:    "demo-app",
-		PlanningDir:    "specs",
-		SetupScope:     types.SetupScopeProject,
-		Features:       &features,
-		GitConventions: &gitConventions,
+		TargetDir:        dir,
+		WorkspaceRoot:    dir,
+		PlanningRepoPath: dir,
+		Tools:            []types.ToolId{types.ToolIdOpenCode},
+		CLITools:         []string{"gh"},
+		EnableServers:    []string{"filesystem", "orchestrator"},
+		ProjectName:      "demo-app",
+		PlanningDir:      "specs",
+		SetupScope:       types.SetupScopeProject,
+		Features:         &features,
+		GitConventions:   &gitConventions,
 	}
 	result := &scaffold.ScaffoldResult{Files: []types.TrackedFile{{
 		Path:   ".ai/mcp.json",
@@ -50,5 +52,11 @@ func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testi
 	}
 	if len(storeData.Files) != 1 || storeData.Files[0].Owner != types.FileOwnerLibrary {
 		t.Fatalf("Files = %#v, want one library-owned tracked file", storeData.Files)
+	}
+	if storeData.Config.WorkspaceRoot != dir {
+		t.Fatalf("WorkspaceRoot = %q, want %q", storeData.Config.WorkspaceRoot, dir)
+	}
+	if storeData.Config.PlanningRepoPath != dir {
+		t.Fatalf("PlanningRepoPath = %q, want %q", storeData.Config.PlanningRepoPath, dir)
 	}
 }

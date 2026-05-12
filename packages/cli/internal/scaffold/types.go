@@ -83,6 +83,8 @@ type ScaffoldContext struct {
 	Housekeeping *types.HousekeepingConfig
 	// Repos lists workspace repos for workspace scope.
 	Repos []types.RepoInfo
+	// WorkspaceRoot is the workspace root where AI tool configs are installed.
+	WorkspaceRoot string
 	// PlanningRepoPath is the path to the planning repo (for workspace scope).
 	PlanningRepoPath string
 	// LibraryFS is the filesystem for reading library data (embedded or disk).

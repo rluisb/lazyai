@@ -51,7 +51,11 @@ func (s McpServer) isEnabled() bool {
 // each adapter writes to the correct path per scope. Tools with no global
 // layout (Copilot × global) are skipped cleanly.
 func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.TrackedFile, error) {
-	catalog := ReadCanonicalMcp(ctx.TargetDir)
+	catalogRoot := mcpWorkspaceRoot(ctx)
+	catalog := ReadCanonicalMcp(catalogRoot)
+	if catalog == nil && catalogRoot != ctx.TargetDir {
+		catalog = ReadCanonicalMcp(ctx.TargetDir)
+	}
 	if catalog == nil {
 		return ctx.FileRecords, nil
 	}
@@ -154,7 +158,7 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}
 
 	hash, _ := files.FileHash(configPath)
-	recordPath, _ := filepath.Rel(ctx.TargetDir, configPath)
+	recordPath, _ := filepath.Rel(mcpWorkspaceRoot(ctx), configPath)
 	if recordPath == "" || recordPath == "." {
 		recordPath = configPath
 	}
@@ -244,7 +248,8 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 	useCliForMCP(ctx, servers)
 
 	// Write .mcp.json for both CLI and fallback paths.
-	mcpPath := filepath.Join(ctx.TargetDir, ".mcp.json")
+	root := mcpWorkspaceRoot(ctx)
+	mcpPath := filepath.Join(root, ".mcp.json")
 	content := toClaudeCodeMcp(servers)
 
 	if err := WriteJSONFile(mcpPath, content); err != nil {
@@ -276,7 +281,7 @@ func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) 
 		settingsPath = filepath.Join(home, ".claude", "settings.local.json")
 		adapterLog.Info("writing local secrets settings with ai-setup convention", "operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope, "path", settingsPath)
 	default:
-		settingsPath = filepath.Join(ctx.TargetDir, ".claude", "settings.local.json")
+		settingsPath = filepath.Join(mcpWorkspaceRoot(ctx), ".claude", "settings.local.json")
 	}
 
 	_ = files.EnsureDir(filepath.Dir(settingsPath))
@@ -286,7 +291,7 @@ func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) 
 	}
 
 	relPath := settingsPath
-	if rel, err := filepath.Rel(ctx.TargetDir, settingsPath); err == nil {
+	if rel, err := filepath.Rel(mcpWorkspaceRoot(ctx), settingsPath); err == nil {
 		relPath = rel
 	}
 	hash, _ := files.FileHash(settingsPath)
@@ -308,7 +313,7 @@ func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
 
 	// For project/workspace scopes, use -s project with the target dir as working dir.
 	scopeFlag := "project"
-	workingDir := ctx.TargetDir
+	workingDir := mcpWorkspaceRoot(ctx)
 
 	// Register all enabled servers via CLI.
 	for name, srv := range servers {
@@ -410,7 +415,8 @@ func compileCopilotMCP(ctx CompileContext, servers map[string]McpServer) ([]type
 	// At global scope, skip the VS Code emit entirely — no project directory
 	// to anchor it to — and rely on the CLI emit (already probe-gated upstream).
 	if ctx.SetupScope != types.SetupScopeGlobal {
-		vscodeDir := filepath.Join(ctx.TargetDir, ".vscode")
+		root := mcpWorkspaceRoot(ctx)
+		vscodeDir := filepath.Join(root, ".vscode")
 		_ = files.EnsureDir(vscodeDir)
 		vscodeMcpPath := filepath.Join(vscodeDir, "mcp.json")
 		content := toCopilotVSCodeMcp(servers)
@@ -453,7 +459,7 @@ func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]t
 	}
 
 	relPath := cfgPath
-	if rel, err := filepath.Rel(ctx.TargetDir, cfgPath); err == nil {
+	if rel, err := filepath.Rel(mcpWorkspaceRoot(ctx), cfgPath); err == nil {
 		relPath = rel
 	}
 	hash, _ := files.FileHash(cfgPath)
@@ -543,6 +549,13 @@ func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
 // ---------------------------------------------------------------------------
 
 var envPattern = regexp.MustCompile(`\$\{(\w+)\}`)
+
+func mcpWorkspaceRoot(ctx CompileContext) string {
+	if ctx.SetupScope == types.SetupScopeWorkspace && ctx.WorkspaceRoot != "" {
+		return ctx.WorkspaceRoot
+	}
+	return ctx.TargetDir
+}
 
 // transformEnvSyntax replaces ${VAR} patterns with the target pattern.
 func transformEnvSyntax(envObj map[string]string, targetPattern string) map[string]string {

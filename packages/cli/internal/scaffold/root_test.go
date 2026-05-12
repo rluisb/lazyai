@@ -33,6 +33,7 @@ func TestScaffoldCompiledRoot_GlobalRequiresHomeDir(t *testing.T) {
 
 func TestMemoryDocDestPath(t *testing.T) {
 	target := "/tmp/target"
+	workspaceRoot := "/tmp/workspace"
 	home := "/tmp/home"
 
 	cases := []struct {
@@ -44,20 +45,20 @@ func TestMemoryDocDestPath(t *testing.T) {
 	}{
 		// claude-code
 		{"claude_project", types.ToolIdClaudeCode, types.SetupScopeProject, filepath.Join(target, "AGENTS.md"), false},
-		{"claude_workspace", types.ToolIdClaudeCode, types.SetupScopeWorkspace, filepath.Join(target, "AGENTS.md"), false},
+		{"claude_workspace", types.ToolIdClaudeCode, types.SetupScopeWorkspace, filepath.Join(workspaceRoot, "AGENTS.md"), false},
 		{"claude_global", types.ToolIdClaudeCode, types.SetupScopeGlobal, filepath.Join(home, ".claude", "AGENTS.md"), false},
 		// opencode
 		{"opencode_project", types.ToolIdOpenCode, types.SetupScopeProject, filepath.Join(target, "AGENTS.md"), false},
 		{"opencode_global", types.ToolIdOpenCode, types.SetupScopeGlobal, filepath.Join(home, ".config", "opencode", "AGENTS.md"), false},
 		// copilot
 		{"copilot_project", types.ToolIdCopilot, types.SetupScopeProject, filepath.Join(target, ".github", "copilot-instructions.md"), false},
-		{"copilot_workspace", types.ToolIdCopilot, types.SetupScopeWorkspace, filepath.Join(target, ".github", "copilot-instructions.md"), false},
+		{"copilot_workspace", types.ToolIdCopilot, types.SetupScopeWorkspace, filepath.Join(workspaceRoot, ".github", "copilot-instructions.md"), false},
 		{"copilot_global", types.ToolIdCopilot, types.SetupScopeGlobal, "", true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			outputFile := RootFileByTool[c.tool]
-			got, err := memoryDocDestPath(c.tool, c.scope, target, home, outputFile)
+			got, err := memoryDocDestPath(c.tool, c.scope, target, workspaceRoot, home, outputFile)
 			if c.unsup {
 				if !errors.Is(err, errMemoryDocScopeUnsupported) {
 					t.Fatalf("want errMemoryDocScopeUnsupported, got err=%v path=%q", err, got)

@@ -198,7 +198,11 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 		return false
 	}
 
-	catalog := ReadCanonicalMcp(ctx.TargetDir)
+	mcpRoot := ctx.TargetDir
+	if ctx.SetupScope == types.SetupScopeWorkspace && ctx.WorkspaceRoot != "" {
+		mcpRoot = ctx.WorkspaceRoot
+	}
+	catalog := ReadCanonicalMcp(mcpRoot)
 	if catalog == nil || len(catalog.Servers) == 0 {
 		return false
 	}
@@ -208,7 +212,7 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 
 	// Map scope to claude mcp add-json scope flag.
 	scopeFlag := "project"
-	workingDir := ctx.TargetDir
+	workingDir := mcpRoot
 	if ctx.SetupScope == types.SetupScopeGlobal {
 		scopeFlag = "user"
 		workingDir = ""

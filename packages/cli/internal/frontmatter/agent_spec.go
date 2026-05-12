@@ -25,6 +25,7 @@ import (
 // temperature into target-specific keys.
 type AgentSpecRaw struct {
 	Name        string
+	Description string
 	Tier        string
 	Temperature float64
 	Thinking    string
@@ -46,9 +47,10 @@ func ParseAgentSpec(source []byte) (AgentSpecRaw, error) {
 	}
 
 	spec := AgentSpecRaw{
-		Name:     ExtractField(fm, "name"),
-		Tier:     strings.ToLower(strings.TrimSpace(ExtractField(fm, "tier"))),
-		Thinking: strings.ToLower(strings.TrimSpace(ExtractField(fm, "thinking"))),
+		Name:        ExtractField(fm, "name"),
+		Description: ExtractField(fm, "description"),
+		Tier:        strings.ToLower(strings.TrimSpace(ExtractField(fm, "tier"))),
+		Thinking:    strings.ToLower(strings.TrimSpace(ExtractField(fm, "thinking"))),
 	}
 	if t, ok := coerceFloat(fm["temperature"]); ok {
 		spec.Temperature = t

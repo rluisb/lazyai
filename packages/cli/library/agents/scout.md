@@ -1,5 +1,6 @@
 ---
 name: Scout
+description: Neutral codebase researcher and pre-flight checker that maps existing code, detects patterns, determines next spec numbers (with PR/branch collision checks), and validates assumptions before any spec or plan is written. Reports facts — does not suggest, critique, or implement.
 output: scout-research
 tier: balanced
 temperature: 0.2

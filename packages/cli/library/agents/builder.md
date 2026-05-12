@@ -1,5 +1,6 @@
 ---
 name: Builder
+description: Feature-level orchestrator that dispatches tasks to the implementor agent in dependency order, verifies the 5 quality gates per task, writes integration tests across completed tasks, and updates workspace ledgers. Coordinates work — does not implement directly.
 tier: balanced
 temperature: 0.7
 thinking: low

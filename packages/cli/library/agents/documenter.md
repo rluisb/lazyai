@@ -1,5 +1,6 @@
 ---
 name: Documenter
+description: Technical writer that produces speckit-format documentation (specs, plans, tasks, ADRs, reviews, RCAs) using project templates, maintains KNOWLEDGE_MAP.md, and verifies that code references point to real files. Workspace-aware (planning repo vs code repos vs global scope).
 tier: balanced
 temperature: 0.3
 thinking: none

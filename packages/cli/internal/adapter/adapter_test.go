@@ -19,10 +19,10 @@ import (
 func createTestFS() fstest.MapFS {
 	return fstest.MapFS{
 		"agents/builder.md": &fstest.MapFile{
-			Data: []byte("---\nname: Builder\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
+			Data: []byte("---\nname: Builder\ndescription: Test builder agent.\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
 		},
 		"agents/orchestrator.md": &fstest.MapFile{
-			Data: []byte("---\nname: Orchestrator\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
+			Data: []byte("---\nname: Orchestrator\ndescription: Test orchestrator agent.\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
 		},
 		"skills/implement.md": &fstest.MapFile{
 			Data: []byte("---\nname: implement\ndescription: Implementation skill\n---\n\n# Implement\n\nImplement features."),

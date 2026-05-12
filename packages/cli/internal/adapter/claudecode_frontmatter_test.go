@@ -1,14 +1,70 @@
 package adapter
 
 import (
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
+	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+// TestRewriteAgentForClaudeCode_EmitsDescription locks the contract that
+// the Claude transform preserves the source `description:` field. Without
+// this guard, dropping the description emit in claudeCodeFrontmatter
+// silently regresses to the pre-#208 behaviour where Claude Code rejects
+// installed agents.
+func TestRewriteAgentForClaudeCode_EmitsDescription(t *testing.T) {
+	source := []byte("---\nname: Builder\ndescription: Coordinates feature builds.\ntier: balanced\ntemperature: 0.7\nthinking: low\nrisk: 3\n---\n\nbody\n")
+	ctx := &AdapterContext{LibraryFS: createTestFS()}
+	out, err := RewriteAgentForClaudeCode(source, ctx)
+	if err != nil {
+		t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+	}
+	if !strings.Contains(string(out), "description: Coordinates feature builds.") {
+		t.Errorf("rewritten agent missing description line; got:\n%s", out)
+	}
+}
+
+// TestLibraryAgentsHaveDescription asserts every source agent in the
+// embedded library declares a non-empty `description:` field. Claude Code
+// rejects agents that omit it, so missing this field on any library agent
+// produces a parse error on fresh install (#208).
+func TestLibraryAgentsHaveDescription(t *testing.T) {
+	libFS := library.GetLibraryFS()
+	if libFS == nil {
+		t.Fatal("library.GetLibraryFS returned nil")
+	}
+	entries, err := fs.ReadDir(libFS, "agents")
+	if err != nil {
+		t.Fatalf("read agents dir: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("library agents directory is empty")
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		data, err := fs.ReadFile(libFS, "agents/"+e.Name())
+		if err != nil {
+			t.Errorf("read %q: %v", e.Name(), err)
+			continue
+		}
+		fm, _, err := frontmatter.ExtractFrontmatter(data)
+		if err != nil {
+			t.Errorf("%s: parse frontmatter: %v", e.Name(), err)
+			continue
+		}
+		desc, _ := fm["description"].(string)
+		if strings.TrimSpace(desc) == "" {
+			t.Errorf("%s: missing required 'description:' frontmatter (Claude Code rejects agents without it)", e.Name())
+		}
+	}
+}
 
 // TestClaudeCodeFrontmatterSchemas verifies that all Claude Code artifacts
 // emitted by Install conform to their required frontmatter schemas (spec 012 task 011).
@@ -45,7 +101,10 @@ func TestClaudeCodeFrontmatterSchemas(t *testing.T) {
 	}
 }
 
-// validateAgentsSchemas checks agent frontmatter for tool delimiters and other constraints.
+// validateAgentsSchemas checks agent frontmatter for required Claude Code
+// fields and tool delimiter conventions. Claude Code rejects an agent file
+// without `name` and `description`, so missing either is a parse error on
+// fresh install (#208).
 func validateAgentsSchemas(t *testing.T, dir string) {
 	if !files.DirExists(dir) {
 		return
@@ -72,6 +131,18 @@ func validateAgentsSchemas(t *testing.T, dir string) {
 		if parseErr != nil {
 			t.Errorf("agent %q: parse error: %v", f, parseErr)
 			continue
+		}
+
+		// Required: name, description (Claude Code rejects agents without these — #208)
+		for _, field := range []string{"name", "description"} {
+			v, ok := fm[field]
+			if !ok {
+				t.Errorf("agent %q: missing required '%s' field", f, field)
+				continue
+			}
+			if s, _ := v.(string); strings.TrimSpace(s) == "" {
+				t.Errorf("agent %q: '%s' field is empty", f, field)
+			}
 		}
 
 		// If tools present, they must be whitespace-separated for Claude (spec 012 task 004)

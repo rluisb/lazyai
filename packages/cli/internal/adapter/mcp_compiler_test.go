@@ -2,12 +2,14 @@ package adapter
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -325,5 +327,55 @@ func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
 	// No .mcp.json should have been written.
 	if files.FileExists(filepath.Join(targetDir, ".mcp.json")) {
 		t.Error("Claude × global must not write project-scope .mcp.json")
+	}
+}
+
+// TestAtlassianCatalogEntryUsesAuthV2Remote verifies the atlassian server in
+// the embedded catalog is wired as a native remote MCP server (type: "remote")
+// pointing at the authv2 endpoint. The previous shape relied on the
+// `mcp-remote@latest` stdio shim, which Atlassian has since deprecated for
+// new clients (#193).
+func TestAtlassianCatalogEntryUsesAuthV2Remote(t *testing.T) {
+	libFS := library.GetLibraryFS()
+	if libFS == nil {
+		t.Fatal("library.GetLibraryFS returned nil")
+	}
+	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
+	if err != nil {
+		t.Fatalf("read catalog.json: %v", err)
+	}
+	var catalog struct {
+		Servers map[string]McpServer `json:"servers"`
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatalf("unmarshal catalog: %v", err)
+	}
+	atl, ok := catalog.Servers["atlassian"]
+	if !ok {
+		t.Fatal("catalog.servers missing 'atlassian' entry")
+	}
+	if want := "https://mcp.atlassian.com/v1/mcp/authv2"; atl.URL != want {
+		t.Errorf("atlassian.url = %q, want %q", atl.URL, want)
+	}
+	if atl.Command != "" || len(atl.Args) > 0 {
+		t.Errorf("atlassian entry must not declare stdio command/args (use remote URL): cmd=%q args=%v", atl.Command, atl.Args)
+	}
+
+	// Force-enable for the emitted-shape assertion (catalog default is opt-in).
+	enabled := true
+	atl.Enabled = &enabled
+	emitted := toOpenCodeMcp(map[string]McpServer{"atlassian": atl})
+	entry, ok := emitted["atlassian"].(map[string]any)
+	if !ok {
+		t.Fatalf("emitted atlassian entry is not a map: %T", emitted["atlassian"])
+	}
+	if entry["type"] != "remote" {
+		t.Errorf("emitted type = %v, want \"remote\"", entry["type"])
+	}
+	if entry["enabled"] != true {
+		t.Errorf("emitted enabled = %v, want true", entry["enabled"])
+	}
+	if entry["url"] != "https://mcp.atlassian.com/v1/mcp/authv2" {
+		t.Errorf("emitted url = %v, want authv2 endpoint", entry["url"])
 	}
 }

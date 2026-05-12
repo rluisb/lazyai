@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.1] - 2026-05-12
+## [1.1.2] - 2026-05-12
 
 ### Added
 - **Orchestrator Dashboard**: Embedded dashboard MVP with global event streams, run details, budget cards, and Catppuccin theming.

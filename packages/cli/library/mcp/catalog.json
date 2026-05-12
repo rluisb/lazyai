@@ -82,12 +82,11 @@
 
     "atlassian": {
       "description": "Jira and Confluence read-only access (search issues, read pages via OAuth)",
-      "command": "npx",
-      "args": ["-y", "mcp-remote@latest", "https://mcp.atlassian.com/v1/mcp"],
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
       "tools": ["searchAtlassian", "getJiraIssue", "searchJiraIssuesUsingJql", "getConfluencePage"],
       "enabled": false,
       "requiresInstall": false,
-      "setupHint": "Authenticate via browser by running: npx mcp-remote@latest https://mcp.atlassian.com/v1/mcp"
+      "setupHint": "Authenticate via browser the first time your MCP client connects to https://mcp.atlassian.com/v1/mcp/authv2"
     },
 
     "fetch": {

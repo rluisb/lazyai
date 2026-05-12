@@ -495,6 +495,56 @@ func TestAdvanceWorkflowAcceptsRecoveryShapes(t *testing.T) {
 	}
 }
 
+func TestEnqueueJobAcceptsPayloadShapes(t *testing.T) {
+	const sentinelOmit = "<<omit>>"
+
+	cases := []struct {
+		name           string
+		payload        any
+		wantPayload    map[string]any
+		wantTextPrefix string
+	}{
+		{name: "object", payload: map[string]any{"key": "value"}, wantPayload: map[string]any{"key": "value"}},
+		{name: "stringified", payload: `{"key":"value"}`, wantPayload: map[string]any{"key": "value"}},
+		{name: "empty_string", payload: "", wantPayload: nil},
+		{name: "null", payload: nil, wantPayload: nil},
+		{name: "omitted", payload: sentinelOmit, wantPayload: nil},
+		{name: "invalid", payload: "not-json", wantTextPrefix: "Invalid enqueue_job payload"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			orchestrator := newTestOrchestrator(t)
+			args := map[string]any{"jobType": "test-job"}
+			if s, ok := tc.payload.(string); !ok || s != sentinelOmit {
+				args["payload"] = tc.payload
+			}
+			result, err := orchestrator.EnqueueJob(context.Background(), toolRequest(args))
+			if err != nil {
+				t.Fatalf("enqueue job transport error: %v", err)
+			}
+			if tc.wantTextPrefix != "" {
+				gotText := decodeToolText(t, result)
+				if !strings.HasPrefix(gotText, tc.wantTextPrefix) {
+					t.Fatalf("expected prefix %q, got %q", tc.wantTextPrefix, gotText)
+				}
+				return
+			}
+			var job struct {
+				ID      string         `json:"id"`
+				Payload map[string]any `json:"payload"`
+			}
+			decodeToolResult(t, result, &job)
+			if job.ID == "" {
+				t.Fatalf("expected job id, got %+v", job)
+			}
+			if !reflect.DeepEqual(job.Payload, tc.wantPayload) {
+				t.Fatalf("expected payload %+v, got %+v", tc.wantPayload, job.Payload)
+			}
+		})
+	}
+}
+
 func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)

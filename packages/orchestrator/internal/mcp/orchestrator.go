@@ -189,7 +189,7 @@ func (o *Orchestrator) RegisterTools(s *server.MCPServer) {
 	s.AddTool(mcp.NewTool("enqueue_job",
 		mcp.WithDescription("Enqueue background job."),
 		mcp.WithString("jobType", mcp.Required(), mcp.Description("Job type identifier")),
-		mcp.WithString("payload", mcp.Description("Job payload JSON")),
+		mcp.WithObject("payload", mcp.Description("Job payload (object; stringified JSON accepted for legacy clients).")),
 	), o.EnqueueJob)
 	s.AddTool(mcp.NewTool("get_job",
 		mcp.WithDescription("Get job status."),
@@ -1028,8 +1028,18 @@ func (o *Orchestrator) SubscribeRun(ctx context.Context, req mcp.CallToolRequest
 }
 
 func (o *Orchestrator) EnqueueJob(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	jobType := req.GetString("jobType", "")
-	job, err := o.Queue.Enqueue(queue.EnqueueInput{JobType: jobType})
+	var raw struct {
+		JobType string          `json:"jobType"`
+		Payload json.RawMessage `json:"payload,omitempty"`
+	}
+	if err := bindArguments(req, &raw); err != nil {
+		return text(fmt.Sprintf("Invalid enqueue_job input: %v", err)), nil
+	}
+	var payload map[string]any
+	if err := decodeOptionalJSONArg(raw.Payload, &payload); err != nil {
+		return text(fmt.Sprintf("Invalid enqueue_job payload: %v", err)), nil
+	}
+	job, err := o.Queue.Enqueue(queue.EnqueueInput{JobType: raw.JobType, Payload: payload})
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}

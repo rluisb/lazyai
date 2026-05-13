@@ -1,0 +1,58 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "instructions": [
+        "AGENTS.md"
+    ],
+    "mcp": {
+        "context7": {
+            "headers": {
+                "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
+            },
+            "type": "remote",
+            "url": "https://mcp.context7.com/mcp"
+        },
+        "filesystem": {
+            "command": [
+                "npx",
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "."
+            ],
+            "type": "local"
+        },
+        "orchestrator": {
+            "command": [
+                "lazyai-orchestrator",
+                "connect"
+            ],
+            "type": "local"
+        },
+        "tavily-mcp": {
+            "type": "local",
+            "command": [
+                "npx",
+                "-y",
+                "tavily-mcp@latest"
+            ],
+            "environment": {
+                "TAVILY_API_KEY": "{env:TAVILY_API_KEY}",
+                "DEFAULT_PARAMETERS": "{\"include_images\": true, \"max_results\": 15, \"search_depth\": \"advanced\"}"
+            }
+        },
+        "morph-mcp": {
+            "type": "local",
+            "environment": {
+                "MORPH_API_KEY": "{env:MORPH_API_KEY}"
+            },
+            "command": [
+                "npx",
+                "-y",
+                "@morphllm/morphmcp"
+            ]
+        }
+    },
+    "permission": {
+        "bash": "ask",
+        "edit": "ask"
+    }
+}

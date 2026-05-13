@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LazyAI · CLI UI kit</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  body { padding: 32px 28px 64px; }
+  .wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+  header { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: var(--border); }
+  header img { display: block; }
+  header .meta { font-family: var(--font-mono); font-size: 12px; color: var(--lz-dimmed); margin-left: auto; }
+  section { display: flex; flex-direction: column; gap: 12px; }
+  .label { font-family: var(--font-mono); font-size: 11px; color: var(--lz-dimmed); text-transform: uppercase; letter-spacing: 0.06em; }
+  .desc { font-size: 13px; color: var(--lz-dimmed); margin: 0; max-width: 72ch; }
+
+  /* Terminal frame */
+  .term { background: var(--lz-bg-2); border: var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-1); }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--lz-bg-code); border-bottom: var(--border); }
+  .term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .term-bar .red { background: #E74C3C; }
+  .term-bar .yel { background: #F1C40F; }
+  .term-bar .grn { background: #2ECC71; }
+  .term-bar .ttl { margin-left: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--lz-dimmed); }
+  .term-body { padding: 16px 18px; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; }
+
+  /* Wizard */
+  .wiz-h { color: var(--lz-primary); font-weight: 700; margin-bottom: 4px; }
+  .wiz-d { color: var(--lz-dimmed); margin-bottom: 10px; font-size: 12px; }
+  .opt { padding: 2px 8px; margin: 0 -8px; border-radius: 3px; display: flex; gap: 8px; align-items: baseline; }
+  .opt .marker { width: 14px; color: var(--lz-dimmed); }
+  .opt.cur { background: color-mix(in oklch, var(--lz-primary) 18%, transparent); }
+  .opt.cur .marker, .opt.cur .text { color: var(--lz-text); }
+  .opt .text { color: var(--lz-dimmed); }
+  .opt.sel .text { color: var(--lz-text); }
+  .opt.sel .marker { color: var(--lz-secondary); }
+  .opt .hint { color: var(--lz-dimmed); margin-left: 8px; font-size: 12px; }
+  .help { margin-top: 12px; color: var(--lz-dimmed); font-size: 11px; padding-top: 10px; border-top: 1px dashed var(--lz-dimmed); }
+  .help kbd { font-size: 10px; padding: 0 4px; }
+
+  /* Summary */
+  .sum-line { display: flex; gap: 8px; }
+  .sum-line .glyph { width: 16px; }
+  .sum-line .file { color: var(--lz-text); }
+  .sum-line .note { color: var(--lz-dimmed); margin-left: auto; font-size: 12px; }
+
+  /* Tree */
+  .tree-row { white-space: pre; }
+  .conn { color: var(--lz-dimmed); }
+  .name { color: var(--lz-text); }
+  .root { color: var(--lz-primary); font-weight: 700; }
+
+  /* Diff */
+  .diff-path { color: var(--lz-secondary); margin-bottom: 4px; font-size: 12px; }
+  .hunk { color: var(--lz-highlight); margin: 4px 0; }
+  .add { color: var(--lz-success); background: color-mix(in oklch, var(--lz-success) 10%, transparent); display: block; padding: 0 6px; }
+  .del { color: var(--lz-error);   background: color-mix(in oklch, var(--lz-error)   10%, transparent); display: block; padding: 0 6px; }
+  .ctx { color: var(--lz-dimmed); display: block; padding: 0 6px; }
+
+  /* Two-column */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Status row */
+  .status-row { display: flex; align-items: baseline; gap: 12px; padding: 4px 0; }
+  .status-row .glyph { width: 16px; font-weight: 700; }
+  .status-row .label-w { width: 110px; color: var(--lz-text); }
+  .status-row .bar { letter-spacing: 0; }
+  .fill { color: var(--lz-success); }
+  .track { color: var(--lz-dimmed); }
+  .frac { color: var(--lz-dimmed); margin-left: 8px; font-size: 12px; }
+
+  h2 { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--lz-secondary); margin: 0; }
+  h2::before { content: "# "; color: var(--lz-dimmed); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="assets/lazyai-mark.svg" width="40" height="40" alt="">
+    <img src="assets/lazyai-wordmark.svg" width="160" alt="lazyai">
+    <div class="meta">CLI UI kit · Bubble Tea + Lip Gloss + Huh recreations · v0.1</div>
+  </header>
+
+  <section>
+    <h2>wizard — single select</h2>
+    <p class="desc"><code>huh.NewSelect</code>. Imperative one-line title, em-dash hint, lowercase option labels.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">~/projects/acme — lazyai-cli init</span></div>
+      <div class="term-body">
+        <div class="wiz-h">Scope</div>
+        <div class="wiz-d">Where should canonical files live? — defaults to project</div>
+        <div class="opt cur sel"><span class="marker">▸</span><span class="text">project</span><span class="hint">— recommended · self-contained single repository</span></div>
+        <div class="opt"><span class="marker">&nbsp;</span><span class="text">workspace</span><span class="hint">— planning repo with multi-project management</span></div>
+        <div class="opt"><span class="marker">&nbsp;</span><span class="text">global</span><span class="hint">— ~/.config/opencode/ + native global paths</span></div>
+        <div class="help"><kbd>↑↓</kbd> navigate · <kbd>enter</kbd> next · <kbd>esc</kbd> back · <kbd>q</kbd> quit</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>wizard — multi select</h2>
+    <p class="desc">Toggle multiple tools. <code>[•]</code> selected · <code>[&nbsp;]</code> empty. The current row gets a primary-tinted band, not a colour swap.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">~/projects/acme — lazyai-cli init</span></div>
+      <div class="term-body">
+        <div class="wiz-h">AI tools</div>
+        <div class="wiz-d">Compile native files for these tools — toggle with space</div>
+        <div class="opt cur sel"><span class="marker">[•]</span><span class="text">opencode</span><span class="hint">— MCP-aware, multi-agent</span></div>
+        <div class="opt sel"><span class="marker">[•]</span><span class="text">claude-code</span><span class="hint">— Anthropic native agent</span></div>
+        <div class="opt"><span class="marker">[ ]</span><span class="text">copilot</span><span class="hint">— GitHub Copilot Chat</span></div>
+        <div class="opt"><span class="marker">[ ]</span><span class="text">gemini</span><span class="hint">— Google Gemini Code Assist</span></div>
+        <div class="help"><kbd>↑↓</kbd> navigate · <kbd>space</kbd> toggle · <kbd>enter</kbd> next · <kbd>esc</kbd> back</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-2">
+    <section>
+      <h2>tree — manifest status</h2>
+      <p class="desc">Tree connectors in dimmed; status glyph trails the leaf node.</p>
+      <div class="term">
+        <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">lazyai-cli doctor</span></div>
+        <div class="term-body">
+          <div class="tree-row"><span class="root">.ai/</span></div>
+          <div class="tree-row"><span class="conn">├── </span><span class="name">constitution/</span></div>
+          <div class="tree-row"><span class="conn">│   ├── </span><span class="name">constitution.md</span> <span class="tui-success">✓</span></div>
+          <div class="tree-row"><span class="conn">│   ├── </span><span class="name">constraints.md</span> <span class="tui-success">✓</span></div>
+          <div class="tree-row"><span class="conn">│   └── </span><span class="name">quality-gates.md</span> <span class="tui-warning">⚠</span></div>
+          <div class="tree-row"><span class="conn">├── </span><span class="name">mcp.json</span> <span class="tui-success">✓</span></div>
+          <div class="tree-row"><span class="conn">└── </span><span class="name">orchestration/</span></div>
+          <div class="tree-row"><span class="conn">    ├── </span><span class="name">teams/</span> <span class="tui-error">✗</span></div>
+          <div class="tree-row"><span class="conn">    └── </span><span class="name">workflows/</span> <span style="color: var(--lz-orange)">⚡</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>summary — final box</h2>
+      <p class="desc">Success-bordered box with a primary title and a dimmed stats footer.</p>
+      <div class="term">
+        <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">lazyai-cli init</span></div>
+        <div class="term-body">
+          <div class="tui-box tui-box--success" style="padding: 10px 14px;">
+            <div class="wiz-h">Setup complete</div>
+            <div class="sum-line"><span class="glyph tui-success">✓</span><span class="file">.ai/ scaffolded</span><span class="note">14 files</span></div>
+            <div class="sum-line"><span class="glyph tui-success">✓</span><span class="file">.opencode/ compiled</span><span class="note">12 files</span></div>
+            <div class="sum-line"><span class="glyph tui-success">✓</span><span class="file">.claude/ compiled</span><span class="note">11 files</span></div>
+            <div class="sum-line"><span class="glyph tui-warning">⚠</span><span class="file">copilot-instructions.md customized</span><span class="note">backed up</span></div>
+            <div style="color: var(--lz-dimmed); font-size: 12px; margin-top: 8px;">installed: 37 · modified: 1 · skipped: 0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>compile — progress + spinner</h2>
+    <p class="desc">Per-tool progress bars. The active row spins; completed rows show <code>✓</code>.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">lazyai-cli compile</span></div>
+      <div class="term-body">
+        <div class="status-row"><span class="glyph tui-success">✓</span><span class="label-w">opencode</span><span class="bar"><span class="fill">████████████████████</span></span><span class="frac">20/20</span></div>
+        <div class="status-row"><span class="glyph tui-success">✓</span><span class="label-w">claude-code</span><span class="bar"><span class="fill">████████████████████</span></span><span class="frac">20/20</span></div>
+        <div class="status-row"><span class="glyph"><span class="spinner"></span></span><span class="label-w">copilot</span><span class="bar"><span class="fill">█████████████░░░░░░░</span></span><span class="frac">13/20</span></div>
+        <div class="status-row"><span class="glyph tui-dim">○</span><span class="label-w">gemini</span><span class="bar"><span class="track">░░░░░░░░░░░░░░░░░░░░</span></span><span class="frac">0/20</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>diff — review change</h2>
+    <p class="desc"><code>lazyai-diffviewer</code> — keyboard-driven hunk review. Add lines green, remove red, hunk headers <code>highlight</code> blue.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span><span class="ttl">lazyai-diffviewer</span></div>
+      <div class="term-body">
+        <div class="wiz-h">Review change · <span class="tui-dim" style="font-weight: 400;">2 of 5</span></div>
+        <div class="diff-path">.claude/agents/reviewer.md</div>
+        <div class="hunk">@@ -3,5 +3,7 @@</div>
+        <span class="ctx"> name: reviewer</span>
+        <span class="del">- model: sonnet</span>
+        <span class="add">+ model: opus</span>
+        <span class="add">+ tools: [search, read, edit]</span>
+        <span class="ctx"> mode: agent</span>
+        <div class="help"><kbd>a</kbd> accept · <kbd>r</kbd> reject · <kbd>n</kbd> next · <kbd>p</kbd> prev · <kbd>q</kbd> quit</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

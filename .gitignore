@@ -22,18 +22,19 @@ docs/llm.txt
 # Allow the lazyai-design-system skill to be tracked even though .claude/ is ignored.
 # The wildcard above (vs .claude/) is required so negations below can re-include subpaths.
 !.claude/skills/
-.claude/skills/*
-!.claude/skills/tui-lazy-ai-design-system/
+
 .codex/
 .gemini/
 .github/agents/
 .github/chatmodes/
 .github/instructions/
 .github/prompts/
+# .agents/ skill definitions — tracked as canonical source
+# .opencode/ skill definitions — tracked as canonical source
+# .specify/ scaffold output — generated, should be ignored
 .specify/
-.opencode/
-.pi/
-.agents/
+# .claude/skills/* is partially ignored — remove lines below to track all skills
+#.claude/skills/*
 .ai-setup-backup/
 GEMINI.md
 

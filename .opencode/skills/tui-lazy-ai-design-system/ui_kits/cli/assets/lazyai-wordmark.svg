@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80" role="img" aria-label="LazyAI wordmark">
+  
+  <rect class="bg" width="360" height="80" rx="6"></rect>
+  <text x="22" y="54" class="prompt">&gt;</text>
+  <text x="56" y="54" class="word">lazyai</text>
+  <rect class="accent" x="216" y="22" width="14" height="36" rx="1"></rect>
+</svg>

@@ -22,7 +22,13 @@ To support independent releases and Go's module system, the repository must be s
 *   **Automated Release Workflows:** Trigger release workflows based on these specific tag patterns. Using GoReleaser is highly recommended for cross-platform Go releases.
 
 ### Managing Inter-Dependencies
-When a change is made in a lower-level package (`orchestrator`) that an upper-level package (`cli`) needs, you must perform a **Topological Release**:
+Relying on `go.work` locally makes development smooth, but it masks dependency resolution. If `packages/cli` depends on `packages/orchestrator`, `cli`'s `go.mod` must explicitly declare a published version of `orchestrator` so external users can run `go install` and CI can build deterministically.
+
+**Independent Evolution (The Default):**
+Because packages are released independently, they do not force updates on their consumers. If `diffviewer` releases `v1.0.1`, the `cli` package will continue using `v1.0.0` until a developer explicitly updates `cli/go.mod`. This allows packages to evolve at their own pace.
+
+**Topological Releases (For Cross-Package Features):**
+When a single feature spans multiple packages (e.g., a new capability in `orchestrator` that requires a new command in `cli`), you must release them in topological order:
 1.  **Release the Dependency:** Merge changes for `packages/orchestrator` and tag the release (`packages/orchestrator/v1.3.0`).
 2.  **Update the Consumer:** Update `packages/cli/go.mod` to require the new version (`GOWORK=off go get github.com/rluisb/lazyai/packages/orchestrator@v1.3.0`).
 3.  **Release the Consumer:** Tag the new CLI release (`packages/cli/v2.1.0`).

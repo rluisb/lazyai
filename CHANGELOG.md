@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-05-13
+
+### Fixed
+- `lazyai-cli --version` now resolves Go module build metadata when installed via `go install ...@vX.Y.Z`, while preserving CI release ldflags precedence and local `0.0.0-dev` behavior.
+
 ## [1.1.2] - 2026-05-12
 
 ### Added

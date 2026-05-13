@@ -27,7 +27,7 @@ harness:
   contract: [speckit-review]
   sensors: [gate-1, gate-3, gate-4]
   memory: [ledger.md]
-  anti_slope: [inventory-scope-locked, regression-tests-present, standards-updated]
+  anti_slope: [inventory-scope-locked, regression-tests-present, standards-updated, standards-handoff-required-if-new-rules]
 workspace:
   scope: [project]
   reads: [affected code, package.json / go.mod]
@@ -174,7 +174,15 @@ Rollback: If any issues arise post-merge, git revert commits in reverse order.
 11. **Record in ledger**: items cleaned, verification results, learnings.
 </cot>
 
-# Reasoning-Model Variant (concise)
+# 10. INTEGRATION
+
+## Handoff
+After housekeeping completes, if new rules were identified in Anti-Slope Standards Updates:
+1. Invoke `/extract-standards` with the new pattern
+2. Pass the inventory item as context: "Pattern observed during housekeeping: {description}"
+3. The extract-standards skill will create the standard with proper scope cascade checking
+
+## Reasoning-Model Variant (concise)
 
 ```
 Role:    Housekeeping executor.

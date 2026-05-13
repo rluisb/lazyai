@@ -214,7 +214,11 @@ Verdict: PASS — process is sound. Note: opportunity to train on pattern detect
 10. **Record in audit file** + memory/ledger.
 </cot>
 
-# Reasoning-Model Variant (concise)
+# 10. INTEGRATION
+
+- Related skill: `impact-check` — audit verifies that impact-check findings were acted upon
+
+## Reasoning-Model Variant (concise)
 
 ```
 Role:    Process auditor.

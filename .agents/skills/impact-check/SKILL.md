@@ -169,7 +169,12 @@ Output: impact-check.md reports "no changes detected in 11 categories" + notes t
 9. **Record in ledger**: What was checked, what was proposed, what was Immediate.
 </cot>
 
-# Reasoning-Model Variant (concise)
+# 10. INTEGRATION
+
+- Related skill: `process-audit` — audit will verify impact-check findings were addressed
+- Audit checks: "Were all Immediate/Flag impact-check items resolved?"
+
+## Reasoning-Model Variant (concise)
 
 ```
 Role:    Knowledge hygienist.

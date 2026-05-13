@@ -1,0 +1,3 @@
+ [Contains warnings] Project config (shared via .mcp.json)
+   Location: /Users/ricardo/projects/teachable/lazyai/.mcp.json
+[Warning] [brave-search] mcpServers.brave-search: Missing environment variables: BRAVE_API_KEY 

@@ -1,4 +1,4 @@
-.PHONY: build test lint vet clean cli-build cli-test cli-vet cli-tidy orchestrator-build orchestrator-test orchestrator-vet orchestrator-tidy diffviewer-build diffviewer-test diffviewer-vet diffviewer-tidy go-work-sync release-dry-run all
+.PHONY: build test lint vet clean cli-build cli-test cli-vet cli-tidy orchestrator-build orchestrator-test orchestrator-vet orchestrator-tidy diffviewer-build diffviewer-test diffviewer-vet diffviewer-tidy go-work-sync cli-snapshot orchestrator-snapshot diffviewer-snapshot snapshot all
 
 GO = go
 CLI_DIR = packages/cli
@@ -61,23 +61,16 @@ clean:
 	rm -f $(ORCHESTRATOR_DIR)/lazyai-orchestrator
 	rm -f $(DIFFVIEWER_DIR)/lazyai-diffviewer
 	rm -rf $(CLI_DIR)/dist $(ORCHESTRATOR_DIR)/dist $(DIFFVIEWER_DIR)/dist
-	rm -rf $(DIST_DIR)
 
-release-dry-run:
-	rm -rf $(DIST_DIR)
-	mkdir -p $(DIST_DIR)
-	@for target in $(PLATFORMS); do \
-		os=$${target%/*}; \
-		arch=$${target#*/}; \
-		ext=""; \
-		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
-		echo "Building lazyai-cli-$$os-$$arch$$ext"; \
-		(cd $(CLI_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "$(CLI_VERSION_LDFLAGS)" -o ../../$(DIST_DIR)/lazyai-cli-$$os-$$arch$$ext ./cmd/lazyai-cli) || exit 1; \
-		echo "Building lazyai-orchestrator-$$os-$$arch$$ext"; \
-		(cd $(ORCHESTRATOR_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "-s -w" -o ../../$(DIST_DIR)/lazyai-orchestrator-$$os-$$arch$$ext ./cmd/lazyai-orchestrator) || exit 1; \
-		echo "Building lazyai-diffviewer-$$os-$$arch$$ext"; \
-		(cd $(DIFFVIEWER_DIR) && GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "-s -w" -o ../../$(DIST_DIR)/lazyai-diffviewer-$$os-$$arch$$ext ./cmd/lazyai-diffviewer) || exit 1; \
-	done
-	cd $(DIST_DIR) && shasum -a 256 lazyai-* > checksums.txt
+cli-snapshot:
+	cd $(CLI_DIR) && goreleaser build --snapshot --clean
+
+orchestrator-snapshot:
+	cd $(ORCHESTRATOR_DIR) && goreleaser build --snapshot --clean
+
+diffviewer-snapshot:
+	cd $(DIFFVIEWER_DIR) && goreleaser build --snapshot --clean
+
+snapshot: cli-snapshot orchestrator-snapshot diffviewer-snapshot
 
 all: vet test build

@@ -369,7 +369,7 @@ func registerServeRoutes(mux *http.ServeMux, config serveRouteConfig) {
 
 	dashboard.RegisterViewRoutes(mux, dashboard.ViewConfig{})
 	mux.Handle("/api/dashboard/", dashboard.NewHandler(dashboard.HandlerConfig{
-		ReadModel: dashboard.NewReadModel(config.Database, sqliteadapter.NewActivityStore(config.Database), sqliteadapter.NewHandoffStore(config.Database), sqliteadapter.NewRunEventStore(config.Database), sqliteadapter.NewExecutionPlanStore(config.Database), sqliteadapter.NewErrorJournalStore(config.Database)),
+		ReadModel: dashboard.NewReadModel(sqliteadapter.NewRunReadStore(config.Database), sqliteadapter.NewActivityStore(config.Database), sqliteadapter.NewHandoffStore(config.Database), sqliteadapter.NewRunEventStore(config.Database), sqliteadapter.NewExecutionPlanStore(config.Database), sqliteadapter.NewErrorJournalStore(config.Database)),
 		Catalog:   dashboard.NewCatalogAdapter(config.Orchestrator.Catalog),
 		Events:    config.Orchestrator.Events,
 		Health: func(ctx context.Context) dashboard.HealthView {

@@ -2,23 +2,19 @@ package dashboard
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"strconv"
-	"strings"
+	"errors"
 	"time"
 
 	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/budget"
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 // ReadModel provides bounded, read-only dashboard queries over existing SQLite state.
 type ReadModel struct {
-	database           *db.DB
+	runStore           ports.RunReadStore
 	activityStore      ports.ActivityStore
 	handoffStore       ports.HandoffQueryStore
 	eventStore         ports.RunEventStore
@@ -27,8 +23,8 @@ type ReadModel struct {
 }
 
 // NewReadModel creates a dashboard read model backed by existing orchestrator tables.
-func NewReadModel(database *db.DB, activityStore ports.ActivityStore, handoffStore ports.HandoffQueryStore, eventStore ports.RunEventStore, executionPlanStore ports.ExecutionPlanStore, errorJournalStore ports.ErrorJournalStore) *ReadModel {
-	return &ReadModel{database: database, activityStore: activityStore, handoffStore: handoffStore, eventStore: eventStore, executionPlanStore: executionPlanStore, errorJournalStore: errorJournalStore}
+func NewReadModel(runStore ports.RunReadStore, activityStore ports.ActivityStore, handoffStore ports.HandoffQueryStore, eventStore ports.RunEventStore, executionPlanStore ports.ExecutionPlanStore, errorJournalStore ports.ErrorJournalStore) *ReadModel {
+	return &ReadModel{runStore: runStore, activityStore: activityStore, handoffStore: handoffStore, eventStore: eventStore, executionPlanStore: executionPlanStore, errorJournalStore: errorJournalStore}
 }
 
 // Attention filter values for the Runs screen. "budget" is intentionally
@@ -92,81 +88,24 @@ func (m *ReadModel) Overview(ctx context.Context, health HealthView, catalogCoun
 
 // ListRuns returns a bounded page of chain/team/workflow run summaries.
 func (m *ReadModel) ListRuns(ctx context.Context, opts RunListOptions) (RunListResponse, error) {
-	limit := NormalizeLimit(opts.Limit, DefaultRunLimit, MaxRunLimit)
-	offset := parseCursor(opts.Cursor)
-
-	clauses := []string{}
-	args := []any{}
-	if opts.Kind != "" {
-		clauses = append(clauses, "kind = ?")
-		args = append(args, string(opts.Kind))
-	}
-	if opts.State != "" {
-		clauses = append(clauses, "state = ?")
-		args = append(args, opts.State)
-	}
-	if opts.Search != "" {
-		pattern := "%" + likeEscape(opts.Search) + "%"
-		clauses = append(clauses, `(LOWER(id) LIKE LOWER(?) ESCAPE '\' OR LOWER(definition_name) LIKE LOWER(?) ESCAPE '\')`)
-		args = append(args, pattern, pattern)
-	}
-	switch opts.Attention {
-	case AttentionRunning:
-		clauses = append(clauses, "state = 'running'")
-	case AttentionFailed:
-		clauses = append(clauses, "state = 'failed'")
-	case AttentionGated:
-		clauses = append(clauses, "state IN ('gated','paused','awaiting_recovery','waiting_on_child')")
-	case AttentionRecent:
-		clauses = append(clauses, "updated_at >= datetime('now', '-1 hour')")
-	case "":
-		// no attention filter
-	default:
-		return RunListResponse{}, fmt.Errorf("unknown attention filter: %q", opts.Attention)
-	}
-	if opts.HasErrors {
-		clauses = append(clauses, "EXISTS (SELECT 1 FROM error_journal e WHERE e.run_id = runs.id AND e.run_kind = runs.kind)")
-	}
-
-	where := ""
-	if len(clauses) > 0 {
-		where = "WHERE " + strings.Join(clauses, " AND ")
-	}
-
-	query := `
-		SELECT kind, id, definition_name, definition_version, state, current, project_root, state_json, created_at, updated_at
-		FROM (` + runUnionQuery() + `) AS runs
-		` + where + `
-		ORDER BY updated_at DESC, id DESC
-		LIMIT ? OFFSET ?`
-	args = append(args, limit+1, offset)
-	rows, err := m.database.QueryContext(ctx, query, args...)
-	if err != nil {
-		return RunListResponse{}, err
-	}
-	runRows, hasMore, err := scanRunRows(rows, limit)
-	if closeErr := rows.Close(); err == nil {
-		err = closeErr
-	}
+	page, err := m.runStore.ListRuns(ctx, domain.RunListFilter{
+		Kind:      opts.Kind,
+		State:     opts.State,
+		Search:    opts.Search,
+		Attention: opts.Attention,
+		HasErrors: opts.HasErrors,
+		Limit:     opts.Limit,
+		Cursor:    opts.Cursor,
+	})
 	if err != nil {
 		return RunListResponse{}, err
 	}
 
-	items, err := m.summariesFromRows(ctx, runRows)
+	items, err := m.summariesFromRows(ctx, page.Items)
 	if err != nil {
 		return RunListResponse{}, err
 	}
-	response := RunListResponse{Items: items}
-	if hasMore {
-		response.NextCursor = strconv.Itoa(offset + limit)
-	}
-	return response, nil
-}
-
-// likeEscape escapes SQL LIKE wildcards so user search terms cannot inject pattern metacharacters.
-func likeEscape(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return r.Replace(s)
+	return RunListResponse{Items: items, NextCursor: page.NextCursor}, nil
 }
 
 // GetRunDetail returns a read-only detail view for one run.
@@ -182,14 +121,14 @@ func (m *ReadModel) GetRunDetail(ctx context.Context, kind types.RunKind, id str
 
 	detail := &RunDetail{Summary: summary}
 	var state map[string]any
-	if err := json.Unmarshal([]byte(row.stateJSON), &state); err != nil {
+	if err := json.Unmarshal([]byte(row.StateJSON), &state); err != nil {
 		detail.StateDecodeError = err.Error()
 	} else {
 		detail.State = state
-		m.populateTypedState(kind, row.stateJSON, detail)
+		m.populateTypedState(kind, row.StateJSON, detail)
 	}
 
-	budgetView, err := m.budgetFromState(ctx, kind, row.stateJSON)
+	budgetView, err := m.budgetFromState(ctx, kind, row.StateJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +149,7 @@ func (m *ReadModel) GetRunDetail(ctx context.Context, kind types.RunKind, id str
 		return nil, err
 	}
 	detail.Handoffs = handoffs
-	detail.ExecutionPlan = m.executionPlanFromState(ctx, kind, row.stateJSON)
+	detail.ExecutionPlan = m.executionPlanFromState(ctx, kind, row.StateJSON)
 	return detail, nil
 }
 
@@ -220,7 +159,7 @@ func (m *ReadModel) GetBudget(ctx context.Context, kind types.RunKind, id string
 	if err != nil {
 		return nil, err
 	}
-	return m.budgetFromState(ctx, kind, row.stateJSON)
+	return m.budgetFromState(ctx, kind, row.StateJSON)
 }
 
 // ListEvents returns persisted run events ordered by id ascending.
@@ -252,67 +191,10 @@ func (m *ReadModel) ListErrors(ctx context.Context, opts ErrorListOptions) ([]Er
 }
 
 func (m *ReadModel) runCountsByState(ctx context.Context) (map[string]int, error) {
-	rows, err := m.database.QueryContext(ctx, `
-		SELECT state, COUNT(*)
-		FROM (`+runUnionQuery()+`)
-		GROUP BY state`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	counts := map[string]int{}
-	for rows.Next() {
-		var state string
-		var count int
-		if err := rows.Scan(&state, &count); err != nil {
-			return nil, err
-		}
-		counts[state] = count
-	}
-	return counts, rows.Err()
+	return m.runStore.CountRunsByState(ctx)
 }
 
-func runUnionQuery() string {
-	return `
-		SELECT 'chain' AS kind, id, definition_name, COALESCE(definition_version, '') AS definition_version, state, COALESCE(current_step_id, '') AS current, project_root, state_json, created_at, updated_at FROM chain_runs
-		UNION ALL
-		SELECT 'team' AS kind, id, definition_name, COALESCE(definition_version, '') AS definition_version, state, '' AS current, project_root, state_json, created_at, updated_at FROM team_runs
-		UNION ALL
-		SELECT 'workflow' AS kind, id, definition_name, COALESCE(definition_version, '') AS definition_version, state, COALESCE(current_phase_id, '') AS current, project_root, state_json, created_at, updated_at FROM workflow_runs
-	`
-}
-
-type runRow struct {
-	kind              types.RunKind
-	id                string
-	definitionName    string
-	definitionVersion string
-	state             string
-	current           string
-	projectRoot       string
-	stateJSON         string
-	createdAt         string
-	updatedAt         string
-}
-
-func scanRunRows(rows *sql.Rows, limit int) ([]runRow, bool, error) {
-	items := make([]runRow, 0, limit)
-	hasMore := false
-	for rows.Next() {
-		row, err := scanRunRow(rows)
-		if err != nil {
-			return nil, false, err
-		}
-		if len(items) < limit {
-			items = append(items, row)
-		} else {
-			hasMore = true
-		}
-	}
-	return items, hasMore, rows.Err()
-}
-
-func (m *ReadModel) summariesFromRows(ctx context.Context, rows []runRow) ([]RunSummary, error) {
+func (m *ReadModel) summariesFromRows(ctx context.Context, rows []domain.RunRow) ([]RunSummary, error) {
 	errorCounts, err := m.errorCountsByRun(ctx, rows)
 	if err != nil {
 		return nil, err
@@ -327,21 +209,13 @@ func (m *ReadModel) summariesFromRows(ctx context.Context, rows []runRow) ([]Run
 	return items, nil
 }
 
-func scanRunRow(scanner interface{ Scan(dest ...any) error }) (runRow, error) {
-	var row runRow
-	if err := scanner.Scan(&row.kind, &row.id, &row.definitionName, &row.definitionVersion, &row.state, &row.current, &row.projectRoot, &row.stateJSON, &row.createdAt, &row.updatedAt); err != nil {
-		return runRow{}, err
-	}
-	return row, nil
-}
-
-func (m *ReadModel) summaryFromRow(row runRow) (RunSummary, error) {
-	errorCount, err := m.errorCount(row.kind, row.id)
+func (m *ReadModel) summaryFromRow(row domain.RunRow) (RunSummary, error) {
+	errorCount, err := m.errorCount(row.Kind, row.ID)
 	if err != nil {
 		return RunSummary{}, err
 	}
 	budgetHealth := ""
-	if budgetView, err := m.budgetFromState(context.Background(), row.kind, row.stateJSON); err == nil && budgetView != nil && budgetView.Evaluation != nil {
+	if budgetView, err := m.budgetFromState(context.Background(), row.Kind, row.StateJSON); err == nil && budgetView != nil && budgetView.Evaluation != nil {
 		budgetHealth = string(budgetView.Evaluation.Overall)
 	}
 	return runSummary(row, budgetHealth, errorCount), nil
@@ -352,21 +226,21 @@ type runKey struct {
 	id   string
 }
 
-func summaryFromRowWithLookups(row runRow, errorCounts map[runKey]int, chainPolicies map[string]types.BudgetPolicy) RunSummary {
-	return runSummary(row, budgetHealthFromState(row, chainPolicies), errorCounts[runKey{kind: row.kind, id: row.id}])
+func summaryFromRowWithLookups(row domain.RunRow, errorCounts map[runKey]int, chainPolicies map[string]types.BudgetPolicy) RunSummary {
+	return runSummary(row, budgetHealthFromState(row, chainPolicies), errorCounts[runKey{kind: row.Kind, id: row.ID}])
 }
 
-func runSummary(row runRow, budgetHealth string, errorCount int) RunSummary {
+func runSummary(row domain.RunRow, budgetHealth string, errorCount int) RunSummary {
 	return RunSummary{
-		Kind:              row.kind,
-		ID:                row.id,
-		DefinitionName:    row.definitionName,
-		DefinitionVersion: row.definitionVersion,
-		State:             row.state,
-		Current:           row.current,
-		ProjectRoot:       row.projectRoot,
-		CreatedAt:         row.createdAt,
-		UpdatedAt:         row.updatedAt,
+		Kind:              row.Kind,
+		ID:                row.ID,
+		DefinitionName:    row.DefinitionName,
+		DefinitionVersion: row.DefinitionVersion,
+		State:             row.State,
+		Current:           row.Current,
+		ProjectRoot:       row.ProjectRoot,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
 		BudgetHealth:      budgetHealth,
 		ErrorCount:        errorCount,
 	}
@@ -379,7 +253,7 @@ func (m *ReadModel) errorCount(kind types.RunKind, id string) (int, error) {
 	return m.errorJournalStore.CountErrorJournalEntry(context.Background(), kind, id)
 }
 
-func (m *ReadModel) errorCountsByRun(ctx context.Context, rows []runRow) (map[runKey]int, error) {
+func (m *ReadModel) errorCountsByRun(ctx context.Context, rows []domain.RunRow) (map[runKey]int, error) {
 	counts := map[runKey]int{}
 	if len(rows) == 0 || m.errorJournalStore == nil {
 		return counts, nil
@@ -387,9 +261,9 @@ func (m *ReadModel) errorCountsByRun(ctx context.Context, rows []runRow) (map[ru
 	refs := make([]domain.RunRef, 0, len(rows))
 	seen := map[string]bool{}
 	for _, row := range rows {
-		key := string(row.kind) + ":" + row.id
+		key := string(row.Kind) + ":" + row.ID
 		if !seen[key] {
-			refs = append(refs, domain.RunRef{Kind: string(row.kind), ID: row.id})
+			refs = append(refs, domain.RunRef{Kind: string(row.Kind), ID: row.ID})
 			seen[key] = true
 		}
 	}
@@ -403,15 +277,15 @@ func (m *ReadModel) errorCountsByRun(ctx context.Context, rows []runRow) (map[ru
 	return counts, nil
 }
 
-func (m *ReadModel) chainBudgetPoliciesForRows(ctx context.Context, rows []runRow) map[string]types.BudgetPolicy {
+func (m *ReadModel) chainBudgetPoliciesForRows(ctx context.Context, rows []domain.RunRow) map[string]types.BudgetPolicy {
 	planIDs := make([]string, 0, len(rows))
 	seen := map[string]bool{}
 	for _, row := range rows {
-		if row.kind != types.RunKindChain {
+		if row.Kind != types.RunKindChain {
 			continue
 		}
 		var state types.ChainState
-		if json.Unmarshal([]byte(row.stateJSON), &state) != nil || state.ExecutionPlanID == "" || seen[state.ExecutionPlanID] {
+		if json.Unmarshal([]byte(row.StateJSON), &state) != nil || state.ExecutionPlanID == "" || seen[state.ExecutionPlanID] {
 			continue
 		}
 		planIDs = append(planIDs, state.ExecutionPlanID)
@@ -432,11 +306,11 @@ func (m *ReadModel) chainBudgetPoliciesForRows(ctx context.Context, rows []runRo
 	return policies
 }
 
-func budgetHealthFromState(row runRow, chainPolicies map[string]types.BudgetPolicy) string {
-	switch row.kind {
+func budgetHealthFromState(row domain.RunRow, chainPolicies map[string]types.BudgetPolicy) string {
+	switch row.Kind {
 	case types.RunKindChain:
 		var state types.ChainState
-		if json.Unmarshal([]byte(row.stateJSON), &state) != nil || state.ExecutionPlanID == "" {
+		if json.Unmarshal([]byte(row.StateJSON), &state) != nil || state.ExecutionPlanID == "" {
 			return ""
 		}
 		policy, ok := chainPolicies[state.ExecutionPlanID]
@@ -447,14 +321,14 @@ func budgetHealthFromState(row runRow, chainPolicies map[string]types.BudgetPoli
 		return string(evaluation.Overall)
 	case types.RunKindTeam:
 		var state types.TeamState
-		if json.Unmarshal([]byte(row.stateJSON), &state) != nil {
+		if json.Unmarshal([]byte(row.StateJSON), &state) != nil {
 			return ""
 		}
 		evaluation := budget.Evaluate(&state.Budget, &state.BudgetPolicy)
 		return string(evaluation.Overall)
 	case types.RunKindWorkflow:
 		var state types.WorkflowState
-		if json.Unmarshal([]byte(row.stateJSON), &state) != nil {
+		if json.Unmarshal([]byte(row.StateJSON), &state) != nil {
 			return ""
 		}
 		evaluation := budget.Evaluate(&state.Budget, &state.BudgetPolicy)
@@ -464,33 +338,16 @@ func budgetHealthFromState(row runRow, chainPolicies map[string]types.BudgetPoli
 	}
 }
 
-func (m *ReadModel) getRunRow(ctx context.Context, kind types.RunKind, id string) (runRow, error) {
-	table, currentColumn, err := runTable(kind)
+func (m *ReadModel) getRunRow(ctx context.Context, kind types.RunKind, id string) (domain.RunRow, error) {
+	row, err := m.runStore.FindRunRow(ctx, kind, id)
 	if err != nil {
-		return runRow{}, err
-	}
-	query := fmt.Sprintf(`SELECT '%s' AS kind, id, definition_name, COALESCE(definition_version, '') AS definition_version, state, %s AS current, project_root, state_json, created_at, updated_at FROM %s WHERE id = ?`, kind, currentColumn, table)
-	row, err := scanRunRow(m.database.QueryRowContext(ctx, query, id))
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return runRow{}, NewNotFoundError("run", string(kind)+"/"+id)
+		var notFound domain.RunReadNotFoundError
+		if errors.As(err, &notFound) {
+			return domain.RunRow{}, NewNotFoundError(notFound.Resource, notFound.ID)
 		}
-		return runRow{}, err
+		return domain.RunRow{}, err
 	}
 	return row, nil
-}
-
-func runTable(kind types.RunKind) (table string, currentColumn string, err error) {
-	switch kind {
-	case types.RunKindChain:
-		return "chain_runs", "COALESCE(current_step_id, '')", nil
-	case types.RunKindTeam:
-		return "team_runs", "''", nil
-	case types.RunKindWorkflow:
-		return "workflow_runs", "COALESCE(current_phase_id, '')", nil
-	default:
-		return "", "", NewNotFoundError("run kind", string(kind))
-	}
 }
 
 func (m *ReadModel) populateTypedState(kind types.RunKind, stateJSON string, detail *RunDetail) {
@@ -646,15 +503,4 @@ func errorEntriesFromDomain(entries []domain.ErrorJournalEntry) []ErrorEntry {
 		})
 	}
 	return converted
-}
-
-func parseCursor(cursor string) int {
-	if cursor == "" {
-		return 0
-	}
-	offset, err := strconv.Atoi(cursor)
-	if err != nil || offset < 0 {
-		return 0
-	}
-	return offset
 }

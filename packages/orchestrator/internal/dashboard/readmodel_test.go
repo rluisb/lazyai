@@ -295,7 +295,7 @@ func TestReadModelErrorsAreBoundedAndFilterable(t *testing.T) {
 func TestReadModelOverviewUsesActivityStorePort(t *testing.T) {
 	database := newDashboardTestDB(t)
 	activityStore := &fakeActivityStore{counts: domain.ActiveRunCounts{Chains: 2, QueueJobs: 1, Total: 3}}
-	model := NewReadModel(database, activityStore, &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
+	model := NewReadModel(sqliteadapter.NewRunReadStore(database), activityStore, &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
 
 	overview, err := model.Overview(context.Background(), HealthView{Status: "ok"}, CatalogCounts{})
 	if err != nil {
@@ -320,7 +320,7 @@ func TestReadModelRunDetailUsesHandoffQueryStorePort(t *testing.T) {
 		CreatedAt: "2026-05-05T10:05:00Z",
 		Resumable: true,
 	}}}
-	model := NewReadModel(database, sqliteadapter.NewActivityStore(database), handoffStore, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
+	model := NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), handoffStore, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
 
 	detail, err := model.GetRunDetail(context.Background(), types.RunKindChain, "chain-handoff")
 	if err != nil {
@@ -343,7 +343,7 @@ func TestReadModelListEventsUsesRunEventStorePort(t *testing.T) {
 		Data:      map[string]any{"stepId": "build"},
 		CreatedAt: "2026-05-05T10:01:00Z",
 	}}}
-	model := NewReadModel(database, sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, eventStore, sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
+	model := NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, eventStore, sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
 
 	events, err := model.ListEvents(context.Background(), "chain-events", 6, 25)
 	if err != nil {
@@ -363,7 +363,7 @@ func TestReadModelRunListUsesExecutionPlanStorePortForChainBudgets(t *testing.T)
 	executionPlans := &fakeExecutionPlanStore{plans: map[string]*types.ExecutionPlan{
 		"plan-warning": {ID: "plan-warning", Kind: "chain", BudgetPolicy: types.BudgetPolicy{ID: "policy-warning", Scope: "chain", Tokens: &types.BudgetThreshold{Limit: 100, WarnAt: 50}, DefaultActionOnLimit: "pause"}},
 	}}
-	model := NewReadModel(database, sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), executionPlans, sqliteadapter.NewErrorJournalStore(database))
+	model := NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), executionPlans, sqliteadapter.NewErrorJournalStore(database))
 
 	page, err := model.ListRuns(context.Background(), RunListOptions{Limit: 10})
 	if err != nil {
@@ -394,7 +394,7 @@ func TestReadModelUsesErrorJournalStorePortForListsAndSummaries(t *testing.T) {
 		}},
 		counts: map[domain.RunRef]int{{Kind: string(types.RunKindChain), ID: "chain-errors"}: 1},
 	}
-	model := NewReadModel(database, sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), errorStore)
+	model := NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), &fakeHandoffQueryStore{}, sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), errorStore)
 
 	entries, err := model.ListErrors(context.Background(), ErrorListOptions{RunID: "chain-errors", Limit: 10})
 	if err != nil {
@@ -416,6 +416,64 @@ func TestReadModelUsesErrorJournalStorePortForListsAndSummaries(t *testing.T) {
 	}
 	if len(page.Items) != 1 || page.Items[0].ErrorCount != 1 {
 		t.Fatalf("summary error count not derived from error journal store: %+v", page.Items)
+	}
+}
+
+func TestReadModelUsesRunReadStorePortForRuns(t *testing.T) {
+	runStore := &fakeRunReadStore{
+		page: domain.RunListPage{
+			Items: []domain.RunRow{{
+				Kind:              types.RunKindChain,
+				ID:                "chain-from-port",
+				DefinitionName:    "release",
+				DefinitionVersion: "1",
+				State:             "running",
+				Current:           "build",
+				ProjectRoot:       "/repo",
+				StateJSON:         `{}`,
+				CreatedAt:         "2026-05-05T09:00:00Z",
+				UpdatedAt:         "2026-05-05T10:00:00Z",
+			}},
+			NextCursor: "50",
+		},
+		counts: map[string]int{"running": 1},
+		row: domain.RunRow{
+			Kind:           types.RunKindChain,
+			ID:             "chain-from-port",
+			DefinitionName: "release",
+			State:          "running",
+			Current:        "build",
+			ProjectRoot:    "/repo",
+			StateJSON:      chainStateJSON(t, "chain-from-port", "release", "1", "running", "build"),
+			CreatedAt:      "2026-05-05T09:00:00Z",
+			UpdatedAt:      "2026-05-05T10:00:00Z",
+		},
+	}
+	model := NewReadModel(runStore, &fakeActivityStore{}, &fakeHandoffQueryStore{}, &fakeRunEventStore{}, nil, &fakeErrorJournalStore{})
+
+	page, err := model.ListRuns(context.Background(), RunListOptions{Kind: types.RunKindChain, State: "running", Search: "release", Attention: AttentionRunning, HasErrors: true, Limit: 25, Cursor: "25"})
+	if err != nil {
+		t.Fatalf("list runs: %v", err)
+	}
+	if runStore.listCalls != 1 {
+		t.Fatalf("run read store ListRuns calls = %d, want 1", runStore.listCalls)
+	}
+	if runStore.filter.Kind != types.RunKindChain || runStore.filter.State != "running" || runStore.filter.Search != "release" || runStore.filter.Attention != AttentionRunning || !runStore.filter.HasErrors || runStore.filter.Limit != 25 || runStore.filter.Cursor != "25" {
+		t.Fatalf("run read store filter mismatch: %+v", runStore.filter)
+	}
+	if len(page.Items) != 1 || page.Items[0].ID != "chain-from-port" || page.NextCursor != "50" {
+		t.Fatalf("list response not built from run read store page: %+v", page)
+	}
+
+	detail, err := model.GetRunDetail(context.Background(), types.RunKindChain, "chain-from-port")
+	if err != nil {
+		t.Fatalf("detail: %v", err)
+	}
+	if runStore.findCalls != 1 || runStore.findKind != types.RunKindChain || runStore.findID != "chain-from-port" {
+		t.Fatalf("run read store FindRunRow call mismatch: %+v", runStore)
+	}
+	if detail.Summary.ID != "chain-from-port" || len(detail.Steps) != 1 {
+		t.Fatalf("detail not built from run read store row: %+v", detail)
 	}
 }
 
@@ -536,7 +594,7 @@ func teamBudgetStateJSON(t *testing.T, id string, consumedTokens int) string {
 }
 
 func newDashboardTestReadModel(database *db.DB) *ReadModel {
-	return NewReadModel(database, sqliteadapter.NewActivityStore(database), sqliteadapter.NewHandoffStore(database), sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
+	return NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), sqliteadapter.NewHandoffStore(database), sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database))
 }
 
 type fakeActivityStore struct {
@@ -625,4 +683,34 @@ func (s *fakeErrorJournalStore) CountErrorJournalEntry(_ context.Context, kind t
 func (s *fakeErrorJournalStore) CountErrorJournalEntriesByRun(_ context.Context, refs []domain.RunRef) (map[domain.RunRef]int, error) {
 	s.countsCalls++
 	return s.counts, nil
+}
+
+type fakeRunReadStore struct {
+	page       domain.RunListPage
+	counts     map[string]int
+	row        domain.RunRow
+	listCalls  int
+	filter     domain.RunListFilter
+	countCalls int
+	findCalls  int
+	findKind   types.RunKind
+	findID     string
+}
+
+func (s *fakeRunReadStore) ListRuns(_ context.Context, filter domain.RunListFilter) (domain.RunListPage, error) {
+	s.listCalls++
+	s.filter = filter
+	return s.page, nil
+}
+
+func (s *fakeRunReadStore) CountRunsByState(context.Context) (map[string]int, error) {
+	s.countCalls++
+	return s.counts, nil
+}
+
+func (s *fakeRunReadStore) FindRunRow(_ context.Context, kind types.RunKind, id string) (domain.RunRow, error) {
+	s.findCalls++
+	s.findKind = kind
+	s.findID = id
+	return s.row, nil
 }

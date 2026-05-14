@@ -19,7 +19,7 @@ builds:
       - -s -w
 
 archives:
-  - format: tar.gz
+  - formats: ['tar.gz']
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -29,13 +29,13 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ['zip']
 
 checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}"
 
 changelog:
   sort: asc

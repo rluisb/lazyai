@@ -330,7 +330,7 @@ func newDashboardHTTPHandlerWithBus(t *testing.T, database *db.DB, store ports.C
 	t.Helper()
 	bus := events.NewBus(sqliteadapter.NewRunEventStore(database))
 	return NewHandler(HandlerConfig{
-		ReadModel: NewReadModel(database, sqliteadapter.NewActivityStore(database), sqliteadapter.NewHandoffStore(database), sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database)),
+		ReadModel: NewReadModel(sqliteadapter.NewRunReadStore(database), sqliteadapter.NewActivityStore(database), sqliteadapter.NewHandoffStore(database), sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database)),
 		Catalog:   NewCatalogAdapter(store),
 		Events:    bus,
 		Health: func(context.Context) HealthView {

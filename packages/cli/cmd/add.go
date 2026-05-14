@@ -5,14 +5,14 @@ import (
 	"os"
 
 	"charm.land/huh/v2"
-	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
-	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
+	setupsvc "github.com/rluisb/lazyai/packages/cli/internal/setup"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -148,49 +148,16 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 		return fmt.Errorf("reading store data: %w", err)
 	}
 
-	// Merge new selections into existing ones.
-	storeData.Config.Tools = mergeToolIds(storeData.Config.Tools, newTools)
-	storeData.Selections.Agents = mergeAgentIds(storeData.Selections.Agents, newAgents)
-	storeData.Selections.Skills = mergeSkillIds(storeData.Selections.Skills, newSkills)
-
-	// Also merge CLI tools.
-	cliTools := mergeStringSlices(storeData.Config.CLITools, toolIdsToStrings(newTools))
-	storeData.Config.CLITools = cliTools
-
-	// Determine preset from scope.
-	presetLevel := preset.DefaultPresetForScope(storeData.Config.SetupScope)
-
-	// Build scaffold context from merged configuration.
-	// LibraryDir may be empty in production mode (embedded FS).
-	libDir := getLibraryDir()
-	libFS := library.GetLibraryFS()
-
-	ctx := &scaffold.ScaffoldContext{
-		TargetDir:        targetDir,
-		LibraryDir:       libDir,
-		LibraryFS:        libFS,
-		Tools:            storeData.Config.Tools,
-		CLITools:         storeData.Config.CLITools,
-		EnableServers:    storeData.Config.EnableServers,
-		ProjectName:      storeData.Config.ProjectName,
-		PlanningDir:      storeData.Config.PlanningDir,
-		SetupScope:       storeData.Config.SetupScope,
-		Features:         storeData.Selections.Features,
-		GitConventions:   storeData.Selections.GitConventions,
-		Strategy:         types.ConflictStrategyAlign,
-		Agents:           storeData.Selections.Agents,
-		Skills:           storeData.Selections.Skills,
-		Prompts:           storeData.Selections.Prompts,
-		ChatModes:         storeData.Selections.ChatModes,
-		OpenCodeCommands:  storeData.Selections.OpenCodeCommands,
-		OpenCodeModes:     storeData.Selections.OpenCodeModes,
-		OpenCodePlugins:   storeData.Selections.OpenCodePlugins,
-		OpenCodeProviders: storeData.Selections.OpenCodeProviders,
-		Templates:         storeData.Selections.Templates,
-		Rules:            storeData.Selections.Rules,
-		Infra:            storeData.Selections.Infra,
-		SpecsDirs:        preset.SpecsDirsForPreset(presetLevel),
-		Housekeeping:     storeData.Config.Housekeeping,
+	ctx, presetLevel, err := setupsvc.BuildAddScaffoldContext(targetDir, setupsvc.Library{
+		Dir: getLibraryDir(),
+		FS:  library.GetLibraryFS(),
+	}, storeData, setupsvc.AddSelections{
+		Tools:  newTools,
+		Agents: newAgents,
+		Skills: newSkills,
+	})
+	if err != nil {
+		return err
 	}
 
 	// Run the scaffold pipeline.
@@ -233,83 +200,4 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 	}
 	fmt.Println()
 	return nil
-}
-
-// mergeToolIds merges new tool IDs into existing, avoiding duplicates.
-func mergeToolIds(existing, new []types.ToolId) []types.ToolId {
-	seen := make(map[types.ToolId]bool)
-	for _, t := range existing {
-		seen[t] = true
-	}
-	for _, t := range new {
-		if !seen[t] {
-			existing = append(existing, t)
-			seen[t] = true
-		}
-	}
-	return existing
-}
-
-// mergeAgentIds merges new agent IDs into existing, avoiding duplicates.
-func mergeAgentIds(existing []types.AgentId, new []string) []types.AgentId {
-	seen := make(map[types.AgentId]bool)
-	for _, a := range existing {
-		seen[a] = true
-	}
-	var result []types.AgentId
-	result = append(result, existing...)
-	for _, a := range new {
-		id := types.AgentId(a)
-		if !seen[id] {
-			result = append(result, id)
-			seen[id] = true
-		}
-	}
-	return result
-}
-
-// mergeSkillIds merges new skill IDs into existing, avoiding duplicates.
-func mergeSkillIds(existing []types.SkillId, new []string) []types.SkillId {
-	seen := make(map[types.SkillId]bool)
-	for _, s := range existing {
-		seen[s] = true
-	}
-	var result []types.SkillId
-	result = append(result, existing...)
-	for _, s := range new {
-		id := types.SkillId(s)
-		if !seen[id] {
-			result = append(result, id)
-			seen[id] = true
-		}
-	}
-	return result
-}
-
-// mergeStringSlices merges two string slices, removing duplicates.
-func mergeStringSlices(existing, new []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, s := range existing {
-		if !seen[s] {
-			result = append(result, s)
-			seen[s] = true
-		}
-	}
-	for _, s := range new {
-		if !seen[s] {
-			result = append(result, s)
-			seen[s] = true
-		}
-	}
-	return result
-}
-
-// toolIdsToStrings converts tool IDs to plain strings.
-func toolIdsToStrings(ids []types.ToolId) []string {
-	result := make([]string, len(ids))
-	for i, id := range ids {
-		result[i] = string(id)
-	}
-	return result
 }

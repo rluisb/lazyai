@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 )
 
 func TestClientTrackerCountsActiveRequests(t *testing.T) {
@@ -97,12 +97,12 @@ func TestClientTrackerUsesDefaultPruneTTLWhenIdleTimeoutDisabled(t *testing.T) {
 
 func TestIdleManagerRequiresNoClientsAndNoActiveRuns(t *testing.T) {
 	tracker := newClientTracker(time.Minute)
-	var activeRuns db.ActiveRunCounts
+	var activeRuns domain.ActiveRunCounts
 	shutdownCalled := false
 	manager := newIdleManager(idleManagerOptions{
 		Timeout: 10 * time.Millisecond,
 		Tracker: tracker,
-		ActiveRuns: func(context.Context) (db.ActiveRunCounts, error) {
+		ActiveRuns: func(context.Context) (domain.ActiveRunCounts, error) {
 			return activeRuns, nil
 		},
 		Shutdown: func(string) { shutdownCalled = true },
@@ -115,7 +115,7 @@ func TestIdleManagerRequiresNoClientsAndNoActiveRuns(t *testing.T) {
 		t.Fatalf("expected active runs to block shutdown, ready=%v status=%+v", ready, status)
 	}
 
-	activeRuns = db.ActiveRunCounts{}
+	activeRuns = domain.ActiveRunCounts{}
 	done := tracker.begin(httptest.NewRequest(http.MethodGet, "/health", nil), "health")
 	ready, status = manager.shouldShutdown(context.Background(), time.Now().Add(time.Minute))
 	done()

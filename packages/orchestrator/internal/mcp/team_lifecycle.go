@@ -1,65 +1,17 @@
 package mcp
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/state"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
-
-// ──────────────────────── Team state persistence ─────────────────────────
-
-func saveTeamState(database *db.DB, projectRoot string, teamState *types.TeamState) error {
-	encoded, err := json.Marshal(teamState)
-	if err != nil {
-		return fmt.Errorf("marshal team state: %w", err)
-	}
-	_, err = database.Exec(`
-		INSERT INTO team_runs (id, definition_name, definition_version, state, project_root, state_json, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			state = excluded.state,
-			state_json = excluded.state_json,
-			updated_at = excluded.updated_at
-	`, teamState.TeamID, teamState.DefinitionName, teamState.DefinitionVersion, teamState.State, projectRoot, string(encoded), teamState.CreatedAt, teamState.UpdatedAt)
-	if err != nil {
-		return fmt.Errorf("save team state %s: %w", teamState.TeamID, err)
-	}
-	return nil
-}
-
-func loadTeamState(database *db.DB, teamID string) (*types.TeamState, error) {
-	var stateJSON string
-	err := database.QueryRow(`SELECT state_json FROM team_runs WHERE id = ?`, teamID).Scan(&stateJSON)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("team state not found: %s", teamID)
-		}
-		return nil, err
-	}
-	var teamState types.TeamState
-	if err := json.Unmarshal([]byte(stateJSON), &teamState); err != nil {
-		return nil, fmt.Errorf("decode team state %s: %w", teamID, err)
-	}
-	return &teamState, nil
-}
-
-// ──────────────────────── Team execution plan persistence ─────────────────
-
-func saveTeamExecutionPlan(database *db.DB, plan *types.ExecutionPlan) error {
-	return saveExecutionPlan(database, plan)
-}
-
-func loadTeamExecutionPlan(database *db.DB, planID string) (*types.ExecutionPlan, error) {
-	return loadExecutionPlan(database, planID)
-}
 
 // ──────────────────────── Compile team plan ───────────────────────────────
 
@@ -101,7 +53,7 @@ func (o *Orchestrator) compileTeamPlan(input types.BuildTeamInput) (*types.Execu
 	return plan, nil
 }
 
-func decodeTeamDefinition(version *catalog.VersionRow) (*types.TeamDefinition, error) {
+func decodeTeamDefinition(version *domain.CatalogVersion) (*types.TeamDefinition, error) {
 	var definition types.TeamDefinition
 	if err := json.Unmarshal([]byte(version.Body), &definition); err != nil {
 		return nil, fmt.Errorf("active team %s/%s version %d body must be a JSON team definition: %w", version.Kind, version.Name, version.Version, err)
@@ -162,17 +114,17 @@ func buildTeamBudgetPolicy(overrides *types.BudgetPolicy) types.BudgetPolicy {
 func cliContextFromTeam() types.CliContext {
 	return types.CliContext{
 		Host:                     types.HostOpenCode,
-		DispatchMode:            types.DispatchTaskTool,
-		SupportsSubagents:       true,
-		SupportsParallelTeams:   true,
+		DispatchMode:             types.DispatchTaskTool,
+		SupportsSubagents:        true,
+		SupportsParallelTeams:    true,
 		SupportsStructuredOutput: true,
-		MCPServerName:           defaultMCPServerName,
+		MCPServerName:            defaultMCPServerName,
 	}
 }
 
 // ──────────────────────── Team handoff ─────────────────────────────────────
 
-func createAndSaveTeamHandoff(database *db.DB, teamState *types.TeamState, plan *types.ExecutionPlan, input handoffInput) (*types.HandoffDocument, string, error) {
+func createAndSaveTeamHandoff(store ports.HandoffStore, teamState *types.TeamState, plan *types.ExecutionPlan, input handoffInput) (*types.HandoffDocument, string, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	teamState.State = types.TeamHandoff
 	teamState.UpdatedAt = now
@@ -192,13 +144,8 @@ func createAndSaveTeamHandoff(database *db.DB, teamState *types.TeamState, plan 
 		Status:    teamState,
 		Plan:      plan,
 	}
-	encoded, err := json.Marshal(doc)
-	if err != nil {
-		return nil, "", fmt.Errorf("marshal handoff: %w", err)
-	}
-	_, err = database.Exec(`INSERT OR IGNORE INTO handoffs (id, run_id, run_kind, doc_json, created_at) VALUES (?, ?, ?, ?, ?)`, doc.ID, doc.RunID, doc.Kind, string(encoded), doc.CreatedAt)
-	if err != nil {
-		return nil, "", fmt.Errorf("save handoff %s: %w", doc.ID, err)
+	if err := store.SaveHandoffDocument(doc); err != nil {
+		return nil, "", err
 	}
 	path := handoffPathURIPrefix + doc.ID
 	return doc, path, nil
@@ -215,12 +162,12 @@ func currentTeamTaskStatus(plan *types.ExecutionPlan, teamState *types.TeamState
 
 	for _, task := range teamState.Tasks {
 		taskMap := map[string]any{
-			"taskId":   task.TaskID,
-			"role":     task.Role,
-			"agent":    task.Agent,
-			"state":    task.State,
-			"kind":     task.Kind,
-			"order":    task.Order,
+			"taskId": task.TaskID,
+			"role":   task.Role,
+			"agent":  task.Agent,
+			"state":  task.State,
+			"kind":   task.Kind,
+			"order":  task.Order,
 		}
 		if task.Assignee != "" {
 			taskMap["assignee"] = task.Assignee
@@ -249,19 +196,19 @@ func currentTeamTaskStatus(plan *types.ExecutionPlan, teamState *types.TeamState
 	}
 
 	return map[string]any{
-		"teamId":            teamState.TeamID,
-		"definitionName":    teamState.DefinitionName,
-		"state":             teamState.State,
-		"task":              teamState.Task,
-		"synthesisTaskId":   teamState.SynthesisTaskID,
-		"readyTaskIds":      teamState.ReadyTaskIDs,
-		"members":           members,
-		"completedMembers":  completedCount,
-		"runningMembers":    runningCount,
-		"pendingMembers":    pendingCount,
-		"failedMembers":     failedCount,
-		"totalMembers":      len(teamState.Tasks),
-		"budget":            teamState.Budget,
+		"teamId":           teamState.TeamID,
+		"definitionName":   teamState.DefinitionName,
+		"state":            teamState.State,
+		"task":             teamState.Task,
+		"synthesisTaskId":  teamState.SynthesisTaskID,
+		"readyTaskIds":     teamState.ReadyTaskIDs,
+		"members":          members,
+		"completedMembers": completedCount,
+		"runningMembers":   runningCount,
+		"pendingMembers":   pendingCount,
+		"failedMembers":    failedCount,
+		"totalMembers":     len(teamState.Tasks),
+		"budget":           teamState.Budget,
 	}
 }
 
@@ -281,10 +228,10 @@ func startTeam(o *Orchestrator, input types.BuildTeamInput) (*types.TeamState, *
 
 	teamState := state.CreateTeamState(definition, plan)
 
-	if err := saveTeamExecutionPlan(o.DB, plan); err != nil {
+	if err := o.ExecutionPlans.SaveExecutionPlan(plan); err != nil {
 		return nil, nil, fmt.Errorf("save team execution plan: %w", err)
 	}
-	if err := saveTeamState(o.DB, o.projectRoot(), teamState); err != nil {
+	if err := o.TeamStates.SaveTeamState(o.projectRoot(), teamState); err != nil {
 		return nil, nil, fmt.Errorf("save team state: %w", err)
 	}
 

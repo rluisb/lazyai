@@ -4,137 +4,42 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/rluisb/lazyai/packages/diffviewer/domain"
 )
 
 // DiffLineType classifies a diff line.
-type DiffLineType string
+type DiffLineType = domain.DiffLineType
 
 const (
-	DiffLineAdded   DiffLineType = "add"
-	DiffLineRemoved DiffLineType = "remove"
-	DiffLineContext DiffLineType = "context"
+	DiffLineAdded   = domain.DiffLineAdded
+	DiffLineRemoved = domain.DiffLineRemoved
+	DiffLineContext = domain.DiffLineContext
 )
 
 // DiffLine represents a single line in a diff.
-type DiffLine struct {
-	Type       DiffLineType
-	Content    string
-	OldLineNum int
-	NewLineNum int
-}
+type DiffLine = domain.DiffLine
 
 // DiffStats holds summary counts.
-type DiffStats struct {
-	Additions int
-	Deletions int
-	Unchanged int
-}
+type DiffStats = domain.DiffStats
 
 // DiffResult holds the full diff output.
-type DiffResult struct {
-	Lines []DiffLine
-	Stats DiffStats
-}
+type DiffResult = domain.DiffResult
 
 // ComputeDiff computes a line-level diff between original and modified content
 // using the LCS (Longest Common Subsequence) algorithm.
 func ComputeDiff(original, modified []byte) []DiffLine {
-	existingLines := strings.Split(string(original), "\n")
-	incomingLines := strings.Split(string(modified), "\n")
-
-	n := len(existingLines)
-	m := len(incomingLines)
-
-	// Build LCS table.
-	dp := make([][]int, n+1)
-	for i := range dp {
-		dp[i] = make([]int, m+1)
-	}
-
-	for i := 1; i <= n; i++ {
-		for j := 1; j <= m; j++ {
-			if existingLines[i-1] == incomingLines[j-1] {
-				dp[i][j] = dp[i-1][j-1] + 1
-			} else if dp[i-1][j] >= dp[i][j-1] {
-				dp[i][j] = dp[i-1][j]
-			} else {
-				dp[i][j] = dp[i][j-1]
-			}
-		}
-	}
-
-	// Backtrack to build diff.
-	var reversed []DiffLine
-	i, j := n, m
-	oldLine, newLine := n, m
-
-	for i > 0 && j > 0 {
-		if existingLines[i-1] == incomingLines[j-1] {
-			reversed = append(reversed, DiffLine{Type: DiffLineContext, Content: existingLines[i-1], OldLineNum: oldLine, NewLineNum: newLine})
-			i--
-			j--
-			oldLine--
-			newLine--
-			continue
-		}
-
-		if dp[i-1][j] >= dp[i][j-1] {
-			reversed = append(reversed, DiffLine{Type: DiffLineRemoved, Content: existingLines[i-1], OldLineNum: oldLine})
-			i--
-			oldLine--
-		} else {
-			reversed = append(reversed, DiffLine{Type: DiffLineAdded, Content: incomingLines[j-1], NewLineNum: newLine})
-			j--
-			newLine--
-		}
-	}
-
-	for i > 0 {
-		reversed = append(reversed, DiffLine{Type: DiffLineRemoved, Content: existingLines[i-1], OldLineNum: oldLine})
-		i--
-		oldLine--
-	}
-
-	for j > 0 {
-		reversed = append(reversed, DiffLine{Type: DiffLineAdded, Content: incomingLines[j-1], NewLineNum: newLine})
-		j--
-		newLine--
-	}
-
-	// Reverse to get correct order.
-	lines := make([]DiffLine, len(reversed))
-	for idx, line := range reversed {
-		lines[len(reversed)-1-idx] = line
-	}
-
-	return lines
+	return domain.ComputeDiff(original, modified)
 }
 
 // ComputeDiffResult computes a full DiffResult with stats.
 func ComputeDiffResult(original, modified []byte) DiffResult {
-	lines := ComputeDiff(original, modified)
-	stats := DiffStats{}
-	for _, line := range lines {
-		switch line.Type {
-		case DiffLineAdded:
-			stats.Additions++
-		case DiffLineRemoved:
-			stats.Deletions++
-		case DiffLineContext:
-			stats.Unchanged++
-		}
-	}
-	return DiffResult{Lines: lines, Stats: stats}
+	return domain.ComputeDiffResult(original, modified)
 }
 
 // HasDiffs reports whether the diff contains any changes.
 func HasDiffs(diffs []DiffLine) bool {
-	for _, line := range diffs {
-		if line.Type != DiffLineContext {
-			return true
-		}
-	}
-	return false
+	return domain.HasDiffs(diffs)
 }
 
 // FormatDiff formats a diff as a string. If the output is a terminal, ANSI

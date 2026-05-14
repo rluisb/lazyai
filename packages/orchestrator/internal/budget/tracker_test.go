@@ -4,17 +4,35 @@ import (
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
+
+func TestTrackerImplementsBudgetTrackerPort(t *testing.T) {
+	tracker := NewTracker()
+	var _ ports.BudgetTracker = tracker
+
+	state := &types.BudgetState{
+		Tokens:  types.BudgetDimensionState{Limit: 100, Remaining: 100},
+		Retries: types.BudgetDimensionState{Limit: 2, Remaining: 2},
+	}
+	tracker.Update(state, "step-1", &types.StepUsage{TotalTokens: 25})
+	tracker.IncrementRetries(state, "step-1")
+	evaluation := tracker.Evaluate(state, &types.BudgetPolicy{Tokens: &types.BudgetThreshold{Limit: 100}})
+
+	if state.Tokens.Consumed != 25 || state.Retries.Consumed != 1 || evaluation.Overall != types.HealthOK {
+		t.Fatalf("tracker did not preserve budget behavior: state=%+v evaluation=%+v", state, evaluation)
+	}
+}
 
 func TestUpdate_AccumulatesUsage(t *testing.T) {
 	state := &types.BudgetState{
-		PolicyID: "policy-1",
-		Scope:    "team",
-		Tokens:   types.BudgetDimensionState{Limit: 100000, Consumed: 0, Remaining: 100000},
-		CostUsd:  types.BudgetDimensionState{Limit: 500, Consumed: 0, Remaining: 500},
+		PolicyID:    "policy-1",
+		Scope:       "team",
+		Tokens:      types.BudgetDimensionState{Limit: 100000, Consumed: 0, Remaining: 100000},
+		CostUsd:     types.BudgetDimensionState{Limit: 500, Consumed: 0, Remaining: 500},
 		WallClockMs: types.BudgetDimensionState{Limit: 300000, Consumed: 0, Remaining: 300000},
-		Retries:  types.BudgetDimensionState{Limit: 3, Consumed: 0, Remaining: 3},
-		ByStep:   map[string]types.StepUsage{},
+		Retries:     types.BudgetDimensionState{Limit: 3, Consumed: 0, Remaining: 3},
+		ByStep:      map[string]types.StepUsage{},
 	}
 
 	usage := &types.StepUsage{
@@ -143,10 +161,10 @@ func TestIncrementRetries(t *testing.T) {
 
 func TestEvaluate_Ok(t *testing.T) {
 	state := &types.BudgetState{
-		Tokens:   types.BudgetDimensionState{Limit: 100000, Consumed: 10000},
-		CostUsd:  types.BudgetDimensionState{Limit: 100, Consumed: 10},
+		Tokens:      types.BudgetDimensionState{Limit: 100000, Consumed: 10000},
+		CostUsd:     types.BudgetDimensionState{Limit: 100, Consumed: 10},
 		WallClockMs: types.BudgetDimensionState{Limit: 100000, Consumed: 10000},
-		Retries:  types.BudgetDimensionState{Limit: 3, Consumed: 0},
+		Retries:     types.BudgetDimensionState{Limit: 3, Consumed: 0},
 	}
 	policy := &types.BudgetPolicy{
 		Tokens:      &types.BudgetThreshold{Limit: 100000},
@@ -170,10 +188,10 @@ func TestEvaluate_Ok(t *testing.T) {
 
 func TestEvaluate_Warning(t *testing.T) {
 	state := &types.BudgetState{
-		Tokens:   types.BudgetDimensionState{Limit: 100000, Consumed: 75000}, // 75% — warning
-		CostUsd:  types.BudgetDimensionState{Limit: 100, Consumed: 10},
+		Tokens:      types.BudgetDimensionState{Limit: 100000, Consumed: 75000}, // 75% — warning
+		CostUsd:     types.BudgetDimensionState{Limit: 100, Consumed: 10},
 		WallClockMs: types.BudgetDimensionState{Limit: 100000, Consumed: 10000},
-		Retries:  types.BudgetDimensionState{Limit: 3, Consumed: 0},
+		Retries:     types.BudgetDimensionState{Limit: 3, Consumed: 0},
 	}
 	policy := &types.BudgetPolicy{
 		Tokens:      &types.BudgetThreshold{Limit: 100000},
@@ -194,10 +212,10 @@ func TestEvaluate_Warning(t *testing.T) {
 
 func TestEvaluate_LimitReached(t *testing.T) {
 	state := &types.BudgetState{
-		Tokens:   types.BudgetDimensionState{Limit: 100000, Consumed: 95000}, // 95% — limit reached
-		CostUsd:  types.BudgetDimensionState{Limit: 100, Consumed: 10},
+		Tokens:      types.BudgetDimensionState{Limit: 100000, Consumed: 95000}, // 95% — limit reached
+		CostUsd:     types.BudgetDimensionState{Limit: 100, Consumed: 10},
 		WallClockMs: types.BudgetDimensionState{Limit: 100000, Consumed: 10000},
-		Retries:  types.BudgetDimensionState{Limit: 3, Consumed: 0},
+		Retries:     types.BudgetDimensionState{Limit: 3, Consumed: 0},
 	}
 	policy := &types.BudgetPolicy{
 		Tokens:      &types.BudgetThreshold{Limit: 100000},
@@ -221,16 +239,16 @@ func TestEvaluate_LimitReached(t *testing.T) {
 
 func TestEvaluate_UsesPolicyDefaultAction(t *testing.T) {
 	state := &types.BudgetState{
-		Tokens:   types.BudgetDimensionState{Limit: 100000, Consumed: 100000, PausedAtLimit: true},
-		CostUsd:  types.BudgetDimensionState{Limit: 100, Consumed: 0},
+		Tokens:      types.BudgetDimensionState{Limit: 100000, Consumed: 100000, PausedAtLimit: true},
+		CostUsd:     types.BudgetDimensionState{Limit: 100, Consumed: 0},
 		WallClockMs: types.BudgetDimensionState{Limit: 100000, Consumed: 0},
-		Retries:  types.BudgetDimensionState{Limit: 3, Consumed: 0},
+		Retries:     types.BudgetDimensionState{Limit: 3, Consumed: 0},
 	}
 	policy := &types.BudgetPolicy{
-		Tokens:   &types.BudgetThreshold{Limit: 100000},
-		CostUsd:  &types.BudgetThreshold{Limit: 100},
-		WallClockMs: &types.BudgetThreshold{Limit: 100000},
-		Retries: &types.BudgetThreshold{Limit: 3},
+		Tokens:               &types.BudgetThreshold{Limit: 100000},
+		CostUsd:              &types.BudgetThreshold{Limit: 100},
+		WallClockMs:          &types.BudgetThreshold{Limit: 100000},
+		Retries:              &types.BudgetThreshold{Limit: 3},
 		DefaultActionOnLimit: "abort",
 	}
 

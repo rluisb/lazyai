@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 )
 
@@ -38,7 +39,7 @@ func TestWorkerStartStop(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 	w := &Worker{
 		DB:               db,
 		Queue:            q,
@@ -81,14 +82,14 @@ func TestWorkerPicksUpJobAndCallsHandler(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 	h := &mockHandler{}
 
 	w := &Worker{
 		DB:               db,
 		Queue:            q,
 		PollInterval:     10 * time.Millisecond,
-		ReclaimInterval:   500 * time.Millisecond,
+		ReclaimInterval:  500 * time.Millisecond,
 		ReclaimTimeoutMs: 5000,
 	}
 	w.RegisterHandler("test-job", h)
@@ -136,7 +137,7 @@ func TestWorkerCallsFailOnHandlerError(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 	h := &mockHandler{failError: errors.New("handler failed")}
 	h.failNext.Store(true)
 
@@ -144,7 +145,7 @@ func TestWorkerCallsFailOnHandlerError(t *testing.T) {
 		DB:               db,
 		Queue:            q,
 		PollInterval:     10 * time.Millisecond,
-		ReclaimInterval:   500 * time.Millisecond,
+		ReclaimInterval:  500 * time.Millisecond,
 		ReclaimTimeoutMs: 5000,
 	}
 	w.RegisterHandler("fail-job", h)
@@ -192,14 +193,14 @@ func TestWorkerCallsCompleteOnSuccess(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 	h := &mockHandler{} // succeeds
 
 	w := &Worker{
 		DB:               db,
 		Queue:            q,
 		PollInterval:     10 * time.Millisecond,
-		ReclaimInterval:   500 * time.Millisecond,
+		ReclaimInterval:  500 * time.Millisecond,
 		ReclaimTimeoutMs: 5000,
 	}
 	w.RegisterHandler("success-job", h)
@@ -241,7 +242,7 @@ func TestReclaimLoopRuns(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 	w := &Worker{
 		DB:               db,
 		Queue:            q,

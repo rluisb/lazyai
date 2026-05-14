@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 )
 
-type activeRunCounter func(context.Context) (db.ActiveRunCounts, error)
+type activeRunCounter func(context.Context) (domain.ActiveRunCounts, error)
 
 type idleManagerOptions struct {
 	Timeout       time.Duration
@@ -27,14 +27,14 @@ type idleManager struct {
 }
 
 type idleStatus struct {
-	Enabled              bool               `json:"enabled"`
-	TimeoutSeconds       int64              `json:"timeoutSeconds"`
-	IdleForSeconds       int64              `json:"idleForSeconds"`
-	ShutdownAfterSeconds int64              `json:"shutdownAfterSeconds"`
-	LastActivity         string             `json:"lastActivity"`
-	BlockingReasons      []string           `json:"blockingReasons,omitempty"`
-	ActiveRuns           db.ActiveRunCounts `json:"activeRuns"`
-	ActiveRunsError      string             `json:"activeRunsError,omitempty"`
+	Enabled              bool                   `json:"enabled"`
+	TimeoutSeconds       int64                  `json:"timeoutSeconds"`
+	IdleForSeconds       int64                  `json:"idleForSeconds"`
+	ShutdownAfterSeconds int64                  `json:"shutdownAfterSeconds"`
+	LastActivity         string                 `json:"lastActivity"`
+	BlockingReasons      []string               `json:"blockingReasons,omitempty"`
+	ActiveRuns           domain.ActiveRunCounts `json:"activeRuns"`
+	ActiveRunsError      string                 `json:"activeRunsError,omitempty"`
 }
 
 func newIdleManager(options idleManagerOptions) *idleManager {
@@ -96,7 +96,7 @@ func (m *idleManager) shouldShutdown(ctx context.Context, now time.Time) (bool, 
 	status := idleStatus{
 		Enabled:         m != nil && m.timeout > 0,
 		LastActivity:    now.UTC().Format(time.RFC3339),
-		ActiveRuns:      db.ActiveRunCounts{},
+		ActiveRuns:      domain.ActiveRunCounts{},
 		BlockingReasons: []string{},
 	}
 	if m == nil {
@@ -147,7 +147,7 @@ func (m *idleManager) shouldShutdown(ctx context.Context, now time.Time) (bool, 
 	return len(status.BlockingReasons) == 0, status
 }
 
-func activeRunTotal(counts db.ActiveRunCounts) int {
+func activeRunTotal(counts domain.ActiveRunCounts) int {
 	if counts.Total > 0 {
 		return counts.Total
 	}

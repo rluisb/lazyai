@@ -8,12 +8,11 @@ import (
 
 	charmlog "charm.land/log/v2"
 	ailog "github.com/rluisb/lazyai/packages/diffviewer/internal/log"
+	"github.com/rluisb/lazyai/packages/diffviewer/ports"
 )
 
 // Reviewer runs a prepared review and returns the user's final response.
-type Reviewer interface {
-	Run() (ReviewResponse, error)
-}
+type Reviewer = ports.Reviewer
 
 // ReviewerFactory builds a reviewer for request-derived conflict views.
 type ReviewerFactory func([]ConflictView) Reviewer

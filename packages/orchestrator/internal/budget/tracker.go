@@ -6,6 +6,29 @@ import (
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 )
 
+// Tracker applies budget accounting rules behind the BudgetTracker service port.
+type Tracker struct{}
+
+// NewTracker creates the default budget tracking service.
+func NewTracker() *Tracker {
+	return &Tracker{}
+}
+
+// Evaluate returns a budget health assessment for a given state.
+func (Tracker) Evaluate(state *types.BudgetState, policy *types.BudgetPolicy) types.BudgetEvaluation {
+	return Evaluate(state, policy)
+}
+
+// Update adds step usage to the budget state.
+func (Tracker) Update(state *types.BudgetState, stepID string, usage *types.StepUsage) {
+	Update(state, stepID, usage)
+}
+
+// IncrementRetries records a consumed retry against the retry budget dimension.
+func (Tracker) IncrementRetries(state *types.BudgetState, stepID string) {
+	IncrementRetries(state, stepID)
+}
+
 // Evaluate returns a budget health assessment for a given state.
 func Evaluate(state *types.BudgetState, policy *types.BudgetPolicy) types.BudgetEvaluation {
 	ev := types.BudgetEvaluation{

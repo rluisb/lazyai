@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	orchmcp "github.com/rluisb/lazyai/packages/orchestrator/internal/mcp"
 )
@@ -22,8 +24,8 @@ func TestServeRoutesMountDashboardAndPreserveDaemonRoutes(t *testing.T) {
 	idle := newIdleManager(idleManagerOptions{
 		Timeout: time.Minute,
 		Tracker: tracker,
-		ActiveRuns: func(context.Context) (db.ActiveRunCounts, error) {
-			return database.ActiveRunCounts()
+		ActiveRuns: func(ctx context.Context) (domain.ActiveRunCounts, error) {
+			return sqliteadapter.NewActivityStore(database).ActiveRunCounts(ctx)
 		},
 		Shutdown: func(string) {},
 	})
@@ -129,8 +131,8 @@ func TestServeDashboardAPIRoutesRemainReadOnly(t *testing.T) {
 	idle := newIdleManager(idleManagerOptions{
 		Timeout: time.Minute,
 		Tracker: tracker,
-		ActiveRuns: func(context.Context) (db.ActiveRunCounts, error) {
-			return database.ActiveRunCounts()
+		ActiveRuns: func(ctx context.Context) (domain.ActiveRunCounts, error) {
+			return sqliteadapter.NewActivityStore(database).ActiveRunCounts(ctx)
 		},
 		Shutdown: func(string) {},
 	})

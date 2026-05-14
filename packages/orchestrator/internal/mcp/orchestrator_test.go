@@ -3,16 +3,19 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
+	budgetpkg "github.com/rluisb/lazyai/packages/orchestrator/internal/budget"
 	oconfig "github.com/rluisb/lazyai/packages/orchestrator/internal/config"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 func TestChainLifecycleStartAdvanceStatus(t *testing.T) {
@@ -186,7 +189,7 @@ func TestStartChainAcceptsContextShapes(t *testing.T) {
 				t.Fatalf("expected chain id and plan id, got %+v", started)
 			}
 
-			plan, err := loadExecutionPlan(orchestrator.DB, started.ExecutionPlanID)
+			plan, err := orchestrator.ExecutionPlans.LoadExecutionPlan(started.ExecutionPlanID)
 			if err != nil {
 				t.Fatalf("load execution plan: %v", err)
 			}
@@ -549,7 +552,7 @@ func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)
 	started := startSimpleChain(t, orchestrator)
-	before, err := loadChainState(orchestrator.DB, started.ChainID)
+	before, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load chain before advance: %v", err)
 	}
@@ -572,7 +575,7 @@ func TestAdvanceChainRejectsPendingStepAndPreservesState(t *testing.T) {
 	if text := decodeToolText(t, result); !strings.Contains(text, "is not active") {
 		t.Fatalf("expected pending step rejection, got %q", text)
 	}
-	after, err := loadChainState(orchestrator.DB, started.ChainID)
+	after, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load chain after advance: %v", err)
 	}
@@ -611,7 +614,7 @@ func TestRetryStepRejectsExhaustedRetryLimitAndPreservesStateAndBudget(t *testin
 	}
 
 	failChainStep(t, orchestrator, started.ChainID, "research")
-	before, err := loadChainState(orchestrator.DB, started.ChainID)
+	before, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load chain before exhausted retry: %v", err)
 	}
@@ -628,7 +631,7 @@ func TestRetryStepRejectsExhaustedRetryLimitAndPreservesStateAndBudget(t *testin
 	if text := decodeToolText(t, exhaustedResult); !strings.Contains(text, "no retries remaining") {
 		t.Fatalf("expected exhausted retry rejection, got %q", text)
 	}
-	after, err := loadChainState(orchestrator.DB, started.ChainID)
+	after, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load chain after exhausted retry: %v", err)
 	}
@@ -664,7 +667,7 @@ func TestEscalateStepPersistsTargetAgentInStateAndPlan(t *testing.T) {
 	if escalated.State != "running" || escalated.NewAssignment.StepID != "research" || escalated.NewAssignment.Agent != "senior-builder" || escalated.NewAssignment.State != "running" {
 		t.Fatalf("unexpected escalation result: %+v", escalated)
 	}
-	chainState, err := loadChainState(orchestrator.DB, started.ChainID)
+	chainState, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load escalated chain: %v", err)
 	}
@@ -674,7 +677,7 @@ func TestEscalateStepPersistsTargetAgentInStateAndPlan(t *testing.T) {
 	if step := findStep(t, chainState, "research"); step.Agent != "senior-builder" || step.State != types.StepRunning {
 		t.Fatalf("target agent was not persisted in state: %+v", step)
 	}
-	plan, err := loadExecutionPlan(orchestrator.DB, chainState.ExecutionPlanID)
+	plan, err := orchestrator.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 	if err != nil {
 		t.Fatalf("load escalated plan: %v", err)
 	}
@@ -708,7 +711,7 @@ func TestHandoffPersistsResumableArtifactWithStatusPlanAndPath(t *testing.T) {
 		t.Fatalf("unexpected handoff result: %+v", handoffResult)
 	}
 
-	chainState, err := loadChainState(orchestrator.DB, started.ChainID)
+	chainState, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load handed off chain: %v", err)
 	}
@@ -770,15 +773,48 @@ func TestInvokeAgentNativePreservesComposedSpecShape(t *testing.T) {
 	}
 }
 
+func TestAgentInvokerOptionRoutesInvokeAgentThroughPort(t *testing.T) {
+	invoker := &recordingAgentInvoker{
+		result: &domain.InvocationResult{
+			ExecutionMode: types.ExecutionNative,
+			Spec: &types.ComposedAgentSpec{
+				ID:     "custom-builder",
+				Base:   "custom-builder",
+				Model:  "test-model",
+				Prompt: "custom prompt",
+			},
+		},
+	}
+	orchestrator := newTestOrchestratorWithOptions(t, WithAgentInvoker(invoker))
+
+	result, err := orchestrator.InvokeAgent(context.Background(), toolRequest(map[string]any{
+		"agent":   "builder",
+		"task":    "ship the feature",
+		"cliTool": "opencode",
+	}))
+	if err != nil {
+		t.Fatalf("invoke agent returned transport error: %v", err)
+	}
+
+	if invoker.request.Agent != "builder" || invoker.request.Task != "ship the feature" || invoker.request.CliTool != "opencode" {
+		t.Fatalf("invoke_agent did not route request through agent invoker port: %+v", invoker.request)
+	}
+	var spec types.ComposedAgentSpec
+	decodeToolResult(t, result, &spec)
+	if spec.ID != "custom-builder" || spec.Model != "test-model" || spec.Prompt != "custom prompt" {
+		t.Fatalf("invoke_agent did not return port result spec: %+v", spec)
+	}
+}
+
 func TestStartChainCompiledStepsRemainNativeByDefault(t *testing.T) {
 	orchestrator := newTestOrchestrator(t)
 	createSimpleChainCatalog(t, orchestrator)
 	started := startSimpleChain(t, orchestrator)
-	chainState, err := loadChainState(orchestrator.DB, started.ChainID)
+	chainState, err := orchestrator.ChainStates.LoadChainState(started.ChainID)
 	if err != nil {
 		t.Fatalf("load chain state: %v", err)
 	}
-	plan, err := loadExecutionPlan(orchestrator.DB, chainState.ExecutionPlanID)
+	plan, err := orchestrator.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 	if err != nil {
 		t.Fatalf("load execution plan: %v", err)
 	}
@@ -898,6 +934,194 @@ func TestNewRuntimeConfigRejectsInvalidExecutionMode(t *testing.T) {
 	}
 }
 
+func TestBudgetTrackerOptionRoutesUsageAndEvaluation(t *testing.T) {
+	tracker := &recordingBudgetTracker{
+		delegate: budgetpkg.NewTracker(),
+		evaluation: types.BudgetEvaluation{
+			Overall:           types.HealthWarning,
+			RecommendedAction: "warn",
+		},
+	}
+	orchestrator := newTestOrchestratorWithOptions(t, WithBudgetTracker(tracker))
+	createSimpleChainCatalog(t, orchestrator)
+	started := startSimpleChain(t, orchestrator)
+
+	advanceResult, err := orchestrator.AdvanceChain(context.Background(), toolRequest(map[string]any{
+		"chainId": started.ChainID,
+		"stepId":  "research",
+		"outcome": "success",
+		"usage":   map[string]any{"totalTokens": 50},
+	}))
+	if err != nil {
+		t.Fatalf("advance chain returned transport error: %v", err)
+	}
+	var advanced struct {
+		Budget types.BudgetState `json:"budget"`
+	}
+	decodeToolResult(t, advanceResult, &advanced)
+	if len(tracker.updatedStepIDs) != 1 || tracker.updatedStepIDs[0] != "research" || advanced.Budget.Tokens.Consumed != 50 {
+		t.Fatalf("budget tracker update was not routed through port: steps=%v budget=%+v", tracker.updatedStepIDs, advanced.Budget)
+	}
+
+	budgetResult, err := orchestrator.GetBudget(context.Background(), toolRequest(map[string]any{
+		"runId": started.ChainID,
+		"kind":  "chain",
+	}))
+	if err != nil {
+		t.Fatalf("get budget returned transport error: %v", err)
+	}
+	var budgetView struct {
+		Health types.BudgetEvaluation `json:"health"`
+	}
+	decodeToolResult(t, budgetResult, &budgetView)
+	if tracker.evaluateCalls != 1 || budgetView.Health.Overall != types.HealthWarning {
+		t.Fatalf("budget tracker evaluation was not routed through port: calls=%d health=%+v", tracker.evaluateCalls, budgetView.Health)
+	}
+}
+
+func TestChainStateStoreOptionRoutesLifecyclePersistence(t *testing.T) {
+	store := newRecordingChainStateStore()
+	orchestrator := newTestOrchestratorWithOptions(t, WithChainStateStore(store))
+	createSimpleChainCatalog(t, orchestrator)
+	started := startSimpleChain(t, orchestrator)
+
+	if len(store.savedIDs) != 1 || store.savedIDs[0] != started.ChainID {
+		t.Fatalf("start_chain did not save through chain state store port: saved=%v chain=%q", store.savedIDs, started.ChainID)
+	}
+
+	_, err := orchestrator.AdvanceChain(context.Background(), toolRequest(map[string]any{
+		"chainId": started.ChainID,
+		"stepId":  "research",
+		"outcome": "success",
+		"output": map[string]any{
+			"summary":  "researched",
+			"status":   "done",
+			"findings": []any{},
+		},
+	}))
+	if err != nil {
+		t.Fatalf("advance chain returned transport error: %v", err)
+	}
+	if len(store.loadedIDs) != 1 || store.loadedIDs[0] != started.ChainID {
+		t.Fatalf("advance_chain did not load through chain state store port: loaded=%v chain=%q", store.loadedIDs, started.ChainID)
+	}
+	if len(store.savedIDs) != 2 || store.savedIDs[1] != started.ChainID {
+		t.Fatalf("advance_chain did not save through chain state store port: saved=%v chain=%q", store.savedIDs, started.ChainID)
+	}
+}
+
+func TestTeamStateStoreOptionRoutesLifecyclePersistence(t *testing.T) {
+	store := newRecordingTeamStateStore()
+	orchestrator := newTestOrchestratorWithOptions(t, WithTeamStateStore(store))
+	createSimpleTeamCatalog(t, orchestrator)
+	started := startSimpleTeam(t, orchestrator)
+
+	if len(store.savedIDs) != 1 || store.savedIDs[0] != started.TeamID {
+		t.Fatalf("build_team did not save through team state store port: saved=%v team=%q", store.savedIDs, started.TeamID)
+	}
+
+	_, err := orchestrator.AssignTeamTask(context.Background(), toolRequest(map[string]any{
+		"teamId":   started.TeamID,
+		"taskId":   "researcher-0",
+		"assignee": "agent-a",
+	}))
+	if err != nil {
+		t.Fatalf("assign team task returned transport error: %v", err)
+	}
+	if len(store.loadedIDs) != 1 || store.loadedIDs[0] != started.TeamID {
+		t.Fatalf("assign_team_task did not load through team state store port: loaded=%v team=%q", store.loadedIDs, started.TeamID)
+	}
+	if len(store.savedIDs) != 2 || store.savedIDs[1] != started.TeamID {
+		t.Fatalf("assign_team_task did not save through team state store port: saved=%v team=%q", store.savedIDs, started.TeamID)
+	}
+}
+
+func TestWorkflowStateStoreOptionRoutesLifecyclePersistence(t *testing.T) {
+	store := newRecordingWorkflowStateStore()
+	orchestrator := newTestOrchestratorWithOptions(t, WithWorkflowStateStore(store))
+	createSimpleWorkflowCatalog(t, orchestrator)
+	started := startSimpleWorkflow(t, orchestrator)
+
+	if len(store.savedIDs) != 1 || store.savedIDs[0] != started.WorkflowID {
+		t.Fatalf("start_workflow did not save through workflow state store port: saved=%v workflow=%q", store.savedIDs, started.WorkflowID)
+	}
+
+	_, err := orchestrator.AdvanceWorkflow(context.Background(), toolRequest(map[string]any{
+		"workflowId": started.WorkflowID,
+		"outcome":    "approved",
+	}))
+	if err != nil {
+		t.Fatalf("advance workflow returned transport error: %v", err)
+	}
+	if len(store.loadedIDs) != 1 || store.loadedIDs[0] != started.WorkflowID {
+		t.Fatalf("advance_workflow did not load through workflow state store port: loaded=%v workflow=%q", store.loadedIDs, started.WorkflowID)
+	}
+	if len(store.savedIDs) != 2 || store.savedIDs[1] != started.WorkflowID {
+		t.Fatalf("advance_workflow did not save through workflow state store port: saved=%v workflow=%q", store.savedIDs, started.WorkflowID)
+	}
+}
+
+func TestExecutionPlanStoreOptionRoutesLifecyclePersistence(t *testing.T) {
+	store := newRecordingExecutionPlanStore()
+	orchestrator := newTestOrchestratorWithOptions(t, WithExecutionPlanStore(store))
+	createSimpleChainCatalog(t, orchestrator)
+	started := startSimpleChain(t, orchestrator)
+
+	if len(store.savedIDs) != 1 || store.savedIDs[0] == "" {
+		t.Fatalf("start_chain did not save through execution plan store port: saved=%v", store.savedIDs)
+	}
+	planID := store.savedIDs[0]
+
+	_, err := orchestrator.AdvanceChain(context.Background(), toolRequest(map[string]any{
+		"chainId": started.ChainID,
+		"stepId":  "research",
+		"outcome": "success",
+		"output": map[string]any{
+			"summary":  "researched",
+			"status":   "done",
+			"findings": []any{},
+		},
+	}))
+	if err != nil {
+		t.Fatalf("advance chain returned transport error: %v", err)
+	}
+	if len(store.loadedIDs) != 1 || store.loadedIDs[0] != planID {
+		t.Fatalf("advance_chain did not load through execution plan store port: loaded=%v plan=%q", store.loadedIDs, planID)
+	}
+}
+
+func TestHandoffStoreOptionRoutesHandoffPersistence(t *testing.T) {
+	store := &recordingHandoffStore{}
+	orchestrator := newTestOrchestratorWithOptions(t, WithHandoffStore(store))
+	createSimpleChainCatalog(t, orchestrator)
+	started := startSimpleChain(t, orchestrator)
+
+	result, err := orchestrator.Handoff(context.Background(), toolRequest(map[string]any{
+		"runId":   started.ChainID,
+		"kind":    "chain",
+		"summary": "Continue through port",
+	}))
+	if err != nil {
+		t.Fatalf("handoff returned transport error: %v", err)
+	}
+	var handoffResult struct {
+		HandoffID string `json:"handoffId"`
+		Path      string `json:"path"`
+	}
+	decodeToolResult(t, result, &handoffResult)
+
+	if len(store.saved) != 1 {
+		t.Fatalf("handoff did not save through handoff store port: saved=%d", len(store.saved))
+	}
+	saved := store.saved[0]
+	if saved.ID != handoffResult.HandoffID || saved.RunID != started.ChainID || saved.Kind != types.RunKindChain || saved.Summary != "Continue through port" || !saved.Resumable {
+		t.Fatalf("unexpected handoff saved through port: result=%+v saved=%+v", handoffResult, saved)
+	}
+	if !strings.HasPrefix(handoffResult.Path, handoffPathURIPrefix) {
+		t.Fatalf("unexpected handoff path: %q", handoffResult.Path)
+	}
+}
+
 func toolRequest(args map[string]any) mcp.CallToolRequest {
 	return mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: args}}
 }
@@ -935,7 +1159,7 @@ func testRuntimeA2AConfig(mode types.ExecutionMode) *oconfig.Config {
 
 func createSimpleChainCatalog(t *testing.T, orchestrator *Orchestrator) {
 	t.Helper()
-	created, err := orchestrator.Catalog.CreateVersion(catalog.CreateVersionInput{
+	created, err := orchestrator.Catalog.CreateVersion(domain.CreateCatalogVersionInput{
 		Kind:      "chain",
 		Name:      "simple-chain",
 		Body:      simpleChainDefinitionJSON(),
@@ -976,6 +1200,92 @@ func startSimpleChain(t *testing.T, orchestrator *Orchestrator) struct {
 	decodeToolResult(t, result, &started)
 	if started.ChainID == "" {
 		t.Fatalf("expected chain id in start result")
+	}
+	return started
+}
+
+func createSimpleTeamCatalog(t *testing.T, orchestrator *Orchestrator) {
+	t.Helper()
+	created, err := orchestrator.Catalog.CreateVersion(domain.CreateCatalogVersionInput{
+		Kind:      "team",
+		Name:      "simple-team",
+		Body:      simpleTeamDefinitionJSON(),
+		SetActive: true,
+	})
+	if err != nil {
+		t.Fatalf("create team catalog version: %v", err)
+	}
+	if created.AlreadyExists {
+		t.Fatalf("expected new team catalog version, got duplicate: %+v", created)
+	}
+}
+
+func startSimpleTeam(t *testing.T, orchestrator *Orchestrator) struct {
+	TeamID string                   `json:"teamId"`
+	State  types.TeamLifecycleState `json:"state"`
+	Tasks  []types.TeamTaskState    `json:"tasks"`
+} {
+	t.Helper()
+	result, err := orchestrator.BuildTeam(context.Background(), toolRequest(map[string]any{
+		"team": "simple-team",
+		"task": "ship the feature",
+	}))
+	if err != nil {
+		t.Fatalf("start simple team: %v", err)
+	}
+	var started struct {
+		TeamID string                   `json:"teamId"`
+		State  types.TeamLifecycleState `json:"state"`
+		Tasks  []types.TeamTaskState    `json:"tasks"`
+	}
+	decodeToolResult(t, result, &started)
+	if started.TeamID == "" {
+		t.Fatalf("expected team id in build result")
+	}
+	return started
+}
+
+func createSimpleWorkflowCatalog(t *testing.T, orchestrator *Orchestrator) {
+	t.Helper()
+	created, err := orchestrator.Catalog.CreateVersion(domain.CreateCatalogVersionInput{
+		Kind:      "workflow",
+		Name:      "simple-workflow",
+		Body:      simpleWorkflowDefinitionJSON(),
+		SetActive: true,
+	})
+	if err != nil {
+		t.Fatalf("create workflow catalog version: %v", err)
+	}
+	if created.AlreadyExists {
+		t.Fatalf("expected new workflow catalog version, got duplicate: %+v", created)
+	}
+}
+
+func startSimpleWorkflow(t *testing.T, orchestrator *Orchestrator) struct {
+	WorkflowID string                       `json:"workflowId"`
+	State      types.WorkflowLifecycleState `json:"state"`
+	Phases     []types.WorkflowPhaseState   `json:"phases"`
+	Budget     types.BudgetState            `json:"budget"`
+	PlanID     string                       `json:"planId"`
+} {
+	t.Helper()
+	result, err := orchestrator.StartWorkflow(context.Background(), toolRequest(map[string]any{
+		"workflow": "simple-workflow",
+		"task":     "ship the feature",
+	}))
+	if err != nil {
+		t.Fatalf("start simple workflow: %v", err)
+	}
+	var started struct {
+		WorkflowID string                       `json:"workflowId"`
+		State      types.WorkflowLifecycleState `json:"state"`
+		Phases     []types.WorkflowPhaseState   `json:"phases"`
+		Budget     types.BudgetState            `json:"budget"`
+		PlanID     string                       `json:"planId"`
+	}
+	decodeToolResult(t, result, &started)
+	if started.WorkflowID == "" {
+		t.Fatalf("expected workflow id in start result")
 	}
 	return started
 }
@@ -1086,4 +1396,257 @@ func simpleChainDefinitionJSON() string {
     }
   ]
 }`
+}
+
+func simpleTeamDefinitionJSON() string {
+	return `{
+  "kind": "team",
+  "name": "simple-team",
+  "description": "Simple test team",
+  "version": "1.0.0",
+  "source": "db",
+  "path": "catalog://team/simple-team/1",
+  "parallel": [
+    {"role":"researcher","agent":"researcher","skills":["research"],"focus":"research"}
+  ],
+  "synthesize": {"agent":"builder","description":"Synthesize results"}
+}`
+}
+
+func simpleWorkflowDefinitionJSON() string {
+	return `{
+  "kind": "workflow",
+  "name": "simple-workflow",
+  "description": "Simple test workflow",
+  "version": "1.0.0",
+  "source": "db",
+  "path": "catalog://workflow/simple-workflow/1",
+  "entry": "approve",
+  "phases": [
+    {"id":"approve","kind":"gate","gate":"human","prompt":"Approve completion"},
+    {"id":"done","kind":"terminal"}
+  ]
+}`
+}
+
+type recordingAgentInvoker struct {
+	request domain.InvocationRequest
+	result  *domain.InvocationResult
+	err     error
+}
+
+func (i *recordingAgentInvoker) InvokeAgent(ctx context.Context, req domain.InvocationRequest) (*domain.InvocationResult, error) {
+	i.request = req
+	if i.err != nil {
+		return nil, i.err
+	}
+	return i.result, nil
+}
+
+type recordingBudgetTracker struct {
+	delegate       ports.BudgetTracker
+	evaluation     types.BudgetEvaluation
+	updates        []string
+	retries        []string
+	updatedStepIDs []string
+	evaluateCalls  int
+}
+
+func (t *recordingBudgetTracker) Update(state *types.BudgetState, stepID string, usage *types.StepUsage) {
+	t.updates = append(t.updates, stepID)
+	t.updatedStepIDs = append(t.updatedStepIDs, stepID)
+	if t.delegate != nil {
+		t.delegate.Update(state, stepID, usage)
+	}
+}
+
+func (t *recordingBudgetTracker) IncrementRetries(state *types.BudgetState, stepID string) {
+	t.retries = append(t.retries, stepID)
+	if t.delegate != nil {
+		t.delegate.IncrementRetries(state, stepID)
+	}
+}
+
+func (t *recordingBudgetTracker) Evaluate(state *types.BudgetState, policy *types.BudgetPolicy) types.BudgetEvaluation {
+	t.evaluateCalls++
+	if t.evaluation.Overall != "" {
+		return t.evaluation
+	}
+	if t.delegate != nil {
+		return t.delegate.Evaluate(state, policy)
+	}
+	return types.BudgetEvaluation{}
+}
+
+type recordingExecutionPlanStore struct {
+	plans     map[string]*types.ExecutionPlan
+	savedIDs  []string
+	loadedIDs []string
+}
+
+func newRecordingExecutionPlanStore() *recordingExecutionPlanStore {
+	return &recordingExecutionPlanStore{plans: make(map[string]*types.ExecutionPlan)}
+}
+
+func (s *recordingExecutionPlanStore) SaveExecutionPlan(plan *types.ExecutionPlan) error {
+	s.savedIDs = append(s.savedIDs, plan.ID)
+	clone, err := cloneExecutionPlan(plan)
+	if err != nil {
+		return err
+	}
+	s.plans[plan.ID] = clone
+	return nil
+}
+
+func (s *recordingExecutionPlanStore) LoadExecutionPlan(id string) (*types.ExecutionPlan, error) {
+	s.loadedIDs = append(s.loadedIDs, id)
+	plan, ok := s.plans[id]
+	if !ok {
+		return nil, fmt.Errorf("execution plan not found: %s", id)
+	}
+	return cloneExecutionPlan(plan)
+}
+
+func cloneExecutionPlan(plan *types.ExecutionPlan) (*types.ExecutionPlan, error) {
+	encoded, err := json.Marshal(plan)
+	if err != nil {
+		return nil, err
+	}
+	var clone types.ExecutionPlan
+	if err := json.Unmarshal(encoded, &clone); err != nil {
+		return nil, err
+	}
+	return &clone, nil
+}
+
+type recordingHandoffStore struct {
+	saved []*types.HandoffDocument
+}
+
+func (s *recordingHandoffStore) SaveHandoffDocument(doc *types.HandoffDocument) error {
+	s.saved = append(s.saved, doc)
+	return nil
+}
+
+type recordingChainStateStore struct {
+	states    map[string]*types.ChainState
+	savedIDs  []string
+	loadedIDs []string
+}
+
+func newRecordingChainStateStore() *recordingChainStateStore {
+	return &recordingChainStateStore{states: make(map[string]*types.ChainState)}
+}
+
+func (s *recordingChainStateStore) SaveChainState(projectRoot string, chainState *types.ChainState) error {
+	s.savedIDs = append(s.savedIDs, chainState.ChainID)
+	clone, err := cloneChainState(chainState)
+	if err != nil {
+		return err
+	}
+	s.states[chainState.ChainID] = clone
+	return nil
+}
+
+func (s *recordingChainStateStore) LoadChainState(id string) (*types.ChainState, error) {
+	s.loadedIDs = append(s.loadedIDs, id)
+	chainState, ok := s.states[id]
+	if !ok {
+		return nil, fmt.Errorf("chain state not found: %s", id)
+	}
+	return cloneChainState(chainState)
+}
+
+func cloneChainState(chainState *types.ChainState) (*types.ChainState, error) {
+	encoded, err := json.Marshal(chainState)
+	if err != nil {
+		return nil, err
+	}
+	var clone types.ChainState
+	if err := json.Unmarshal(encoded, &clone); err != nil {
+		return nil, err
+	}
+	return &clone, nil
+}
+
+type recordingTeamStateStore struct {
+	states    map[string]*types.TeamState
+	savedIDs  []string
+	loadedIDs []string
+}
+
+func newRecordingTeamStateStore() *recordingTeamStateStore {
+	return &recordingTeamStateStore{states: make(map[string]*types.TeamState)}
+}
+
+func (s *recordingTeamStateStore) SaveTeamState(projectRoot string, teamState *types.TeamState) error {
+	s.savedIDs = append(s.savedIDs, teamState.TeamID)
+	clone, err := cloneTeamState(teamState)
+	if err != nil {
+		return err
+	}
+	s.states[teamState.TeamID] = clone
+	return nil
+}
+
+func (s *recordingTeamStateStore) LoadTeamState(id string) (*types.TeamState, error) {
+	s.loadedIDs = append(s.loadedIDs, id)
+	teamState, ok := s.states[id]
+	if !ok {
+		return nil, fmt.Errorf("team state not found: %s", id)
+	}
+	return cloneTeamState(teamState)
+}
+
+func cloneTeamState(teamState *types.TeamState) (*types.TeamState, error) {
+	encoded, err := json.Marshal(teamState)
+	if err != nil {
+		return nil, err
+	}
+	var clone types.TeamState
+	if err := json.Unmarshal(encoded, &clone); err != nil {
+		return nil, err
+	}
+	return &clone, nil
+}
+
+type recordingWorkflowStateStore struct {
+	states    map[string]*types.WorkflowState
+	savedIDs  []string
+	loadedIDs []string
+}
+
+func newRecordingWorkflowStateStore() *recordingWorkflowStateStore {
+	return &recordingWorkflowStateStore{states: make(map[string]*types.WorkflowState)}
+}
+
+func (s *recordingWorkflowStateStore) SaveWorkflowState(projectRoot string, workflowState *types.WorkflowState) error {
+	s.savedIDs = append(s.savedIDs, workflowState.WorkflowID)
+	clone, err := cloneWorkflowState(workflowState)
+	if err != nil {
+		return err
+	}
+	s.states[workflowState.WorkflowID] = clone
+	return nil
+}
+
+func (s *recordingWorkflowStateStore) LoadWorkflowState(id string) (*types.WorkflowState, error) {
+	s.loadedIDs = append(s.loadedIDs, id)
+	workflowState, ok := s.states[id]
+	if !ok {
+		return nil, fmt.Errorf("workflow state not found: %s", id)
+	}
+	return cloneWorkflowState(workflowState)
+}
+
+func cloneWorkflowState(workflowState *types.WorkflowState) (*types.WorkflowState, error) {
+	encoded, err := json.Marshal(workflowState)
+	if err != nil {
+		return nil, err
+	}
+	var clone types.WorkflowState
+	if err := json.Unmarshal(encoded, &clone); err != nil {
+		return nil, err
+	}
+	return &clone, nil
 }

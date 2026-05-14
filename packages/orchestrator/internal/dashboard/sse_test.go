@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 )
 
@@ -19,7 +19,7 @@ func TestDashboardEventsJSONReplayUsesSinceIDAndValidatesRunKind(t *testing.T) {
 	seedEvent(t, database, "chain-events", "step_started", `{"stepId":"build"}`, "2026-05-05T10:01:00Z")
 	seedEvent(t, database, "chain-events", "step_completed", `{"stepId":"build"}`, "2026-05-05T10:02:00Z")
 	seedEvent(t, database, "other-run", "other_event", `{}`, "2026-05-05T10:03:00Z")
-	handler := newDashboardHTTPHandler(t, database, catalog.NewStore(database))
+	handler := newDashboardHTTPHandler(t, database, sqliteadapter.NewCatalogStore(database))
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/dashboard/runs/chain/chain-events/events?since_id=1", nil))
@@ -51,7 +51,7 @@ func TestDashboardEventsSSEReplaysAndStreamsLivePerRunOnly(t *testing.T) {
 	seedRun(t, database, types.RunKindChain, "chain-stream", "release", "1", "running", "build", chainStateJSON(t, "chain-stream", "release", "1", "running", "build"), "2026-05-05T10:00:00Z")
 	seedRun(t, database, types.RunKindChain, "chain-other", "release", "1", "running", "test", chainStateJSON(t, "chain-other", "release", "1", "running", "test"), "2026-05-05T10:00:00Z")
 	seedEvent(t, database, "chain-stream", "step_started", `{"stepId":"build"}`, "2026-05-05T10:01:00Z")
-	handler, bus := newDashboardHTTPHandlerWithBus(t, database, catalog.NewStore(database))
+	handler, bus := newDashboardHTTPHandlerWithBus(t, database, sqliteadapter.NewCatalogStore(database))
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -124,7 +124,7 @@ func TestDashboardGlobalEventsJSONReplayCapsAndSinceID(t *testing.T) {
 		seedEvent(t, database, "chain-a", "step_event", `{"i":1}`, "2026-05-05T10:01:00Z")
 		seedEvent(t, database, "team-b", "task_event", `{"i":2}`, "2026-05-05T10:01:01Z")
 	}
-	handler := newDashboardHTTPHandler(t, database, catalog.NewStore(database))
+	handler := newDashboardHTTPHandler(t, database, sqliteadapter.NewCatalogStore(database))
 
 	// Default JSON snapshot returns events across all runs ordered by id ASC.
 	response := httptest.NewRecorder()
@@ -191,7 +191,7 @@ func TestDashboardGlobalEventsSSEStreamsLiveAcrossAllRuns(t *testing.T) {
 	seedRun(t, database, types.RunKindTeam, "team-stream", "launch", "1", "running", "", `{}`, "2026-05-05T10:00:01Z")
 	seedEvent(t, database, "chain-stream", "step_started", `{"stepId":"build"}`, "2026-05-05T10:01:00Z")
 
-	handler, bus := newDashboardHTTPHandlerWithBus(t, database, catalog.NewStore(database))
+	handler, bus := newDashboardHTTPHandlerWithBus(t, database, sqliteadapter.NewCatalogStore(database))
 	server := httptest.NewServer(handler)
 	defer server.Close()
 

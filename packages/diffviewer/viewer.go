@@ -11,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/diffviewer/domain"
 )
 
 // ConflictView holds the data for visualizing a single conflict.
@@ -366,26 +367,19 @@ func (d *DiffViewer) Run() (ReviewResponse, error) {
 // resolveCurrent records the resolution for the current conflict.
 func (d *DiffViewer) resolveCurrent(action Action) {
 	if d.currentIndex >= 0 && d.currentIndex < len(d.conflicts) {
-		if d.decisions == nil {
-			d.decisions = make(map[int]Resolution, len(d.conflicts))
-		}
-		d.decisions[d.currentIndex] = Resolution{
-			Path:   d.conflicts[d.currentIndex].FilePath,
-			Action: action,
-		}
+		d.decisions = domain.RecordResolution(
+			d.decisions,
+			len(d.conflicts),
+			d.currentIndex,
+			d.conflicts[d.currentIndex].FilePath,
+			action,
+		)
 	}
 }
 
 // orderedResolutions returns recorded decisions in conflict order for stable output.
 func (d *DiffViewer) orderedResolutions() []Resolution {
-	resolutions := make([]Resolution, 0, len(d.decisions))
-	for i := range d.conflicts {
-		resolution, ok := d.decisions[i]
-		if ok {
-			resolutions = append(resolutions, resolution)
-		}
-	}
-	return resolutions
+	return domain.OrderedResolutions(d.conflictPaths(), d.decisions)
 }
 
 // advanceOrQuit moves to the next undecided conflict or summary if all are resolved.
@@ -429,7 +423,7 @@ func (d *DiffViewer) updateSummary(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (d *DiffViewer) allFilesDecided() bool {
-	return len(d.conflicts) > 0 && len(d.decisions) == len(d.conflicts)
+	return domain.AllFilesDecided(len(d.conflicts), d.decisions)
 }
 
 func (d *DiffViewer) moveToFile(index int) {
@@ -442,15 +436,15 @@ func (d *DiffViewer) moveToFile(index int) {
 }
 
 func (d *DiffViewer) reviewResponse(status ReviewStatus) ReviewResponse {
-	resolutions := []Resolution{}
-	if status == ReviewStatusConfirmed {
-		resolutions = d.orderedResolutions()
+	return domain.ReviewResponseForStatus(status, d.orderedResolutions())
+}
+
+func (d *DiffViewer) conflictPaths() []string {
+	paths := make([]string, 0, len(d.conflicts))
+	for _, conflict := range d.conflicts {
+		paths = append(paths, conflict.FilePath)
 	}
-	return ReviewResponse{
-		Version:     reviewContractVersion,
-		Status:      status,
-		Resolutions: resolutions,
-	}
+	return paths
 }
 
 // syncViewports updates the viewport contents for the current conflict.
@@ -517,16 +511,7 @@ func (d *DiffViewer) updateHunkStarts() {
 }
 
 func computeHunkStarts(diffLines []DiffLine) []int {
-	hunkStarts := make([]int, 0)
-	inHunk := false
-	for i, diffLine := range diffLines {
-		isChange := diffLine.Type != DiffLineContext
-		if isChange && !inHunk {
-			hunkStarts = append(hunkStarts, i)
-		}
-		inHunk = isChange
-	}
-	return hunkStarts
+	return domain.HunkStarts(diffLines)
 }
 
 func (d *DiffViewer) nextHunk() {

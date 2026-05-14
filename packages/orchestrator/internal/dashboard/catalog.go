@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
-// CatalogAdapter converts catalog.Store read methods into dashboard contracts.
+// CatalogAdapter converts catalog persistence port read methods into dashboard contracts.
 type CatalogAdapter struct {
-	store *catalog.Store
+	store ports.CatalogStore
 }
 
 // NewCatalogAdapter creates a read-only dashboard catalog adapter.
-func NewCatalogAdapter(store *catalog.Store) *CatalogAdapter {
+func NewCatalogAdapter(store ports.CatalogStore) *CatalogAdapter {
 	return &CatalogAdapter{store: store}
 }
 

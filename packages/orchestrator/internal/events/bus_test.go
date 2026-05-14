@@ -4,10 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 )
 
-func newBusTestDB(t *testing.T) *db.DB {
+func newBusTestStore(t *testing.T) *sqlite.RunEventStore {
 	t.Helper()
 	database, err := db.Open(":memory:")
 	if err != nil {
@@ -17,11 +19,33 @@ func newBusTestDB(t *testing.T) *db.DB {
 	if err := database.RunMigrations(); err != nil {
 		t.Fatalf("migrate db: %v", err)
 	}
-	return database
+	return sqlite.NewRunEventStore(database)
+}
+
+func TestBusPublishesThroughRunEventStorePort(t *testing.T) {
+	store := &fakeRunEventStore{}
+	bus := NewBus(store)
+
+	bus.Publish("chain-1", "chain.started", map[string]any{"step": "research"})
+
+	if len(store.events) != 1 {
+		t.Fatalf("expected one persisted event, got %d", len(store.events))
+	}
+	if store.events[0].RunID != "chain-1" || store.events[0].Type != "chain.started" {
+		t.Fatalf("unexpected stored event: %+v", store.events[0])
+	}
+	if store.events[0].CreatedAt == "" {
+		t.Fatalf("expected stored event timestamp")
+	}
+
+	replayed := bus.Replay("chain-1", 0)
+	if len(replayed) != 1 || replayed[0].Data["step"] != "research" {
+		t.Fatalf("unexpected replay through port: %+v", replayed)
+	}
 }
 
 func TestBusSubscribeAllReceivesEventsFromAllRuns(t *testing.T) {
-	bus := NewBus(newBusTestDB(t))
+	bus := NewBus(newBusTestStore(t))
 
 	ch := make(chan Event, 8)
 	replay := bus.SubscribeAll(ch)
@@ -43,7 +67,7 @@ func TestBusSubscribeAllReceivesEventsFromAllRuns(t *testing.T) {
 }
 
 func TestBusUnsubscribeAllStopsDeliveryWithoutLeakingPublishers(t *testing.T) {
-	bus := NewBus(newBusTestDB(t))
+	bus := NewBus(newBusTestStore(t))
 	ch := make(chan Event, 4)
 	bus.SubscribeAll(ch)
 	bus.UnsubscribeAll(ch)
@@ -58,7 +82,7 @@ func TestBusUnsubscribeAllStopsDeliveryWithoutLeakingPublishers(t *testing.T) {
 }
 
 func TestBusPublishDropsForSlowGlobalSubscriberWithoutBlocking(t *testing.T) {
-	bus := NewBus(newBusTestDB(t))
+	bus := NewBus(newBusTestStore(t))
 	slow := make(chan Event) // unbuffered, never read — every send must drop
 	bus.SubscribeAll(slow)
 	defer bus.UnsubscribeAll(slow)
@@ -80,7 +104,7 @@ func TestBusPublishDropsForSlowGlobalSubscriberWithoutBlocking(t *testing.T) {
 }
 
 func TestBusReplayAllOrdersByIDAndCapsLimit(t *testing.T) {
-	bus := NewBus(newBusTestDB(t))
+	bus := NewBus(newBusTestStore(t))
 	for i := 0; i < 5; i++ {
 		bus.Publish("chain-a", "step_completed", map[string]any{"i": i})
 		bus.Publish("team-b", "task_completed", map[string]any{"i": i})
@@ -111,7 +135,7 @@ func TestBusReplayAllOrdersByIDAndCapsLimit(t *testing.T) {
 }
 
 func TestBusPerRunSubscribeStillReceivesOnlyMatchingRun(t *testing.T) {
-	bus := NewBus(newBusTestDB(t))
+	bus := NewBus(newBusTestStore(t))
 	chRun := make(chan Event, 4)
 	chAll := make(chan Event, 4)
 	bus.Subscribe("chain-x", chRun)
@@ -145,4 +169,46 @@ func drainBus(t *testing.T, ch chan Event, n int, timeout time.Duration) []Event
 		}
 	}
 	return out
+}
+
+type fakeRunEventStore struct {
+	events []domain.RunEvent
+}
+
+func (s *fakeRunEventStore) AppendRunEvent(runID, eventType string, data map[string]any, createdAt string) error {
+	s.events = append(s.events, domain.RunEvent{
+		ID:        len(s.events) + 1,
+		RunID:     runID,
+		Type:      eventType,
+		Data:      data,
+		CreatedAt: createdAt,
+	})
+	return nil
+}
+
+func (s *fakeRunEventStore) ReplayRunEvents(runID string, sinceID int) ([]domain.RunEvent, error) {
+	var replay []domain.RunEvent
+	for _, event := range s.events {
+		if event.RunID == runID && event.ID > sinceID {
+			replay = append(replay, event)
+		}
+	}
+	return replay, nil
+}
+
+func (s *fakeRunEventStore) ReplayAllRunEvents(sinceID, limit int) ([]domain.RunEvent, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	var replay []domain.RunEvent
+	for _, event := range s.events {
+		if event.ID <= sinceID {
+			continue
+		}
+		replay = append(replay, event)
+		if len(replay) == limit {
+			break
+		}
+	}
+	return replay, nil
 }

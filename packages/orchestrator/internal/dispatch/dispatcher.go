@@ -5,32 +5,22 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	oconfig "github.com/rluisb/lazyai/packages/orchestrator/internal/config"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
-// InvocationRequest captures the host-native agent invocation that the MCP
-// invoke_agent tool currently composes. Phase 1 intentionally keeps this as a
-// prompt/spec handoff rather than executing any agent process directly.
-type InvocationRequest struct {
-	Agent   string
-	Task    string
-	CliTool string
-}
+// InvocationRequest is kept as a compatibility alias; the canonical invocation
+// DTO lives in the domain package for the AgentInvoker port.
+type InvocationRequest = domain.InvocationRequest
 
-// InvocationResult is the dispatcher seam's normalized response. Native mode
-// returns Spec with the existing invoke_agent JSON shape; disabled A2A paths
-// return an error before this result is emitted.
-type InvocationResult struct {
-	Spec          *types.ComposedAgentSpec
-	ExecutionMode types.ExecutionMode
-}
+// InvocationResult is kept as a compatibility alias; the canonical invocation
+// DTO lives in the domain package for the AgentInvoker port.
+type InvocationResult = domain.InvocationResult
 
-// Dispatcher resolves an invocation request into the execution handoff for the
-// selected runtime mode.
-type Dispatcher interface {
-	InvokeAgent(ctx context.Context, req InvocationRequest) (*InvocationResult, error)
-}
+// Dispatcher is kept as a compatibility alias for the AgentInvoker port.
+type Dispatcher = ports.AgentInvoker
 
 // NativeDispatcher preserves the existing MCP invoke_agent behavior: produce a
 // composed agent spec for the host CLI to execute natively.
@@ -40,8 +30,8 @@ func NewNativeDispatcher() *NativeDispatcher {
 	return &NativeDispatcher{}
 }
 
-func (d *NativeDispatcher) InvokeAgent(ctx context.Context, req InvocationRequest) (*InvocationResult, error) {
-	return &InvocationResult{
+func (d *NativeDispatcher) InvokeAgent(ctx context.Context, req domain.InvocationRequest) (*domain.InvocationResult, error) {
+	return &domain.InvocationResult{
 		ExecutionMode: types.ExecutionNative,
 		Spec: &types.ComposedAgentSpec{
 			ID: req.Agent, Base: req.Agent, Model: "sonnet",
@@ -58,7 +48,7 @@ func NewDisabledA2ADispatcher() *DisabledA2ADispatcher {
 	return &DisabledA2ADispatcher{}
 }
 
-func (d *DisabledA2ADispatcher) InvokeAgent(ctx context.Context, req InvocationRequest) (*InvocationResult, error) {
+func (d *DisabledA2ADispatcher) InvokeAgent(ctx context.Context, req domain.InvocationRequest) (*domain.InvocationResult, error) {
 	return nil, fmt.Errorf("A2A execution mode is not configured: Phase 1 does not include an A2A client; use execution-mode native or hybrid without A2A config for native fallback")
 }
 
@@ -74,7 +64,7 @@ func NewConfiguredDispatcher(mode types.ExecutionMode, config *oconfig.Config) *
 	return &ConfiguredDispatcher{mode: mode, config: config, native: NewNativeDispatcher()}
 }
 
-func (d *ConfiguredDispatcher) InvokeAgent(ctx context.Context, req InvocationRequest) (*InvocationResult, error) {
+func (d *ConfiguredDispatcher) InvokeAgent(ctx context.Context, req domain.InvocationRequest) (*domain.InvocationResult, error) {
 	switch d.mode {
 	case types.ExecutionA2A:
 		provider, err := d.resolveA2ATarget(req)
@@ -93,7 +83,7 @@ func (d *ConfiguredDispatcher) InvokeAgent(ctx context.Context, req InvocationRe
 	}
 }
 
-func (d *ConfiguredDispatcher) resolveA2ATarget(req InvocationRequest) (string, error) {
+func (d *ConfiguredDispatcher) resolveA2ATarget(req domain.InvocationRequest) (string, error) {
 	if d.config == nil {
 		return "", fmt.Errorf("A2A execution mode is not configured: no orchestrator config loaded; use execution-mode native or provide .ai/orchestrator.json")
 	}

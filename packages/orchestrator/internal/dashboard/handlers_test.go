@@ -9,17 +9,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/events"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 func TestDashboardHandlerOverviewAndMethodRejection(t *testing.T) {
 	database := newDashboardTestDB(t)
 	seedRun(t, database, types.RunKindChain, "chain-running", "release", "1", "running", "build", chainStateJSON(t, "chain-running", "release", "1", "running", "build"), "2026-05-05T10:00:00Z")
 	seedError(t, database, "err-1", "chain-running", types.RunKindChain, "release", "build", "transient", "dispatch_failed", "dispatch failed", "2026-05-05T10:01:00Z")
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"description": "Release chain"}, "body", true)
 	createCatalogVersion(t, store, "team", "launch", map[string]any{"description": "Launch team"}, "team body", true)
 
@@ -72,7 +73,7 @@ func TestDashboardHandlerRunsEndpointFiltersBoundsAndValidatesInputs(t *testing.
 	seedRun(t, database, types.RunKindChain, "chain-running", "release", "1", "running", "build", chainStateJSON(t, "chain-running", "release", "1", "running", "build"), "2026-05-05T10:00:00Z")
 	seedRun(t, database, types.RunKindChain, "chain-complete", "release", "1", "completed", "done", `{}`, "2026-05-05T10:01:00Z")
 	seedRun(t, database, types.RunKindTeam, "team-running", "launch", "1", "running", "", `{}`, "2026-05-05T10:02:00Z")
-	handler := newDashboardHTTPHandler(t, database, catalog.NewStore(database))
+	handler := newDashboardHTTPHandler(t, database, sqliteadapter.NewCatalogStore(database))
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/dashboard/runs?kind=chain&state=running&limit=500", nil))
@@ -111,7 +112,7 @@ func TestDashboardHandlerRunsAttentionSearchHasErrorsParams(t *testing.T) {
 	seedRun(t, database, types.RunKindTeam, "team-launch-running", "launch", "1", "running", "", `{}`, "2026-05-05T10:02:00Z")
 	seedError(t, database, "err-failed", "chain-failed", types.RunKindChain, "release", "build", "fatal", "boom", "boom", "2026-05-05T10:04:30Z")
 
-	handler := newDashboardHTTPHandler(t, database, catalog.NewStore(database))
+	handler := newDashboardHTTPHandler(t, database, sqliteadapter.NewCatalogStore(database))
 
 	cases := []struct {
 		name        string
@@ -170,7 +171,7 @@ func TestDashboardHandlerDetailBudgetCatalogAndErrors(t *testing.T) {
 	seedRun(t, database, types.RunKindChain, "chain-detail", "release", "1", "running", "build", chainBudgetStateJSON(t, "chain-detail", "plan-warning", 75), "2026-05-05T10:00:00Z")
 	seedEvent(t, database, "chain-detail", "step_started", `{"stepId":"build"}`, "2026-05-05T10:01:00Z")
 	seedError(t, database, "err-detail", "chain-detail", types.RunKindChain, "release", "build", "transient", "retry", "retry requested", "2026-05-05T10:02:00Z")
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"owner": "ops"}, "body v1", true)
 
 	handler := newDashboardHTTPHandler(t, database, store)
@@ -245,7 +246,7 @@ func TestDashboardHandlerDetailBudgetCatalogAndErrors(t *testing.T) {
 
 func TestDashboardHandlerCatalogDetailQueryRouteSupportsSlashNamesAndLegacyRoute(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "agent", "agents/platform/reviewer", map[string]any{"owner": "platform"}, "agent body", true)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"owner": "ops"}, "chain body", true)
 
@@ -277,7 +278,7 @@ func TestDashboardHandlerCatalogDetailQueryRouteSupportsSlashNamesAndLegacyRoute
 
 func TestDashboardHandlerCatalogDetailQueryRouteValidatesInputs(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"owner": "ops"}, "body", true)
 	handler := newDashboardHTTPHandler(t, database, store)
 
@@ -303,7 +304,7 @@ func TestDashboardHandlerCatalogDetailQueryRouteValidatesInputs(t *testing.T) {
 
 func TestDashboardHandlerCatalogDetailQueryRouteReportsNoActiveVersion(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "agent", "draft-agent", map[string]any{"description": "Draft"}, "agent body", false)
 	handler := newDashboardHTTPHandler(t, database, store)
 
@@ -319,17 +320,17 @@ func TestDashboardHandlerCatalogDetailQueryRouteReportsNoActiveVersion(t *testin
 	}
 }
 
-func newDashboardHTTPHandler(t *testing.T, database *db.DB, store *catalog.Store) http.Handler {
+func newDashboardHTTPHandler(t *testing.T, database *db.DB, store ports.CatalogStore) http.Handler {
 	t.Helper()
 	handler, _ := newDashboardHTTPHandlerWithBus(t, database, store)
 	return handler
 }
 
-func newDashboardHTTPHandlerWithBus(t *testing.T, database *db.DB, store *catalog.Store) (http.Handler, *events.Bus) {
+func newDashboardHTTPHandlerWithBus(t *testing.T, database *db.DB, store ports.CatalogStore) (http.Handler, *events.Bus) {
 	t.Helper()
-	bus := events.NewBus(database)
+	bus := events.NewBus(sqliteadapter.NewRunEventStore(database))
 	return NewHandler(HandlerConfig{
-		ReadModel: NewReadModel(database),
+		ReadModel: NewReadModel(database, sqliteadapter.NewActivityStore(database), sqliteadapter.NewHandoffStore(database), sqliteadapter.NewRunEventStore(database), sqliteadapter.NewExecutionPlanStore(database), sqliteadapter.NewErrorJournalStore(database)),
 		Catalog:   NewCatalogAdapter(store),
 		Events:    bus,
 		Health: func(context.Context) HealthView {

@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 
 	"charm.land/huh/v2"
-	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
-	"github.com/rluisb/lazyai/packages/cli/internal/preset"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
+	setupsvc "github.com/rluisb/lazyai/packages/cli/internal/setup"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -51,48 +51,15 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading store data: %w", err)
 	}
 
-	// Build scaffold context from stored configuration.
-	strategy := types.ConflictStrategyAlign
-	if force {
-		strategy = types.ConflictStrategyBackupAndReplace
-	}
-
-	libFS := library.GetLibraryFS()
-	presetLevel := preset.DefaultPresetForScope(storeData.Config.SetupScope)
-
-	// LibraryDir may be empty in production mode (embedded FS).
-	// That's OK — the adapter and scaffold layers use LibraryFS.
-	libDir := getLibraryDir()
-
-	ctx := &scaffold.ScaffoldContext{
-		TargetDir:        targetDir,
-		LibraryDir:       libDir,
-		LibraryFS:        libFS,
-		Tools:            storeData.Config.Tools,
-		CLITools:         storeData.Config.CLITools,
-		EnableServers:    storeData.Config.EnableServers,
-		ProjectName:      storeData.Config.ProjectName,
-		PlanningDir:      storeData.Config.PlanningDir,
-		SetupScope:       storeData.Config.SetupScope,
-		Features:         storeData.Selections.Features,
-		GitConventions:   storeData.Selections.GitConventions,
-		Strategy:         strategy,
-		Force:            force,
-		DryRun:           dryRun,
-		StoreData:        storeData,
-		Agents:            storeData.Selections.Agents,
-		Skills:            storeData.Selections.Skills,
-		Prompts:           storeData.Selections.Prompts,
-		ChatModes:         storeData.Selections.ChatModes,
-		OpenCodeCommands:  storeData.Selections.OpenCodeCommands,
-		OpenCodeModes:     storeData.Selections.OpenCodeModes,
-		OpenCodePlugins:   storeData.Selections.OpenCodePlugins,
-		OpenCodeProviders: storeData.Selections.OpenCodeProviders,
-		Templates:         storeData.Selections.Templates,
-		Rules:            storeData.Selections.Rules,
-		Infra:            storeData.Selections.Infra,
-		SpecsDirs:        preset.SpecsDirsForPreset(presetLevel),
-		Housekeeping:     storeData.Config.Housekeeping,
+	ctx, presetLevel, err := setupsvc.BuildUpdateScaffoldContext(targetDir, setupsvc.Library{
+		Dir: getLibraryDir(),
+		FS:  library.GetLibraryFS(),
+	}, storeData, setupsvc.UpdateOptions{
+		Force:  force,
+		DryRun: dryRun,
+	})
+	if err != nil {
+		return err
 	}
 
 	if nonInteractive {

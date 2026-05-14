@@ -22,6 +22,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/dashboard"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 	orchlog "github.com/rluisb/lazyai/packages/orchestrator/internal/log"
@@ -244,10 +246,10 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Start background queue worker
 	w := &queue.Worker{
-		DB:              database,
-		Queue:           o.Queue,
-		PollInterval:    2 * time.Second,
-		ReclaimInterval: 30 * time.Second,
+		DB:               database,
+		Queue:            o.Queue,
+		PollInterval:     2 * time.Second,
+		ReclaimInterval:  30 * time.Second,
 		ReclaimTimeoutMs: 60000,
 	}
 	// Register a no-op handler that logs job types; real handlers can be registered by the MCP layer
@@ -262,6 +264,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	startedAt := time.Now().UTC().Format(time.RFC3339)
 	var shutdownOnce sync.Once
 	tracker := newClientTracker(resolvedIdleTimeout)
+	activityStore := sqliteadapter.NewActivityStore(database)
 	var idle *idleManager
 
 	shutdown := func(reason string) {
@@ -282,8 +285,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 	idle = newIdleManager(idleManagerOptions{
 		Timeout: resolvedIdleTimeout,
 		Tracker: tracker,
-		ActiveRuns: func(context.Context) (db.ActiveRunCounts, error) {
-			return database.ActiveRunCounts()
+		ActiveRuns: func(ctx context.Context) (domain.ActiveRunCounts, error) {
+			return activityStore.ActiveRunCounts(ctx)
 		},
 		Shutdown: shutdown,
 	})
@@ -366,7 +369,7 @@ func registerServeRoutes(mux *http.ServeMux, config serveRouteConfig) {
 
 	dashboard.RegisterViewRoutes(mux, dashboard.ViewConfig{})
 	mux.Handle("/api/dashboard/", dashboard.NewHandler(dashboard.HandlerConfig{
-		ReadModel: dashboard.NewReadModel(config.Database),
+		ReadModel: dashboard.NewReadModel(config.Database, sqliteadapter.NewActivityStore(config.Database), sqliteadapter.NewHandoffStore(config.Database), sqliteadapter.NewRunEventStore(config.Database), sqliteadapter.NewExecutionPlanStore(config.Database), sqliteadapter.NewErrorJournalStore(config.Database)),
 		Catalog:   dashboard.NewCatalogAdapter(config.Orchestrator.Catalog),
 		Events:    config.Orchestrator.Events,
 		Health: func(ctx context.Context) dashboard.HealthView {
@@ -669,18 +672,18 @@ type daemonInfo struct {
 }
 
 type daemonHealth struct {
-	Status        string             `json:"status"`
-	Name          string             `json:"name"`
-	Port          int                `json:"port"`
-	PID           int                `json:"pid"`
-	StartedAt     string             `json:"startedAt"`
-	ProjectRoot   string             `json:"projectRoot,omitempty"`
-	Scope         string             `json:"scope,omitempty"`
-	ExecutionMode string             `json:"executionMode,omitempty"`
-	ConfigPath    string             `json:"configPath,omitempty"`
-	Clients       clientSnapshot     `json:"clients"`
-	Idle          idleStatus         `json:"idle"`
-	ActiveRuns    db.ActiveRunCounts `json:"activeRuns"`
+	Status        string                 `json:"status"`
+	Name          string                 `json:"name"`
+	Port          int                    `json:"port"`
+	PID           int                    `json:"pid"`
+	StartedAt     string                 `json:"startedAt"`
+	ProjectRoot   string                 `json:"projectRoot,omitempty"`
+	Scope         string                 `json:"scope,omitempty"`
+	ExecutionMode string                 `json:"executionMode,omitempty"`
+	ConfigPath    string                 `json:"configPath,omitempty"`
+	Clients       clientSnapshot         `json:"clients"`
+	Idle          idleStatus             `json:"idle"`
+	ActiveRuns    domain.ActiveRunCounts `json:"activeRuns"`
 }
 
 func dataDir() string {

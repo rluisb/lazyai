@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boxes</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 18px 22px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tui-box { font-size: 12px; }
+  .label { font-family: var(--font-mono); font-size: 11px; color: var(--lz-dimmed); margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="tui-box"><span class="tui-success">✓</span> Installed 12 files</div>
+    <div class="label">Box() — default · dimmed border</div>
+  </div>
+  <div>
+    <div class="tui-box tui-box--success"><span class="tui-success">✓ Build success</span> in 38ms</div>
+    <div class="label">SuccessBox() — green border</div>
+  </div>
+  <div>
+    <div class="tui-box tui-box--warning"><span class="tui-warning">⚠ Drift detected</span> in 2 files</div>
+    <div class="label">WarningBox() — yellow border</div>
+  </div>
+  <div>
+    <div class="tui-box tui-box--error"><span class="tui-error">✗ Migration failed</span></div>
+    <div class="label">ErrorBox() — red border</div>
+  </div>
+</body>
+</html>

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 )
 
@@ -21,9 +21,9 @@ func TestContractJSONShapes(t *testing.T) {
 			ProjectRoot:   "/repo",
 			Scope:         "project",
 			ExecutionMode: "native",
-			ActiveRuns:    db.ActiveRunCounts{Chains: 1, Total: 1},
+			ActiveRuns:    domain.ActiveRunCounts{Chains: 1, Total: 1},
 		},
-		ActiveRuns:       db.ActiveRunCounts{Chains: 1, Total: 1},
+		ActiveRuns:       domain.ActiveRunCounts{Chains: 1, Total: 1},
 		RunCountsByState: map[string]int{"running": 1},
 		RecentRuns: []RunSummary{{
 			Kind:              types.RunKindChain,

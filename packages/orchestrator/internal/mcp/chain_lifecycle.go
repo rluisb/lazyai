@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -11,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 const (
@@ -202,7 +201,7 @@ func requestedCatalogKinds(req mcp.CallToolRequest) map[string]bool {
 	return kinds
 }
 
-func descriptionFromVersion(version *catalog.VersionRow) string {
+func descriptionFromVersion(version *domain.CatalogVersion) string {
 	var frontmatter map[string]any
 	if err := json.Unmarshal([]byte(version.FrontmatterJSON), &frontmatter); err == nil {
 		if description, ok := frontmatter["description"].(string); ok {
@@ -267,7 +266,7 @@ func (o *Orchestrator) compileChainPlan(input types.StartChainInput) (*types.Exe
 	return plan, nil
 }
 
-func decodeChainDefinition(version *catalog.VersionRow) (*types.ChainDefinition, error) {
+func decodeChainDefinition(version *domain.CatalogVersion) (*types.ChainDefinition, error) {
 	var definition types.ChainDefinition
 	if err := json.Unmarshal([]byte(version.Body), &definition); err != nil {
 		return nil, fmt.Errorf("active chain %s/%s version %d body must be a JSON chain definition: %w", version.Kind, version.Name, version.Version, err)
@@ -290,7 +289,7 @@ func decodeChainDefinition(version *catalog.VersionRow) (*types.ChainDefinition,
 	return &definition, nil
 }
 
-func (o *Orchestrator) getActiveOrLatestVersion(kind, name string) (*catalog.VersionRow, error) {
+func (o *Orchestrator) getActiveOrLatestVersion(kind, name string) (*domain.CatalogVersion, error) {
 	version, err := o.Catalog.GetVersion(kind, name, 0)
 	if err == nil {
 		return version, nil
@@ -601,80 +600,7 @@ func sortedTransitionKeys(transitions map[string]types.StepTransition) []string 
 	return keys
 }
 
-func saveExecutionPlan(database *db.DB, plan *types.ExecutionPlan) error {
-	encoded, err := json.Marshal(plan)
-	if err != nil {
-		return fmt.Errorf("marshal execution plan: %w", err)
-	}
-	_, err = database.Exec(`
-		INSERT INTO execution_plans (id, kind, definition_name, definition_version, project_root, plan_json, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			kind = excluded.kind,
-			definition_name = excluded.definition_name,
-			definition_version = excluded.definition_version,
-			project_root = excluded.project_root,
-			plan_json = excluded.plan_json
-	`, plan.ID, plan.Kind, plan.Definition.Name, plan.Definition.Version, plan.Project.RootPath, string(encoded), plan.CreatedAt)
-	if err != nil {
-		return fmt.Errorf("save execution plan %s: %w", plan.ID, err)
-	}
-	return nil
-}
-
-func loadExecutionPlan(database *db.DB, id string) (*types.ExecutionPlan, error) {
-	var planJSON string
-	err := database.QueryRow(`SELECT plan_json FROM execution_plans WHERE id = ?`, id).Scan(&planJSON)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("execution plan not found: %s", id)
-		}
-		return nil, err
-	}
-	var plan types.ExecutionPlan
-	if err := json.Unmarshal([]byte(planJSON), &plan); err != nil {
-		return nil, fmt.Errorf("decode execution plan %s: %w", id, err)
-	}
-	return &plan, nil
-}
-
-func saveChainState(database *db.DB, projectRoot string, chainState *types.ChainState) error {
-	encoded, err := json.Marshal(chainState)
-	if err != nil {
-		return fmt.Errorf("marshal chain state: %w", err)
-	}
-	_, err = database.Exec(`
-		INSERT INTO chain_runs (id, definition_name, definition_version, state, current_step_id, project_root, state_json, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			state = excluded.state,
-			current_step_id = excluded.current_step_id,
-			state_json = excluded.state_json,
-			updated_at = excluded.updated_at
-	`, chainState.ChainID, chainState.DefinitionName, chainState.DefinitionVersion, chainState.State, nullableString(chainState.CurrentStepID), projectRoot, string(encoded), chainState.CreatedAt, chainState.UpdatedAt)
-	if err != nil {
-		return fmt.Errorf("save chain state %s: %w", chainState.ChainID, err)
-	}
-	return nil
-}
-
-func loadChainState(database *db.DB, id string) (*types.ChainState, error) {
-	var stateJSON string
-	err := database.QueryRow(`SELECT state_json FROM chain_runs WHERE id = ?`, id).Scan(&stateJSON)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("chain state not found: %s", id)
-		}
-		return nil, err
-	}
-	var chainState types.ChainState
-	if err := json.Unmarshal([]byte(stateJSON), &chainState); err != nil {
-		return nil, fmt.Errorf("decode chain state %s: %w", id, err)
-	}
-	return &chainState, nil
-}
-
-func createAndSaveChainHandoff(database *db.DB, chainState *types.ChainState, plan *types.ExecutionPlan, input handoffInput) (*types.HandoffDocument, string, error) {
+func createAndSaveChainHandoff(store ports.HandoffStore, chainState *types.ChainState, plan *types.ExecutionPlan, input handoffInput) (*types.HandoffDocument, string, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	chainState.State = types.ChainHandoff
 	chainState.UpdatedAt = now
@@ -694,13 +620,8 @@ func createAndSaveChainHandoff(database *db.DB, chainState *types.ChainState, pl
 		Status:    chainState,
 		Plan:      plan,
 	}
-	encoded, err := json.Marshal(doc)
-	if err != nil {
-		return nil, "", fmt.Errorf("marshal handoff: %w", err)
-	}
-	_, err = database.Exec(`INSERT OR IGNORE INTO handoffs (id, run_id, run_kind, doc_json, created_at) VALUES (?, ?, ?, ?, ?)`, doc.ID, doc.RunID, doc.Kind, string(encoded), doc.CreatedAt)
-	if err != nil {
-		return nil, "", fmt.Errorf("save handoff %s: %w", doc.ID, err)
+	if err := store.SaveHandoffDocument(doc); err != nil {
+		return nil, "", err
 	}
 	path := handoffPathURIPrefix + doc.ID
 	chainState.HandoffPath = path

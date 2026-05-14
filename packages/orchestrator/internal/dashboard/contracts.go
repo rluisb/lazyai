@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
 )
 
@@ -70,29 +70,29 @@ func IsNotFound(err error) bool {
 
 // HealthView mirrors the existing daemon health shape used by dashboard overview.
 type HealthView struct {
-	Status        string             `json:"status"`
-	Name          string             `json:"name"`
-	Port          int                `json:"port"`
-	PID           int                `json:"pid"`
-	StartedAt     string             `json:"startedAt"`
-	ProjectRoot   string             `json:"projectRoot,omitempty"`
-	Scope         string             `json:"scope,omitempty"`
-	ExecutionMode string             `json:"executionMode,omitempty"`
-	ConfigPath    string             `json:"configPath,omitempty"`
-	Clients       any                `json:"clients,omitempty"`
-	Idle          any                `json:"idle,omitempty"`
-	ActiveRuns    db.ActiveRunCounts `json:"activeRuns"`
+	Status        string                 `json:"status"`
+	Name          string                 `json:"name"`
+	Port          int                    `json:"port"`
+	PID           int                    `json:"pid"`
+	StartedAt     string                 `json:"startedAt"`
+	ProjectRoot   string                 `json:"projectRoot,omitempty"`
+	Scope         string                 `json:"scope,omitempty"`
+	ExecutionMode string                 `json:"executionMode,omitempty"`
+	ConfigPath    string                 `json:"configPath,omitempty"`
+	Clients       any                    `json:"clients,omitempty"`
+	Idle          any                    `json:"idle,omitempty"`
+	ActiveRuns    domain.ActiveRunCounts `json:"activeRuns"`
 }
 
 // DashboardOverview is the dashboard landing-page read model.
 type DashboardOverview struct {
-	Health           HealthView         `json:"health"`
-	ActiveRuns       db.ActiveRunCounts `json:"activeRuns"`
-	RunCountsByState map[string]int     `json:"runCountsByState"`
-	RecentRuns       []RunSummary       `json:"recentRuns"`
-	RecentErrors     []ErrorEntry       `json:"recentErrors"`
-	CatalogCounts    CatalogCounts      `json:"catalogCounts"`
-	GeneratedAt      string             `json:"generatedAt"`
+	Health           HealthView             `json:"health"`
+	ActiveRuns       domain.ActiveRunCounts `json:"activeRuns"`
+	RunCountsByState map[string]int         `json:"runCountsByState"`
+	RecentRuns       []RunSummary           `json:"recentRuns"`
+	RecentErrors     []ErrorEntry           `json:"recentErrors"`
+	CatalogCounts    CatalogCounts          `json:"catalogCounts"`
+	GeneratedAt      string                 `json:"generatedAt"`
 }
 
 // CatalogCounts summarizes catalog entries by definition kind.

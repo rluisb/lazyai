@@ -1,21 +1,15 @@
 package events
 
 import (
-	"encoding/json"
 	"sync"
 	"time"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 // Event represents a run lifecycle event.
-type Event struct {
-	ID        int            `json:"id"`
-	RunID     string         `json:"runId"`
-	Type      string         `json:"eventType"`
-	Data      map[string]any `json:"data"`
-	CreatedAt string         `json:"createdAt"`
-}
+type Event = domain.RunEvent
 
 // Bus provides channel-based pub/sub for run events.
 //
@@ -28,25 +22,23 @@ type Bus struct {
 	mu          sync.RWMutex
 	subscribers map[string][]chan Event
 	globalSubs  []chan Event
-	database    *db.DB
+	store       ports.RunEventStore
 }
 
 // NewBus creates a new event bus.
-func NewBus(database *db.DB) *Bus {
+func NewBus(store ports.RunEventStore) *Bus {
 	return &Bus{
 		subscribers: make(map[string][]chan Event),
-		database:    database,
+		store:       store,
 	}
 }
 
 // Publish emits an event to per-run and global subscribers, and persists it.
 func (b *Bus) Publish(runID, eventType string, data map[string]any) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	dataJSON, _ := json.Marshal(data)
-
-	b.database.Exec(
-		`INSERT INTO run_events (run_id, event_type, event_json, created_at) VALUES (?, ?, ?, ?)`,
-		runID, eventType, string(dataJSON), now)
+	if b.store != nil {
+		_ = b.store.AppendRunEvent(runID, eventType, data, now)
+	}
 
 	event := Event{
 		RunID:     runID,
@@ -72,7 +64,7 @@ func (b *Bus) Publish(runID, eventType string, data map[string]any) {
 	}
 }
 
-// Subscribe registers a per-run subscriber channel and returns past events from the DB.
+// Subscribe registers a per-run subscriber channel and returns past events from the store.
 func (b *Bus) Subscribe(runID string, ch chan Event) []Event {
 	b.mu.Lock()
 	b.subscribers[runID] = append(b.subscribers[runID], ch)
@@ -125,64 +117,25 @@ func (b *Bus) UnsubscribeAll(ch chan Event) {
 
 // Replay returns events for a single run since a given event ID, ordered by id ASC.
 func (b *Bus) Replay(runID string, sinceID int) []Event {
-	var query string
-	var args []any
-	if sinceID > 0 {
-		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events WHERE run_id = ? AND id > ? ORDER BY id ASC`
-		args = []any{runID, sinceID}
-	} else {
-		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events WHERE run_id = ? ORDER BY id ASC`
-		args = []any{runID}
+	if b.store == nil {
+		return nil
 	}
-
-	rows, err := b.database.Query(query, args...)
+	events, err := b.store.ReplayRunEvents(runID, sinceID)
 	if err != nil {
 		return nil
 	}
-	defer rows.Close()
-
-	return scanEvents(rows)
+	return events
 }
 
 // ReplayAll returns events across all runs since a given event ID, ordered by id ASC,
 // capped at the provided limit. limit <= 0 returns no events.
 func (b *Bus) ReplayAll(sinceID, limit int) []Event {
-	if limit <= 0 {
+	if b.store == nil || limit <= 0 {
 		return nil
 	}
-	var query string
-	var args []any
-	if sinceID > 0 {
-		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events WHERE id > ? ORDER BY id ASC LIMIT ?`
-		args = []any{sinceID, limit}
-	} else {
-		query = `SELECT id, run_id, event_type, event_json, created_at FROM run_events ORDER BY id ASC LIMIT ?`
-		args = []any{limit}
-	}
-
-	rows, err := b.database.Query(query, args...)
+	events, err := b.store.ReplayAllRunEvents(sinceID, limit)
 	if err != nil {
 		return nil
-	}
-	defer rows.Close()
-
-	return scanEvents(rows)
-}
-
-// scanEvents reads rows from a `SELECT id, run_id, event_type, event_json, created_at` query.
-func scanEvents(rows interface {
-	Next() bool
-	Scan(dest ...any) error
-}) []Event {
-	var events []Event
-	for rows.Next() {
-		var e Event
-		var dataJSON string
-		if err := rows.Scan(&e.ID, &e.RunID, &e.Type, &dataJSON, &e.CreatedAt); err != nil {
-			continue
-		}
-		json.Unmarshal([]byte(dataJSON), &e.Data)
-		events = append(events, e)
 	}
 	return events
 }

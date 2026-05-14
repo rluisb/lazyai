@@ -8,25 +8,33 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/budget"
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/dispatch"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/events"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/queue"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/state"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
+// Orchestrator coordinates MCP tools over domain services and outbound ports.
 type Orchestrator struct {
-	DB         *db.DB
-	Catalog    *catalog.Store
-	Events     *events.Bus
-	Queue      *queue.Queue
-	Scope      *ScopeContext
-	Runs       map[string]*RunContext
-	Runtime    RuntimeConfig
-	Dispatcher dispatch.Dispatcher
+	DB             *db.DB
+	Catalog        ports.CatalogStore
+	ChainStates    ports.ChainStateStore
+	TeamStates     ports.TeamStateStore
+	WorkflowStates ports.WorkflowStateStore
+	ExecutionPlans ports.ExecutionPlanStore
+	Handoffs       ports.HandoffStore
+	Events         *events.Bus
+	Queue          *queue.Queue
+	Budget         ports.BudgetTracker
+	Scope          *ScopeContext
+	Runs           map[string]*RunContext
+	Runtime        RuntimeConfig
+	Dispatcher     ports.AgentInvoker
 }
 
 type RunContext struct {
@@ -39,14 +47,20 @@ type RunContext struct {
 func NewOrchestrator(database *db.DB, scope *ScopeContext, options ...OrchestratorOption) *Orchestrator {
 	runtime := DefaultRuntimeConfig()
 	o := &Orchestrator{
-		DB:         database,
-		Catalog:    catalog.NewStore(database),
-		Events:     events.NewBus(database),
-		Queue:      queue.New(database),
-		Scope:      scope,
-		Runs:       make(map[string]*RunContext),
-		Runtime:    runtime,
-		Dispatcher: defaultDispatcherFor(runtime),
+		DB:             database,
+		Catalog:        sqliteadapter.NewCatalogStore(database),
+		ChainStates:    sqliteadapter.NewChainStateStore(database),
+		TeamStates:     sqliteadapter.NewTeamStateStore(database),
+		WorkflowStates: sqliteadapter.NewWorkflowStateStore(database),
+		ExecutionPlans: sqliteadapter.NewExecutionPlanStore(database),
+		Handoffs:       sqliteadapter.NewHandoffStore(database),
+		Events:         events.NewBus(sqliteadapter.NewRunEventStore(database)),
+		Queue:          queue.New(sqliteadapter.NewJobQueueStore(database)),
+		Budget:         budget.NewTracker(),
+		Scope:          scope,
+		Runs:           make(map[string]*RunContext),
+		Runtime:        runtime,
+		Dispatcher:     defaultDispatcherFor(runtime),
 	}
 	for _, option := range options {
 		if option != nil {
@@ -255,11 +269,11 @@ func (o *Orchestrator) StartChain(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	chainState := state.CreateChainState(plan)
 
-	if err := saveExecutionPlan(o.DB, plan); err != nil {
+	if err := o.ExecutionPlans.SaveExecutionPlan(plan); err != nil {
 		toolLog.Error("tool failed", "tool", "start_chain", "chain", input.Chain, "chainId", chainState.ChainID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	if err := saveChainState(o.DB, o.projectRoot(), chainState); err != nil {
+	if err := o.ChainStates.SaveChainState(o.projectRoot(), chainState); err != nil {
 		toolLog.Error("tool failed", "tool", "start_chain", "chain", input.Chain, "chainId", chainState.ChainID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -307,19 +321,19 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 		return text("Missing: chainId, stepId, outcome"), nil
 	}
 
-	chainState, err := loadChainState(o.DB, input.ChainID)
+	chainState, err := o.ChainStates.LoadChainState(input.ChainID)
 	if err != nil {
 		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+	plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 	if err != nil {
 		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 
 	if input.Usage != nil {
-		budget.Update(&chainState.Budget, input.StepID, input.Usage)
+		o.Budget.Update(&chainState.Budget, input.StepID, input.Usage)
 	}
 
 	advanced, err := state.AdvanceChain(state.AdvanceInput{
@@ -339,7 +353,7 @@ func (o *Orchestrator) AdvanceChain(ctx context.Context, req mcp.CallToolRequest
 		advanced.AdvanceChainResult.Budget = chainState.Budget
 	}
 
-	if err := saveChainState(o.DB, o.projectRoot(), &advanced.StateSnapshot); err != nil {
+	if err := o.ChainStates.SaveChainState(o.projectRoot(), &advanced.StateSnapshot); err != nil {
 		toolLog.Error("tool failed", "tool", "advance_chain", "chainId", input.ChainID, "stepId", input.StepID, "outcome", input.Outcome, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -385,11 +399,11 @@ func (o *Orchestrator) BuildTeam(ctx context.Context, req mcp.CallToolRequest) (
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	teamState := state.CreateTeamState(def, plan)
-	if err := saveTeamState(o.DB, o.projectRoot(), teamState); err != nil {
+	if err := o.TeamStates.SaveTeamState(o.projectRoot(), teamState); err != nil {
 		toolLog.Error("tool failed", "tool", "build_team", "team", input.Team, "teamId", teamState.TeamID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	if err := saveTeamExecutionPlan(o.DB, plan); err != nil {
+	if err := o.ExecutionPlans.SaveExecutionPlan(plan); err != nil {
 		toolLog.Error("tool failed", "tool", "build_team", "team", input.Team, "teamId", teamState.TeamID, "error", err)
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -417,7 +431,7 @@ func (o *Orchestrator) AssignTeamTask(ctx context.Context, req mcp.CallToolReque
 	if input.TeamID == "" || input.TaskID == "" {
 		return text("Missing required: teamId, taskId"), nil
 	}
-	teamState, err := loadTeamState(o.DB, input.TeamID)
+	teamState, err := o.TeamStates.LoadTeamState(input.TeamID)
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -427,7 +441,7 @@ func (o *Orchestrator) AssignTeamTask(ctx context.Context, req mcp.CallToolReque
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	if err := saveTeamState(o.DB, o.projectRoot(), updated); err != nil {
+	if err := o.TeamStates.SaveTeamState(o.projectRoot(), updated); err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(updated.TeamID, "team.task_assigned", map[string]any{"taskId": input.TaskID, "assignee": assign})
@@ -460,18 +474,18 @@ func (o *Orchestrator) CompleteTeamTask(ctx context.Context, req mcp.CallToolReq
 	if input.TeamID == "" || input.TaskID == "" || input.Outcome == "" {
 		return text("Missing required: teamId, taskId, outcome"), nil
 	}
-	teamState, err := loadTeamState(o.DB, input.TeamID)
+	teamState, err := o.TeamStates.LoadTeamState(input.TeamID)
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	if input.Usage != nil {
-		budget.Update(&teamState.Budget, input.TaskID, input.Usage)
+		o.Budget.Update(&teamState.Budget, input.TaskID, input.Usage)
 	}
 	updated, err := state.CompleteTeamTask(teamState, input.TaskID, input.Outcome, input.Result, input.Usage, input.Error)
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	if err := saveTeamState(o.DB, o.projectRoot(), updated); err != nil {
+	if err := o.TeamStates.SaveTeamState(o.projectRoot(), updated); err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(updated.TeamID, fmt.Sprintf("team.%s", updated.State), map[string]any{"taskId": input.TaskID, "outcome": input.Outcome})
@@ -537,7 +551,7 @@ func (o *Orchestrator) AdvanceWorkflow(ctx context.Context, req mcp.CallToolRequ
 	if input.WorkflowID == "" {
 		return text("Missing required: workflowId"), nil
 	}
-	workflowState, err := loadWorkflowState(o.DB, input.WorkflowID)
+	workflowState, err := o.WorkflowStates.LoadWorkflowState(input.WorkflowID)
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -545,7 +559,7 @@ func (o *Orchestrator) AdvanceWorkflow(ctx context.Context, req mcp.CallToolRequ
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
-	if err := saveWorkflowState(o.DB, o.projectRoot(), updated); err != nil {
+	if err := o.WorkflowStates.SaveWorkflowState(o.projectRoot(), updated); err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
 	o.Events.Publish(updated.WorkflowID, fmt.Sprintf("workflow.%s", updated.State), map[string]any{"outcome": input.Outcome, "state": updated.State})
@@ -566,7 +580,7 @@ func (o *Orchestrator) GetStatus(ctx context.Context, req mcp.CallToolRequest) (
 
 	switch kind {
 	case string(types.RunKindTeam):
-		teamState, err := loadTeamState(o.DB, runID)
+		teamState, err := o.TeamStates.LoadTeamState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -587,7 +601,7 @@ func (o *Orchestrator) GetStatus(ctx context.Context, req mcp.CallToolRequest) (
 		}), nil
 
 	case string(types.RunKindWorkflow):
-		workflowState, err := loadWorkflowState(o.DB, runID)
+		workflowState, err := o.WorkflowStates.LoadWorkflowState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -596,24 +610,24 @@ func (o *Orchestrator) GetStatus(ctx context.Context, req mcp.CallToolRequest) (
 			"runId": workflowState.WorkflowID,
 			"state": workflowState.State,
 			"summary": map[string]any{
-				"definitionName":  workflowState.DefinitionName,
-				"task":            workflowState.Task,
-				"entryPhaseId":    workflowState.EntryPhaseID,
-				"currentPhaseId":  workflowState.CurrentPhaseID,
-				"totalPhases":     len(workflowState.Phases),
+				"definitionName": workflowState.DefinitionName,
+				"task":           workflowState.Task,
+				"entryPhaseId":   workflowState.EntryPhaseID,
+				"currentPhaseId": workflowState.CurrentPhaseID,
+				"totalPhases":    len(workflowState.Phases),
 			},
-			"phases":     workflowState.Phases,
-			"childRuns":  workflowState.ChildRuns,
-			"budget":     workflowState.Budget,
-			"history":    o.Events.Replay(workflowState.WorkflowID, 0),
+			"phases":    workflowState.Phases,
+			"childRuns": workflowState.ChildRuns,
+			"budget":    workflowState.Budget,
+			"history":   o.Events.Replay(workflowState.WorkflowID, 0),
 		}), nil
 
 	case string(types.RunKindChain):
-		chainState, err := loadChainState(o.DB, runID)
+		chainState, err := o.ChainStates.LoadChainState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -647,7 +661,7 @@ func (o *Orchestrator) GetBudget(ctx context.Context, req mcp.CallToolRequest) (
 
 	switch kind {
 	case string(types.RunKindTeam):
-		teamState, err := loadTeamState(o.DB, runID)
+		teamState, err := o.TeamStates.LoadTeamState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -660,11 +674,11 @@ func (o *Orchestrator) GetBudget(ctx context.Context, req mcp.CallToolRequest) (
 			"retries":       teamState.Budget.Retries,
 			"byStep":        teamState.Budget.ByStep,
 			"lastUpdatedAt": teamState.Budget.LastUpdatedAt,
-			"health":        budget.Evaluate(&teamState.Budget, &teamState.BudgetPolicy),
+			"health":        o.Budget.Evaluate(&teamState.Budget, &teamState.BudgetPolicy),
 		}), nil
 
 	case string(types.RunKindWorkflow):
-		workflowState, err := loadWorkflowState(o.DB, runID)
+		workflowState, err := o.WorkflowStates.LoadWorkflowState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -677,15 +691,15 @@ func (o *Orchestrator) GetBudget(ctx context.Context, req mcp.CallToolRequest) (
 			"retries":       workflowState.Budget.Retries,
 			"byStep":        workflowState.Budget.ByStep,
 			"lastUpdatedAt": workflowState.Budget.LastUpdatedAt,
-			"health":        budget.Evaluate(&workflowState.Budget, &workflowState.BudgetPolicy),
+			"health":        o.Budget.Evaluate(&workflowState.Budget, &workflowState.BudgetPolicy),
 		}), nil
 
 	case string(types.RunKindChain):
-		chainState, err := loadChainState(o.DB, runID)
+		chainState, err := o.ChainStates.LoadChainState(runID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 		if err != nil {
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -698,7 +712,7 @@ func (o *Orchestrator) GetBudget(ctx context.Context, req mcp.CallToolRequest) (
 			"retries":       chainState.Budget.Retries,
 			"byStep":        chainState.Budget.ByStep,
 			"lastUpdatedAt": chainState.Budget.LastUpdatedAt,
-			"health":        budget.Evaluate(&chainState.Budget, &plan.BudgetPolicy),
+			"health":        o.Budget.Evaluate(&chainState.Budget, &plan.BudgetPolicy),
 		}), nil
 
 	default:
@@ -714,7 +728,7 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 
 	switch input.Kind {
 	case types.RunKindTeam:
-		teamState, err := loadTeamState(o.DB, input.RunID)
+		teamState, err := o.TeamStates.LoadTeamState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -724,8 +738,8 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		budget.IncrementRetries(&retried.Budget, input.StepID)
-		if err := saveTeamState(o.DB, o.projectRoot(), retried); err != nil {
+		o.Budget.IncrementRetries(&retried.Budget, input.StepID)
+		if err := o.TeamStates.SaveTeamState(o.projectRoot(), retried); err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -734,7 +748,7 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 		return jsonOut(map[string]any{"runId": retried.TeamID, "stepId": input.StepID, "state": retried.State, "budget": retried.Budget}), nil
 
 	case types.RunKindWorkflow:
-		workflowState, err := loadWorkflowState(o.DB, input.RunID)
+		workflowState, err := o.WorkflowStates.LoadWorkflowState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -745,8 +759,8 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		budget.IncrementRetries(&retried.Budget, input.StepID)
-		if err := saveWorkflowState(o.DB, o.projectRoot(), retried); err != nil {
+		o.Budget.IncrementRetries(&retried.Budget, input.StepID)
+		if err := o.WorkflowStates.SaveWorkflowState(o.projectRoot(), retried); err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -755,12 +769,12 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 		return jsonOut(map[string]any{"runId": retried.WorkflowID, "stepId": input.StepID, "state": retried.State, "budget": retried.Budget}), nil
 
 	case types.RunKindChain:
-		chainState, err := loadChainState(o.DB, input.RunID)
+		chainState, err := o.ChainStates.LoadChainState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -770,8 +784,8 @@ func (o *Orchestrator) RetryStep(ctx context.Context, req mcp.CallToolRequest) (
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		budget.IncrementRetries(&retried.Budget, input.StepID)
-		if err := saveChainState(o.DB, o.projectRoot(), retried); err != nil {
+		o.Budget.IncrementRetries(&retried.Budget, input.StepID)
+		if err := o.ChainStates.SaveChainState(o.projectRoot(), retried); err != nil {
 			toolLog.Error("tool failed", "tool", "retry_step", "runId", input.RunID, "stepId", input.StepID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -797,7 +811,7 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 
 	switch input.Kind {
 	case types.RunKindTeam:
-		teamState, err := loadTeamState(o.DB, input.RunID)
+		teamState, err := o.TeamStates.LoadTeamState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -807,7 +821,7 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveTeamState(o.DB, o.projectRoot(), escalated); err != nil {
+		if err := o.TeamStates.SaveTeamState(o.projectRoot(), escalated); err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -816,7 +830,7 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 		return jsonOut(map[string]any{"runId": escalated.TeamID, "stepId": input.StepID, "state": escalated.State}), nil
 
 	case types.RunKindWorkflow:
-		workflowState, err := loadWorkflowState(o.DB, input.RunID)
+		workflowState, err := o.WorkflowStates.LoadWorkflowState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -827,7 +841,7 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveWorkflowState(o.DB, o.projectRoot(), escalated); err != nil {
+		if err := o.WorkflowStates.SaveWorkflowState(o.projectRoot(), escalated); err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -836,12 +850,12 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 		return jsonOut(map[string]any{"runId": escalated.WorkflowID, "stepId": input.StepID, "state": escalated.State}), nil
 
 	case types.RunKindChain:
-		chainState, err := loadChainState(o.DB, input.RunID)
+		chainState, err := o.ChainStates.LoadChainState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
@@ -851,11 +865,11 @@ func (o *Orchestrator) EscalateStep(ctx context.Context, req mcp.CallToolRequest
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveExecutionPlan(o.DB, escalatedPlan); err != nil {
+		if err := o.ExecutionPlans.SaveExecutionPlan(escalatedPlan); err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveChainState(o.DB, o.projectRoot(), escalatedState); err != nil {
+		if err := o.ChainStates.SaveChainState(o.projectRoot(), escalatedState); err != nil {
 			toolLog.Error("tool failed", "tool", "escalate_step", "runId", input.RunID, "stepId", input.StepID, "targetAgent", input.TargetAgent, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -881,22 +895,22 @@ func (o *Orchestrator) Handoff(ctx context.Context, req mcp.CallToolRequest) (*m
 
 	switch input.Kind {
 	case types.RunKindTeam:
-		teamState, err := loadTeamState(o.DB, input.RunID)
+		teamState, err := o.TeamStates.LoadTeamState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadTeamExecutionPlan(o.DB, teamState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(teamState.ExecutionPlanID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		doc, path, err := createAndSaveTeamHandoff(o.DB, teamState, plan, input)
+		doc, path, err := createAndSaveTeamHandoff(o.Handoffs, teamState, plan, input)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveTeamState(o.DB, o.projectRoot(), teamState); err != nil {
+		if err := o.TeamStates.SaveTeamState(o.projectRoot(), teamState); err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "handoffId", doc.ID, "path", path, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -907,22 +921,22 @@ func (o *Orchestrator) Handoff(ctx context.Context, req mcp.CallToolRequest) (*m
 		return jsonOut(map[string]any{"handoffId": doc.ID, "path": path, "summary": doc.Summary, "resumable": doc.Resumable}), nil
 
 	case types.RunKindWorkflow:
-		workflowState, err := loadWorkflowState(o.DB, input.RunID)
+		workflowState, err := o.WorkflowStates.LoadWorkflowState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadWorkflowExecutionPlan(o.DB, workflowState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(workflowState.ExecutionPlanID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		doc, path, err := createAndSaveWorkflowHandoff(o.DB, workflowState, plan, input)
+		doc, path, err := createAndSaveWorkflowHandoff(o.Handoffs, workflowState, plan, input)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveWorkflowState(o.DB, o.projectRoot(), workflowState); err != nil {
+		if err := o.WorkflowStates.SaveWorkflowState(o.projectRoot(), workflowState); err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "handoffId", doc.ID, "path", path, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -933,22 +947,22 @@ func (o *Orchestrator) Handoff(ctx context.Context, req mcp.CallToolRequest) (*m
 		return jsonOut(map[string]any{"handoffId": doc.ID, "path": path, "summary": doc.Summary, "resumable": doc.Resumable}), nil
 
 	case types.RunKindChain:
-		chainState, err := loadChainState(o.DB, input.RunID)
+		chainState, err := o.ChainStates.LoadChainState(input.RunID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		plan, err := loadExecutionPlan(o.DB, chainState.ExecutionPlanID)
+		plan, err := o.ExecutionPlans.LoadExecutionPlan(chainState.ExecutionPlanID)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		doc, path, err := createAndSaveChainHandoff(o.DB, chainState, plan, input)
+		doc, path, err := createAndSaveChainHandoff(o.Handoffs, chainState, plan, input)
 		if err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
-		if err := saveChainState(o.DB, o.projectRoot(), chainState); err != nil {
+		if err := o.ChainStates.SaveChainState(o.projectRoot(), chainState); err != nil {
 			toolLog.Error("tool failed", "tool", "handoff", "runId", input.RunID, "handoffId", doc.ID, "path", path, "error", err)
 			return text(fmt.Sprintf("Error: %v", err)), nil
 		}
@@ -986,7 +1000,7 @@ func (o *Orchestrator) CatalogCreateVersion(ctx context.Context, req mcp.CallToo
 	kind := req.GetString("kind", "")
 	name := req.GetString("name", "")
 	body := req.GetString("body", "")
-	result, err := o.Catalog.CreateVersion(catalog.CreateVersionInput{Kind: kind, Name: name, Body: body, SetActive: true})
+	result, err := o.Catalog.CreateVersion(domain.CreateCatalogVersionInput{Kind: kind, Name: name, Body: body, SetActive: true})
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}
@@ -1010,7 +1024,7 @@ func (o *Orchestrator) InvokeAgent(ctx context.Context, req mcp.CallToolRequest)
 	agent := req.GetString("agent", "")
 	task := req.GetString("task", "")
 	cliTool := req.GetString("cliTool", "")
-	result, err := o.Dispatcher.InvokeAgent(ctx, dispatch.InvocationRequest{Agent: agent, Task: task, CliTool: cliTool})
+	result, err := o.Dispatcher.InvokeAgent(ctx, domain.InvocationRequest{Agent: agent, Task: task, CliTool: cliTool})
 	if err != nil {
 		return text(fmt.Sprintf("Error: %v", err)), nil
 	}

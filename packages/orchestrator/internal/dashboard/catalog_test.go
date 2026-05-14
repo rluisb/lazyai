@@ -5,13 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rluisb/lazyai/packages/orchestrator/internal/catalog"
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
+	"github.com/rluisb/lazyai/packages/orchestrator/domain"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 func TestCatalogAdapterListsDefinitionsWithVersionCountsAndKindFilter(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"description": "Release chain"}, "body v1", true)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"description": "Release chain v2"}, "body v2", true)
 	createCatalogVersion(t, store, "team", "launch", map[string]any{"description": "Launch team"}, "team body", true)
@@ -36,7 +38,7 @@ func TestCatalogAdapterListsDefinitionsWithVersionCountsAndKindFilter(t *testing
 
 func TestCatalogAdapterListsAllKnownCatalogKinds(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	for _, kind := range catalogKindStrings() {
 		createCatalogVersion(t, store, kind, kind+"-definition", map[string]any{"kind": kind}, kind+" body", true)
 	}
@@ -70,7 +72,7 @@ func TestCatalogAdapterListsAllKnownCatalogKinds(t *testing.T) {
 
 func TestCatalogAdapterDetailReturnsActiveOrRequestedVersionReadOnly(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"description": "Release chain"}, "body v1", true)
 	createCatalogVersion(t, store, "chain", "release", map[string]any{"description": "Release chain v2", "owner": "ops"}, "body v2", true)
 
@@ -97,7 +99,7 @@ func TestCatalogAdapterDetailReturnsActiveOrRequestedVersionReadOnly(t *testing.
 
 func TestCatalogAdapterReturnsNotFoundForMissingDefinition(t *testing.T) {
 	database := newDashboardTestDB(t)
-	adapter := NewCatalogAdapter(catalog.NewStore(database))
+	adapter := NewCatalogAdapter(sqliteadapter.NewCatalogStore(database))
 
 	_, err := adapter.GetCatalogDetail(context.Background(), "chain", "missing", 0)
 	if !IsNotFound(err) {
@@ -112,7 +114,7 @@ func TestCatalogAdapterReturnsNotFoundForMissingDefinition(t *testing.T) {
 
 func TestCatalogAdapterReturnsNotFoundForDefinitionWithoutActiveVersion(t *testing.T) {
 	database := newDashboardTestDB(t)
-	store := catalog.NewStore(database)
+	store := sqliteadapter.NewCatalogStore(database)
 	createCatalogVersion(t, store, "agent", "draft-agent", map[string]any{"description": "Draft"}, "agent body", false)
 
 	adapter := NewCatalogAdapter(store)
@@ -144,9 +146,9 @@ func catalogKindStrings() []string {
 	}
 }
 
-func createCatalogVersion(t *testing.T, store *catalog.Store, kind, name string, frontmatter map[string]any, body string, active bool) {
+func createCatalogVersion(t *testing.T, store ports.CatalogStore, kind, name string, frontmatter map[string]any, body string, active bool) {
 	t.Helper()
-	result, err := store.CreateVersion(catalog.CreateVersionInput{
+	result, err := store.CreateVersion(domain.CreateCatalogVersionInput{
 		Kind:        kind,
 		Name:        name,
 		Frontmatter: frontmatter,

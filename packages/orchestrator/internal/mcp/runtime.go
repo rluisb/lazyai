@@ -9,6 +9,7 @@ import (
 	oconfig "github.com/rluisb/lazyai/packages/orchestrator/internal/config"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/dispatch"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
 
 type RuntimeConfig struct {
@@ -111,15 +112,67 @@ func WithRuntimeConfig(config RuntimeConfig) OrchestratorOption {
 	}
 }
 
-func WithDispatcher(dispatcher dispatch.Dispatcher) OrchestratorOption {
+func WithAgentInvoker(invoker ports.AgentInvoker) OrchestratorOption {
 	return func(o *Orchestrator) {
-		if dispatcher != nil {
-			o.Dispatcher = dispatcher
+		if invoker != nil {
+			o.Dispatcher = invoker
 		}
 	}
 }
 
-func defaultDispatcherFor(config RuntimeConfig) dispatch.Dispatcher {
+func WithDispatcher(dispatcher ports.AgentInvoker) OrchestratorOption {
+	return WithAgentInvoker(dispatcher)
+}
+
+func WithBudgetTracker(tracker ports.BudgetTracker) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if tracker != nil {
+			o.Budget = tracker
+		}
+	}
+}
+
+func WithChainStateStore(store ports.ChainStateStore) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if store != nil {
+			o.ChainStates = store
+		}
+	}
+}
+
+func WithTeamStateStore(store ports.TeamStateStore) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if store != nil {
+			o.TeamStates = store
+		}
+	}
+}
+
+func WithWorkflowStateStore(store ports.WorkflowStateStore) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if store != nil {
+			o.WorkflowStates = store
+		}
+	}
+}
+
+func WithExecutionPlanStore(store ports.ExecutionPlanStore) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if store != nil {
+			o.ExecutionPlans = store
+		}
+	}
+}
+
+func WithHandoffStore(store ports.HandoffStore) OrchestratorOption {
+	return func(o *Orchestrator) {
+		if store != nil {
+			o.Handoffs = store
+		}
+	}
+}
+
+func defaultDispatcherFor(config RuntimeConfig) ports.AgentInvoker {
 	switch config.ExecutionMode {
 	case types.ExecutionA2A:
 		if config.A2AConfig != nil {

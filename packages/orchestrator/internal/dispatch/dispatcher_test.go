@@ -7,7 +7,11 @@ import (
 
 	oconfig "github.com/rluisb/lazyai/packages/orchestrator/internal/config"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/types"
+	"github.com/rluisb/lazyai/packages/orchestrator/ports"
 )
+
+var _ ports.AgentInvoker = (*NativeDispatcher)(nil)
+var _ ports.AgentInvoker = (*ConfiguredDispatcher)(nil)
 
 func TestNativeDispatcherComposesExistingInvokeAgentSpec(t *testing.T) {
 	result, err := NewNativeDispatcher().InvokeAgent(context.Background(), InvocationRequest{

@@ -3,6 +3,7 @@ package queue
 import (
 	"testing"
 
+	sqliteadapter "github.com/rluisb/lazyai/packages/orchestrator/adapters/sqlite"
 	"github.com/rluisb/lazyai/packages/orchestrator/internal/db"
 )
 
@@ -16,7 +17,7 @@ func TestEnqueueDequeueComplete(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 
 	// Enqueue a job
 	job, err := q.Enqueue(EnqueueInput{
@@ -78,7 +79,7 @@ func TestEnqueueDequeueFailRequeue(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 
 	if _, err := q.Enqueue(EnqueueInput{
 		JobType:     "fail-job",
@@ -164,7 +165,7 @@ func TestDequeue_ReturnsNilWhenEmpty(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 
 	result, err := q.Dequeue("non-existent")
 	if err != nil {
@@ -185,7 +186,7 @@ func TestList_FilterByStatus(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 
 	// Enqueue jobs with different statuses via direct insert
 	// (simulating different states)
@@ -223,7 +224,7 @@ func TestReclaim_ResetsStaleClaimedJobs(t *testing.T) {
 		t.Fatalf("migrate db: %v", err)
 	}
 
-	q := New(db)
+	q := New(sqliteadapter.NewJobQueueStore(db))
 
 	// job is used to retrieve ID in the Reclaim test below
 	job, _ := q.Enqueue(EnqueueInput{JobType: "reclaim-test", MaxAttempts: 3})

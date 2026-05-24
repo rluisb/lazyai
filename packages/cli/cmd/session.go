@@ -122,6 +122,13 @@ func runSessionStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
+	// Append to ledger
+	_ = appendToLedger("session_start", map[string]string{
+		"session_id": sessionID,
+		"goal":       goal,
+		"status":     "active",
+	})
+	
 	fmt.Printf("✅ Session started: %s\n", sessionID)
 	fmt.Printf("   Goal: %s\n", goal)
 	fmt.Printf("   Started: %s\n", startedAt)
@@ -151,6 +158,12 @@ func runSessionEnd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("session not found: %s", sessionID)
 	}
 
+	// Append to ledger
+	_ = appendToLedger("session_end", map[string]string{
+		"session_id": sessionID,
+		"status":     "ended",
+	})
+	
 	fmt.Printf("✅ Session ended: %s\n", sessionID)
 	fmt.Printf("   Ended: %s\n", endedAt)
 	return nil

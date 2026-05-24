@@ -1,58 +1,162 @@
 {
-    "$schema": "https://opencode.ai/config.json",
-    "instructions": [
-        "AGENTS.md"
-    ],
-    "mcp": {
-        "context7": {
-            "headers": {
-                "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
-            },
-            "type": "remote",
-            "url": "https://mcp.context7.com/mcp"
-        },
-        "filesystem": {
-            "command": [
-                "npx",
-                "-y",
-                "@modelcontextprotocol/server-filesystem",
-                "."
-            ],
-            "type": "local"
-        },
-        "orchestrator": {
-            "command": [
-                "lazyai-orchestrator",
-                "connect"
-            ],
-            "type": "local"
-        },
-        "tavily-mcp": {
-            "type": "local",
-            "command": [
-                "npx",
-                "-y",
-                "tavily-mcp@latest"
-            ],
-            "environment": {
-                "TAVILY_API_KEY": "{env:TAVILY_API_KEY}",
-                "DEFAULT_PARAMETERS": "{\"include_images\": true, \"max_results\": 15, \"search_depth\": \"advanced\"}"
-            }
-        },
-        "morph-mcp": {
-            "type": "local",
-            "environment": {
-                "MORPH_API_KEY": "{env:MORPH_API_KEY}"
-            },
-            "command": [
-                "npx",
-                "-y",
-                "@morphllm/morphmcp"
-            ]
-        }
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "mcp": {
+    "atlassian": {
+      "command": [
+        "npx",
+        "-y",
+        "mcp-remote@latest",
+        "https://mcp.atlassian.com/v1/mcp"
+      ],
+      "enabled": false,
+      "type": "local"
     },
-    "permission": {
-        "bash": "ask",
-        "edit": "ask"
+    "brave-search": {
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "enabled": false,
+      "environment": {
+        "BRAVE_API_KEY": "{env:BRAVE_API_KEY}"
+      },
+      "type": "local"
+    },
+    "codegraph": {
+      "command": [
+        "codegraph",
+        "serve",
+        "--mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "context7": {
+      "enabled": false,
+      "headers": {
+        "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
+      },
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "fetch": {
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "enabled": false,
+      "type": "local"
+    },
+    "filesystem": {
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "graphify": {
+      "command": [
+        "graphify",
+        "query"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "memoria": {
+      "command": [
+        "npx",
+        "-y",
+        "@byronwade/memoria"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "memory": {
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "morph-mcp": {
+      "command": [
+        "npx",
+        "-y",
+        "@morphllm/morphmcp"
+      ],
+      "environment": {
+        "MORPH_API_KEY": "{env:MORPH_API_KEY}"
+      },
+      "type": "local"
+    },
+    "obsidian": {
+      "command": [
+        "ob",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "orchestrator": {
+      "command": [
+        "lazyai-orchestrator",
+        "connect"
+      ],
+      "enabled": false,
+      "type": "local"
+    },
+    "playwright": {
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp",
+        "--headless"
+      ],
+      "enabled": false,
+      "type": "local"
+    },
+    "qmd": {
+      "command": [
+        "qmd",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "ripgrep": {
+      "command": [
+        "npx",
+        "-y",
+        "mcp-ripgrep"
+      ],
+      "enabled": true,
+      "type": "local"
+    },
+    "tavily-mcp": {
+      "command": [
+        "npx",
+        "-y",
+        "tavily-mcp@latest"
+      ],
+      "environment": {
+        "DEFAULT_PARAMETERS": "{\"include_images\": true, \"max_results\": 15, \"search_depth\": \"advanced\"}",
+        "TAVILY_API_KEY": "{env:TAVILY_API_KEY}"
+      },
+      "type": "local"
     }
+  },
+  "permission": {
+    "bash": "ask",
+    "edit": "ask"
+  }
 }

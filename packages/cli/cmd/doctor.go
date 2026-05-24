@@ -133,7 +133,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	issues := len(missingFiles) + len(modifiedFiles) + len(strayAgentsFiles) + metadataErrors + len(staleMcpEntries) + envWarn + envFail
+	issues := len(missingFiles) + len(modifiedFiles) + len(strayAgentsFiles) + metadataErrors + len(staleMcpEntries) + envFail
 	isHealthy := issues == 0
 
 	// JSON output

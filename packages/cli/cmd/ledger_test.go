@@ -161,14 +161,25 @@ func TestInitLedger(t *testing.T) {
 
 func TestAppendToLedger(t *testing.T) {
 	tmpDir := t.TempDir()
-	ledgerPath := filepath.Join(tmpDir, "test_ledger.jsonl")
-	
+
+	// Save and switch to temp directory because appendToLedger uses os.Getwd()
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to chdir to temp directory: %v", err)
+	}
+	defer os.Chdir(origDir)
+
+	ledgerPath := getLedgerPath()
+
 	// Initialize ledger
-	err := initLedger(ledgerPath)
+	err = initLedger(ledgerPath)
 	if err != nil {
 		t.Fatalf("Failed to initialize ledger: %v", err)
 	}
-	
+
 	// Append an event
 	err = appendToLedger("test_event", map[string]string{
 		"key": "value",
@@ -176,26 +187,26 @@ func TestAppendToLedger(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to append to ledger: %v", err)
 	}
-	
+
 	// Read entries
 	entries, err := readLedgerEntries(ledgerPath)
 	if err != nil {
 		t.Fatalf("Failed to read ledger: %v", err)
 	}
-	
+
 	if len(entries) != 2 {
 		t.Errorf("Expected 2 entries, got %d", len(entries))
 	}
-	
+
 	if len(entries) > 1 {
 		if entries[1].EventType != "test_event" {
 			t.Errorf("Expected event type 'test_event', got '%s'", entries[1].EventType)
 		}
-		
+
 		if !strings.Contains(entries[1].Data, "key=value") {
 			t.Errorf("Expected data to contain 'key=value', got '%s'", entries[1].Data)
 		}
-		
+
 		// Verify hash chain
 		if entries[1].PrevHash != entries[0].Hash {
 			t.Error("Hash chain is broken")

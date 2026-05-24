@@ -52,6 +52,11 @@ var migrations = []struct {
 		Up:      migrationUp008,
 		Down:    migrationDown008,
 	},
+	{
+		Version: 9,
+		Up:      migrationUp009,
+		Down:    migrationDown009,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -321,4 +326,56 @@ ALTER TABLE selections ADD COLUMN opencode_providers TEXT NOT NULL DEFAULT '[]';
 
 const migrationDown008 = `
 ALTER TABLE selections DROP COLUMN opencode_providers;
+`
+
+const migrationUp009 = `
+-- Session tracking tables (ported from production AI agent runtime)
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    goal TEXT,
+    repo_name TEXT,
+    status TEXT DEFAULT 'active',
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    model TEXT,
+    cost_usd REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS agent_dispatches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    agent TEXT NOT NULL,
+    task TEXT,
+    status TEXT DEFAULT 'pending',
+    dispatched_at TEXT,
+    completed_at TEXT,
+    result TEXT,
+    error TEXT,
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE TABLE IF NOT EXISTS quality_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    workflow_id TEXT,
+    agent TEXT NOT NULL,
+    model TEXT,
+    metric_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    recorded_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispatches_session ON agent_dispatches(session_id);
+CREATE INDEX IF NOT EXISTS idx_dispatches_agent ON agent_dispatches(agent);
+CREATE INDEX IF NOT EXISTS idx_metrics_session ON quality_metrics(session_id);
+CREATE INDEX IF NOT EXISTS idx_metrics_name ON quality_metrics(metric_name);
+`
+
+const migrationDown009 = `
+DROP TABLE IF EXISTS quality_metrics;
+DROP TABLE IF EXISTS agent_dispatches;
+DROP TABLE IF EXISTS sessions;
 `

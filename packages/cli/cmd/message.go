@@ -23,6 +23,16 @@ var messageSendCmd = &cobra.Command{
 		toAgent := args[0]
 		subject := args[1]
 		body := args[2]
+		
+		if err := ValidateAgentName(toAgent); err != nil {
+			return err
+		}
+		if err := ValidateNotEmpty(subject, "subject"); err != nil {
+			return err
+		}
+		if err := ValidateNotEmpty(body, "body"); err != nil {
+			return err
+		}
 
 		// Get from agent from env or default
 		fromAgent := os.Getenv("LAZYAI_AGENT")
@@ -34,12 +44,15 @@ var messageSendCmd = &cobra.Command{
 		if priority == "" {
 			priority = "normal"
 		}
+		if err := ValidatePriority(priority); err != nil {
+			return err
+		}
 
-		database, err := getDB()
+		database, err := EnsureDB()
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer SafeCloseDB(database)
 
 		messageID := fmt.Sprintf("msg_%d", time.Now().Unix())
 
@@ -67,11 +80,11 @@ var messageRecvCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		agent := args[0]
 
-		database, err := getDB()
+		database, err := EnsureDB()
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer SafeCloseDB(database)
 
 		// Mark messages as read
 		_, err = database.Exec(
@@ -136,12 +149,15 @@ var messageBroadcastCmd = &cobra.Command{
 		if priority == "" {
 			priority = "normal"
 		}
+		if err := ValidatePriority(priority); err != nil {
+			return err
+		}
 
-		database, err := getDB()
+		database, err := EnsureDB()
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer SafeCloseDB(database)
 
 		// Always include common agents
 		agents := []string{"orchestrator", "builder", "planner", "reviewer", "scout"}

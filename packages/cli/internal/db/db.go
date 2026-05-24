@@ -41,6 +41,17 @@ func Open(dbPath string) (*DB, error) {
 		sqlDB.Close()
 		return nil, fmt.Errorf("enable foreign keys: %w", err)
 	}
+	
+	// Set busy timeout to wait for locks instead of failing immediately (5 seconds)
+	if _, err := sqlDB.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("set busy timeout: %w", err)
+	}
+	
+	// Limit connection pool to prevent "too many open connections"
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0)
 
 	return &DB{DB: sqlDB, path: dbPath}, nil
 }

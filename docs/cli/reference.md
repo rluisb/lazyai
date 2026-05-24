@@ -1,332 +1,493 @@
-# Command Reference
+# CLI Reference
 
-All command examples use the LazyAI CLI binary, `lazyai-cli`.
+Complete reference for all `lazyai-cli` commands.
 
-## `init`
+---
 
-Initialize a new managed AI setup.
+## Table of Contents
 
+- [Session Management](#session-management)
+- [Health Checks](#health-checks)
+- [Audit Trail](#audit-trail)
+- [Validation](#validation)
+- [Task Queue](#task-queue)
+- [Agent Message Bus](#agent-message-bus)
+- [Metrics Dashboard](#metrics-dashboard)
+- [Memory Vault](#memory-vault)
+- [Evaluation Harness](#evaluation-harness)
+- [Workflow Execution](#workflow-execution)
+
+---
+
+## Session Management
+
+### `session start [goal]`
+
+Start a new AI agent session.
+
+**Arguments:**
+- `goal` (required): Brief description of the session goal
+
+**Example:**
 ```bash
-lazyai-cli init [options]
+lazyai-cli session start "Implement authentication feature"
 ```
 
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--scope` | `project \| global \| workspace` | prompt | Setup scope |
-| `--planning-repo` | path | — | Planning repo for workspace scope |
-| `--repos` | comma-separated | — | Workspace repo references |
-| `--tools` | comma-separated | prompt | `opencode,claude-code,copilot` |
-| `--cli-tools` | comma-separated | — | Locally installed CLI tools |
-| `--name` | string | dir-derived | Project or workspace name |
-| `--force` | boolean | `false` | Overwrite managed files |
-| `--no-interactive` | boolean | `false` | Disable prompts |
-| `--migrate` | boolean | `false` | Detect and import existing setup |
-| `--from` | path | current | Source path for migration |
-| `--absorb` | boolean | prompt/`false` | Absorb detected config into `.ai/` |
-| `--dry-run` | boolean | `false` | Preview without writing |
-| `--preset` | `minimal \| standard \| full \| custom` | wizard | Feature preset |
-| `--features` | comma-separated | — | Explicitly enable features |
-| `--disable-features` | comma-separated | — | Disable features; `all` to start from nothing |
-| `--branch-pattern` | string | `{type}/{ticket}-{description}` | Branch naming pattern |
-| `--commit-pattern` | string | `{type}({scope}): {description}` | Commit message pattern |
-| `--enable-servers` | comma-separated | — | Enable optional MCP servers |
-| `--install-mode` | `copy \| symlink` | `copy` | How library files are installed |
-
-**Examples**
-
-```bash
-lazyai-cli init
-lazyai-cli init --scope project --tools opencode,claude-code --name my-repo --no-interactive
-lazyai-cli init --scope workspace --planning-repo ./planning --repos ../api,../web --no-interactive
-lazyai-cli init --migrate --from ../legacy-project
+**Output:**
+```
+✅ Session started: ses_1234567890
+   Goal: Implement authentication feature
+   Started: 2026-05-24T00:08:16Z
 ```
 
 ---
 
-## `compile`
+### `session list`
 
-Recompile canonical content into tool-native directories.
+List all sessions.
 
+**Example:**
 ```bash
-lazyai-cli compile [options]
+lazyai-cli session list
 ```
 
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--scope` | `project \| global \| workspace` | manifest scope | Override scope |
-| `--tools` | comma-separated | manifest tools | Compile only selected tools |
-| `--force` | boolean | `false` | Overwrite existing files |
-| `--dry-run` | boolean | `false` | Preview without writing |
-| `--planning-repo` | path | manifest | Workspace planning repo |
-
-**Examples**
-
-```bash
-lazyai-cli compile
-lazyai-cli compile --tools opencode,claude-code
-lazyai-cli compile --scope global
+**Output:**
+```
+Sessions:
+---------
+🟢 ses_1234567890 | Implement auth | 2026-05-24T00:08:16Z
+🔴 ses_1234567889 | Fix bug #42 | 2026-05-23T23:45:00Z
 ```
 
 ---
 
-## `add`
+### `session show [session-id]`
 
-Add another tool adapter to an existing setup.
+Show session details.
 
+**Arguments:**
+- `session-id` (required): Session ID (e.g., `ses_1234567890`)
+
+**Example:**
 ```bash
-lazyai-cli add <tool>
-```
-
-| Argument | Description |
-|---|---|
-| `tool` | `opencode`, `claude-code`, or `copilot` |
-
-**Example**
-
-```bash
-lazyai-cli add copilot
+lazyai-cli session show ses_1234567890
 ```
 
 ---
 
-## `update`
+### `session end [session-id]`
 
-Refresh tracked files from the bundled library.
+End a session.
 
+**Arguments:**
+- `session-id` (required): Session ID to end
+
+**Example:**
 ```bash
-lazyai-cli update [options]
-```
-
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--force` | boolean | `false` | Overwrite with backup |
-| `--check` | boolean | `false` | Preview which skills would be updated |
-
-**Examples**
-
-```bash
-lazyai-cli update
-lazyai-cli update --force
-lazyai-cli update --check
+lazyai-cli session end ses_1234567890
 ```
 
 ---
 
-## `doctor`
+## Health Checks
 
-Verify setup health and detect drift.
+### `doctor`
 
-```bash
-lazyai-cli doctor [options]
-```
+Run health checks on the environment.
 
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--migration-check` | boolean | `false` | Compare to a clean LazyAI state |
-| `--verbose` | boolean | `false` | Detailed output |
-| `--json` | boolean | `false` | Emit JSON |
-| `--skills-check` | boolean | `false` | Compare installed skills to library source |
+**Checks:**
+- sqlite3: Database engine
+- git: Version control
+- jq: JSON processor
+- bash: Shell
+- ollama: Local LLM runtime
+- openai: API access
+- disk: Disk usage
+- orchestrator: MCP runtime
 
-**Examples**
-
+**Example:**
 ```bash
 lazyai-cli doctor
-lazyai-cli doctor --verbose
-lazyai-cli doctor --skills-check --json
+```
+
+**Output:**
+```
+LazyAI Health Check
+═══════════════════════════════════════════════════════════════
+✅ sqlite3     | SQLite database engine
+✅ git         | Git version control
+✅ jq          | JSON processor
+✅ bash        | Bash shell
+⚠️  ollama     | Local LLM runtime (not running)
+✅ openai      | API access configured
+✅ disk        | 45% usage
+✅ orchestrator| MCP runtime
 ```
 
 ---
 
-## `status`
+## Audit Trail
 
-Print setup summary: scope, tools, features, git conventions, file health.
+### `ledger init`
 
+Initialize the immutable ledger.
+
+**Example:**
 ```bash
-lazyai-cli status [--json]
+lazyai-cli ledger init
 ```
 
 ---
 
-## `create`
+### `ledger append [event-type] [data]`
 
-Scaffold a new artifact: agent, skill, command, prompt, template, workflow, domain, or mode.
+Append an event to the ledger.
 
+**Arguments:**
+- `event-type` (required): Type of event (e.g., `dispatch`, `session_start`)
+- `data` (required): Event data as key=value pairs
+
+**Example:**
 ```bash
-lazyai-cli create <type> [name] [options]
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--name` | prompt | Artifact name |
-| `--description` | — | Artifact description |
-| `--force` | `false` | Overwrite existing files |
-| `--no-interactive` | `false` | Disable prompts |
-
-**Subcommand flags**
-
-- `create agent`: `--model`, `--mode`, `--tools`
-- `create skill`: `--command`, `--steps`
-- `create command`: `--arguments`, `--flags-description`
-- `create prompt`: `--task-context`, `--output-format`
-- `create template`: `--sections`, `--fields`
-- `create workflow`: `--chain`, `--team`, `--steps`, `--step`
-- `create domain`: no extra flags
-- `create mode`: no extra flags
-
-**Examples**
-
-```bash
-lazyai-cli create agent --name release-manager
-lazyai-cli create skill deploy --command /deploy --steps "validate\nbuild\nship"
-lazyai-cli create workflow release --chain feature --team review-team --no-interactive
+lazyai-cli ledger append dispatch "agent=builder task=auth"
 ```
 
 ---
 
-## `import` / `migrate`
+### `ledger verify`
 
-Detect and import an existing AI setup into LazyAI canonical format.
+Verify ledger integrity.
 
+**Example:**
 ```bash
-lazyai-cli import [path] [options]
-lazyai-cli migrate [path] [options]
+lazyai-cli ledger verify
 ```
 
-| Flag | Default | Description |
-|---|---|---|
-| `--preview`, `-p` | `false` | Show migration plan without applying |
-| `--strategy`, `-s` | `smart` | `smart`, `preserve`, `replace`, `append` |
-| `--verbose`, `-v` | `false` | Detailed output |
-| `--interactive`, `-i` | `false` | Resolve conflicts interactively |
-| `--skip-backup` | `false` | Skip backup creation |
-| `--yes`, `-y` | `false` | Auto-confirm |
-| `--no-canonical` | `false` | Use legacy output (migrate only) |
+**Output:**
+```
+🔍 Verifying ledger integrity...
 
-**Examples**
-
-```bash
-lazyai-cli import --preview
-lazyai-cli import ../legacy-project --strategy preserve --yes
-lazyai-cli migrate ../legacy-project --no-canonical
+  ✅ All 11 entries verified. Chain intact.
 ```
 
 ---
 
-## `eject`
+### `ledger show [count]`
 
-Stop managing the current setup. Removes `.ai-setup.json` while leaving generated files in place.
+Show recent ledger entries.
 
+**Arguments:**
+- `count` (optional): Number of entries to show (default: 10)
+
+**Example:**
 ```bash
-lazyai-cli eject
+lazyai-cli ledger show 5
 ```
 
 ---
 
-## `list`
+## Validation
 
-List bundled library content.
+### `validate agents`
 
+Validate agent file structure.
+
+**Checks:**
+- Dispatch parameters present
+- Tool schemas correct
+- Common mistakes
+
+**Example:**
 ```bash
-lazyai-cli list [category] [--json] [--enabled]
-```
-
-**Categories:** `agents`, `skills`, `templates`, `rules`, `servers`/`mcp`, `tools`/`cli`, `workflows`, `chains`, `teams`, `domains`, `modes`, `orchestration`, `all`
-
-**Examples**
-
-```bash
-lazyai-cli list agents
-lazyai-cli list servers --enabled
-lazyai-cli list orchestration --json
-```
-
----
-
-## `info`
-
-Show detailed information about a library item.
-
-```bash
-lazyai-cli info <item> [--json]
-```
-
-**Examples**
-
-```bash
-lazyai-cli info builder
-lazyai-cli info code-style --json
-lazyai-cli info review-team
+lazyai-cli validate agents
 ```
 
 ---
 
-## `orchestration`
+## Task Queue
 
-Orchestration-focused commands.
+### `task create [description]`
 
+Create a new task.
+
+**Arguments:**
+- `description` (required): Task description
+
+**Example:**
 ```bash
-lazyai-cli orchestration list [kind] [--json]
-lazyai-cli orchestration create <type> <name> [options]
-lazyai-cli orchestration status [--json]
-```
-
-**Kinds:** `workflows`, `chains`, `teams`, `domains`, `modes`
-
-**Examples**
-
-```bash
-lazyai-cli orchestration list workflows --json
-lazyai-cli orchestration create domain payments --description "Payments domain" --no-interactive
-lazyai-cli orchestration status
+lazyai-cli task create "Implement login page"
 ```
 
 ---
 
-## `completions`
+### `task list`
 
-Print a shell completion script.
+List all tasks.
 
+**Example:**
 ```bash
-lazyai-cli completions [bash|zsh|fish]
+lazyai-cli task list
 ```
 
-**Example**
-
-```bash
-lazyai-cli completions bash
-lazyai-cli completions zsh > ~/.config/fish/completions/lazyai-cli.fish
+**Output:**
 ```
-
----
-
-## `extensions` / `ext`
-
-List discovered LazyAI extensions.
-
-```bash
-lazyai-cli extensions [--json]
+Tasks:
+───────────────────────────────────────────────────────────────
+  task_1234567890 [pending] Implement login page
+  task_1234567889 [claimed] Fix navigation bug | Claimed by: builder
 ```
 
 ---
 
-## `update-self`
+### `task claim [task-id]`
 
-Download the latest `lazyai-cli` binary from GitHub Releases and replace the running binary.
+Claim a task for processing.
 
+**Arguments:**
+- `task-id` (required): Task ID to claim
+
+**Example:**
 ```bash
-lazyai-cli update-self [--check] [--dry-run] [--force]
+lazyai-cli task claim task_1234567890
 ```
 
-| Flag | Description |
-|---|---|
-| `--check` | See if a newer release exists |
-| `--dry-run` | Preview without applying |
-| `--force` | Upgrade even if already on latest |
+---
 
-**Example**
+### `task complete [task-id]`
 
+Mark a task as completed.
+
+**Arguments:**
+- `task-id` (required): Task ID to complete
+
+**Example:**
 ```bash
-lazyai-cli update-self --check
-lazyai-cli update-self --dry-run
-lazyai-cli update-self
+lazyai-cli task complete task_1234567890
 ```
+
+---
+
+## Agent Message Bus
+
+### `message send [to-agent] [subject] [body]`
+
+Send a message to an agent.
+
+**Arguments:**
+- `to-agent` (required): Target agent name
+- `subject` (required): Message subject
+- `body` (required): Message body
+
+**Flags:**
+- `--priority, -p`: Message priority (low, normal, high, critical)
+
+**Example:**
+```bash
+lazyai-cli message send builder "Need help" "Can you review the auth code?" --priority high
+```
+
+---
+
+### `message recv [agent]`
+
+Receive messages for an agent.
+
+**Arguments:**
+- `agent` (required): Agent name to receive messages for
+
+**Example:**
+```bash
+lazyai-cli message recv builder
+```
+
+---
+
+### `message broadcast [subject] [body]`
+
+Broadcast a message to all agents.
+
+**Arguments:**
+- `subject` (required): Broadcast subject
+- `body` (required): Broadcast body
+
+**Flags:**
+- `--priority, -p`: Message priority (low, normal, high, critical)
+
+**Example:**
+```bash
+lazyai-cli message broadcast "All hands" "System update at 2pm"
+```
+
+---
+
+## Metrics Dashboard
+
+### `metrics list`
+
+List recent quality metrics.
+
+**Flags:**
+- `--limit, -n`: Number of metrics to show (default: 10)
+
+**Example:**
+```bash
+lazyai-cli metrics list --limit 5
+```
+
+---
+
+### `metrics export`
+
+Export metrics to Prometheus format.
+
+**Flags:**
+- `--output, -o`: Output file path (default: metrics.prom)
+
+**Example:**
+```bash
+lazyai-cli metrics export --output my-metrics.prom
+```
+
+---
+
+### `metrics dashboard`
+
+Generate HTML dashboard.
+
+**Flags:**
+- `--output, -o`: Output file path (default: dashboard.html)
+
+**Example:**
+```bash
+lazyai-cli metrics dashboard --output my-dashboard.html
+```
+
+---
+
+## Memory Vault
+
+### `memory save [content]`
+
+Save a memory.
+
+**Arguments:**
+- `content` (required): Memory content
+
+**Flags:**
+- `--type, -t`: Memory type (lesson, context, decision, idea)
+- `--tags`: Tags for categorization
+
+**Example:**
+```bash
+lazyai-cli memory save "Always test migrations" --type lesson --tags database,migrations
+```
+
+---
+
+### `memory list`
+
+List all memories.
+
+**Example:**
+```bash
+lazyai-cli memory list
+```
+
+---
+
+### `memory search [query]`
+
+Search memories.
+
+**Arguments:**
+- `query` (required): Search query
+
+**Example:**
+```bash
+lazyai-cli memory search database
+```
+
+---
+
+## Evaluation Harness
+
+### `eval list`
+
+List available evaluation suites.
+
+**Example:**
+```bash
+lazyai-cli eval list
+```
+
+---
+
+### `eval run [suite-name]`
+
+Run an evaluation suite.
+
+**Arguments:**
+- `suite-name` (required): Name of the evaluation suite
+
+**Example:**
+```bash
+lazyai-cli eval run agent-quality
+```
+
+---
+
+## Workflow Execution
+
+Workflows are defined in `.opencode/workflows/*.yaml`.
+
+### Workflow Structure
+
+```yaml
+name: rpi
+version: "1.0"
+description: "Research → Plan → Implement"
+
+phases:
+  - name: research
+    agent: scout
+    inputs:
+      - task_description
+    outputs:
+      - findings_document
+
+  - name: plan
+    agent: planner
+    inputs:
+      - findings_document
+    outputs:
+      - spec_document
+
+  - name: implement
+    agent: builder
+    inputs:
+      - spec_document
+    outputs:
+      - implementation
+```
+
+---
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LAZYAI_AGENT` | Current agent name | `orchestrator` |
+| `LAZYAI_DB_PATH` | Database file path | `.specify/lazyai.db` |
+| `LAZYAI_LEDGER_PATH` | Ledger file path | `.specify/ledger.jsonl` |
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Validation error |
+| 3 | Database error |
+| 4 | Ledger error |

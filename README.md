@@ -112,9 +112,88 @@ lazyai-cli validate agents
 # → Checks dispatch parameters, tool schemas, common mistakes
 
 lazyai-cli validate skills
-# → Checks skill structure (coming soon)
+# → Checks skill structure
 ```
 
+### Task Queue
+SQLite-backed task queue with atomic claiming:
+
+```bash
+lazyai-cli task create "Implement login page"
+# → ✅ Task created: task_1234567890
+
+lazyai-cli task list
+# → Shows all tasks with status
+
+lazyai-cli task claim task_1234567890
+# → ✅ Task claimed (atomic, prevents duplicates)
+
+lazyai-cli task complete task_1234567890
+# → ✅ Task completed
+```
+
+### Agent Message Bus
+SQLite-based messaging between agents:
+
+```bash
+lazyai-cli message send builder "Need help" "Can you review the auth code?"
+# → ✅ Message sent: msg_1234567890
+
+lazyai-cli message recv builder
+# → Shows unread messages for builder
+
+lazyai-cli message broadcast "All hands" "System update at 2pm"
+# → ✅ Broadcast sent to 5 agents
+```
+
+### Metrics Dashboard
+Track performance and generate dashboards:
+
+```bash
+lazyai-cli metrics list
+# → Shows recent quality metrics
+
+lazyai-cli metrics export
+# → Exports to Prometheus format (metrics.prom)
+
+lazyai-cli metrics dashboard
+# → Generates HTML dashboard (dashboard.html)
+```
+
+### Memory Vault
+Long-term institutional memory:
+
+```bash
+lazyai-cli memory save "Always test database migrations" --type lesson --tags database
+# → ✅ Memory saved: 20260523_225222_lesson.md
+
+lazyai-cli memory list
+# → Shows all saved memories
+
+lazyai-cli memory search database
+# → Searches memories by content
+```
+
+### Evaluation Harness
+Measure agent quality over time:
+
+```bash
+lazyai-cli eval list
+# → Shows available evaluation suites
+
+lazyai-cli eval run agent-quality
+# → Runs evaluation suite
+```
+
+### Workflow Execution
+Execute structured workflows:
+
+```bash
+# Workflows are defined in .opencode/workflows/*.yaml
+# See .opencode/workflows/rpi.yaml for example
+```
+
+---
 
 ## Supported Tools
 

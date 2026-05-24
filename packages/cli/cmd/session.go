@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/spf13/cobra"
 )
 
 var sessionCmd = &cobra.Command{
@@ -49,6 +49,7 @@ func init() {
 	sessionCmd.AddCommand(sessionEndCmd)
 	sessionCmd.AddCommand(sessionShowCmd)
 	rootCmd.AddCommand(sessionCmd)
+	sessionCmd.GroupID = "runtime"
 }
 
 func getDB() (*db.DB, error) {
@@ -128,7 +129,7 @@ func runSessionStart(cmd *cobra.Command, args []string) error {
 		"goal":       goal,
 		"status":     "active",
 	})
-	
+
 	fmt.Printf("✅ Session started: %s\n", sessionID)
 	fmt.Printf("   Goal: %s\n", goal)
 	fmt.Printf("   Started: %s\n", startedAt)
@@ -163,10 +164,10 @@ func runSessionEnd(cmd *cobra.Command, args []string) error {
 		"session_id": sessionID,
 		"status":     "ended",
 	})
-	
+
 	// Record quality metric
 	_ = recordQualityMetric(sessionID, "session_duration", "session", "")
-	
+
 	fmt.Printf("✅ Session ended: %s\n", sessionID)
 	fmt.Printf("   Ended: %s\n", endedAt)
 	return nil

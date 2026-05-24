@@ -10,10 +10,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// secretsWarningShown tracks whether the security warning has been displayed
+// in the current session to avoid repeating it.
+var secretsWarningShown bool
+
 var secretCmd = &cobra.Command{
 	Use:   "secret",
 	Short: "Secret management",
 	Long:  `Securely store and retrieve secrets using OS keychain.`,
+	GroupID: "safety",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if !secretsWarningShown {
+			fmt.Fprintln(os.Stderr, "⚠️  Secrets are stored locally. They are not encrypted at rest. Do not use for production credentials.")
+			secretsWarningShown = true
+		}
+		return nil
+	},
 }
 
 var secretSetCmd = &cobra.Command{
@@ -24,11 +36,11 @@ var secretSetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		value := args[1]
-		
+
 		if err := storeSecret(name, value); err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("✅ Secret stored: %s\n", name)
 		return nil
 	},
@@ -41,12 +53,12 @@ var secretGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		
+
 		value, err := retrieveSecret(name)
 		if err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("%s: %s\n", name, value)
 		return nil
 	},
@@ -61,19 +73,19 @@ var secretListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		
+
 		fmt.Println("Stored Secrets:")
 		fmt.Println("───────────────────────────────────────────────────────────────")
-		
+
 		if len(secrets) == 0 {
 			fmt.Println("  No secrets found.")
 			return nil
 		}
-		
+
 		for _, secret := range secrets {
 			fmt.Printf("  • %s\n", secret)
 		}
-		
+
 		fmt.Printf("\nTotal: %d secrets\n", len(secrets))
 		return nil
 	},
@@ -82,15 +94,22 @@ var secretListCmd = &cobra.Command{
 var secretRemoveCmd = &cobra.Command{
 	Use:   "remove [name]",
 	Short: "Remove a secret",
-	Long:  `Delete a secret from the OS keychain.`,
+	Long:  `Delete a secret from the OS keychain. This action cannot be undone.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		
+		force, _ := cmd.Flags().GetBool("force")
+
+		// Safety confirmation
+		if !ConfirmAction(fmt.Sprintf("Permanently delete secret '%s'? This cannot be undone.", name), force) {
+			fmt.Println("❌ Removal cancelled.")
+			return nil
+		}
+
 		if err := removeSecret(name); err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("✅ Secret removed: %s\n", name)
 		return nil
 	},
@@ -99,7 +118,7 @@ var secretRemoveCmd = &cobra.Command{
 // storeSecret stores a secret in the OS keychain
 func storeSecret(name, value string) error {
 	service := "lazyai-cli"
-	
+
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS Keychain
@@ -113,7 +132,7 @@ func storeSecret(name, value string) error {
 			return fmt.Errorf("failed to store secret: %w (output: %s)", err, string(output))
 		}
 		return nil
-		
+
 	case "linux":
 		// Linux: Try secret-tool (libsecret)
 		cmd := exec.Command("secret-tool", "store", "--label=lazyai-cli",
@@ -126,7 +145,7 @@ func storeSecret(name, value string) error {
 			return storeSecretFallback(name, value)
 		}
 		return nil
-		
+
 	default:
 		return storeSecretFallback(name, value)
 	}
@@ -135,7 +154,7 @@ func storeSecret(name, value string) error {
 // retrieveSecret retrieves a secret from the OS keychain
 func retrieveSecret(name string) (string, error) {
 	service := "lazyai-cli"
-	
+
 	switch runtime.GOOS {
 	case "darwin":
 		cmd := exec.Command("security", "find-generic-password",
@@ -147,7 +166,7 @@ func retrieveSecret(name string) (string, error) {
 			return "", fmt.Errorf("secret not found: %s", name)
 		}
 		return strings.TrimSpace(string(output)), nil
-		
+
 	case "linux":
 		cmd := exec.Command("secret-tool", "lookup",
 			"service", service,
@@ -157,7 +176,7 @@ func retrieveSecret(name string) (string, error) {
 			return retrieveSecretFallback(name)
 		}
 		return strings.TrimSpace(string(output)), nil
-		
+
 	default:
 		return retrieveSecretFallback(name)
 	}
@@ -166,7 +185,7 @@ func retrieveSecret(name string) (string, error) {
 // listSecrets lists all secrets
 func listSecrets() ([]string, error) {
 	service := "lazyai-cli"
-	
+
 	switch runtime.GOOS {
 	case "darwin":
 		cmd := exec.Command("security", "dump-keychain")
@@ -174,7 +193,7 @@ func listSecrets() ([]string, error) {
 		if err != nil {
 			return listSecretsFallback()
 		}
-		
+
 		var secrets []string
 		lines := strings.Split(string(output), "\n")
 		for _, line := range lines {
@@ -189,7 +208,7 @@ func listSecrets() ([]string, error) {
 			}
 		}
 		return secrets, nil
-		
+
 	default:
 		return listSecretsFallback()
 	}
@@ -198,7 +217,7 @@ func listSecrets() ([]string, error) {
 // removeSecret removes a secret
 func removeSecret(name string) error {
 	service := "lazyai-cli"
-	
+
 	switch runtime.GOOS {
 	case "darwin":
 		cmd := exec.Command("security", "delete-generic-password",
@@ -209,7 +228,7 @@ func removeSecret(name string) error {
 			return fmt.Errorf("failed to remove secret: %w (output: %s)", err, string(output))
 		}
 		return nil
-		
+
 	case "linux":
 		cmd := exec.Command("secret-tool", "clear",
 			"service", service,
@@ -219,7 +238,7 @@ func removeSecret(name string) error {
 			return removeSecretFallback(name)
 		}
 		return nil
-		
+
 	default:
 		return removeSecretFallback(name)
 	}
@@ -228,18 +247,18 @@ func removeSecret(name string) error {
 // Fallback implementations using file-based storage
 func storeSecretFallback(name, value string) error {
 	fmt.Println("⚠️  Using fallback file-based storage (not secure)")
-	
+
 	// Store in ~/.lazyai/secrets/ with base64 encoding
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
-	
+
 	secretsDir := fmt.Sprintf("%s/.lazyai/secrets", homeDir)
 	if err := os.MkdirAll(secretsDir, 0700); err != nil {
 		return err
 	}
-	
+
 	secretPath := fmt.Sprintf("%s/%s", secretsDir, name)
 	return os.WriteFile(secretPath, []byte(value), 0600)
 }
@@ -249,13 +268,13 @@ func retrieveSecretFallback(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	secretPath := fmt.Sprintf("%s/.lazyai/secrets/%s", homeDir, name)
 	data, err := os.ReadFile(secretPath)
 	if err != nil {
 		return "", fmt.Errorf("secret not found: %s", name)
 	}
-	
+
 	return string(data), nil
 }
 
@@ -264,20 +283,20 @@ func listSecretsFallback() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	secretsDir := fmt.Sprintf("%s/.lazyai/secrets", homeDir)
 	entries, err := os.ReadDir(secretsDir)
 	if err != nil {
 		return []string{}, nil
 	}
-	
+
 	var secrets []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			secrets = append(secrets, entry.Name())
 		}
 	}
-	
+
 	return secrets, nil
 }
 
@@ -286,12 +305,14 @@ func removeSecretFallback(name string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	secretPath := fmt.Sprintf("%s/.lazyai/secrets/%s", homeDir, name)
 	return os.Remove(secretPath)
 }
 
 func init() {
+	secretRemoveCmd.Flags().Bool("force", false, "Skip confirmation prompt")
+
 	secretCmd.AddCommand(secretSetCmd)
 	secretCmd.AddCommand(secretGetCmd)
 	secretCmd.AddCommand(secretListCmd)

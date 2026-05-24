@@ -23,7 +23,7 @@ var messageSendCmd = &cobra.Command{
 		toAgent := args[0]
 		subject := args[1]
 		body := args[2]
-		
+
 		if err := ValidateAgentName(toAgent); err != nil {
 			return err
 		}
@@ -212,4 +212,5 @@ func init() {
 	messageCmd.AddCommand(messageRecvCmd)
 	messageCmd.AddCommand(messageBroadcastCmd)
 	rootCmd.AddCommand(messageCmd)
+	messageCmd.GroupID = "runtime"
 }

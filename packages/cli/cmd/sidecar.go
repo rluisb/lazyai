@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	sidecarpkg "github.com/rluisb/lazyai/packages/cli/internal/sidecar"
+	"github.com/spf13/cobra"
 )
 
 // ---------------------------------------------------------------------------
@@ -80,6 +80,7 @@ func init() {
 	sidecarCmd.AddCommand(sidecarDetachCmd)
 	sidecarCmd.AddCommand(sidecarDoctorCmd)
 	rootCmd.AddCommand(sidecarCmd)
+	sidecarCmd.GroupID = "workspace"
 }
 
 // ---------------------------------------------------------------------------

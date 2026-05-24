@@ -25,7 +25,7 @@ func TestRunSessionStart(t *testing.T) {
 	if len(sessionID) < 4 {
 		t.Error("Session ID is too short")
 	}
-	
+
 	if sessionID[:4] != "ses_" {
 		t.Error("Session ID does not start with 'ses_'")
 	}
@@ -35,12 +35,12 @@ func TestSessionIDFormat(t *testing.T) {
 	// Test session ID format
 	now := time.Now().Unix()
 	sessionID := fmt.Sprintf("ses_%d", now)
-	
+
 	expectedPrefix := "ses_"
 	if len(sessionID) <= len(expectedPrefix) {
 		t.Errorf("Session ID '%s' is too short", sessionID)
 	}
-	
+
 	if sessionID[:len(expectedPrefix)] != expectedPrefix {
 		t.Errorf("Session ID '%s' does not start with '%s'", sessionID, expectedPrefix)
 	}
@@ -50,12 +50,12 @@ func TestTimeFormat(t *testing.T) {
 	// Test that time formatting works correctly
 	now := time.Now().UTC()
 	formatted := now.Format(time.RFC3339)
-	
+
 	// Should contain T and Z
 	if !strings.Contains(formatted, "T") {
 		t.Error("Formatted time does not contain 'T'")
 	}
-	
+
 	if !strings.Contains(formatted, "Z") {
 		t.Error("Formatted time does not contain 'Z'")
 	}

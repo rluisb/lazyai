@@ -1,7 +1,7 @@
 package cmd
 
 import (
-			"encoding/json"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +24,7 @@ type LedgerEvent struct {
 // appendToLedger appends an event to the ledger
 func appendToLedger(eventType string, data map[string]string) error {
 	ledgerPath := getLedgerPath()
-	
+
 	// Check if ledger exists
 	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
 		// Initialize ledger if it doesn't exist
@@ -32,25 +32,25 @@ func appendToLedger(eventType string, data map[string]string) error {
 			return fmt.Errorf("failed to initialize ledger: %w", err)
 		}
 	}
-	
+
 	// Read last entry to get prev_hash
 	entries, err := readLedgerEntries(ledgerPath)
 	if err != nil {
 		return err
 	}
-	
+
 	var prevHash string
 	if len(entries) > 0 {
 		prevHash = entries[len(entries)-1].Hash
 	}
-	
+
 	// Build data string from map
 	dataParts := []string{}
 	for k, v := range data {
 		dataParts = append(dataParts, fmt.Sprintf("%s=%s", k, v))
 	}
 	dataStr := strings.Join(dataParts, " ")
-	
+
 	entry := LedgerEvent{
 		ID:        fmt.Sprintf("entry_%d", time.Now().UnixNano()),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -58,30 +58,30 @@ func appendToLedger(eventType string, data map[string]string) error {
 		Data:      dataStr,
 		PrevHash:  prevHash,
 	}
-	
+
 	// Calculate hash
 	entryData, _ := json.Marshal(map[string]string{
-		"id":        entry.ID,
-		"timestamp": entry.Timestamp,
+		"id":         entry.ID,
+		"timestamp":  entry.Timestamp,
 		"event_type": entry.EventType,
-		"data":      entry.Data,
-		"prev_hash": entry.PrevHash,
+		"data":       entry.Data,
+		"prev_hash":  entry.PrevHash,
 	})
 	entry.Hash = sha256Hash(entryData)
-	
+
 	// Append to file
 	file, err := os.OpenFile(ledgerPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open ledger: %w", err)
 	}
 	defer file.Close()
-	
+
 	entryJSON, _ := json.Marshal(entry)
 	_, err = file.WriteString(string(entryJSON) + "\n")
 	if err != nil {
 		return fmt.Errorf("failed to write to ledger: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -91,7 +91,7 @@ func initLedger(ledgerPath string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	genesis := LedgerEvent{
 		ID:        "genesis",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -100,22 +100,22 @@ func initLedger(ledgerPath string) error {
 		Hash:      "",
 		PrevHash:  "",
 	}
-	
+
 	genesisData, _ := json.Marshal(map[string]string{
-		"id":        genesis.ID,
-		"timestamp": genesis.Timestamp,
+		"id":         genesis.ID,
+		"timestamp":  genesis.Timestamp,
 		"event_type": genesis.EventType,
-		"data":      genesis.Data,
-		"prev_hash": genesis.PrevHash,
+		"data":       genesis.Data,
+		"prev_hash":  genesis.PrevHash,
 	})
 	genesis.Hash = sha256Hash(genesisData)
-	
+
 	file, err := os.Create(ledgerPath)
 	if err != nil {
 		return fmt.Errorf("failed to create ledger: %w", err)
 	}
 	defer file.Close()
-	
+
 	entryJSON, _ := json.Marshal(genesis)
 	_, err = file.WriteString(string(entryJSON) + "\n")
 	return err
@@ -127,7 +127,7 @@ func readLedgerEntries(path string) ([]LedgerEvent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ledger: %w", err)
 	}
-	
+
 	var entries []LedgerEvent
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
@@ -135,15 +135,13 @@ func readLedgerEntries(path string) ([]LedgerEvent, error) {
 		if line == "" {
 			continue
 		}
-		
+
 		var entry LedgerEvent
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue
 		}
 		entries = append(entries, entry)
 	}
-	
+
 	return entries, nil
 }
-
-

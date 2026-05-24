@@ -7,7 +7,7 @@ import (
 func TestGetDiskUsage(t *testing.T) {
 	// Test with current directory
 	usage := getDiskUsage(".")
-	
+
 	// Should return a value between 0 and 100, or -1 on error
 	if usage >= 0 {
 		if usage < 0 || usage > 100 {
@@ -21,12 +21,12 @@ func TestGetDiskUsage(t *testing.T) {
 
 func TestRunEnhancedHealthChecks(t *testing.T) {
 	checks := runEnhancedHealthChecks()
-	
+
 	// Should return at least 8 checks
 	if len(checks) < 8 {
 		t.Errorf("Expected at least 8 health checks, got %d", len(checks))
 	}
-	
+
 	// Verify all checks have required fields
 	for i, check := range checks {
 		if check.Name == "" {
@@ -41,13 +41,13 @@ func TestRunEnhancedHealthChecks(t *testing.T) {
 		if check.Checked == "" {
 			t.Errorf("Check %d has no checked timestamp", i)
 		}
-		
+
 		// Status should be one of: pass, warn, fail
 		if check.Status != "pass" && check.Status != "warn" && check.Status != "fail" {
 			t.Errorf("Check %d has invalid status: %s", i, check.Status)
 		}
 	}
-	
+
 	// Count results
 	pass, warn, fail := 0, 0, 0
 	for _, check := range checks {
@@ -60,9 +60,9 @@ func TestRunEnhancedHealthChecks(t *testing.T) {
 			fail++
 		}
 	}
-	
+
 	t.Logf("Health checks: %d pass, %d warn, %d fail (of %d total)", pass, warn, fail, len(checks))
-	
+
 	// At least some checks should pass (sqlite3 and git should be available)
 	if pass == 0 {
 		t.Error("No health checks passed")
@@ -76,15 +76,15 @@ func TestHealthCheckStruct(t *testing.T) {
 		Detail:  "Test detail",
 		Checked: "2026-05-24T00:00:00Z",
 	}
-	
+
 	if check.Name != "Test Check" {
 		t.Errorf("Expected name 'Test Check', got '%s'", check.Name)
 	}
-	
+
 	if check.Status != "pass" {
 		t.Errorf("Expected status 'pass', got '%s'", check.Status)
 	}
-	
+
 	if check.Detail != "Test detail" {
 		t.Errorf("Expected detail 'Test detail', got '%s'", check.Detail)
 	}

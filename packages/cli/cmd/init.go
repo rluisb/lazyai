@@ -48,6 +48,7 @@ func init() {
 	initCmd.Flags().Bool("reversa", false, "Analyze existing code with Scout/Reversa to auto-populate project details")
 	initCmd.Flags().Bool("no-reversa", false, "Skip Scout/Reversa analysis and leave project details explicit/manual")
 	rootCmd.AddCommand(initCmd)
+	initCmd.GroupID = "lifecycle"
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
@@ -529,4 +530,12 @@ func printInitNextSteps(ctx *scaffold.ScaffoldContext) {
 	} else {
 		theme.Successf(os.Stdout, "All placeholders filled! Your AGENTS.md is ready.")
 	}
+
+	// Hint for workspace + sidecar flow
+	fmt.Println()
+	fmt.Println("Workspace & Sidecar:")
+	fmt.Println("  lazyai-cli workspace add <path> --name <name>  # Register a project")
+	fmt.Println("  lazyai-cli workspace switch <name>               # Set active workspace")
+	fmt.Println("  lazyai-cli sidecar init --path <kb-path>         # Attach a sidecar for docs/specs/plans")
+	fmt.Println("  lazyai-cli sidecar status                          # Verify resolved paths")
 }

@@ -179,4 +179,5 @@ func init() {
 	memoryCmd.AddCommand(memoryListCmd)
 	memoryCmd.AddCommand(memorySearchCmd)
 	rootCmd.AddCommand(memoryCmd)
+	memoryCmd.GroupID = "workspace"
 }

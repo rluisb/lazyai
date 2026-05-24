@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	sidecarpkg "github.com/rluisb/lazyai/packages/cli/internal/sidecar"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	sidecarpkg "github.com/rluisb/lazyai/packages/cli/internal/sidecar"
 )
 
 // WorkspaceConfig holds the global workspace registry.
@@ -63,6 +63,7 @@ func init() {
 	workspaceCmd.AddCommand(workspaceSwitchCmd)
 	workspaceCmd.AddCommand(workspaceStatusCmd)
 	rootCmd.AddCommand(workspaceCmd)
+	workspaceCmd.GroupID = "workspace"
 }
 
 // ---------------------------------------------------------------------------

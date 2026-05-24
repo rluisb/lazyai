@@ -81,6 +81,7 @@ func init() {
 	orchestrationCmd.AddCommand(orchestrationStatusCmd)
 	orchestrationCmd.AddCommand(catalogCmd)
 	rootCmd.AddCommand(orchestrationCmd)
+	orchestrationCmd.GroupID = "runtime"
 }
 
 // ---------------------------------------------------------------------------

@@ -38,7 +38,8 @@ Validate environment before work:
 
 ```bash
 lazyai-cli doctor
-# → Checks: sqlite3, git, jq, bash, ollama, openai, disk space
+# → Checks: file integrity, stray files, metadata gaps, stale MCP entries,
+# →        sqlite3, git, jq, bash, ollama, openai, disk space, orchestrator binary
 
 lazyai-cli doctor --json
 # → Machine-readable output for CI integration
@@ -72,6 +73,16 @@ lazyai-cli validate skills
 # → Checks skill structure
 ```
 
+### Workspace
+Manage multi-project workspaces:
+
+```bash
+lazyai-cli workspace add /path/to/project --name my-project
+lazyai-cli workspace switch my-project
+lazyai-cli workspace list
+lazyai-cli workspace status
+```
+
 ### Task Queue
 SQLite-backed task queue with atomic claiming:
 
@@ -97,10 +108,51 @@ lazyai-cli message send builder "Need help" "Can you review the auth code?"
 # → ✅ Message sent: msg_1234567890
 
 lazyai-cli message recv builder
-# → Shows unread messages for builder
+# → Marks unread messages as read and shows recent messages
 
 lazyai-cli message broadcast "All hands" "System update at 2pm"
 # → ✅ Broadcast sent to 5 agents
+```
+
+### Git Integration
+Auto-commit with safety confirmation:
+
+```bash
+lazyai-cli git sync
+# → Shows files to be committed, asks for confirmation
+# → Use --force to skip confirmation
+```
+
+### Backup
+Create and restore backups:
+
+```bash
+lazyai-cli backup create
+# → Creates lazyai-backup-YYYYMMDD_HHMMSS.tar.gz
+
+lazyai-cli backup restore <backup-file>
+# → Restores from backup (asks for confirmation; use --force to skip)
+```
+
+### Secrets
+Store and retrieve secrets:
+
+```bash
+lazyai-cli secret set api-key "sk-..."
+lazyai-cli secret get api-key
+# → Secrets use OS keychain when available; fallback to ~/.lazyai/secrets/
+# → Not encrypted at rest — do not use for production credentials
+```
+
+### Notifications
+Configure and send notifications:
+
+```bash
+lazyai-cli notify config --webhook https://hooks.example.com/notify
+# → Webhook URL stored in local config
+
+lazyai-cli notify send "Build complete"
+lazyai-cli notify test
 ```
 
 ### Metrics Dashboard
@@ -112,9 +164,20 @@ lazyai-cli metrics list
 
 lazyai-cli metrics export
 # → Exports to Prometheus format (metrics.prom)
+# → Writes file to current directory
 
 lazyai-cli metrics dashboard
 # → Generates HTML dashboard (dashboard.html)
+# → Writes file to current directory
+```
+
+### Completion
+Generate shell completion scripts:
+
+```bash
+source <(lazyai-cli completion bash)
+source <(lazyai-cli completion zsh)
+lazyai-cli completion fish | source
 ```
 
 ### Memory Vault
@@ -139,7 +202,7 @@ lazyai-cli eval list
 # → Shows available evaluation suites
 
 lazyai-cli eval run agent-quality
-# → Runs evaluation suite
+# → Runs evaluation suite (currently a stub; records attempt to ledger)
 ```
 
 ### Workflow Execution
@@ -148,6 +211,12 @@ Execute structured workflows:
 ```bash
 # Workflows are defined in .opencode/workflows/*.yaml
 # See .opencode/workflows/rpi.yaml for example
+
+# Dry run by default (shows what would execute)
+lazyai-cli workflow run rpi
+
+# Actual execution
+lazyai-cli workflow run rpi --dry-run=false
 ```
 
 ---

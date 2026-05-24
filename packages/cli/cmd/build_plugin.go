@@ -26,6 +26,7 @@ func init() {
 	buildPluginCmd.Flags().String("out", "./dist/plugin", "Output directory for the generated plugin")
 	buildPluginCmd.Flags().Bool("force", false, "Overwrite the output directory if it exists and is non-empty")
 	rootCmd.AddCommand(buildPluginCmd)
+	buildPluginCmd.GroupID = "auth"
 }
 
 func runBuildPlugin(cmd *cobra.Command, _ []string) error {

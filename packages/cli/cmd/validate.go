@@ -31,6 +31,7 @@ func init() {
 	validateCmd.AddCommand(validateAgentsCmd)
 	validateCmd.AddCommand(validateSkillsCmd)
 	rootCmd.AddCommand(validateCmd)
+	validateCmd.GroupID = "audit"
 }
 
 // ValidationResult represents a single validation issue
@@ -43,33 +44,33 @@ type ValidationResult struct {
 func runValidateAgents(cmd *cobra.Command, args []string) error {
 	dir, _ := os.Getwd()
 	agentsDir := filepath.Join(dir, ".opencode", "agents")
-	
+
 	if _, err := os.Stat(agentsDir); os.IsNotExist(err) {
 		return fmt.Errorf("agents directory not found: %s", agentsDir)
 	}
-	
+
 	var results []ValidationResult
 	var passCount, failCount int
-	
+
 	entries, err := os.ReadDir(agentsDir)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		
+
 		path := filepath.Join(agentsDir, entry.Name())
 		content, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
-		
+
 		contentStr := string(content)
 		fileName := entry.Name()
-		
+
 		// Check for Dispatch Parameters section
 		if !strings.Contains(contentStr, "## Dispatch Parameters") {
 			results = append(results, ValidationResult{
@@ -81,7 +82,7 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 		} else {
 			passCount++
 		}
-		
+
 		// Check for Tool Schema Quick Reference
 		if !strings.Contains(contentStr, "## Tool Schema Quick Reference") {
 			results = append(results, ValidationResult{
@@ -90,7 +91,7 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 				Message:  "Missing '## Tool Schema Quick Reference' section",
 			})
 		}
-		
+
 		// Check for common mistakes
 		if strings.Contains(contentStr, "`text`") && strings.Contains(contentStr, "todowrite") {
 			results = append(results, ValidationResult{
@@ -99,7 +100,7 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 				Message:  "May use 'text' instead of 'content' for todowrite",
 			})
 		}
-		
+
 		if strings.Contains(contentStr, "mode:") && strings.Contains(contentStr, "task(") {
 			results = append(results, ValidationResult{
 				File:     fileName,
@@ -108,17 +109,17 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 			})
 		}
 	}
-	
+
 	// Output results
 	fmt.Println("🔍 Agent Validation Results")
 	fmt.Println()
-	
+
 	if len(results) == 0 {
 		fmt.Println("✅ All agents pass validation")
 		fmt.Printf("   Checked: %d files\n", passCount)
 		return nil
 	}
-	
+
 	for _, result := range results {
 		var emoji string
 		if result.Severity == "error" {
@@ -128,36 +129,36 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("  %s %s: %s\n", emoji, result.File, result.Message)
 	}
-	
+
 	fmt.Println()
 	fmt.Printf("  Summary: %d passed, %d issues found\n", passCount, len(results))
-	
+
 	// Append to ledger
 	status := "pass"
 	if failCount > 0 {
 		status = "fail"
 	}
 	_ = appendToLedger("validate_agents", map[string]string{
-		"status":      status,
+		"status":         status,
 		"agents_checked": fmt.Sprintf("%d", passCount+failCount),
-		"issues_found":  fmt.Sprintf("%d", len(results)),
+		"issues_found":   fmt.Sprintf("%d", len(results)),
 	})
-	
+
 	if failCount > 0 {
 		return fmt.Errorf("validation failed: %d errors", failCount)
 	}
-	
+
 	return nil
 }
 
 func runValidateSkills(cmd *cobra.Command, args []string) error {
 	dir, _ := os.Getwd()
 	skillsDir := filepath.Join(dir, ".opencode", "skills")
-	
+
 	if _, err := os.Stat(skillsDir); os.IsNotExist(err) {
 		return fmt.Errorf("skills directory not found: %s", skillsDir)
 	}
-	
+
 	fmt.Println("🔍 Skill Validation Results")
 	fmt.Println()
 	fmt.Println("  ℹ️  Skill validation not yet implemented")
@@ -165,6 +166,6 @@ func runValidateSkills(cmd *cobra.Command, args []string) error {
 	fmt.Println("    - Quick Reference section presence")
 	fmt.Println("    - Proper frontmatter format")
 	fmt.Println("    - Script references validity")
-	
+
 	return nil
 }

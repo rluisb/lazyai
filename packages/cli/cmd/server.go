@@ -77,6 +77,7 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Manage MCP server configurations",
 	Long:  "Add, remove, list, and validate MCP server configurations.",
+	GroupID: "runtime",
 }
 
 var serverListCmd = &cobra.Command{

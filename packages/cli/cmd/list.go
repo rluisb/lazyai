@@ -28,6 +28,7 @@ func init() {
 	listCmd.Flags().Bool("verbose", false, "Show detailed artifact information including file paths")
 	listCmd.Flags().Bool("json", false, "Output as JSON")
 	rootCmd.AddCommand(listCmd)
+	listCmd.GroupID = "scaffold"
 }
 
 // artifactGroup groups artifacts by their type.

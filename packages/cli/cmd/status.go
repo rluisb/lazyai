@@ -30,6 +30,7 @@ func init() {
 	statusCmd.Flags().String("dir", "", "Target directory (default: current directory)")
 	statusCmd.Flags().Bool("json", false, "Output as JSON")
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.GroupID = "lifecycle"
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {

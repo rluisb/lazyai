@@ -102,13 +102,13 @@ func EnsureDB() (*db.DB, error) {
 		}
 		return nil, err
 	}
-	
+
 	// Run migrations to ensure schema is up to date
 	if err := db.RunMigrations(database); err != nil {
 		database.Close()
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
-	
+
 	return database, nil
 }
 

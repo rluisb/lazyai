@@ -72,14 +72,14 @@ lazyai-cli doctor
 ```
 
 Checks:
-- sqlite3 version
-- git version
-- jq availability
-- bash version
-- ollama responding (localhost:11434)
-- openai API key configured
-- disk space usage
-- orchestrator binary on PATH
+- File integrity (managed files present and unmodified)
+- Stray AGENTS.md files
+- Metadata gaps in specs
+- Stale Claude MCP entries
+- Dependency health (sqlite3, git, jq, bash)
+- Provider status (ollama, openai)
+- Disk space
+- Orchestrator binary on PATH
 
 ### JSON Output
 
@@ -149,11 +149,180 @@ Checks:
 lazyai-cli validate skills
 ```
 
-Coming soon: Skill structure validation.
+Checks:
+- Skills directory exists
+- Skill structure validation (basic checks; expanding)
+
+## Workspace
+
+Manage multi-project workspaces.
+
+### List Workspaces
+
+```bash
+lazyai-cli workspace list
+```
+
+### Add a Workspace
+
+```bash
+lazyai-cli workspace add /path/to/project --name my-project
+```
+
+### Switch Active Workspace
+
+```bash
+lazyai-cli workspace switch my-project
+```
+
+### Show Workspace Status
+
+```bash
+lazyai-cli workspace status
+```
 
 ## Workflow
 
-Typical workflow using all commands:
+Execute structured workflows defined in `.opencode/workflows/*.yaml`.
+
+### List Workflows
+
+```bash
+lazyai-cli workflow list
+```
+
+### Show Workflow Details
+
+```bash
+lazyai-cli workflow show <workflow-name>
+```
+
+### Run a Workflow
+
+```bash
+# Dry run by default — shows what would execute
+lazyai-cli workflow run <workflow-name>
+
+# Actually execute
+lazyai-cli workflow run <workflow-name> --dry-run=false
+```
+
+## Agent Message Bus
+
+SQLite-based messaging between agents.
+
+### Send a Message
+
+```bash
+lazyai-cli message send builder "Need help" "Can you review the auth code?" --priority high
+```
+
+### Receive Messages
+
+```bash
+lazyai-cli message recv builder
+```
+
+**Note:** This marks all unread messages for the agent as read and shows the 10 most recent messages.
+
+### Broadcast
+
+```bash
+lazyai-cli message broadcast "All hands" "System update at 2pm"
+```
+
+## Git Integration
+
+### Sync Changes
+
+```bash
+lazyai-cli git sync
+```
+
+**Safety note:** This command stages and commits ALL changes in the current repository after showing the file list and asking for confirmation. Use `--force` to skip the confirmation prompt.
+
+## Backup
+
+### Create Backup
+
+```bash
+lazyai-cli backup create
+```
+
+### Restore from Backup
+
+```bash
+lazyai-cli backup restore <backup-file>
+```
+
+**Safety note:** This overwrites current LazyAI data with the backup contents. Use `--force` to skip the confirmation prompt.
+
+## Secrets
+
+### Store a Secret
+
+```bash
+lazyai-cli secret set <name> <value>
+```
+
+### Retrieve a Secret
+
+```bash
+lazyai-cli secret get <name>
+```
+
+**Safety note:** Secrets are stored locally using the OS keychain when available, or a fallback file in `~/.lazyai/secrets/` (not encrypted at rest). Do not use for production credentials.
+
+## Notifications
+
+### Configure Webhook
+
+```bash
+lazyai-cli notify config --webhook https://hooks.example.com/notify
+```
+
+**Safety note:** The webhook URL is stored in the local config file. Ensure the URL is trusted and uses HTTPS.
+
+### Send a Test Notification
+
+```bash
+lazyai-cli notify test
+```
+
+## Metrics
+
+### Export Metrics
+
+```bash
+lazyai-cli metrics export
+```
+
+Writes `metrics.prom` (Prometheus format) in the current directory. Use `-o` to specify a different path.
+
+### Generate Dashboard
+
+```bash
+lazyai-cli metrics dashboard
+```
+
+Writes `dashboard.html` in the current directory. Use `-o` to specify a different path.
+
+## Completion
+
+Generate shell completion scripts.
+
+```bash
+# Bash
+source <(lazyai-cli completion bash)
+
+# Zsh
+source <(lazyai-cli completion zsh)
+
+# Fish
+lazyai-cli completion fish | source
+```
+
+## Typical Workflow
 
 ```bash
 # 1. Check environment

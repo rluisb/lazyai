@@ -40,6 +40,7 @@ func init() {
 	doctorCmd.Flags().Bool("verbose", false, "Show detailed output for all files")
 	doctorCmd.Flags().Bool("json", false, "Output as JSON")
 	rootCmd.AddCommand(doctorCmd)
+	doctorCmd.GroupID = "lifecycle"
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {

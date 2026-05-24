@@ -16,6 +16,8 @@ Complete reference for all `lazyai-cli` commands.
 - [Memory Vault](#memory-vault)
 - [Evaluation Harness](#evaluation-harness)
 - [Workflow Execution](#workflow-execution)
+- [Workspace](#workspace)
+- [Completion](#completion)
 
 ---
 
@@ -96,14 +98,14 @@ lazyai-cli session end ses_1234567890
 Run health checks on the environment.
 
 **Checks:**
-- sqlite3: Database engine
-- git: Version control
-- jq: JSON processor
-- bash: Shell
-- ollama: Local LLM runtime
-- openai: API access
-- disk: Disk usage
-- orchestrator: MCP runtime
+- File integrity (managed files present and unmodified)
+- Stray AGENTS.md files in specs/
+- Metadata gaps in spec frontmatter
+- Stale Claude MCP entries referencing legacy orchestrator
+- Dependencies: sqlite3, git, jq, bash
+- Providers: ollama (localhost:11434), openai (API key)
+- Disk space usage
+- Orchestrator binary on PATH
 
 **Example:**
 ```bash
@@ -112,16 +114,28 @@ lazyai-cli doctor
 
 **Output:**
 ```
-LazyAI Health Check
-═══════════════════════════════════════════════════════════════
-✅ sqlite3     | SQLite database engine
-✅ git         | Git version control
-✅ jq          | JSON processor
-✅ bash        | Bash shell
-⚠️  ollama     | Local LLM runtime (not running)
-✅ openai      | API access configured
-✅ disk        | 45% usage
-✅ orchestrator| MCP runtime
+🩺 Integrity Check
+
+  Status ✅ All files healthy
+  Health ████████████████████ 100%
+  Total files 42
+  Healthy 42
+  Missing 0
+  Modified 0
+  Stray AGENTS.md 0
+  Metadata gaps 0
+  Stale MCP entries 0
+
+🩺 Environment Health Checks
+
+  ✅ Dependency: sqlite3     | 3.39.5
+  ✅ Dependency: git         | git version 2.39.0
+  ⚠️  Dependency: jq          | jq not found (optional but recommended)
+  ✅ Dependency: bash         | GNU bash, version 5.2.0
+  ⚠️  Provider: ollama       | Ollama not running on localhost:11434
+  ✅ Provider: openai        | API key configured
+  ✅ Disk space              | 45% used
+  ⚠️  Orchestrator binary     | lazyai-orchestrator not on PATH
 ```
 
 ---
@@ -195,11 +209,26 @@ Validate agent file structure.
 **Checks:**
 - Dispatch parameters present
 - Tool schemas correct
-- Common mistakes
+- Common mistakes (text vs content, mode misuse)
 
 **Example:**
 ```bash
 lazyai-cli validate agents
+```
+
+---
+
+### `validate skills`
+
+Validate skill file structure.
+
+**Checks:**
+- Skills directory exists under `.opencode/skills/`
+- Basic structure validation (expanding)
+
+**Example:**
+```bash
+lazyai-cli validate skills
 ```
 
 ---
@@ -295,6 +324,10 @@ Receive messages for an agent.
 **Arguments:**
 - `agent` (required): Agent name to receive messages for
 
+**Behavior:**
+- Marks all unread messages for the agent as read
+- Shows the 10 most recent messages
+
 **Example:**
 ```bash
 lazyai-cli message recv builder
@@ -341,7 +374,9 @@ lazyai-cli metrics list --limit 5
 Export metrics to Prometheus format.
 
 **Flags:**
-- `--output, -o`: Output file path (default: metrics.prom)
+- `--output, -o`: Output file path (default: `metrics.prom`)
+
+**Safety note:** Writes a file to the current directory. Existing files are overwritten.
 
 **Example:**
 ```bash
@@ -355,7 +390,9 @@ lazyai-cli metrics export --output my-metrics.prom
 Generate HTML dashboard.
 
 **Flags:**
-- `--output, -o`: Output file path (default: dashboard.html)
+- `--output, -o`: Output file path (default: `dashboard.html`)
+
+**Safety note:** Writes a file to the current directory. Existing files are overwritten.
 
 **Example:**
 ```bash
@@ -429,6 +466,8 @@ Run an evaluation suite.
 **Arguments:**
 - `suite-name` (required): Name of the evaluation suite
 
+**Note:** Evaluation logic is currently a stub. The command validates the suite exists and records the attempt to the ledger, but does not yet execute the suite.
+
 **Example:**
 ```bash
 lazyai-cli eval run agent-quality
@@ -440,38 +479,295 @@ lazyai-cli eval run agent-quality
 
 Workflows are defined in `.opencode/workflows/*.yaml`.
 
-### Workflow Structure
+### `workflow list`
 
-```yaml
-name: rpi
-version: "1.0"
-description: "Research → Plan → Implement"
+List available workflows.
 
-phases:
-  - name: research
-    agent: scout
-    inputs:
-      - task_description
-    outputs:
-      - findings_document
-
-  - name: plan
-    agent: planner
-    inputs:
-      - findings_document
-    outputs:
-      - spec_document
-
-  - name: implement
-    agent: builder
-    inputs:
-      - spec_document
-    outputs:
-      - implementation
+**Example:**
+```bash
+lazyai-cli workflow list
 ```
 
 ---
 
+### `workflow show [workflow-name]`
+
+Show workflow details.
+
+**Arguments:**
+- `workflow-name` (required): Name of the workflow
+
+**Example:**
+```bash
+lazyai-cli workflow show rpi
+```
+
+---
+
+### `workflow run [workflow-name]`
+
+Execute a workflow.
+
+**Arguments:**
+- `workflow-name` (required): Name of the workflow
+
+**Flags:**
+- `--dry-run`: Show what would be executed without running (default: `true`)
+
+**Note:** By default, `workflow run` operates in dry-run mode. Use `--dry-run=false` to actually execute phases.
+
+**Example:**
+```bash
+# Dry run (default)
+lazyai-cli workflow run rpi
+
+# Actual execution
+lazyai-cli workflow run rpi --dry-run=false
+```
+
+---
+
+## Workspace
+
+Manage multi-project workspaces.
+
+### `workspace list`
+
+List registered workspaces.
+
+**Example:**
+```bash
+lazyai-cli workspace list
+```
+
+---
+
+### `workspace add [path]`
+
+Register a project path as a workspace.
+
+**Arguments:**
+- `path` (required): Path to the project directory
+
+**Flags:**
+- `--name`: Override workspace name (default: directory basename)
+
+**Example:**
+```bash
+lazyai-cli workspace add /path/to/project --name my-project
+```
+
+---
+
+### `workspace switch [name]`
+
+Set the active workspace by name.
+
+**Arguments:**
+- `name` (required): Workspace name
+
+**Example:**
+```bash
+lazyai-cli workspace switch my-project
+```
+
+---
+
+### `workspace status`
+
+Show active workspace details.
+
+**Example:**
+```bash
+lazyai-cli workspace status
+```
+
+---
+
+## Completion
+
+### `completion [shell]`
+
+Generate shell completion scripts.
+
+**Arguments:**
+- `shell` (required): One of `bash`, `zsh`, `fish`, `powershell`
+
+**Example:**
+```bash
+# Bash
+source <(lazyai-cli completion bash)
+
+# Zsh
+source <(lazyai-cli completion zsh)
+
+# Fish
+lazyai-cli completion fish | source
+```
+
+---
+
+## Git Integration
+
+### `git sync`
+
+Auto-commit all changes with descriptive messages.
+
+**Safety note:** This command automatically stages (`git add -A`) and commits ALL changes in the current repository. It shows the list of files and asks for confirmation before proceeding. Use `--force` to skip the confirmation prompt.
+
+**Flags:**
+- `--message, -m`: Custom commit message
+- `--force`: Skip confirmation prompt
+
+**Example:**
+```bash
+lazyai-cli git sync --message "Fix auth bug" --force
+```
+
+---
+
+## Backup
+
+### `backup create`
+
+Create a backup of LazyAI data.
+
+**Flags:**
+- `--output, -o`: Output file path (default: `lazyai-backup-YYYYMMDD_HHMMSS.tar.gz`)
+
+**Example:**
+```bash
+lazyai-cli backup create --output my-backup.tar.gz
+```
+
+---
+
+### `backup restore [backup-file]`
+
+Restore LazyAI data from a backup tarball.
+
+**Arguments:**
+- `backup-file` (required): Path to the backup file
+
+**Safety note:** This overwrites current LazyAI data with the backup contents. It asks for confirmation before proceeding. Use `--force` to skip the confirmation prompt.
+
+**Flags:**
+- `--force`: Skip confirmation prompt
+
+**Example:**
+```bash
+lazyai-cli backup restore my-backup.tar.gz
+```
+
+---
+
+## Secrets
+
+### `secret set [name] [value]`
+
+Store a secret.
+
+**Arguments:**
+- `name` (required): Secret name
+- `value` (required): Secret value
+
+**Safety note:** Secrets are stored using the OS keychain when available, or a fallback file in `~/.lazyai/secrets/` (not encrypted at rest). Do not use for production credentials.
+
+**Example:**
+```bash
+lazyai-cli secret set api-key "sk-..."
+```
+
+---
+
+### `secret get [name]`
+
+Retrieve a secret.
+
+**Arguments:**
+- `name` (required): Secret name
+
+**Safety note:** The secret value is printed to stdout. Be careful when running this in shared environments or logging output.
+
+**Example:**
+```bash
+lazyai-cli secret get api-key
+```
+
+---
+
+### `secret list`
+
+List stored secrets.
+
+**Example:**
+```bash
+lazyai-cli secret list
+```
+
+---
+
+### `secret remove [name]`
+
+Remove a secret.
+
+**Arguments:**
+- `name` (required): Secret name
+
+**Flags:**
+- `--force`: Skip confirmation prompt
+
+**Example:**
+```bash
+lazyai-cli secret remove api-key
+```
+
+---
+
+## Notifications
+
+### `notify config`
+
+Configure notification settings.
+
+**Flags:**
+- `--webhook`: Webhook URL for notifications
+- `--enabled`: Enable or disable notifications
+
+**Safety note:** The webhook URL is stored in the local config file. Ensure the URL is trusted and uses HTTPS.
+
+**Example:**
+```bash
+lazyai-cli notify config --webhook https://hooks.example.com/notify --enabled
+```
+
+---
+
+### `notify send [message]`
+
+Send a desktop notification.
+
+**Arguments:**
+- `message` (required): Notification message
+
+**Flags:**
+- `--title, -t`: Notification title (default: "LazyAI")
+
+**Example:**
+```bash
+lazyai-cli notify send "Build complete" --title "CI"
+```
+
+---
+
+### `notify test`
+
+Send a test notification to verify configuration.
+
+**Example:**
+```bash
+lazyai-cli notify test
+```
 
 ---
 

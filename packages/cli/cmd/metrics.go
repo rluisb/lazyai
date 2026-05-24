@@ -240,4 +240,5 @@ func init() {
 	metricsCmd.AddCommand(metricsDashboardCmd)
 	metricsCmd.AddCommand(metricsListCmd)
 	rootCmd.AddCommand(metricsCmd)
+	metricsCmd.GroupID = "audit"
 }

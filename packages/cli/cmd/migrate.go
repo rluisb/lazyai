@@ -24,6 +24,7 @@ func init() {
 	migrateCmd.Flags().Bool("verbose", false, "Show detailed output")
 	migrateCmd.Flags().Bool("skip-backup", false, "Skip creating backup")
 	rootCmd.AddCommand(migrateCmd)
+	migrateCmd.GroupID = "lifecycle"
 }
 
 func runMigrate(cmd *cobra.Command, args []string) error {

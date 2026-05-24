@@ -52,6 +52,7 @@ func init() {
 	mcpSetupCmd.Flags().StringVar(&mcpSetupProjectFlag, "project", "",
 		"Target project directory (defaults to current working directory)")
 	rootCmd.AddCommand(mcpSetupCmd)
+	mcpSetupCmd.GroupID = "auth"
 }
 
 // ---------------------------------------------------------------------------
@@ -152,24 +153,24 @@ func runMcpSetup(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-if !orchestratorEnabled {
-			// Scaffold orchestrator into .ai/mcp.json via library catalog.
-			// libraryDir is the repo root so ScaffoldMcp can build the orchestrator
-			// binary from packages/orchestrator if needed. If not available,
-			// ScaffoldMcp will skip orchestrator binary preparation.
-			libraryDir, _ := library.FindLibraryDir()
-			libFS := library.GetLibraryFS()
-			cliTools := []string{}
-			enableServers := []string{"orchestrator"}
-			var fileRecords []types.TrackedFile
-			err := scaffold.ScaffoldMcp(targetDir, libraryDir, libFS, cliTools, enableServers, &fileRecords, types.ConflictStrategySkip, nil)
-			if err != nil {
-				cmdLog.Warn("scaffold MCP failed", "error", err)
-			} else {
-				fmt.Printf("    %s Scaffolded .ai/mcp.json with orchestrator\n",
-					greenStyle.Render("✓"))
-			}
+	if !orchestratorEnabled {
+		// Scaffold orchestrator into .ai/mcp.json via library catalog.
+		// libraryDir is the repo root so ScaffoldMcp can build the orchestrator
+		// binary from packages/orchestrator if needed. If not available,
+		// ScaffoldMcp will skip orchestrator binary preparation.
+		libraryDir, _ := library.FindLibraryDir()
+		libFS := library.GetLibraryFS()
+		cliTools := []string{}
+		enableServers := []string{"orchestrator"}
+		var fileRecords []types.TrackedFile
+		err := scaffold.ScaffoldMcp(targetDir, libraryDir, libFS, cliTools, enableServers, &fileRecords, types.ConflictStrategySkip, nil)
+		if err != nil {
+			cmdLog.Warn("scaffold MCP failed", "error", err)
 		} else {
+			fmt.Printf("    %s Scaffolded .ai/mcp.json with orchestrator\n",
+				greenStyle.Render("✓"))
+		}
+	} else {
 		fmt.Printf("    %s orchestrator already registered in .ai/mcp.json\n",
 			greenStyle.Render("✓"))
 	}

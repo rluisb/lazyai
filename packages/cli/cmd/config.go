@@ -11,10 +11,10 @@ import (
 
 // LazyAIConfig represents the configuration structure
 type LazyAIConfig struct {
-	Agent      AgentConfig      `yaml:"agent"`
-	Database   DatabaseConfig   `yaml:"database"`
-	Ledger     LedgerConfig     `yaml:"ledger"`
-	Workflows  WorkflowsConfig  `yaml:"workflows"`
+	Agent         AgentConfig        `yaml:"agent"`
+	Database      DatabaseConfig     `yaml:"database"`
+	Ledger        LedgerConfig       `yaml:"ledger"`
+	Workflows     WorkflowsConfig    `yaml:"workflows"`
 	Notifications NotificationConfig `yaml:"notifications"`
 }
 
@@ -46,9 +46,10 @@ type NotificationConfig struct {
 }
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Configuration management",
-	Long:  `Get and set LazyAI configuration values.`,
+	Use:     "config",
+	Short:   "Configuration management",
+	Long:    `Get and set LazyAI configuration values.`,
+	GroupID: "workspace",
 }
 
 var configGetCmd = &cobra.Command{
@@ -58,17 +59,17 @@ var configGetCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key := args[0]
-		
+
 		config, err := loadConfig()
 		if err != nil {
 			return err
 		}
-		
+
 		value, err := getConfigValue(config, key)
 		if err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("%s: %v\n", key, value)
 		return nil
 	},
@@ -82,7 +83,7 @@ var configSetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key := args[0]
 		value := args[1]
-		
+
 		config, err := loadConfig()
 		if err != nil {
 			// If config doesn't exist, create a new one
@@ -105,15 +106,24 @@ var configSetCmd = &cobra.Command{
 				},
 			}
 		}
-		
+
+		// Warn for critical configuration keys
+		criticalKeys := []string{"agent.default_agent", "agent.default_model", "database.path", "ledger.path", "workflows.directory", "notifications.webhook"}
+		for _, ck := range criticalKeys {
+			if key == ck {
+				fmt.Fprintf(os.Stderr, "⚠️  Warning: '%s' is a critical configuration key. Changing it may affect LazyAI behavior.\n", key)
+				break
+			}
+		}
+
 		if err := setConfigValue(config, key, value); err != nil {
 			return err
 		}
-		
+
 		if err := saveConfig(config); err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("✅ Set %s = %s\n", key, value)
 		return nil
 	},
@@ -128,7 +138,7 @@ var configListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		
+
 		fmt.Println("Current Configuration:")
 		fmt.Println("───────────────────────────────────────────────────────────────")
 		fmt.Printf("agent.default_agent: %s\n", config.Agent.DefaultAgent)
@@ -140,7 +150,7 @@ var configListCmd = &cobra.Command{
 		if config.Notifications.Webhook != "" {
 			fmt.Printf("notifications.webhook: %s\n", config.Notifications.Webhook)
 		}
-		
+
 		return nil
 	},
 }
@@ -151,11 +161,11 @@ var configInitCmd = &cobra.Command{
 	Long:  `Create a new configuration file with defaults.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configPath := filepath.Join(".opencode", "config.yaml")
-		
+
 		if _, err := os.Stat(configPath); err == nil {
 			return fmt.Errorf("config file already exists at %s", configPath)
 		}
-		
+
 		config := &LazyAIConfig{
 			Agent: AgentConfig{
 				DefaultAgent: "orchestrator",
@@ -174,11 +184,11 @@ var configInitCmd = &cobra.Command{
 				Enabled: false,
 			},
 		}
-		
+
 		if err := saveConfig(config); err != nil {
 			return err
 		}
-		
+
 		fmt.Printf("✅ Configuration initialized at %s\n", configPath)
 		return nil
 	},
@@ -187,7 +197,7 @@ var configInitCmd = &cobra.Command{
 // loadConfig loads the configuration from file
 func loadConfig() (*LazyAIConfig, error) {
 	configPath := filepath.Join(".opencode", "config.yaml")
-	
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -195,12 +205,12 @@ func loadConfig() (*LazyAIConfig, error) {
 		}
 		return nil, err
 	}
-	
+
 	var config LazyAIConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
-	
+
 	// Apply environment variable overrides
 	if agent := os.Getenv("LAZYAI_AGENT"); agent != "" {
 		config.Agent.DefaultAgent = agent
@@ -214,23 +224,23 @@ func loadConfig() (*LazyAIConfig, error) {
 	if ledgerPath := os.Getenv("LAZYAI_LEDGER_PATH"); ledgerPath != "" {
 		config.Ledger.Path = ledgerPath
 	}
-	
+
 	return &config, nil
 }
 
 // saveConfig saves the configuration to file
 func saveConfig(config *LazyAIConfig) error {
 	configPath := filepath.Join(".opencode", "config.yaml")
-	
+
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %w", err)
 	}
-	
+
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("error writing config: %w", err)
 	}
-	
+
 	return nil
 }
 

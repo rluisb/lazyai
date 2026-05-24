@@ -56,4 +56,5 @@ PowerShell:
 
 func init() {
 	rootCmd.AddCommand(completionCmd)
+	completionCmd.GroupID = "shell"
 }

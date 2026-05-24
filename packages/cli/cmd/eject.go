@@ -26,6 +26,7 @@ var ejectCmd = &cobra.Command{
 func init() {
 	ejectCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
 	rootCmd.AddCommand(ejectCmd)
+	ejectCmd.GroupID = "lifecycle"
 }
 
 func runEject(cmd *cobra.Command, args []string) error {

@@ -11,63 +11,77 @@ import (
 )
 
 var gitCmd = &cobra.Command{
-	Use:   "git",
-	Short: "Git integration",
-	Long:  `Integrate LazyAI with git for traceability.`,
+	Use:     "git",
+	Short:   "Git integration",
+	Long:    `Integrate LazyAI with git for traceability.`,
+	GroupID: "safety",
 }
 
 var gitSyncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "Sync changes with git",
-	Long:  `Auto-commit all changes with descriptive messages.`,
+	Long: `Auto-commit all changes with descriptive messages.
+
+WARNING: This command automatically stages (git add -A) and commits ALL changes
+in the current repository. Review the list of files before confirming.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		message, _ := cmd.Flags().GetString("message")
 		if message == "" {
 			message = fmt.Sprintf("lazyai: Auto-commit at %s", time.Now().Format(time.RFC3339))
 		}
-		
+		force, _ := cmd.Flags().GetBool("force")
+
 		// Check if we're in a git repo
 		if err := runGitCommand("rev-parse", "--git-dir"); err != nil {
 			return fmt.Errorf("not a git repository. Run 'git init' first")
 		}
-		
+
 		// Check for changes
 		status, err := runGitOutput("status", "--porcelain")
 		if err != nil {
 			return fmt.Errorf("error checking git status: %w", err)
 		}
-		
+
 		if strings.TrimSpace(status) == "" {
 			fmt.Println("✅ No changes to commit")
 			return nil
 		}
-		
+
+		// Safety confirmation: show files to be committed
+		files := strings.Split(strings.TrimSpace(status), "\n")
+		fileList := strings.Join(files, "\n  ")
+		confirmMsg := fmt.Sprintf("📝 The following files will be auto-added and committed:\n  %s\n\nContinue?", fileList)
+		if !ConfirmAction(confirmMsg, force) {
+			fmt.Println("❌ Sync cancelled.")
+			return nil
+		}
+
 		// Add all changes
 		fmt.Println("📝 Adding changes...")
 		if err := runGitCommand("add", "-A"); err != nil {
 			return fmt.Errorf("error adding changes: %w", err)
 		}
-		
+
 		// Commit
 		fmt.Printf("📝 Committing: %s\n", message)
 		if err := runGitCommand("commit", "-m", message); err != nil {
 			return fmt.Errorf("error committing: %w", err)
 		}
-		
+
 		// Get commit hash
 		commitHash, err := runGitOutput("rev-parse", "--short", "HEAD")
 		if err != nil {
 			commitHash = "unknown"
 		}
-		
+
 		fmt.Printf("✅ Committed: %s\n", strings.TrimSpace(commitHash))
-		
+
 		// Record to ledger
 		appendToLedger("git_commit", map[string]string{
 			"hash":    strings.TrimSpace(commitHash),
 			"message": message,
 		})
-		
+
 		return nil
 	},
 }
@@ -81,22 +95,22 @@ var gitLogCmd = &cobra.Command{
 		if limit <= 0 {
 			limit = 10
 		}
-		
+
 		// Get git log with custom format
 		output, err := runGitOutput("log", fmt.Sprintf("-%d", limit), "--format=%h|%s|%an|%ad", "--date=short")
 		if err != nil {
 			return fmt.Errorf("error getting git log: %w", err)
 		}
-		
+
 		fmt.Println("Recent Commits:")
 		fmt.Println("───────────────────────────────────────────────────────────────")
-		
+
 		lines := strings.Split(output, "\n")
 		for _, line := range lines {
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			
+
 			parts := strings.SplitN(line, "|", 4)
 			if len(parts) >= 3 {
 				hash := parts[0]
@@ -106,7 +120,7 @@ var gitLogCmd = &cobra.Command{
 				if len(parts) >= 4 {
 					date = parts[3]
 				}
-				
+
 				// Highlight LazyAI commits
 				if strings.Contains(message, "lazyai") || strings.Contains(author, "LazyAI") {
 					fmt.Printf("  🤖 %s | %s | %s | %s\n", hash, date, author, message)
@@ -115,7 +129,7 @@ var gitLogCmd = &cobra.Command{
 				}
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -129,22 +143,22 @@ var gitStatusCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("error getting git status: %w", err)
 		}
-		
+
 		fmt.Println(output)
-		
+
 		// Show current session if any
 		database, err := EnsureDB()
 		if err == nil {
 			defer SafeCloseDB(database)
-			
+
 			var activeSession string
 			database.QueryRow("SELECT id FROM sessions WHERE status = 'active' ORDER BY started_at DESC LIMIT 1").Scan(&activeSession)
-			
+
 			if activeSession != "" {
 				fmt.Printf("\n🟢 Active Session: %s\n", activeSession)
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -169,8 +183,9 @@ func runGitOutput(args ...string) (string, error) {
 
 func init() {
 	gitSyncCmd.Flags().StringP("message", "m", "", "Commit message")
+	gitSyncCmd.Flags().Bool("force", false, "Skip confirmation prompt")
 	gitLogCmd.Flags().IntP("limit", "n", 10, "Number of commits to show")
-	
+
 	gitCmd.AddCommand(gitSyncCmd)
 	gitCmd.AddCommand(gitLogCmd)
 	gitCmd.AddCommand(gitStatusCmd)

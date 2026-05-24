@@ -40,6 +40,7 @@ func init() {
 	updateSelfCmd.Flags().Bool("dry-run", false, "Preview without downloading")
 	updateSelfCmd.Flags().Bool("verbose", false, "Show detailed output")
 	rootCmd.AddCommand(updateSelfCmd)
+	updateSelfCmd.GroupID = "lifecycle"
 }
 
 func runUpdateSelf(cmd *cobra.Command, args []string) error {

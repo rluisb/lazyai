@@ -30,6 +30,7 @@ func init() {
 	setupCmd.Flags().Bool("all", false, "Select all supported setup targets for the requested scope")
 	setupCmd.Flags().Bool("global", false, "Use global scope/home layout where supported")
 	rootCmd.AddCommand(setupCmd)
+	setupCmd.GroupID = "workspace"
 }
 
 type setupListResult struct {

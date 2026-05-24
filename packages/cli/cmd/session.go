@@ -164,6 +164,9 @@ func runSessionEnd(cmd *cobra.Command, args []string) error {
 		"status":     "ended",
 	})
 	
+	// Record quality metric
+	_ = recordQualityMetric(sessionID, "session_duration", "session", "")
+	
 	fmt.Printf("✅ Session ended: %s\n", sessionID)
 	fmt.Printf("   Ended: %s\n", endedAt)
 	return nil

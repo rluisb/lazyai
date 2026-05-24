@@ -132,6 +132,17 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Printf("  Summary: %d passed, %d issues found\n", passCount, len(results))
 	
+	// Append to ledger
+	status := "pass"
+	if failCount > 0 {
+		status = "fail"
+	}
+	_ = appendToLedger("validate_agents", map[string]string{
+		"status":      status,
+		"agents_checked": fmt.Sprintf("%d", passCount+failCount),
+		"issues_found":  fmt.Sprintf("%d", len(results)),
+	})
+	
 	if failCount > 0 {
 		return fmt.Errorf("validation failed: %d errors", failCount)
 	}

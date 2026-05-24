@@ -69,6 +69,34 @@ Opus or equivalent reasoning model. Planning requires evaluating trade-offs, sur
 - Decision Protocol: when multiple approaches exist, evaluate A vs B with pros/cons/effort/rationale
 - Contract testing: define contracts/ during plan phase for API boundaries
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines
 
 ### Planning Phase (speckit-plan)

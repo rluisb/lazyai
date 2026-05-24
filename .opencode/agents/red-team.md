@@ -68,6 +68,34 @@ Opus or equivalent reasoning model. Finding edge cases and adversarial inputs re
 - Security testing: injection, XSS, auth bypass, data exposure, OWASP Top 10
 - Codegraph: trace execution paths to find untested branches
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines — Dual-Agent Contract Mode
 
 ### Phase 1: Understand the Contract

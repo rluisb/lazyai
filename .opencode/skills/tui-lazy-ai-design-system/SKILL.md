@@ -12,6 +12,19 @@ description: |
   for prose. Status communication is always glyph + colour together
   (✓ ⚠ ✗ ⚡ ○) — never colour alone.
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # LazyAI design system
 

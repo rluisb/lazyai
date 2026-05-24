@@ -35,6 +35,19 @@ workspace:
   writes: [.specify/investigate/{YYYY-MM-DD}-{topic-slug}.md]
   cross_repo: true
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # Investigate Skill
 

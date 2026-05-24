@@ -34,6 +34,19 @@ workspace:
   writes: [.specify/memory/repos/{active}/rpi-execution.md, per-phase spec.md/plan.md/tasks.md]
   cross_repo: true (coordinates per-repo execution)
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # 1. IDENTITY AND ROLE
 

@@ -100,6 +100,34 @@ For complex work that doesn't fit fixed roles:
 3. Run independent subtasks in parallel (different files, no shared state)
 4. Synthesize results into a single output
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Hard rules
 
 1. **Budget gate** — before every `start_chain` (or team build), call `get_budget` or derive an estimate from the chain definition, show it to the user, and wait for explicit confirmation. No exceptions.

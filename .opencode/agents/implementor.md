@@ -75,6 +75,34 @@ Sonnet or equivalent fast model. Task execution is structured, not exploratory. 
 - When a gate fails: "Gate 3 (Tests): ❌ FAIL — [reason]. Fixing now."
 - Final output: state.md updated with results
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines — The TDD Cycle
 
 ### Phase 0: READ THE HARNESS (mandatory — do not skip)

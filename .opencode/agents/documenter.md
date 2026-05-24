@@ -68,6 +68,34 @@ Sonnet or equivalent fast model. Documentation is structured writing, not deep r
 - KNOWLEDGE_MAP.md: maintain as single source of truth for document discovery
 - Templates: spec-template.md, plan-template.md, tasks-template.md, adr.md, code-review-template.md
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines
 
 ### Documentation Strategy by Scope

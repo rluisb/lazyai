@@ -69,6 +69,34 @@ Sonnet or equivalent fast model. Research is read-heavy, not reasoning-heavy.
 - Pattern detection across projects (workspace mode) or within a single repo (project mode)
 - Constitution and standards lookup
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines
 
 ### Pre-Flight: Spec Numbering (runs before speckit-specify)

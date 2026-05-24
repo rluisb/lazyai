@@ -68,6 +68,34 @@ Opus or equivalent reasoning model. Review requires understanding intent, detect
 - Qmd: use to cross-reference implementation against spec.md, plan.md, and constitution.md
 - LLM-as-Judge pattern: when lenses produce conflicting findings, you synthesize and resolve
 
+
+## Context Pruning
+
+When approaching TOKEN_BUDGET, apply these pruning priorities:
+
+| Keep | Drop |
+|------|------|
+| Agent identity and role | Historical examples |
+| Current task context | Completed task details |
+| Safety rules | Redundant explanations |
+| Tool schemas | Full documentation |
+
+**Rule:** Prune from bottom (oldest) up. Never drop safety rules or current task context.
+
+
+## Negative Examples
+
+**Bad output — DON'T produce this:**
+
+```
+[Example of incorrect output for this agent]
+```
+
+**Why this is wrong:**
+- Missing required fields
+- Incorrect tool usage
+- Violates safety rules
+
 ## Specific Guidelines — The Five Lenses
 
 Review MUST proceed in this order. Earlier lenses are prerequisites for later ones.

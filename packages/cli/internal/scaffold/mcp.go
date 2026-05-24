@@ -33,16 +33,19 @@ type mcpCatalog struct {
 
 // mcpServer represents a single MCP server entry.
 type mcpServer struct {
-	Description     string            `json:"description,omitempty"`
-	Command         string            `json:"command,omitempty"`
-	Args            []string          `json:"args,omitempty"`
-	Enabled         *bool             `json:"enabled,omitempty"`
-	Env             map[string]string `json:"env,omitempty"`
-	URL             string            `json:"url,omitempty"`
-	Headers         map[string]string `json:"headers,omitempty"`
-	Tools           []string          `json:"tools,omitempty"`
-	RequiresInstall bool              `json:"requiresInstall,omitempty"`
-	InstallHint     string            `json:"installHint,omitempty"`
+	Description        string            `json:"description,omitempty"`
+	Command            string            `json:"command,omitempty"`
+	Args               []string          `json:"args,omitempty"`
+	Enabled            *bool             `json:"enabled,omitempty"`
+	Env                map[string]string `json:"env,omitempty"`
+	URL                string            `json:"url,omitempty"`
+	Headers            map[string]string `json:"headers,omitempty"`
+	Tools              []string          `json:"tools,omitempty"`
+	RequiresInstall    bool              `json:"requiresInstall,omitempty"`
+	InstallHint        string            `json:"installHint,omitempty"`
+	PreferredInterface string            `json:"preferred_interface,omitempty"`
+	CliEquivalent      string            `json:"cli_equivalent,omitempty"`
+	TokenPolicy        string            `json:"token_policy,omitempty"`
 }
 
 var orchestratorLookPath = exec.LookPath

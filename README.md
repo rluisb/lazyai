@@ -1,49 +1,6 @@
 # LazyAI
 
-![Go >=1.26](https://img.shields.io/badge/go-%3E%3D1.26-00ADD8?logo=go&logoColor=white)
-
-Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
-
-`lazyai-cli` initializes and manages tool-agnostic project rules, agents, skills, and templates, then compiles them into native formats for OpenCode, Claude Code, and GitHub Copilot. LazyAI is distributed as Go modules under `github.com/rluisb/lazyai`.
-
----
-
-## Quick Start
-
-```bash
-go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
-lazyai-cli init
-```
-
-This launches an interactive wizard that asks for scope, tools, preset, and optional MCP servers.
-
-For a non-interactive project setup:
-
-```bash
-lazyai-cli init \
-  --scope project \
-  --tools opencode,claude-code,copilot \
-  --name my-app \
-  --preset standard \
-  --no-interactive
-```
-
-Read the full [Quick Start guide](docs/getting-started/quick-start.md) for workspace and global scope examples.
-
----
-
-## Installation
-
-- **CLI**: `go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest`
-- **Orchestrator MCP runtime**: `go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest`
-- **Diff viewer utility**: `go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest`
-- **Clone for development**: `git clone git@github.com:rluisb/lazyai.git`
-
-See [Installation](docs/getting-started/installation.md) for details.
-
----
-
-## How It Works
+A CLI-first AI operating system for software teams. Define your AI setup once in a canonical format, then compile it to any supported AI tool.
 
 `lazyai-cli` uses a **canonical source → compile** model:
 
@@ -192,6 +149,85 @@ Execute structured workflows:
 # Workflows are defined in .opencode/workflows/*.yaml
 # See .opencode/workflows/rpi.yaml for example
 ```
+
+---
+
+## Sidecar (Optional)
+
+LazyAI can keep your docs, specs, and plans in a dedicated **sidecar** directory instead of inside each project. This is useful when you want a single knowledge base shared across workspaces, or when you prefer to keep planning artifacts outside version control.
+
+### What sidecar means in LazyAI
+
+A sidecar is a separate directory on disk that stores:
+- `docs/` — documentation and guides
+- `specs/` — feature specifications and ADRs
+- `plans/` — execution plans and task breakdowns
+
+When a sidecar is configured, LazyAI resolves these directories from the sidecar path instead of the project/workspace root. If no sidecar is configured, LazyAI falls back to its default behavior (docs/specs/plans live in the current scope root).
+
+### Scope behavior
+
+Sidecar configuration can live at three levels, with **workspace** as the primary use case:
+
+| Scope | Config file | Priority |
+|---|---|---|
+| **Workspace** | `~/.lazyai/workspaces.yaml` (active workspace entry) | Highest |
+| **Project** | `<project-root>/.lazyai-sidecar.yaml` | Middle |
+| **Global** | `~/.lazyai/sidecar.yaml` | Lowest |
+
+Resolution follows the chain: **workspace → project → global → default**. A workspace sidecar always wins over a project sidecar; a project sidecar wins over global; if none are configured, LazyAI uses the scope default.
+
+**Workspace scope (recommended):**
+- Best for multi-repo teams with a planning repo
+- The active workspace entry in `workspaces.yaml` carries the sidecar block
+- All projects in that workspace share the same sidecar by default
+
+**Project scope:**
+- Best when one repo needs its own isolated docs/specs/plans
+- Create `.lazyai-sidecar.yaml` in the project root
+
+**Global scope:**
+- Best for personal defaults across all projects
+- Set once in `~/.lazyai/sidecar.yaml`
+
+### Commands
+
+```bash
+# Initialize a sidecar at a scope
+lazyai-cli sidecar init --scope workspace --path /Users/me/kb/my-workspace
+
+# Show resolved paths for the current scope
+lazyai-cli sidecar status
+# → Scope: workspace | Config Level: workspace
+# → Docs:  /Users/me/kb/my-workspace/docs
+# → Specs: /Users/me/kb/my-workspace/specs
+# → Plans: /Users/me/kb/my-workspace/plans
+
+# Attach a sidecar to the active workspace or project
+lazyai-cli sidecar attach --path /tmp/kb
+
+# Detach (remove) the sidecar configuration
+lazyai-cli sidecar detach
+
+# Validate sidecar paths exist and are writable
+lazyai-cli sidecar doctor
+```
+
+### Optional fallback behavior
+
+Sidecar is **always optional**. If you never run `sidecar init`, LazyAI behaves exactly as it does today:
+- `project` scope → docs/specs/plans live in the project root
+- `workspace` scope → docs/specs/plans live in the workspace (planning repo) root
+- `global` scope → docs/specs/plans live in `~/.lazyai/`
+
+No sidecar configured = no errors, no warnings, no behavior change.
+
+### Explicit exclusions
+
+- **No Skeeper integration.** The sidecar is purely local. There is no `skeeper` field, no provider abstraction, and no remote sync.
+- **No content migration.** `sidecar init` does not move existing docs/specs/plans.
+- **No multi-sidecar.** One sidecar per scope level.
+- **No auto-discovery.** Sidecars are explicitly configured, not detected from parent directories or environment variables.
 
 ---
 

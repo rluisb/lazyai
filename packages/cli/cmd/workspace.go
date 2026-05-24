@@ -8,19 +8,20 @@ import (
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	sidecarpkg "github.com/rluisb/lazyai/packages/cli/internal/sidecar"
 )
 
 // WorkspaceConfig holds the global workspace registry.
-type WorkspaceConfig struct {
-	Workspaces []WorkspaceEntry `yaml:"workspaces"`
-	Active     string           `yaml:"active"`
-}
+type WorkspaceConfig = sidecarpkg.WorkspaceConfig
+
+// LinkedProject is a cross-project reference within a sidecar.
+type LinkedProject = sidecarpkg.LinkedProject
+
+// SidecarConfig holds the sidecar configuration for a single scope level.
+type SidecarConfig = sidecarpkg.SidecarConfig
 
 // WorkspaceEntry represents a registered project/workspace.
-type WorkspaceEntry struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
-}
+type WorkspaceEntry = sidecarpkg.WorkspaceEntry
 
 var workspaceCmd = &cobra.Command{
 	Use:   "workspace",

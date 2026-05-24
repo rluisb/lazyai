@@ -472,6 +472,106 @@ phases:
 
 ---
 
+
+---
+
+## Sidecar Commands
+
+Manage optional sidecar directories for docs, specs, and plans.
+
+### `sidecar init`
+
+Initialize a sidecar configuration at the specified scope.
+
+**Flags:**
+- `--scope`: Scope level (`workspace`, `project`, `global`). Default: `workspace`.
+- `--path`: Sidecar root path (required).
+- `--specs-dir`: Override specs directory name. Default: `specs`.
+- `--docs-dir`: Override docs directory name. Default: `docs`.
+- `--plans-dir`: Override plans directory name. Default: `plans`.
+
+**Examples:**
+
+```bash
+# Workspace sidecar (recommended)
+lazyai-cli sidecar init --scope workspace --path /Users/me/kb/my-workspace
+
+# Project sidecar
+lazyai-cli sidecar init --scope project --path ../shared-docs
+
+# Global sidecar
+lazyai-cli sidecar init --scope global --path ~/kb
+```
+
+### `sidecar status`
+
+Show resolved docs/specs/plans paths for the current scope, including which config level provided each value.
+
+**Flags:** none
+
+**Example:**
+
+```bash
+lazyai-cli sidecar status
+# → Scope: workspace | Config level: workspace
+# → Docs:  /Users/me/kb/my-workspace/docs
+# → Specs: /Users/me/kb/my-workspace/specs
+# → Plans: /Users/me/kb/my-workspace/plans
+```
+
+### `sidecar attach`
+
+Attach a sidecar to the active workspace or project. Requires an existing config target.
+
+**Flags:**
+- `--scope`: Scope level (`workspace`, `project`). Default: `workspace`.
+- `--path`: Sidecar root path (required).
+- `--specs-dir`: Override specs directory name.
+- `--docs-dir`: Override docs directory name.
+- `--plans-dir`: Override plans directory name.
+
+**Example:**
+
+```bash
+lazyai-cli sidecar attach --path /tmp/kb
+```
+
+### `sidecar detach`
+
+Remove the sidecar configuration from the active workspace or project.
+
+**Flags:**
+- `--scope`: Scope level (`workspace`, `project`). Default: `workspace`.
+- `--force`: Skip confirmation prompt.
+
+**Example:**
+
+```bash
+lazyai-cli sidecar detach
+# → Remove workspace sidecar? [y/N]
+```
+
+### `sidecar doctor`
+
+Validate all configured sidecar paths exist and are writable. Reports issues with exit codes.
+
+**Flags:**
+- `--scope`: Scope to validate (`workspace`, `project`, `global`). Default: `workspace`.
+
+**Exit codes:**
+- `0`: All paths valid, or warnings only (e.g., missing path that will be created on first write). WARN lines are printed but the command succeeds.
+- `1`: Errors found (e.g., non-writable directory, file where directory expected).
+
+**Example:**
+
+```bash
+lazyai-cli sidecar doctor
+# → ✅ Sidecar path exists and is writable
+# → ✅ Docs dir: /Users/me/kb/docs
+# → ✅ Specs dir: /Users/me/kb/specs
+# → ✅ Plans dir: /Users/me/kb/plans
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |

@@ -57,6 +57,65 @@ Learn more in [How It Works](docs/concepts/how-it-works.md).
 
 ---
 
+## Commands
+
+### Session Management
+Track AI agent sessions with SQLite persistence:
+
+```bash
+lazyai-cli session start "Implement auth feature"
+# → Session started: ses_1234567890
+
+lazyai-cli session list
+# → 🟢 ses_1234567890 | Implement auth feature | 2026-05-24T00:08:16Z
+
+lazyai-cli session show ses_1234567890
+# → Shows session details and dispatch history
+
+lazyai-cli session end ses_1234567890
+# → ✅ Session ended
+```
+
+### Health Checks
+Validate environment before work:
+
+```bash
+lazyai-cli doctor
+# → Checks: sqlite3, git, jq, bash, ollama, openai, disk space
+
+lazyai-cli doctor --json
+# → Machine-readable output for CI integration
+```
+
+### Audit Trail
+Immutable hash-chained ledger for accountability:
+
+```bash
+lazyai-cli ledger init
+# → Initializes .specify/ledger.jsonl
+
+lazyai-cli ledger append dispatch "agent=builder task=auth"
+# → Appends event with SHA-256 hash
+
+lazyai-cli ledger verify
+# → Verifies chain integrity
+
+lazyai-cli ledger show 5
+# → Shows last 5 entries
+```
+
+### Validation
+Check agent and skill file structure:
+
+```bash
+lazyai-cli validate agents
+# → Checks dispatch parameters, tool schemas, common mistakes
+
+lazyai-cli validate skills
+# → Checks skill structure (coming soon)
+```
+
+
 ## Supported Tools
 
 - [OpenCode](docs/concepts/tools.md#opencode)

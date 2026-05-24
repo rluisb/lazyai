@@ -1,0 +1,12 @@
+agent:
+    default_agent: orchestrator
+    default_model: gpt-4
+database:
+    path: .specify/lazyai.db
+ledger:
+    path: .specify/ledger.jsonl
+workflows:
+    directory: .opencode/workflows
+notifications:
+    enabled: false
+    webhook: ""

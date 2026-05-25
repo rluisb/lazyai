@@ -511,3 +511,52 @@ func TestInitNonInteractiveScopeFilter_AllUnsupported(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestBuildScaffoldContext_FortniteMode_DefaultTrue(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeProject,
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:   types.PresetLevelMinimal,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "fortnite-default"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if !ctx.FortniteMode {
+		t.Fatalf("FortniteMode = false, want true when opencode is selected without --plain-opencode")
+	}
+}
+
+func TestBuildScaffoldContext_FortniteMode_PlainOpenCodeFalse(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive:      false,
+		HomeDir:          testRepoRoot(t),
+		TargetDir:        dir,
+		CLIScope:         types.SetupScopeProject,
+		CLITools:         []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:        types.PresetLevelMinimal,
+		CLIPlainOpenCode: true,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "fortnite-plain"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.FortniteMode {
+		t.Fatalf("FortniteMode = true, want false when --plain-opencode is set")
+	}
+}

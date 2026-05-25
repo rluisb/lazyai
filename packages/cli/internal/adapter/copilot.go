@@ -144,7 +144,7 @@ func (a *CopilotAdapter) copySubdirAsPromptsFromFS(ctx *AdapterContext, libFS fs
 		}
 		destFile := fileIDVal + ".prompt.md"
 		dest := filepath.Join(promptsDir, destFile)
-		if err := CopyWithRecord(subdir+"/"+file, dest, ctx, false, nil); err != nil {
+		if err := CopyWithRecord(subdir+"/"+file, dest, ctx, false, nil, 0o644); err != nil {
 			return err
 		}
 	}

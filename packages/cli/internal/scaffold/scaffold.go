@@ -136,6 +136,7 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 				SetupScope:    ctx.SetupScope,
 				WorkspaceRoot: ctx.WorkspaceRoot,
 				LibraryFS:     ctx.LibraryFS,
+				FortniteMode:  ctx.FortniteMode,
 			}
 			warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
 			for _, w := range warnings {

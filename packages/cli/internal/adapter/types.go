@@ -43,6 +43,9 @@ type AdapterContext struct {
 	// gitignored `.claude/settings.local.json` instead of committed surfaces
 	// (`.mcp.json` / `.claude/settings.json`). Opt-in; default false.
 	LocalSecrets bool
+	// FortniteMode, when true, enables Fortnite-style multi-agent scaffolding
+	// for OpenCode. Default true when opencode is in the tools list.
+	FortniteMode bool
 	// Strategy controls how file conflicts are handled.
 	Strategy types.ConflictStrategy
 	// PerFileOverrides allows per-file conflict strategy overrides.

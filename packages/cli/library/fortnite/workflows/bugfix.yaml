@@ -1,0 +1,52 @@
+name: bugfix
+trigger: /bugfix
+description: Bug fix workflow — Investigate root cause → Fix → Verify
+modes:
+  investigate:
+    phases: [diagnose, fix, verify]
+    skip_gates: false
+  known:
+    phases: [fix, verify]
+    skip_gates: false
+  fast:
+    phases: [fix, verify]
+    skip_gates: true
+default_mode: investigate
+phases:
+  - name: diagnose
+    agent: respawn-crew
+    skill: reboot-van
+    mode: diagnose
+    feedforward: "Bug: {BUG_DESCRIPTION}. Symptoms: {SYMPTOMS}. Find root cause."
+    gate: human_confirms_root_cause
+    gate_prompt: "Root cause identified. Proceed to fix?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      failure_classification: true
+      gate_result: true
+  - name: fix
+    agent: wall-builder
+    skill: build-mode
+    mode: "${COMPLEXITY == 'complex' ? 'senior' : 'standard'}"
+    feedforward: "Root cause: {ROOT_CAUSE}. Fix the bug. Follow existing patterns."
+    gate: null
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+  - name: verify
+    agent: shield-audit
+    skill: zero-point
+    mode: review
+    feedforward: "Bug: {BUG_DESCRIPTION}. Fix applied. Verify the fix resolves the issue and doesn't regress."
+    gate: human_confirms_pass
+    gate_prompt: "Bug fix verified. Close the ticket?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      regression_test_capture: true
+      gate_result: true

@@ -1,0 +1,14 @@
+name: test-failure-policy
+trigger: manual
+description: Test workflow for failure policies
+phases:
+  - name: phase1
+    agent: wall-builder
+    skill: build-mode
+    mode: standard
+    feedforward: "Build step 1"
+  - name: phase2
+    agent: shield-audit
+    skill: zero-point
+    mode: review
+    feedforward: "Review step 2"

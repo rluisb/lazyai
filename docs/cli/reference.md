@@ -6,6 +6,7 @@ Complete reference for all `lazyai-cli` commands.
 
 ## Table of Contents
 
+- [Init](#init)
 - [Session Management](#session-management)
 - [Health Checks](#health-checks)
 - [Audit Trail](#audit-trail)
@@ -18,6 +19,47 @@ Complete reference for all `lazyai-cli` commands.
 - [Workflow Execution](#workflow-execution)
 - [Workspace](#workspace)
 - [Completion](#completion)
+
+---
+
+## Init
+
+### `init`
+
+Initialize the AI development environment.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--scope` | Setup scope (`project`, `global`, `workspace`) |
+| `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`) |
+| `--preset` | Preset configuration (`minimal`, `standard`, `full`, `custom`) |
+| `--enable-servers` | MCP servers to enable (`orchestrator`, `filesystem`, `memory`) |
+| `--name` | Project name |
+| `--no-interactive` | Run without interactive prompts |
+| `--plain-opencode` | Use plain OpenCode scaffolding without Fortnite multi-agent mode |
+| `--force` | Overwrite existing files |
+| `--dry-run` | Preview changes without writing |
+
+**OpenCode default behavior:**
+
+When OpenCode is selected, `init` defaults to the **Fortnite/OpenCode runtime**. The default install includes Fortnite agents, skills, scripts, and workflows, plus `AGENTS.md`, `.opencode/STARTUP.md`, and `opencode.jsonc` with `default_agent: loop-driver`.
+
+To opt out and install legacy/generic OpenCode assets, use `--plain-opencode`.
+
+**Examples:**
+
+```bash
+# Interactive setup
+lazyai-cli init
+
+# Non-interactive with OpenCode (Fortnite runtime by default)
+lazyai-cli init --tools opencode --preset standard --no-interactive
+
+# Opt out of Fortnite runtime
+lazyai-cli init --tools opencode --plain-opencode --no-interactive
+```
 
 ---
 

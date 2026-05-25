@@ -1,0 +1,1 @@
+/Users/ricardo/.config/opencode/scripts/run-evals.sh

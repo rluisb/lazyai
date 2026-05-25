@@ -306,6 +306,8 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [Claude Code](docs/concepts/tools.md#claude-code)
 - [GitHub Copilot](docs/concepts/tools.md#github-copilot)
 
+> **Note:** When OpenCode is selected, LazyAI defaults to the Fortnite/OpenCode runtime. Use `--plain-opencode` to opt out and install legacy/generic OpenCode assets instead.
+
 ---
 
 ## Documentation

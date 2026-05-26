@@ -41,6 +41,7 @@ GEMINI.md
 # git worktrees
 .worktrees/
 AGENTS.md
+!packages/cli/library/fortnite/AGENTS.md
 INSTRUCTIONS.md
 
 # Scaffold-generated docs (copies from library/)

@@ -29,6 +29,7 @@ func init() {
 	updateCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	updateCmd.Flags().Bool("dry-run", false, "Show what would be changed without making changes")
 	rootCmd.AddCommand(updateCmd)
+	updateCmd.GroupID = "lifecycle"
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {

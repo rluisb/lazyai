@@ -24,6 +24,7 @@ var authListCmd = &cobra.Command{
 func init() {
 	authCmd.AddCommand(authListCmd)
 	rootCmd.AddCommand(authCmd)
+	authCmd.GroupID = "auth"
 }
 
 func runAuthList(cmd *cobra.Command, args []string) error {

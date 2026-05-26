@@ -25,6 +25,7 @@ var infoCmd = &cobra.Command{
 func init() {
 	infoCmd.Flags().Bool("json", false, "Output as JSON")
 	rootCmd.AddCommand(infoCmd)
+	infoCmd.GroupID = "scaffold"
 }
 
 func runInfo(cmd *cobra.Command, args []string) error {

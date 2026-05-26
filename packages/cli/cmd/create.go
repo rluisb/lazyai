@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
-	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"charm.land/lipgloss/v2"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/generator"
@@ -28,6 +28,7 @@ func init() {
 	createCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	createCmd.Flags().String("description", "", "Description of the artifact")
 	rootCmd.AddCommand(createCmd)
+	createCmd.GroupID = "scaffold"
 }
 
 func runCreate(cmd *cobra.Command, args []string) error {

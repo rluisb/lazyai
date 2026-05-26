@@ -36,6 +36,7 @@ func init() {
 	compileCmd.Flags().Bool("validate-contracts", true, "Validate skill output/produces_for/consumes chain before compile")
 	compileCmd.Flags().Bool("strict-contracts", false, "Fail compile on contract warnings (default: warn-only)")
 	rootCmd.AddCommand(compileCmd)
+	compileCmd.GroupID = "lifecycle"
 }
 
 var getContractLibraryFS = library.GetLibraryFS

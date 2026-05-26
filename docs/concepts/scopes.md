@@ -93,3 +93,50 @@ lazyai-cli init \
   --preset standard \
   --no-interactive
 ```
+
+---
+
+## Sidecar and scope behavior
+
+LazyAI can optionally store docs, specs, and plans in a **sidecar** directory instead of the scope root. Sidecar configuration is scope-aware and follows a deterministic resolution chain.
+
+### Resolution priority
+
+When resolving docs/specs/plans directories, LazyAI checks sidecar configuration in this order:
+
+1. **Workspace sidecar** — highest priority, configured in the active workspace entry of `~/.lazyai/workspaces.yaml`
+2. **Project sidecar** — configured in `.lazyai-sidecar.yaml` at the project root
+3. **Global sidecar** — configured in `~/.lazyai/sidecar.yaml`
+4. **Scope default** — if no sidecar is configured at any level:
+   - `project` scope → project root
+   - `workspace` scope → active workspace path
+   - `global` scope → `~/.lazyai/`
+
+### Workspace as the primary use case
+
+The **workspace scope** is the recommended way to use sidecars. In a multi-repo team, you typically have one planning repo that acts as the workspace root. By attaching a sidecar to that workspace, all projects in the workspace share the same docs/specs/plans directory by default.
+
+Example workspace sidecar block in `~/.lazyai/workspaces.yaml`:
+
+```yaml
+workspaces:
+  - name: acme-workspace
+    path: /Users/me/projects/acme-planning
+    sidecar:
+      path: /Users/me/kb/acme-docs
+      specs_dir: specs
+      docs_dir: docs
+      plans_dir: plans
+active: acme-workspace
+```
+
+### Optional fallback behavior
+
+Sidecar is **always optional**. If no sidecar is configured at any level, LazyAI falls back to the scope default with no behavior change from today. No sidecar = no errors, no warnings, no migration needed.
+
+### Explicit exclusions
+
+- **No Skeeper or external provider integration.** The sidecar is purely local. There is no `skeeper` field, no provider abstraction, and no remote sync.
+- **No content migration.** `sidecar init` does not move existing docs/specs/plans.
+- **No multi-sidecar.** One sidecar per scope level.
+- **No auto-discovery.** Sidecars are explicitly configured, not detected from parent directories or environment variables.

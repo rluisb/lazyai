@@ -26,6 +26,7 @@ func init() {
 	importCmd.Flags().Bool("verbose", false, "Show detailed output")
 	importCmd.Flags().Bool("skip-backup", false, "Skip creating backup")
 	rootCmd.AddCommand(importCmd)
+	importCmd.GroupID = "scaffold"
 }
 
 func runImport(cmd *cobra.Command, args []string) error {

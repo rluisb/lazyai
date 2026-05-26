@@ -4,6 +4,19 @@ description: Prevent scope creep and speculative implementation.
 trigger: /anti-speculation
 phase: implement
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # Anti-Speculation
 

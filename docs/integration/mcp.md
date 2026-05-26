@@ -1,6 +1,6 @@
 # MCP Integration
 
-`lazyai-cli` maintains a canonical MCP catalog under `.ai/` and compiles it into each tool’s native config format.
+`lazyai-cli` maintains a canonical MCP catalog under `.ai/` and compiles it into each tool's native config format.
 
 ## Canonical source
 
@@ -60,6 +60,33 @@ Edit `.ai/mcp.json` and set the server's `enabled` flag to `false`, then rerun `
 | `brave-search` | disabled | No | Web search; needs `BRAVE_API_KEY` |
 | `fetch` | disabled | No | General HTTP fetch MCP |
 | `orchestrator` | disabled | Yes | Optional LazyAI orchestration runtime (`lazyai-orchestrator`) |
+
+## Token-efficient usage — CLI-first vs MCP
+
+Many bundled servers have equivalent CLI tools. For bulk or deterministic work, prefer the CLI to avoid MCP JSON-RPC overhead and keep agent context windows small. See [MCP vs CLI](../concepts/mcp-vs-cli.md) for the full comparison.
+
+Quick reference:
+
+| Server | Recommended interface | Reason |
+|---|---|---|
+| `filesystem` | **CLI-first** | Bulk file ops are cheaper via `lazyai-cli` or native shell commands. |
+| `ripgrep` | **CLI-first** | Large search results stream faster through `rg` than via MCP JSON. |
+| `fetch` | **CLI-first** | `curl` / `wget` avoid double serialization for large payloads. |
+| `graphify` | **CLI-first** for batch; **MCP** for interactive | Batch ingestion via CLI; live queries via MCP. |
+| `obsidian` | **CLI-first** for bulk; **MCP** for live queries | Bulk exports via `ob`; session queries via MCP. |
+| `qmd` | **Hybrid** | CLI for scripted indexing; MCP for inline agent queries. |
+| `codegraph` | **Hybrid** | CLI for initial index/build; MCP for semantic context calls. |
+| `playwright` | **MCP-only** | No stable CLI equivalent for agent-driven browser automation. |
+| `atlassian` | **MCP-only** | OAuth and remote API abstraction require the MCP server. |
+| `memory` | **MCP-only** | Stateful graph operations need the persistent server. |
+| `memoria` | **MCP-only** | No dedicated CLI wrapper for git-history queries. |
+| `orchestrator` | **MCP-only** | Workflow control plane is only exposed through MCP. |
+
+To apply a token-efficient preset, disable `filesystem`, `ripgrep`, and `fetch` in `.ai/mcp.json`, then recompile:
+
+```bash
+lazyai-cli compile
+```
 
 ## Environment variables
 

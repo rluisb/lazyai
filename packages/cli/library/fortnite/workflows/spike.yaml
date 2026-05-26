@@ -1,0 +1,45 @@
+name: spike
+trigger: /spike
+description: Research-only workflow — Explore → Document findings (no implementation)
+modes:
+  standard:
+    phases: [explore, document]
+    skip_gates: false
+  deep:
+    phases: [explore, document, validate]
+    skip_gates: false
+default_mode: standard
+phases:
+  - name: explore
+    agent: loot-hawk
+    skill: storm-scout
+    mode: research
+    feedforward: "Spike topic: {TOPIC}. Explore the codebase, domain, and alternatives. Time-box: {TIMEBOX}."
+    gate: null
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      research_output_tracking: true
+  - name: document
+    agent: turbo-crank
+    skill: storm-scout
+    mode: plan
+    feedforward: "Exploration findings: {EXPLORE_OUTPUT}. Document findings, recommendations, and next steps. No code."
+    gate: human_reviews_findings
+    gate_prompt: "Spike findings documented. Archive or proceed to implementation?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      dataset_capture: true
+  - name: validate
+    agent: shield-audit
+    skill: zero-point
+    mode: quick
+    feedforward: "Spike findings: {DOCUMENT_OUTPUT}. Validate: are recommendations sound? Are there gaps?"
+    gate: null
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true

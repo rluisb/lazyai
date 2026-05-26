@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/fang"
 	clilog "github.com/rluisb/lazyai/packages/cli/internal/log"
@@ -36,7 +38,42 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose debug output")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "Set log level (debug|info|warn|error)")
 	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "", "Set log format (text|json|logfmt)")
+
+	// Register command groups for organized help output
+	rootCmd.AddGroup(&cobra.Group{ID: "lifecycle", Title: "Environment Lifecycle"})
+	rootCmd.AddGroup(&cobra.Group{ID: "workspace", Title: "Workspace & Knowledge"})
+	rootCmd.AddGroup(&cobra.Group{ID: "runtime", Title: "Runtime Coordination"})
+	rootCmd.AddGroup(&cobra.Group{ID: "audit", Title: "Audit & Observability"})
+	rootCmd.AddGroup(&cobra.Group{ID: "safety", Title: "Safety & Administration"})
+	rootCmd.AddGroup(&cobra.Group{ID: "scaffold", Title: "Scaffolding & Discovery"})
+	rootCmd.AddGroup(&cobra.Group{ID: "auth", Title: "Authentication"})
+	rootCmd.AddGroup(&cobra.Group{ID: "shell", Title: "Shell & Utilities"})
+
+	// Set custom help template with group-aware rendering
+	rootCmd.SetHelpTemplate(helpTemplate)
 }
+
+const helpTemplate = `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
+
+{{end}}Usage:
+  {{.UseLine}}
+
+{{if .HasAvailableSubCommands}}Available Commands:{{range .Groups}}
+  {{.Title}}{{range .Commands}}
+    {{rpad .Name .NamePadding }} {{.Short}}{{end}}
+{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
+{{end}}{{if .HasAvailableInheritedFlags}}
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}
+{{end}}{{if .HasHelpSubCommands}}
+Additional help topics:{{range .HelpCommands}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}
+{{end}}{{if .HasAvailableSubCommands}}
+
+Run '{{.CommandPath}} help <command>' for details on a specific command.
+{{end}}`
 
 type loggingFlagConfig struct {
 	Verbose           bool
@@ -95,4 +132,18 @@ func Execute(ctx context.Context) error {
 	return fang.Execute(ctx, rootCmd,
 		fang.WithVersion(Version),
 	)
+}
+
+// ConfirmAction prompts the user for confirmation before proceeding.
+// Returns true if the user confirms, false otherwise.
+// If force is true, skips the prompt and returns true.
+func ConfirmAction(message string, force bool) bool {
+	if force {
+		return true
+	}
+	fmt.Fprintf(os.Stderr, "\n%s [y/N]: ", message)
+	var response string
+	fmt.Fscanln(os.Stdin, &response)
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
 }

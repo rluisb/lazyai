@@ -32,6 +32,19 @@ workspace:
   writes: [specs/{NNN-slug}/tasks.md, per-task harness files in tasks/ subdirectory]
   cross_repo: false
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # 1. IDENTITY AND ROLE
 

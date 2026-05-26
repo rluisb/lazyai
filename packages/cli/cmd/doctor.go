@@ -40,6 +40,7 @@ func init() {
 	doctorCmd.Flags().Bool("verbose", false, "Show detailed output for all files")
 	doctorCmd.Flags().Bool("json", false, "Output as JSON")
 	rootCmd.AddCommand(doctorCmd)
+	doctorCmd.GroupID = "lifecycle"
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
@@ -119,7 +120,21 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		staleMcpEntries = nil
 	}
 
-	issues := len(missingFiles) + len(modifiedFiles) + len(strayAgentsFiles) + metadataErrors + len(staleMcpEntries)
+	// Run enhanced health checks
+	envChecks := runEnhancedHealthChecks()
+	envPass, envWarn, envFail := 0, 0, 0
+	for _, c := range envChecks {
+		switch c.Status {
+		case "pass":
+			envPass++
+		case "warn":
+			envWarn++
+		case "fail":
+			envFail++
+		}
+	}
+
+	issues := len(missingFiles) + len(modifiedFiles) + len(strayAgentsFiles) + metadataErrors + len(staleMcpEntries) + envFail
 	isHealthy := issues == 0
 
 	// JSON output
@@ -132,6 +147,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			"strayAgentsFiles": strayAgentsFiles,
 			"metadataGaps":     metadataGaps,
 			"staleMcpEntries":  staleMcpEntries,
+			"healthChecks":     envChecks,
 			"checkedAt":        checkedAt,
 		}
 		enc := json.NewEncoder(os.Stdout)
@@ -287,6 +303,35 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			printKV("  2", fmt.Sprintf("Run %s to reset modified files", cyanStyle.Render("lazyai-cli update --force")), labelStyle, lipgloss.NewStyle())
 			printKV("  3", fmt.Sprintf("Run %s to regenerate tool files", cyanStyle.Render("lazyai-cli compile")), labelStyle, lipgloss.NewStyle())
 		}
+	}
+
+	// Show environment health checks
+	if len(envChecks) > 0 {
+		fmt.Println()
+		fmt.Println(headerStyle.Render("🩺 Environment Health Checks"))
+		fmt.Println()
+		for _, check := range envChecks {
+			var emoji string
+			var style lipgloss.Style
+			switch check.Status {
+			case "pass":
+				emoji = "✅"
+				style = greenStyle
+			case "warn":
+				emoji = "⚠️"
+				style = yellowStyle
+			case "fail":
+				emoji = "❌"
+				style = redStyle
+			}
+			fmt.Printf("  %s %-40s %s\n", emoji, check.Name, style.Render(check.Detail))
+		}
+		fmt.Println()
+		fmt.Printf("  Summary: %s passed, %s warned, %s failed (of %d total)\n",
+			greenStyle.Render(fmt.Sprintf("%d", envPass)),
+			yellowStyle.Render(fmt.Sprintf("%d", envWarn)),
+			redStyle.Render(fmt.Sprintf("%d", envFail)),
+			len(envChecks))
 	}
 
 	fmt.Println()

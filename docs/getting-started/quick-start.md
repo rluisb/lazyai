@@ -69,6 +69,21 @@ lazyai-cli init \
 6. Generates `.env.example` when enabled MCP servers require environment variables
 7. Scaffolds `.ai/orchestration/` when the optional `orchestrator` MCP server is enabled
 
+## OpenCode default behavior
+
+When OpenCode is selected during `init`, LazyAI defaults to the **Fortnite/OpenCode runtime**. The default install includes:
+
+- Fortnite agents, skills, scripts, and workflows
+- `AGENTS.md`, `.opencode/STARTUP.md`, and `opencode.jsonc` with `default_agent: loop-driver`
+
+To opt out and use legacy/generic OpenCode assets instead, pass `--plain-opencode`:
+
+```bash
+lazyai-cli init --tools opencode --plain-opencode
+```
+
+Existing safety constraints still apply: no push/deploy by default, and project files are created with no-overwrite behavior where applicable.
+
 ## Verify the setup
 
 ```bash

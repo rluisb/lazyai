@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	"github.com/rluisb/lazyai/packages/cli/internal/db"
 )
 
 func TestAuthListCmd(t *testing.T) {
@@ -25,11 +25,11 @@ func TestAuthListCmd(t *testing.T) {
 
 	// Create a dummy cmd
 	cmd := &cobra.Command{Use: "test"}
-	
+
 	// We need to temporarily replace os.Stdout or just let runAuthList print
-	// Since runAuthList uses fmt.Println directly, we can't easily capture it without os.Stdout redirection, 
+	// Since runAuthList uses fmt.Println directly, we can't easily capture it without os.Stdout redirection,
 	// but we can at least ensure the command runs without error.
-	
+
 	err = runAuthList(cmd, []string{})
 	assert.NoError(t, err, "runAuthList should not return an error")
 

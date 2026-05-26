@@ -1,0 +1,78 @@
+# Research → Plan → Implement Workflow
+# Standard workflow for feature development
+
+name: rpi
+version: "1.0"
+description: "Research → Plan → Implement: Standard feature development workflow"
+
+phases:
+  - name: research
+    description: "Gather context and understand the problem"
+    agent: scout
+    mode: research
+    inputs:
+      - task_description
+      - codebase_context
+    outputs:
+      - findings_document
+    gates:
+      - type: human
+        description: "Review findings before proceeding"
+
+  - name: plan
+    description: "Create specification and task list"
+    agent: planner
+    mode: plan
+    inputs:
+      - findings_document
+      - task_description
+    outputs:
+      - spec_document
+      - task_list
+    gates:
+      - type: human
+        description: "Approve spec before implementation"
+
+  - name: implement
+    description: "Execute the planned tasks"
+    agent: builder
+    mode: standard
+    inputs:
+      - spec_document
+      - task_list
+    outputs:
+      - implementation
+      - test_results
+    gates:
+      - type: auto
+        description: "Run tests automatically"
+
+  - name: review
+    description: "Verify implementation against spec"
+    agent: reviewer
+    mode: review
+    inputs:
+      - spec_document
+      - implementation
+    outputs:
+      - review_report
+    gates:
+      - type: human
+        description: "Approve changes before merge"
+
+fallback:
+  on_agent_failure:
+    action: retry
+    max_retries: 2
+    fallback_agent: orchestrator
+  on_test_failure:
+    action: backpropagate
+    update_spec: true
+  on_timeout:
+    action: escalate
+    notify: human
+
+metadata:
+  estimated_duration: "2-4 hours"
+  complexity: medium
+  requires_approval: true

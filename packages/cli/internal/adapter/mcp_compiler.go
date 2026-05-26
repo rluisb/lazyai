@@ -21,15 +21,18 @@ import (
 
 // McpServer represents a single MCP server entry in the canonical config.
 type McpServer struct {
-	Description string            `json:"description,omitempty"`
-	Command     string            `json:"command,omitempty"`
-	Args        []string          `json:"args,omitempty"`
-	Env         map[string]string `json:"env,omitempty"`
-	URL         string            `json:"url,omitempty"`
-	Headers     map[string]string `json:"headers,omitempty"`
-	Tools       []string          `json:"tools,omitempty"`
-	Enabled     *bool             `json:"enabled,omitempty"`
-	SetupHint   string            `json:"setupHint,omitempty"`
+	Description        string            `json:"description,omitempty"`
+	Command            string            `json:"command,omitempty"`
+	Args               []string          `json:"args,omitempty"`
+	Env                map[string]string `json:"env,omitempty"`
+	URL                string            `json:"url,omitempty"`
+	Headers            map[string]string `json:"headers,omitempty"`
+	Tools              []string          `json:"tools,omitempty"`
+	Enabled            *bool             `json:"enabled,omitempty"`
+	SetupHint          string            `json:"setupHint,omitempty"`
+	PreferredInterface string            `json:"preferred_interface,omitempty"`
+	CliEquivalent      string            `json:"cli_equivalent,omitempty"`
+	TokenPolicy        string            `json:"token_policy,omitempty"`
 }
 
 // McpCatalog represents the canonical .ai/mcp.json structure.

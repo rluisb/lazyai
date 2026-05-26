@@ -52,6 +52,21 @@ var migrations = []struct {
 		Up:      migrationUp008,
 		Down:    migrationDown008,
 	},
+	{
+		Version: 9,
+		Up:      migrationUp009,
+		Down:    migrationDown009,
+	},
+	{
+		Version: 10,
+		Up:      migrationUp010,
+		Down:    migrationDown010,
+	},
+	{
+		Version: 11,
+		Up:      migrationUp011,
+		Down:    migrationDown011,
+	},
 }
 
 // migrationSQL holds the SQL for creating and interacting with the
@@ -321,4 +336,134 @@ ALTER TABLE selections ADD COLUMN opencode_providers TEXT NOT NULL DEFAULT '[]';
 
 const migrationDown008 = `
 ALTER TABLE selections DROP COLUMN opencode_providers;
+`
+
+const migrationUp009 = `
+-- Session tracking tables (ported from production AI agent runtime)
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    goal TEXT,
+    repo_name TEXT,
+    status TEXT DEFAULT 'active',
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    model TEXT,
+    cost_usd REAL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS agent_dispatches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    agent TEXT NOT NULL,
+    task TEXT,
+    status TEXT DEFAULT 'pending',
+    dispatched_at TEXT,
+    completed_at TEXT,
+    result TEXT,
+    error TEXT,
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE TABLE IF NOT EXISTS quality_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    workflow_id TEXT,
+    agent TEXT NOT NULL,
+    model TEXT,
+    metric_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    recorded_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispatches_session ON agent_dispatches(session_id);
+CREATE INDEX IF NOT EXISTS idx_dispatches_agent ON agent_dispatches(agent);
+CREATE INDEX IF NOT EXISTS idx_metrics_session ON quality_metrics(session_id);
+CREATE INDEX IF NOT EXISTS idx_metrics_name ON quality_metrics(metric_name);
+`
+
+const migrationDown009 = `
+DROP TABLE IF EXISTS quality_metrics;
+DROP TABLE IF EXISTS agent_dispatches;
+DROP TABLE IF EXISTS sessions;
+`
+
+const migrationUp010 = `
+-- Task queue tables (ported from production AI agent runtime)
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    agent TEXT,
+    status TEXT DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    claimed_at TEXT,
+    completed_at TEXT,
+    claimed_by TEXT,
+    result TEXT,
+    error TEXT,
+    retry_count INTEGER DEFAULT 0,
+    max_retries INTEGER DEFAULT 3,
+    parent_task_id TEXT,
+    metadata TEXT
+);
+
+CREATE TABLE IF NOT EXISTS task_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL,
+    queue_position INTEGER NOT NULL,
+    enqueued_at TEXT NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+);
+
+CREATE TABLE IF NOT EXISTS dead_letter_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL,
+    failed_at TEXT NOT NULL,
+    error TEXT,
+    retry_count INTEGER,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(agent);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority DESC, created_at);
+CREATE INDEX IF NOT EXISTS idx_task_queue_position ON task_queue(queue_position);
+`
+
+const migrationDown010 = `
+DROP TABLE IF EXISTS dead_letter_queue;
+DROP TABLE IF EXISTS task_queue;
+DROP TABLE IF EXISTS tasks;
+`
+
+const migrationUp011 = `
+-- Agent message bus tables
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id TEXT UNIQUE NOT NULL,
+    from_agent TEXT NOT NULL,
+    to_agent TEXT NOT NULL,
+    subject TEXT,
+    body TEXT,
+    priority TEXT DEFAULT 'normal',
+    status TEXT DEFAULT 'unread',
+    created_at TEXT NOT NULL,
+    read_at TEXT,
+    session_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_agent);
+CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_agent);
+CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
+CREATE INDEX IF NOT EXISTS idx_messages_priority ON messages(priority);
+`
+
+const migrationDown011 = `
+DROP TABLE IF EXISTS messages;
 `

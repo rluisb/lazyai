@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -121,7 +122,7 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	dest := filepath.Join(targetDir, ".opencode", "agents", "builder.md")
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -166,7 +167,7 @@ func TestCopyWithRecord_WithTransform(t *testing.T) {
 		return append([]byte("<!-- transformed -->\n"), content...)
 	}
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, transform)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, transform, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord with transform failed: %v", err)
 	}
@@ -312,7 +313,7 @@ func TestCopyWithRecord_SkipExisting(t *testing.T) {
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
 	// CopyWithRecord with skip strategy should skip.
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -337,7 +338,7 @@ func TestCopyWithRecord_ForceOverwrite(t *testing.T) {
 	_ = files.EnsureDir(filepath.Dir(dest))
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord force failed: %v", err)
 	}
@@ -1074,4 +1075,403 @@ func TestGetOrchestratorAgentContent_SpaceDelimitedTools(t *testing.T) {
 	if !strings.Contains(toolsLine, "list_catalog") || !strings.Contains(toolsLine, "start_chain") {
 		t.Errorf("expected tools missing from: %s", toolsLine)
 	}
+}
+
+// --- Test: OpenCode adapter Fortnite mode install ---
+
+func testRepoRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
+	}
+
+	// Parse opencode.jsonc
+	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfg, err := jsonc.ReadJSONCFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+
+	// Assert default_agent == loop-driver
+	if da, ok := cfg["default_agent"].(string); !ok || da != "loop-driver" {
+		t.Errorf("default_agent = %q, want %q", da, "loop-driver")
+	}
+
+	// Assert instructions contain AGENTS.md and STARTUP.md
+	rawInstr, ok := cfg["instructions"].([]any)
+	if !ok || len(rawInstr) == 0 {
+		t.Fatalf("instructions must be non-empty array, got %T", cfg["instructions"])
+	}
+	var instr []string
+	for _, v := range rawInstr {
+		if s, ok := v.(string); ok {
+			instr = append(instr, s)
+		}
+	}
+	if !sliceContains(instr, "AGENTS.md") {
+		t.Errorf("instructions missing AGENTS.md: %v", instr)
+	}
+	if !sliceContains(instr, "STARTUP.md") {
+		t.Errorf("instructions missing STARTUP.md: %v", instr)
+	}
+
+	// Assert .opencode/STARTUP.md exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "STARTUP.md")); os.IsNotExist(err) {
+		t.Error(".opencode/STARTUP.md was not created")
+	}
+
+	// Assert root AGENTS.md exists
+	if _, err := os.Stat(filepath.Join(targetDir, "AGENTS.md")); os.IsNotExist(err) {
+		t.Error("root AGENTS.md was not created")
+	}
+
+	// Assert root AGENTS.md contains managed block markers and loop-driver
+	rootAgentsData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read root AGENTS.md: %v", err)
+	}
+	rootAgentsContent := string(rootAgentsData)
+	if !strings.Contains(rootAgentsContent, ManagedBlockStartMarker) {
+		t.Errorf("root AGENTS.md missing managed block start marker")
+	}
+	if !strings.Contains(rootAgentsContent, ManagedBlockEndMarker) {
+		t.Errorf("root AGENTS.md missing managed block end marker")
+	}
+	if !strings.Contains(rootAgentsContent, "loop-driver") {
+		t.Errorf("root AGENTS.md missing loop-driver reference")
+	}
+
+	// Assert .opencode/scripts exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "scripts")); os.IsNotExist(err) {
+		t.Error(".opencode/scripts was not created")
+	}
+
+	// Assert .opencode/workflows exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "workflows")); os.IsNotExist(err) {
+		t.Error(".opencode/workflows was not created")
+	}
+
+	// Assert the 8 Fortnite agents exist under .opencode/agents/
+	fortniteAgents := []string{
+		"loop-driver.md",
+		"engine-control.md",
+		"loot-hawk.md",
+		"turbo-crank.md",
+		"wall-builder.md",
+		"shield-audit.md",
+		"rift-deploy.md",
+		"respawn-crew.md",
+	}
+	for _, name := range fortniteAgents {
+		path := filepath.Join(targetDir, ".opencode", "agents", name)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("Fortnite agent %s was not installed", name)
+		}
+	}
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode_PreservesExistingRootAgents(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	// Seed an existing root AGENTS.md with user content.
+	existingContent := "# My Project\n\nThis is my custom project overview.\n"
+	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(existingContent), 0o644); err != nil {
+		t.Fatalf("seed existing AGENTS.md: %v", err)
+	}
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
+	}
+
+	// Read back root AGENTS.md
+	data, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read root AGENTS.md: %v", err)
+	}
+	content := string(data)
+
+	// Must preserve existing user content
+	if !strings.Contains(content, "My Project") {
+		t.Error("existing user content was lost")
+	}
+	if !strings.Contains(content, "This is my custom project overview") {
+		t.Error("existing user content was lost")
+	}
+
+	// Must contain managed block markers
+	if !strings.Contains(content, ManagedBlockStartMarker) {
+		t.Error("root AGENTS.md missing managed block start marker")
+	}
+	if !strings.Contains(content, ManagedBlockEndMarker) {
+		t.Error("root AGENTS.md missing managed block end marker")
+	}
+
+	// Must contain Fortnite content (loop-driver)
+	if !strings.Contains(content, "loop-driver") {
+		t.Error("root AGENTS.md missing loop-driver reference")
+	}
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode_Idempotent(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+
+	// First install
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("first install failed: %v", err)
+	}
+
+	firstData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md after first install: %v", err)
+	}
+
+	// Second install (idempotent)
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("second install failed: %v", err)
+	}
+
+	secondData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md after second install: %v", err)
+	}
+
+	if string(firstData) != string(secondData) {
+		t.Error("second install mutated AGENTS.md; expected idempotent behavior")
+	}
+}
+
+func TestMergeManagedBlock_CreateNew(t *testing.T) {
+	managed := []byte("managed content")
+	result := MergeManagedBlock(nil, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), ManagedBlockStartMarker) {
+		t.Error("missing start marker")
+	}
+	if !strings.Contains(string(result), ManagedBlockEndMarker) {
+		t.Error("missing end marker")
+	}
+	if !strings.Contains(string(result), "managed content") {
+		t.Error("missing managed content")
+	}
+}
+
+func TestMergeManagedBlock_AppendToExisting(t *testing.T) {
+	existing := []byte("# User Content\n")
+	managed := []byte("managed content")
+	result := MergeManagedBlock(existing, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), "# User Content") {
+		t.Error("existing content was lost")
+	}
+	if !strings.Contains(string(result), ManagedBlockStartMarker) {
+		t.Error("missing start marker")
+	}
+	if !strings.Contains(string(result), ManagedBlockEndMarker) {
+		t.Error("missing end marker")
+	}
+}
+
+func TestMergeManagedBlock_ReplaceExistingBlock(t *testing.T) {
+	existing := []byte("# User Content\n\n" + ManagedBlockStartMarker + "\nold content\n" + ManagedBlockEndMarker + "\n\nmore user content")
+	managed := []byte("new managed content")
+	result := MergeManagedBlock(existing, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), "# User Content") {
+		t.Error("pre-block user content was lost")
+	}
+	if !strings.Contains(string(result), "more user content") {
+		t.Error("post-block user content was lost")
+	}
+	if !strings.Contains(string(result), "new managed content") {
+		t.Error("new managed content not inserted")
+	}
+	if strings.Contains(string(result), "old content") {
+		t.Error("old managed content was not replaced")
+	}
+}
+
+func TestOpenCodeAdapter_Install_PlainOpenCodeMode(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: false,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install (plain) failed: %v", err)
+	}
+
+	// Parse opencode.jsonc
+	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfg, err := jsonc.ReadJSONCFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+
+	// Assert default_agent is NOT loop-driver (legacy uses orchestrator)
+	if da, ok := cfg["default_agent"].(string); ok && da == "loop-driver" {
+		t.Errorf("plain mode default_agent should not be loop-driver, got %q", da)
+	}
+
+	// Assert generic legacy agent exists (e.g., builder)
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "builder.md")); os.IsNotExist(err) {
+		t.Error("plain mode: generic agent builder.md was not installed")
+	}
+
+	// Assert a Fortnite-only agent does NOT exist
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "loop-driver.md")); err == nil {
+		t.Error("plain mode: Fortnite agent loop-driver.md should not exist")
+	}
+}
+
+// --- Test: CopyLibraryDirectory recursive nested paths ---
+
+func TestCopyLibraryDirectory_RecursiveNestedPaths(t *testing.T) {
+	libFS := fstest.MapFS{
+		"skills/nested/skill-a/SKILL.md": &fstest.MapFile{
+			Data: []byte("# Skill A\n"),
+		},
+		"skills/nested/skill-b/SKILL.md": &fstest.MapFile{
+			Data: []byte("# Skill B\n"),
+		},
+		"skills/nested/skill-b/scripts/run.sh": &fstest.MapFile{
+			Data: []byte("#!/bin/sh\n"),
+		},
+	}
+
+	targetDir := t.TempDir()
+	destSkillsDir := filepath.Join(targetDir, ".opencode", "skills")
+	_ = files.EnsureDir(destSkillsDir)
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{},
+	}
+
+	err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "skills",
+		SelectionKey: "skills",
+		ToDestPath: func(file string) string {
+			return filepath.Join(destSkillsDir, file)
+		},
+		Recursive:  true,
+		WarnOnSkip: true,
+	})
+	if err != nil {
+		t.Fatalf("CopyLibraryDirectory recursive failed: %v", err)
+	}
+
+	// Assert nested relative paths preserved
+	for _, rel := range []string{
+		"nested/skill-a/SKILL.md",
+		"nested/skill-b/SKILL.md",
+		"nested/skill-b/scripts/run.sh",
+	} {
+		path := filepath.Join(destSkillsDir, rel)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("expected file %s was not copied", rel)
+		}
+	}
+}
+
+// --- Test: ChmodScriptsExecutable makes .sh executable ---
+
+func TestChmodScriptsExecutable(t *testing.T) {
+	dir := t.TempDir()
+
+	scriptPath := filepath.Join(dir, "test.sh")
+	if err := os.WriteFile(scriptPath, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+
+	otherPath := filepath.Join(dir, "readme.md")
+	if err := os.WriteFile(otherPath, []byte("# readme\n"), 0o644); err != nil {
+		t.Fatalf("write readme: %v", err)
+	}
+
+	if err := ChmodScriptsExecutable(dir); err != nil {
+		t.Fatalf("ChmodScriptsExecutable failed: %v", err)
+	}
+
+	scriptInfo, err := os.Stat(scriptPath)
+	if err != nil {
+		t.Fatalf("stat script: %v", err)
+	}
+	if scriptInfo.Mode().Perm()&0o111 == 0 {
+		t.Errorf("script %s should be executable, got %o", scriptPath, scriptInfo.Mode().Perm())
+	}
+
+	otherInfo, err := os.Stat(otherPath)
+	if err != nil {
+		t.Fatalf("stat readme: %v", err)
+	}
+	if otherInfo.Mode().Perm() != 0o644 {
+		t.Errorf("readme %s should remain 0644, got %o", otherPath, otherInfo.Mode().Perm())
+	}
+}
+
+func sliceContains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
 }

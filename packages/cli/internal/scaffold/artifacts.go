@@ -30,6 +30,7 @@ func (ctx *ScaffoldContext) ScaffoldArtifacts() ([]types.TrackedFile, error) {
 			DryRun:              ctx.DryRun,
 			DriveCLI:            ctx.DriveCLI,
 			LocalSecrets:        ctx.LocalSecrets,
+			FortniteMode:        ctx.FortniteMode,
 			Strategy:            ctx.Strategy,
 			PerFileOverrides:    ctx.PerFileOverrides,
 			ConfiguredProviders: ctx.OpenCodeProviders,

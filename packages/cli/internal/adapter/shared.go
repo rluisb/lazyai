@@ -3,9 +3,11 @@
 package adapter
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,6 +15,12 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
+)
+
+// Managed block markers for idempotent root AGENTS.md patching.
+const (
+	ManagedBlockStartMarker = "<!-- lazyai:managed:start root-agents v1 -->"
+	ManagedBlockEndMarker   = "<!-- lazyai:managed:end root-agents v1 -->"
 )
 
 // selectionSet returns a set (map[T]bool) for the given slice, or nil if the
@@ -28,12 +36,84 @@ func selectionSet[T ~string](items []T) map[T]bool {
 	return m
 }
 
+// MergeManagedBlock merges newManagedContent into existing content using managed
+// block markers. If existing is empty, returns content wrapped in markers. If
+// existing has no markers, appends the managed block. If existing has markers,
+// replaces only the content between them while preserving all user content outside.
+func MergeManagedBlock(existing, newManagedContent []byte, startMarker, endMarker string) []byte {
+	existingStr := string(existing)
+	startIdx := strings.Index(existingStr, startMarker)
+	endIdx := strings.Index(existingStr, endMarker)
+
+	if startIdx == -1 || endIdx == -1 || endIdx <= startIdx {
+		// No existing managed block — append it.
+		var sb strings.Builder
+		if len(existing) > 0 {
+			sb.Write(existing)
+			if !strings.HasSuffix(existingStr, "\n") {
+				sb.WriteByte('\n')
+			}
+			sb.WriteByte('\n')
+		}
+		sb.WriteString(startMarker)
+		sb.WriteByte('\n')
+		sb.Write(newManagedContent)
+		if !strings.HasSuffix(string(newManagedContent), "\n") {
+			sb.WriteByte('\n')
+		}
+		sb.WriteString(endMarker)
+		sb.WriteByte('\n')
+		return []byte(sb.String())
+	}
+
+	// Replace content between markers idempotently.
+	var sb strings.Builder
+	sb.WriteString(existingStr[:startIdx+len(startMarker)])
+	sb.WriteByte('\n')
+	sb.Write(newManagedContent)
+	if !strings.HasSuffix(string(newManagedContent), "\n") {
+		sb.WriteByte('\n')
+	}
+	sb.WriteString(existingStr[endIdx:])
+	return []byte(sb.String())
+}
+
+// WriteManagedBlockToFile reads destPath (if it exists), merges the managed
+// block, and writes back. Returns the final content and whether the file was
+// modified (true if created or changed).
+func WriteManagedBlockToFile(destPath string, managedContent []byte, startMarker, endMarker string) ([]byte, bool, error) {
+	var existing []byte
+	if files.FileExists(destPath) {
+		data, err := files.ReadFile(destPath)
+		if err != nil {
+			return nil, false, fmt.Errorf("read %s: %w", destPath, err)
+		}
+		existing = data
+	}
+
+	merged := MergeManagedBlock(existing, managedContent, startMarker, endMarker)
+	modified := !bytesEqual(existing, merged)
+
+	if modified {
+		if err := files.WriteFile(destPath, merged, 0o644); err != nil {
+			return nil, false, fmt.Errorf("write %s: %w", destPath, err)
+		}
+	}
+
+	return merged, modified, nil
+}
+
+func bytesEqual(a, b []byte) bool {
+	return bytes.Equal(a, b)
+}
+
 // CopyWithRecord copies a file from the library FS to dest, records it in
 // ctx.FileRecords, and handles conflict resolution. If transform is non-nil,
 // it is applied to the file content before writing.
 //
 // src is a relative path within ctx.LibraryFS (e.g., "agents/builder.md").
-func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte) error {
+// perm defaults to 0o644 if zero.
+func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte, perm os.FileMode) error {
 	relPath, err := filepath.Rel(ctx.TargetDir, dest)
 	if err != nil {
 		relPath = dest
@@ -107,7 +187,10 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 		content = transform(content)
 	}
 
-	if err := files.WriteFile(dest, content, 0o644); err != nil {
+	if perm == 0 {
+		perm = 0o644
+	}
+	if err := files.WriteFile(dest, content, perm); err != nil {
 		return err
 	}
 
@@ -191,6 +274,7 @@ type CopyLibraryDirectoryOption struct {
 	WarnOnSkip   bool
 	Transform    func(content []byte) []byte
 	IncludeFile  func(file string) bool
+	Recursive    bool
 }
 
 // CopyLibraryDirectory copies all files from the library subdirectory,
@@ -227,6 +311,22 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 
 	for _, entry := range entries {
 		if entry.IsDir() {
+			if opts.Recursive {
+				subDirName := entry.Name()
+				dummyDest := opts.ToDestPath(subDirName)
+				subDirDest := filepath.Join(filepath.Dir(dummyDest), subDirName)
+				if err := files.EnsureDir(subDirDest); err != nil {
+					return err
+				}
+				subOpts := opts
+				subOpts.SourceSubdir = opts.SourceSubdir + "/" + subDirName
+				subOpts.ToDestPath = func(file string) string {
+					return filepath.Join(subDirDest, file)
+				}
+				if err := copyLibraryDirectoryFromFS(subOpts, libFS); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		file := entry.Name()
@@ -270,7 +370,7 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 
 		srcPath := opts.SourceSubdir + "/" + file
 		dest := opts.ToDestPath(file)
-		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
+		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
 			return err
 		}
 	}
@@ -293,6 +393,21 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 
 		srcPath := filepath.Join(sourceDir, file)
 		if files.IsDirectory(srcPath) {
+			if opts.Recursive {
+				dummyDest := opts.ToDestPath(file)
+				subDirDest := filepath.Join(filepath.Dir(dummyDest), file)
+				if err := files.EnsureDir(subDirDest); err != nil {
+					return err
+				}
+				subOpts := opts
+				subOpts.SourceSubdir = opts.SourceSubdir + "/" + file
+				subOpts.ToDestPath = func(f string) string {
+					return filepath.Join(subDirDest, f)
+				}
+				if err := copyLibraryDirectoryFromDisk(subOpts, srcPath); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 
@@ -332,7 +447,7 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 		dest := opts.ToDestPath(file)
 		// Use library-relative path for the source so CopyWithRecord reads from FS.
 		libRelPath := opts.SourceSubdir + "/" + file
-		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform); err != nil {
+		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
 			return err
 		}
 	}
@@ -362,7 +477,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 	if err := CopyWithRecord(
 		"tool-agents/agents-dir.md",
 		filepath.Join(opts.ToolDir, opts.AgentsDestDir, opts.ContextFileName),
-		opts.Ctx, opts.WarnOnSkip, nil,
+		opts.Ctx, opts.WarnOnSkip, nil, 0o644,
 	); err != nil {
 		return err
 	}
@@ -372,7 +487,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 		if err := CopyWithRecord(
 			"tool-agents/skills-dir.md",
 			filepath.Join(opts.ToolDir, opts.SkillsDestDir, opts.ContextFileName),
-			opts.Ctx, opts.WarnOnSkip, nil,
+			opts.Ctx, opts.WarnOnSkip, nil, 0o644,
 		); err != nil {
 			return err
 		}
@@ -383,7 +498,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 		if err := CopyWithRecord(
 			"tool-agents/templates-dir.md",
 			filepath.Join(opts.ToolDir, opts.TemplatesDestDir, opts.ContextFileName),
-			opts.Ctx, opts.WarnOnSkip, nil,
+			opts.Ctx, opts.WarnOnSkip, nil, 0o644,
 		); err != nil {
 			return err
 		}
@@ -397,7 +512,7 @@ func InstallToolContextFiles(opts InstallToolContextFilesOption) error {
 	return CopyWithRecord(
 		"tool-agents/root-dir.md",
 		rootPath,
-		opts.Ctx, opts.WarnOnSkip, nil,
+		opts.Ctx, opts.WarnOnSkip, nil, 0o644,
 	)
 }
 
@@ -833,4 +948,19 @@ func truncateOutput(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// ChmodScriptsExecutable walks a directory and chmods all .sh files to 0o755.
+func ChmodScriptsExecutable(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".sh") {
+			if err := os.Chmod(path, 0o755); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

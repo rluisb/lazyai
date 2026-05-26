@@ -1,0 +1,78 @@
+name: rpi
+trigger: /rpi
+description: Full feature workflow — Research → Plan → Implement → Verify
+modes:
+  simple:
+    phases: [plan, implement, verify]
+    skip_gates: false
+  complex:
+    phases: [clarify, research, plan, implement, verify]
+    skip_gates: false
+  fast:
+    phases: [plan, implement, verify]
+    skip_gates: true
+default_mode: complex
+phases:
+  - name: clarify
+    agent: turbo-crank
+    skill: storm-scout
+    mode: clarify
+    feedforward: "Task: {GOAL}. Resolve critical unknowns. MAX_QUESTIONS=3."
+    gate: human_confirms
+    gate_prompt: "Clarification complete. Proceed to research?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      dataset_capture: true
+  - name: research
+    agent: loot-hawk
+    skill: storm-scout
+    mode: research
+    feedforward: "Confirmed understanding: {CLARIFY_OUTPUT}. Map existing codebase and domain knowledge."
+    gate: null
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      dataset_capture: true
+  - name: plan
+    agent: turbo-crank
+    skill: storm-scout
+    mode: plan
+    feedforward: "Research findings: {RESEARCH_OUTPUT}. Produce spec.md and tasks.md. No code yet."
+    gate: human_approves_spec
+    gate_prompt: "Spec and tasks ready. Approve for implementation?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      dataset_capture: true
+  - name: implement
+    agent: wall-builder
+    skill: build-mode
+    mode: "${COMPLEXITY == 'complex' ? 'senior' : 'standard'}"
+    feedforward: "Spec: {SPEC}. Current task: {TASK}. Done-condition: {DONE_CONDITION}."
+    gate: null
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      dataset_capture: false
+  - name: verify
+    agent: shield-audit
+    skill: zero-point
+    mode: review
+    feedforward: "Spec: {SPEC}. Implementation complete. Run quality gates and verify spec compliance."
+    gate: human_confirms_pass
+    gate_prompt: "Verification passed. Ship it?"
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      dataset_capture: false

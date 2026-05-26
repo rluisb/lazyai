@@ -24,6 +24,19 @@ produces_for:
   - `speckit-specify` (Provides the exact feed-forward context needed to write the spec)
 mcp_tools: [bash, filesystem, qmd, atlassian-mcp]
 ---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
 
 # Jira Grooming Skill
 

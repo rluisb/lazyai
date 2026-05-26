@@ -38,6 +38,7 @@ func init() {
 	modelsSyncCmd.Flags().Bool("dry-run", false, "Print the diff and exit without writing")
 	modelsCmd.AddCommand(modelsSyncCmd)
 	rootCmd.AddCommand(modelsCmd)
+	modelsCmd.GroupID = "scaffold"
 }
 
 func runModelsSync(cmd *cobra.Command, _ []string) error {

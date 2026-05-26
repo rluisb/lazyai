@@ -29,6 +29,7 @@ func init() {
 	addCmd.Flags().StringSlice("skills", []string{}, "Skills to add")
 	addCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	rootCmd.AddCommand(addCmd)
+	addCmd.GroupID = "scaffold"
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {

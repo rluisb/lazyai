@@ -30,11 +30,14 @@ type McpCatalog struct {
 }
 
 type McpServer struct {
-	Description     string `json:"description"`
-	Enabled         bool   `json:"enabled"`
-	RequiresInstall bool   `json:"requiresInstall"`
-	InstallHint     string `json:"installHint"`
-	SetupHint       string `json:"setupHint,omitempty"`
+	Description        string `json:"description"`
+	Enabled            bool   `json:"enabled"`
+	RequiresInstall    bool   `json:"requiresInstall"`
+	InstallHint        string `json:"installHint"`
+	SetupHint          string `json:"setupHint,omitempty"`
+	PreferredInterface string `json:"preferred_interface,omitempty"`
+	CliEquivalent      string `json:"cli_equivalent,omitempty"`
+	TokenPolicy        string `json:"token_policy,omitempty"`
 }
 
 type CliTool struct {

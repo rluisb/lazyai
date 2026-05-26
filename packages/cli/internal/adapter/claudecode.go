@@ -126,6 +126,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 			filepath.Join(claudeDir, "agents", "orchestrator.md"),
 			ctx, false,
 			func([]byte) []byte { return content },
+			0o644,
 		); err != nil {
 			return nil, err
 		}

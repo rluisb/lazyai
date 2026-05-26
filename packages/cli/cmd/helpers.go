@@ -170,6 +170,18 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 
 	planningRepoPath, workspaceRoot := scaffoldRootsForScope(result.Phase1.Scope, config.TargetDir, config.CLIWorkspaceRoot)
 
+	// Determine FortniteMode: default true when opencode is selected,
+	// unless --plain-opencode is explicitly set.
+	fortniteMode := false
+	if !config.CLIPlainOpenCode {
+		for _, t := range result.Phase1.Tools {
+			if t == types.ToolIdOpenCode {
+				fortniteMode = true
+				break
+			}
+		}
+	}
+
 	ctx := &scaffold.ScaffoldContext{
 		TargetDir:           config.TargetDir,
 		LibraryDir:          libDir,
@@ -189,6 +201,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		DryRun:              config.DryRun,
 		DriveCLI:            config.CLIDriveCLI,
 		LocalSecrets:        config.CLILocalSecrets,
+		FortniteMode:        fortniteMode,
 		Organization:        firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
 		Team:                firstNonEmpty(result.Phase1.Team, config.CLITeam),
 		ProjectOverview:     result.Phase2.ProjectOverview,

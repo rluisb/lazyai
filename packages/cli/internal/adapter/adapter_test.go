@@ -1191,6 +1191,23 @@ func TestOpenCodeAdapter_Install_FortniteMode(t *testing.T) {
 			t.Errorf("Fortnite agent %s was not installed", name)
 		}
 	}
+
+	// Assert non-agent reference files are NOT copied to .opencode/agents/
+	referenceDocs := []string{
+		"DISPATCH-MATRIX.md",
+		"FALLBACK-CHAINS.md",
+		"OUTPUT-SCHEMAS.md",
+		"REPO-PROFILES.md",
+		"SAFETY-BOUNDARIES.md",
+		"TOOL-SCHEMAS.md",
+		"_TEMPLATE.md",
+	}
+	for _, name := range referenceDocs {
+		path := filepath.Join(targetDir, ".opencode", "agents", name)
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("reference doc %s should NOT be installed in .opencode/agents/", name)
+		}
+	}
 }
 
 func TestOpenCodeAdapter_Install_FortniteMode_PreservesExistingRootAgents(t *testing.T) {

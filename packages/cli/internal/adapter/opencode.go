@@ -200,6 +200,19 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 				return filepath.Join(ocDir, "agents", file)
 			},
 			WarnOnSkip: true,
+			IncludeFile: func(file string) bool {
+				// Only copy actual agent definition files, not reference docs.
+				if filepath.Ext(file) != ".md" {
+					return false
+				}
+				name := fileID(file)
+				switch name {
+				case "DISPATCH-MATRIX", "FALLBACK-CHAINS", "OUTPUT-SCHEMAS",
+					"REPO-PROFILES", "SAFETY-BOUNDARIES", "TOOL-SCHEMAS", "_TEMPLATE":
+					return false
+				}
+				return true
+			},
 			Transform: func(content []byte) []byte {
 				out, err := RewriteAgentForOpenCode(content, ctx, "")
 				if err != nil {

@@ -18,7 +18,7 @@ phases:
     gates:
       - type: auto
         description: "Confirm reproduction"
-        
+
   - name: investigate
     description: "Root cause analysis"
     agent: scout
@@ -31,7 +31,7 @@ phases:
     gates:
       - type: human
         description: "Review root cause before fix"
-        
+
   - name: fix
     description: "Implement fix with tests"
     agent: builder
@@ -44,7 +44,7 @@ phases:
     gates:
       - type: auto
         description: "Run tests automatically"
-        
+
   - name: verify
     description: "Verify fix and check for regressions"
     agent: reviewer

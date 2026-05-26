@@ -86,7 +86,7 @@ func TestResolve_GlobalOnly(t *testing.T) {
 	require.NoError(t, os.MkdirAll(sidecarPath, 0755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:    sidecarPath,
+		Path:     sidecarPath,
 		SpecsDir: "my-specs",
 		DocsDir:  "my-docs",
 		PlansDir: "my-plans",
@@ -111,14 +111,14 @@ func TestResolve_ProjectOverridesGlobal(t *testing.T) {
 	require.NoError(t, os.MkdirAll(projectPath, 0755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:    globalPath,
+		Path:     globalPath,
 		SpecsDir: "global-specs",
 		DocsDir:  "global-docs",
 		PlansDir: "global-plans",
 	})
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:    projectPath,
+		Path:     projectPath,
 		SpecsDir: "project-specs",
 		DocsDir:  "project-docs",
 		PlansDir: "project-plans",
@@ -148,7 +148,7 @@ func TestResolve_WorkspaceOverridesProject(t *testing.T) {
 				Name: "my-project",
 				Path: projectRoot,
 				Sidecar: &SidecarConfig{
-					Path:    workspacePath,
+					Path:     workspacePath,
 					SpecsDir: "workspace-specs",
 					DocsDir:  "workspace-docs",
 					PlansDir: "workspace-plans",
@@ -159,7 +159,7 @@ func TestResolve_WorkspaceOverridesProject(t *testing.T) {
 	})
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:    projectPath,
+		Path:     projectPath,
 		SpecsDir: "project-specs",
 		DocsDir:  "project-docs",
 		PlansDir: "project-plans",
@@ -183,7 +183,7 @@ func TestResolve_RelativePathResolution(t *testing.T) {
 	require.NoError(t, os.MkdirAll(kbPath, 0755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:    "kb", // relative to globalDir
+		Path:     "kb", // relative to globalDir
 		SpecsDir: "specs",
 		DocsDir:  "docs",
 		PlansDir: "plans",
@@ -207,7 +207,7 @@ func TestResolve_AbsolutePathPassthrough(t *testing.T) {
 	defer os.RemoveAll(absPath)
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:    absPath,
+		Path:     absPath,
 		SpecsDir: "specs",
 		DocsDir:  "docs",
 		PlansDir: "plans",
@@ -252,7 +252,7 @@ func TestResolve_AbsoluteDirPaths(t *testing.T) {
 	defer os.RemoveAll(absSpecs)
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:    projectRoot,
+		Path:     projectRoot,
 		DocsDir:  absDocs,
 		SpecsDir: absSpecs,
 		PlansDir: "plans",

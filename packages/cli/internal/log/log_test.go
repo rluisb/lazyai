@@ -124,10 +124,10 @@ func resetDefaultLogger(t *testing.T) {
 // `bytes.Buffer` so the assertion is on the raw rendered text.
 func TestThemedLevelGlyphs(t *testing.T) {
 	cases := []struct {
-		name   string
-		level  charmlog.Level
-		emit   func(l *charmlog.Logger, msg string)
-		glyph  string
+		name  string
+		level charmlog.Level
+		emit  func(l *charmlog.Logger, msg string)
+		glyph string
 	}{
 		{"info", charmlog.InfoLevel, func(l *charmlog.Logger, m string) { l.Info(m) }, theme.GlyphBullet},
 		{"warn", charmlog.WarnLevel, func(l *charmlog.Logger, m string) { l.Warn(m) }, theme.GlyphWarn},

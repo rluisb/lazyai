@@ -599,11 +599,11 @@ type WizardSelections struct {
 	// wizard from auth.DetectAll results; never includes "anthropic" because
 	// the OpenCode catalog denies it. When empty (legacy stores), adapters
 	// fall back to a live auth probe at install/compile time.
-	OpenCodeProviders []string `json:"opencodeProviders,omitempty"`
-	Infra            []InfraId           `json:"infra"`
-	Constitution     []string            `json:"constitution"`
-	Features         *FeatureFlags       `json:"features,omitempty"`
-	GitConventions   *GitConventions     `json:"gitConventions,omitempty"`
+	OpenCodeProviders []string        `json:"opencodeProviders,omitempty"`
+	Infra             []InfraId       `json:"infra"`
+	Constitution      []string        `json:"constitution"`
+	Features          *FeatureFlags   `json:"features,omitempty"`
+	GitConventions    *GitConventions `json:"gitConventions,omitempty"`
 }
 
 // Meta stores schema and version metadata for the store file.

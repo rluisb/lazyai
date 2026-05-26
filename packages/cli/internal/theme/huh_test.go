@@ -33,9 +33,9 @@ func TestHuhThemeOverridesBase(t *testing.T) {
 	project := HuhTheme().Theme(true)
 
 	cases := []struct {
-		name       string
-		baseValue  string
-		projValue  string
+		name      string
+		baseValue string
+		projValue string
 	}{
 		{
 			"Focused.Title.Foreground",

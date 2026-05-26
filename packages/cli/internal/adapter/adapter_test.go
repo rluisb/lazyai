@@ -1094,11 +1094,11 @@ func TestOpenCodeAdapter_Install_FortniteMode(t *testing.T) {
 	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
 
 	ctx := &AdapterContext{
-		TargetDir:  targetDir,
-		SetupScope: types.SetupScopeProject,
-		LibraryFS:  libFS,
-		Strategy:   types.ConflictStrategyAlign,
-		Selections: AdapterSelections{},
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
 		FortniteMode: true,
 	}
 

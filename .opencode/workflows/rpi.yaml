@@ -18,7 +18,7 @@ phases:
     gates:
       - type: human
         description: "Review findings before proceeding"
-        
+
   - name: plan
     description: "Create specification and task list"
     agent: planner
@@ -32,7 +32,7 @@ phases:
     gates:
       - type: human
         description: "Approve spec before implementation"
-        
+
   - name: implement
     description: "Execute the planned tasks"
     agent: builder
@@ -46,7 +46,7 @@ phases:
     gates:
       - type: auto
         description: "Run tests automatically"
-        
+
   - name: review
     description: "Verify implementation against spec"
     agent: reviewer

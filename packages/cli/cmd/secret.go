@@ -15,9 +15,9 @@ import (
 var secretsWarningShown bool
 
 var secretCmd = &cobra.Command{
-	Use:   "secret",
-	Short: "Secret management",
-	Long:  `Securely store and retrieve secrets using OS keychain.`,
+	Use:     "secret",
+	Short:   "Secret management",
+	Long:    `Securely store and retrieve secrets using OS keychain.`,
 	GroupID: "safety",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if !secretsWarningShown {

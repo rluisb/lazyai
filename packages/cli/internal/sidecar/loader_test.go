@@ -90,7 +90,7 @@ func TestLoadProjectSidecar_Valid(t *testing.T) {
 	defer cleanup()
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:    "../kb",
+		Path:     "../kb",
 		SpecsDir: "specs",
 		DocsDir:  "docs",
 		PlansDir: "plans",
@@ -131,7 +131,7 @@ func TestLoadGlobalSidecar_Valid(t *testing.T) {
 	defer cleanup()
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:    filepath.Join(globalDir, "kb"),
+		Path:     filepath.Join(globalDir, "kb"),
 		SpecsDir: "specs",
 		DocsDir:  "docs",
 		PlansDir: "plans",

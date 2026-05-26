@@ -168,8 +168,8 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			ToDestPath: func(file string) string {
 				return filepath.Join(ocDir, "scripts", file)
 			},
-			Recursive:   true,
-			WarnOnSkip:  true,
+			Recursive:  true,
+			WarnOnSkip: true,
 		}); err != nil {
 			return nil, err
 		}
@@ -185,8 +185,8 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			ToDestPath: func(file string) string {
 				return filepath.Join(ocDir, "workflows", file)
 			},
-			Recursive:   true,
-			WarnOnSkip:  true,
+			Recursive:  true,
+			WarnOnSkip: true,
 		}); err != nil {
 			return nil, err
 		}
@@ -220,8 +220,8 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			ToDestPath: func(file string) string {
 				return filepath.Join(ocDir, "skills", file)
 			},
-			Recursive:   true,
-			WarnOnSkip:  true,
+			Recursive:  true,
+			WarnOnSkip: true,
 		}); err != nil {
 			return nil, err
 		}

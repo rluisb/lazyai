@@ -9,15 +9,15 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.21'
-    
+
     - name: Run go fmt
       run: |
         cd packages/cli
@@ -27,15 +27,15 @@ jobs:
           exit 1
         fi
         echo "✅ Code is properly formatted"
-    
+
     - name: Run go vet
       run: |
         cd packages/cli
         go vet ./...
-    
+
     - name: Install staticcheck
       run: go install honnef.co/go/tools/cmd/staticcheck@latest
-    
+
     - name: Run staticcheck
       run: |
         cd packages/cli
@@ -44,13 +44,13 @@ jobs:
 
   yaml-lint:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install yamllint
       run: pip install yamllint
-    
+
     - name: Lint YAML files
       run: |
         yamllint -d relaxed .opencode/workflows/ || true

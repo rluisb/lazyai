@@ -18,7 +18,7 @@ phases:
     gates:
       - type: auto
         description: "Auto-approve diagnosis"
-        
+
   - name: fix
     description: "Implement minimal fix"
     agent: builder
@@ -30,7 +30,7 @@ phases:
     gates:
       - type: human
         description: "Review fix before deploy"
-        
+
   - name: validate
     description: "Run smoke tests"
     agent: reviewer

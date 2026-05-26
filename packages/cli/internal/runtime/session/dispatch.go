@@ -4,6 +4,7 @@ package session
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/runtime"

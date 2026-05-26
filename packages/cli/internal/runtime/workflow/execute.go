@@ -1,36 +1,19 @@
 package workflow
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/runtime"
 	"github.com/rluisb/lazyai/packages/cli/internal/runtime/dispatch"
 )
 
 // Manager handles workflow operations
 type Manager struct {
-	db       DB
+	db       *runtime.DB
 	session  SessionManager
 	dispatch dispatch.Dispatcher
-}
-
-// DB is the database interface for workflows
-type DB interface {
-	Exec(query string, args ...interface{}) error
-	QueryRow(query string, args ...interface{}) Row
-	Query(query string, args ...interface{}) (Rows, error)
-}
-
-// Row is a single database row
-type Row interface {
-	Scan(dest ...interface{}) error
-}
-
-// Rows is a result set
-type Rows interface {
-	Next() bool
-	Scan(dest ...interface{}) error
-	Close() error
 }
 
 // SessionManager handles session operations
@@ -39,7 +22,7 @@ type SessionManager interface {
 }
 
 // NewManager creates a workflow manager
-func NewManager(db DB, sessionMgr SessionManager, disp dispatch.Dispatcher) *Manager {
+func NewManager(db *runtime.DB, sessionMgr SessionManager, disp dispatch.Dispatcher) *Manager {
 	return &Manager{
 		db:       db,
 		session:  sessionMgr,
@@ -118,6 +101,7 @@ func (m *Manager) Run(sessionID string, workflowName string, opts RunOptions) (*
 		// Dispatch agent (or simulate in dry-run)
 		if opts.DryRun {
 			fmt.Printf("[DRY RUN] Would dispatch: agent=%s task=%s mode=%s\n", step.Agent, interpolatedTask, step.Mode)
+			_ = m.updateWorkflowStep(stepID, "completed", "dry-run")
 		} else {
 			dispatchResult, err := m.dispatch.Dispatch(sessionID, step.Agent, interpolatedTask, step.Mode)
 			if err != nil {
@@ -188,32 +172,72 @@ func (m *Manager) findStep(wf *Workflow, phaseName string) *WorkflowStep {
 
 // loadWorkflow retrieves a workflow from the database
 func (m *Manager) loadWorkflow(name string) (*Workflow, error) {
-	// TODO: Implement DB query
-	// For now, parse from YAML file
-	return ParseYAML(".opencode/workflows/" + name + ".yaml")
+	var id, wfName, description, trigger, configJSON, team string
+	var version int
+	var createdAt string
+	var updatedAt sql.NullString
+
+	err := m.db.QueryRow(
+		"SELECT id, name, description, trigger_cmd, config_json, version, created_at, updated_at, team FROM workflows WHERE name = ?",
+		name,
+	).Scan(&id, &wfName, &description, &trigger, &configJSON, &version, &createdAt, &updatedAt, &team)
+	if err == sql.ErrNoRows {
+		// Fall back to YAML file
+		return ParseYAML(".opencode/workflows/" + name + ".yaml")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query workflow: %w", err)
+	}
+
+	// TODO: Parse config_json and steps
+	return nil, fmt.Errorf("DB workflow loading not yet implemented")
 }
 
 // createWorkflowRun inserts a workflow run record
 func (m *Manager) createWorkflowRun(result *RunResult) error {
-	// TODO: Implement DB insert
-	result.InstanceID = int(time.Now().Unix())
+	res, err := m.db.Exec(
+		"INSERT INTO workflow_instances (workflow_name, session_id, status, current_step, total_steps, started_at) VALUES (?, ?, ?, ?, ?, ?)",
+		result.WorkflowName, result.SessionID, result.Status, result.CurrentStep, result.TotalSteps, result.StartedAt.Format(time.RFC3339),
+	)
+	if err != nil {
+		return fmt.Errorf("insert workflow instance: %w", err)
+	}
+	id, _ := res.LastInsertId()
+	result.InstanceID = int(id)
 	return nil
 }
 
 // updateWorkflowRun updates a workflow run record
 func (m *Manager) updateWorkflowRun(result *RunResult) error {
-	// TODO: Implement DB update
-	return nil
+	var completedAt interface{}
+	if result.CompletedAt != nil {
+		completedAt = result.CompletedAt.Format(time.RFC3339)
+	}
+	_, err := m.db.Exec(
+		"UPDATE workflow_instances SET status = ?, current_step = ?, result = ?, error_message = ?, completed_at = ? WHERE id = ?",
+		result.Status, result.CurrentStep, result.Result, result.ErrorMessage, completedAt, result.InstanceID,
+	)
+	return err
 }
 
 // createWorkflowStep inserts a workflow step record
 func (m *Manager) createWorkflowStep(instanceID int, step *WorkflowStep, task string) (int, error) {
-	// TODO: Implement DB insert
-	return int(time.Now().Unix()), nil
+	res, err := m.db.Exec(
+		"INSERT INTO workflow_steps (instance_id, step_order, agent, task, mode, status, started_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		instanceID, 0, step.Agent, task, step.Mode, "running", time.Now().Format(time.RFC3339),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert workflow step: %w", err)
+	}
+	id, _ := res.LastInsertId()
+	return int(id), nil
 }
 
 // updateWorkflowStep updates a workflow step record
 func (m *Manager) updateWorkflowStep(stepID int, status string, result string) error {
-	// TODO: Implement DB update
-	return nil
+	_, err := m.db.Exec(
+		"UPDATE workflow_steps SET status = ?, result = ?, completed_at = ? WHERE id = ?",
+		status, result, time.Now().Format(time.RFC3339), stepID,
+	)
+	return err
 }

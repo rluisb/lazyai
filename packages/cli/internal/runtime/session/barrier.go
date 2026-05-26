@@ -11,14 +11,14 @@ import (
 
 // Barrier represents a synchronization barrier.
 type Barrier struct {
-	ID              int
-	SessionID       string
-	BarrierID       string
-	ExpectedCount   int
-	ArrivedCount    int
-	Status          string
-	CreatedAt       time.Time
-	ResolvedAt      *time.Time
+	ID            int
+	SessionID     string
+	BarrierID     string
+	ExpectedCount int
+	ArrivedCount  int
+	Status        string
+	CreatedAt     time.Time
+	ResolvedAt    *time.Time
 }
 
 // CreateBarrier creates a new barrier for a session.

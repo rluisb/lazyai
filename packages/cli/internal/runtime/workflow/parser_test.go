@@ -29,7 +29,7 @@ phases:
       description: Human approval
       prompt: Approve plan?
     metrics:
-      - record_latency
+      record_latency: true
 `
 	if err := os.WriteFile(yamlPath, []byte(yamlContent), 0644); err != nil {
 		t.Fatalf("write test yaml: %v", err)

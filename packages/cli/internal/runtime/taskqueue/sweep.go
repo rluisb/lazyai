@@ -3,8 +3,6 @@ package taskqueue
 
 import (
 	"fmt"
-
-	"github.com/rluisb/lazyai/packages/cli/internal/runtime"
 )
 
 // Sweep removes stale claims from agents that have crashed or timed out.

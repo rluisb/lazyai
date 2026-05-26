@@ -94,3 +94,86 @@ func TestUpdateNonInteractiveRemovesKnownStrayAgentsArtifacts(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoveLegacyAgentsDeletesUnmodifiedLibraryAgents(t *testing.T) {
+	dir := t.TempDir()
+	legacyAgentPath := filepath.Join(dir, ".opencode", "agents", "builder.md")
+	if err := os.MkdirAll(filepath.Dir(legacyAgentPath), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(legacyAgentPath, []byte("# legacy builder\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	hash, _ := files.FileHash(legacyAgentPath)
+	tracked := []types.TrackedFile{
+		{
+			Path:  ".opencode/agents/builder.md",
+			Hash:  hash,
+			Owner: types.FileOwnerLibrary,
+		},
+	}
+
+	if err := removeLegacyAgents(dir, tracked); err != nil {
+		t.Fatalf("removeLegacyAgents: %v", err)
+	}
+
+	if fileExists(legacyAgentPath) {
+		t.Fatal("expected legacy agent to be removed")
+	}
+}
+
+func TestRemoveLegacyAgentsPreservesUserEditedAgents(t *testing.T) {
+	dir := t.TempDir()
+	legacyAgentPath := filepath.Join(dir, ".opencode", "agents", "builder.md")
+	if err := os.MkdirAll(filepath.Dir(legacyAgentPath), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(legacyAgentPath, []byte("# user customized builder\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	tracked := []types.TrackedFile{
+		{
+			Path:  ".opencode/agents/builder.md",
+			Hash:  "oldhash123",
+			Owner: types.FileOwnerLibrary,
+		},
+	}
+
+	if err := removeLegacyAgents(dir, tracked); err != nil {
+		t.Fatalf("removeLegacyAgents: %v", err)
+	}
+
+	if !fileExists(legacyAgentPath) {
+		t.Fatal("expected user-edited legacy agent to be preserved")
+	}
+}
+
+func TestRemoveLegacyAgentsPreservesUserOwnedAgents(t *testing.T) {
+	dir := t.TempDir()
+	legacyAgentPath := filepath.Join(dir, ".opencode", "agents", "builder.md")
+	if err := os.MkdirAll(filepath.Dir(legacyAgentPath), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(legacyAgentPath, []byte("# user created builder\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	hash, _ := files.FileHash(legacyAgentPath)
+	tracked := []types.TrackedFile{
+		{
+			Path:  ".opencode/agents/builder.md",
+			Hash:  hash,
+			Owner: types.FileOwnerUser,
+		},
+	}
+
+	if err := removeLegacyAgents(dir, tracked); err != nil {
+		t.Fatalf("removeLegacyAgents: %v", err)
+	}
+
+	if !fileExists(legacyAgentPath) {
+		t.Fatal("expected user-owned legacy agent to be preserved")
+	}
+}

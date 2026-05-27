@@ -98,11 +98,17 @@ func (m *Manager) GetDLQ(sessionID string) ([]DLQEntry, error) {
 	var entries []DLQEntry
 	for rows.Next() {
 		var e DLQEntry
+		var failedAtStr string
 		if err := rows.Scan(
-			&e.ID, &e.TaskID, &e.FailedAgent, &e.ErrorMessage, &e.ContextDump, &e.FailedAt,
+			&e.ID, &e.TaskID, &e.FailedAgent, &e.ErrorMessage, &e.ContextDump, &failedAtStr,
 		); err != nil {
 			continue
 		}
+		parsedAt, err := time.Parse(time.RFC3339, failedAtStr)
+		if err != nil {
+			continue
+		}
+		e.FailedAt = parsedAt
 		entries = append(entries, e)
 	}
 

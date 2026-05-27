@@ -7,6 +7,7 @@ import (
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/rluisb/lazyai/packages/cli/internal/runtime/session"
 	"github.com/spf13/cobra"
 )
 
@@ -52,6 +53,8 @@ func init() {
 	sessionCmd.GroupID = "runtime"
 }
 
+// getDB opens the legacy ai-setup database for backward compatibility.
+// New runtime commands should prefer openRuntimeDB().
 func getDB() (*db.DB, error) {
 	dir, _ := os.Getwd()
 	dbPath := db.DefaultDBPath(dir)
@@ -62,166 +65,146 @@ func getDB() (*db.DB, error) {
 }
 
 func runSessionList(cmd *cobra.Command, args []string) error {
-	database, err := getDB()
+	db, err := openRuntimeDB()
 	if err != nil {
 		return err
 	}
-	defer database.Close()
+	defer db.Close()
 
-	if err := db.RunMigrations(database); err != nil {
-		return err
-	}
-
-	rows, err := database.Query("SELECT id, goal, status, started_at, ended_at FROM sessions ORDER BY started_at DESC")
+	mgr := session.NewManager(db)
+	sessions, err := mgr.List()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list sessions: %w", err)
 	}
-	defer rows.Close()
 
 	fmt.Println("Sessions:")
 	fmt.Println("---------")
-	count := 0
-	for rows.Next() {
-		var id, goal, status, startedAt string
-		var endedAt *string
-		if err := rows.Scan(&id, &goal, &status, &startedAt, &endedAt); err != nil {
-			continue
-		}
-		count++
+	if len(sessions) == 0 {
+		fmt.Println("No sessions found")
+		return nil
+	}
+	for _, s := range sessions {
 		statusEmoji := "🟢"
-		if status == "ended" {
+		if s.Status == session.SessionEnded {
 			statusEmoji = "🔴"
 		}
-		fmt.Printf("%s %s | %s | %s\n", statusEmoji, id, goal, startedAt)
-	}
-	if count == 0 {
-		fmt.Println("No sessions found")
+		startedAt := s.StartedAt.Format(time.RFC3339)
+		fmt.Printf("%s %s | %s | %s\n", statusEmoji, s.ID, s.Goal, startedAt)
 	}
 	return nil
 }
 
 func runSessionStart(cmd *cobra.Command, args []string) error {
-	database, err := getDB()
+	db, err := openRuntimeDB()
 	if err != nil {
 		return err
 	}
-	defer database.Close()
-
-	if err := db.RunMigrations(database); err != nil {
-		return err
-	}
+	defer db.Close()
 
 	goal := args[0]
-	sessionID := fmt.Sprintf("ses_%d", time.Now().Unix())
-	startedAt := time.Now().UTC().Format(time.RFC3339)
+	agentName := os.Getenv("LAZYAI_AGENT")
+	if agentName == "" {
+		agentName = "loop-driver"
+	}
 
-	_, err = database.Exec(
-		"INSERT INTO sessions (id, goal, status, started_at) VALUES (?, ?, ?, ?)",
-		sessionID, goal, "active", startedAt,
-	)
+	mgr := session.NewManager(db)
+	s, err := mgr.Start(goal, session.StartOptions{
+		Agent: agentName,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Append to ledger
+	// Append to ledger (best-effort)
 	_ = appendToLedger("session_start", map[string]string{
-		"session_id": sessionID,
+		"session_id": s.ID,
 		"goal":       goal,
 		"status":     "active",
 	})
 
-	fmt.Printf("✅ Session started: %s\n", sessionID)
+	fmt.Printf("✅ Session started: %s\n", s.ID)
 	fmt.Printf("   Goal: %s\n", goal)
-	fmt.Printf("   Started: %s\n", startedAt)
+	fmt.Printf("   Started: %s\n", s.StartedAt.Format(time.RFC3339))
 	return nil
 }
 
 func runSessionEnd(cmd *cobra.Command, args []string) error {
-	database, err := getDB()
+	db, err := openRuntimeDB()
 	if err != nil {
 		return err
 	}
-	defer database.Close()
+	defer db.Close()
 
 	sessionID := args[0]
-	endedAt := time.Now().UTC().Format(time.RFC3339)
 
-	result, err := database.Exec(
-		"UPDATE sessions SET status = ?, ended_at = ? WHERE id = ?",
-		"ended", endedAt, sessionID,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to end session: %w", err)
+	mgr := session.NewManager(db)
+	if err := mgr.End(sessionID); err != nil {
+		return err
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("session not found: %s", sessionID)
-	}
-
-	// Append to ledger
+	// Append to ledger (best-effort)
 	_ = appendToLedger("session_end", map[string]string{
 		"session_id": sessionID,
 		"status":     "ended",
 	})
 
-	// Record quality metric
+	// Record quality metric (best-effort)
 	_ = recordQualityMetric(sessionID, "session_duration", "session", "")
 
 	fmt.Printf("✅ Session ended: %s\n", sessionID)
-	fmt.Printf("   Ended: %s\n", endedAt)
+	fmt.Printf("   Ended: %s\n", time.Now().UTC().Format(time.RFC3339))
 	return nil
 }
 
 func runSessionShow(cmd *cobra.Command, args []string) error {
-	database, err := getDB()
+	db, err := openRuntimeDB()
 	if err != nil {
 		return err
 	}
-	defer database.Close()
+	defer db.Close()
 
 	sessionID := args[0]
 
-	var goal, status, startedAt string
-	var endedAt *string
-	err = database.QueryRow(
-		"SELECT goal, status, started_at, ended_at FROM sessions WHERE id = ?",
-		sessionID,
-	).Scan(&goal, &status, &startedAt, &endedAt)
+	mgr := session.NewManager(db)
+	s, err := mgr.Get(sessionID)
 	if err != nil {
 		return fmt.Errorf("session not found: %s", sessionID)
 	}
 
-	fmt.Printf("Session: %s\n", sessionID)
-	fmt.Printf("Goal: %s\n", goal)
-	fmt.Printf("Status: %s\n", status)
-	fmt.Printf("Started: %s\n", startedAt)
-	if endedAt != nil {
-		fmt.Printf("Ended: %s\n", *endedAt)
+	fmt.Printf("Session: %s\n", s.ID)
+	fmt.Printf("Goal: %s\n", s.Goal)
+	fmt.Printf("Status: %s\n", s.Status)
+	fmt.Printf("Started: %s\n", s.StartedAt.Format(time.RFC3339))
+	if s.EndedAt != nil {
+		fmt.Printf("Ended: %s\n", s.EndedAt.Format(time.RFC3339))
 	}
 
 	// Show dispatches
-	rows, err := database.Query(
-		"SELECT agent, task, status, dispatched_at FROM agent_dispatches WHERE session_id = ? ORDER BY seq",
-		sessionID,
-	)
+	dispatches, err := mgr.ListDispatches(sessionID)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
 	fmt.Println("\nDispatches:")
-	dispatchCount := 0
-	for rows.Next() {
-		var agent, task, dispatchStatus, dispatchedAt string
-		if err := rows.Scan(&agent, &task, &dispatchStatus, &dispatchedAt); err != nil {
-			continue
-		}
-		dispatchCount++
-		fmt.Printf("  [%s] %s: %s\n", dispatchStatus, agent, task)
-	}
-	if dispatchCount == 0 {
+	if len(dispatches) == 0 {
 		fmt.Println("  No dispatches")
+		return nil
+	}
+	for _, d := range dispatches {
+		status := "pending"
+		if d.Result != "" {
+			status = "completed"
+		} else if d.ErrorMessage != "" {
+			status = "failed"
+		}
+		startedAt := ""
+		if d.StartedAt != nil {
+			startedAt = d.StartedAt.Format(time.RFC3339)
+		}
+		fmt.Printf("  [%s] %s: %s\n", status, d.Agent, d.Task)
+		if startedAt != "" {
+			fmt.Printf("    Dispatched: %s\n", startedAt)
+		}
 	}
 
 	return nil

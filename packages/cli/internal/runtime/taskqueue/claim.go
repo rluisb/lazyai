@@ -96,6 +96,48 @@ func (m *Manager) Claim(sessionID string, topic string, agent string) (*Task, er
 	return m.GetTask(*taskID)
 }
 
+// ClaimByID claims a specific task by its integer ID for the given agent.
+// Returns nil if the task is not available (not open, already claimed by this agent, or max agents reached).
+func (m *Manager) ClaimByID(sessionID string, topic string, agent string, taskID int) (*Task, error) {
+	claimedAt := runtime.Now()
+
+	// Verify task exists, is open, and agent hasn't already claimed it
+	var available int
+	err := m.db.QueryRow(
+		`SELECT 1 FROM task_queue q
+		WHERE q.id = ? AND q.session_id = ? AND q.topic = ? AND q.status = 'open'
+		  AND q.id NOT IN (SELECT task_id FROM task_claims WHERE agent = ?)
+		  AND (SELECT COUNT(*) FROM task_claims WHERE task_id = ?) < q.max_agents`,
+		taskID, sessionID, topic, agent, taskID,
+	).Scan(&available)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("check task availability: %w", err)
+	}
+
+	// Insert claim
+	_, err = m.db.Exec(
+		"INSERT INTO task_claims (task_id, agent, claimed_at) VALUES (?, ?, ?)",
+		taskID, agent, claimedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("claim task by id: %w", err)
+	}
+
+	// Update task status to claimed
+	_, err = m.db.Exec(
+		"UPDATE task_queue SET status = ? WHERE id = ?",
+		string(TaskClaimed), taskID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("update task status: %w", err)
+	}
+
+	return m.GetTask(taskID)
+}
+
 // findExistingClaim checks if an agent already claimed a task.
 func (m *Manager) findExistingClaim(sessionID string, topic string, agent string) (*int, error) {
 	var taskID int

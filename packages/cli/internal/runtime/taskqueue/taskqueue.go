@@ -79,12 +79,13 @@ func (m *Manager) Enqueue(sessionID string, topic string, task string, opts Enqu
 func (m *Manager) GetTask(taskID int) (*Task, error) {
 	var t Task
 	var dedupeKey sql.NullString
+	var createdAtStr string
 
 	err := m.db.QueryRow(
 		"SELECT id, session_id, topic, task, status, max_agents, dedupe_key, created_at FROM task_queue WHERE id = ?",
 		taskID,
 	).Scan(
-		&t.ID, &t.SessionID, &t.Topic, &t.Task, &t.Status, &t.MaxAgents, &dedupeKey, &t.CreatedAt,
+		&t.ID, &t.SessionID, &t.Topic, &t.Task, &t.Status, &t.MaxAgents, &dedupeKey, &createdAtStr,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("task not found: %d", taskID)
@@ -96,6 +97,12 @@ func (m *Manager) GetTask(taskID int) (*Task, error) {
 	if dedupeKey.Valid {
 		t.DedupeKey = &dedupeKey.String
 	}
+
+	parsedAt, err := time.Parse(time.RFC3339, createdAtStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse created_at: %w", err)
+	}
+	t.CreatedAt = parsedAt
 
 	// Load claims
 	claims, err := m.GetClaims(taskID)
@@ -121,9 +128,15 @@ func (m *Manager) GetClaims(taskID int) ([]TaskClaim, error) {
 	var claims []TaskClaim
 	for rows.Next() {
 		var c TaskClaim
-		if err := rows.Scan(&c.TaskID, &c.Agent, &c.ClaimedAt); err != nil {
+		var claimedAtStr string
+		if err := rows.Scan(&c.TaskID, &c.Agent, &claimedAtStr); err != nil {
 			continue
 		}
+		parsedAt, err := time.Parse(time.RFC3339, claimedAtStr)
+		if err != nil {
+			continue
+		}
+		c.ClaimedAt = parsedAt
 		claims = append(claims, c)
 	}
 
@@ -155,9 +168,10 @@ func (m *Manager) List(sessionID string, status TaskStatus) ([]Task, error) {
 	for rows.Next() {
 		var t Task
 		var dedupeKey sql.NullString
+		var createdAtStr string
 
 		if err := rows.Scan(
-			&t.ID, &t.SessionID, &t.Topic, &t.Task, &t.Status, &t.MaxAgents, &dedupeKey, &t.CreatedAt,
+			&t.ID, &t.SessionID, &t.Topic, &t.Task, &t.Status, &t.MaxAgents, &dedupeKey, &createdAtStr,
 		); err != nil {
 			continue
 		}
@@ -165,6 +179,12 @@ func (m *Manager) List(sessionID string, status TaskStatus) ([]Task, error) {
 		if dedupeKey.Valid {
 			t.DedupeKey = &dedupeKey.String
 		}
+
+		parsedAt, err := time.Parse(time.RFC3339, createdAtStr)
+		if err != nil {
+			continue
+		}
+		t.CreatedAt = parsedAt
 
 		tasks = append(tasks, t)
 	}

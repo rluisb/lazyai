@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,6 +10,12 @@ import (
 	"strings"
 	"time"
 )
+
+// sha256Hash computes a SHA-256 hex digest.
+func sha256Hash(data []byte) string {
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
+}
 
 // LedgerIntegration provides helper functions for appending to the ledger
 // from other commands (session, dispatch, workflow, etc.)

@@ -24,10 +24,10 @@ func TestFormatTaskID(t *testing.T) {
 
 func TestParseTaskID(t *testing.T) {
 	cases := []struct {
-		input       string
-		wantID      int
-		wantErr     bool
-		wantErrMsg  string
+		input      string
+		wantID     int
+		wantErr    bool
+		wantErrMsg string
 	}{
 		{"task_1", 1, false, ""},
 		{"task_42", 42, false, ""},

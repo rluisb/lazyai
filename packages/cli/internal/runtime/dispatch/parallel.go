@@ -78,29 +78,29 @@ func DispatchWave(ctx context.Context, d Dispatcher, wave *Wave) (*WaveResult, e
 	}
 
 	result := NewWaveResult()
-	
+
 	// Create semaphore for concurrency control
 	maxConcurrent := wave.MaxConcurrent
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
 	}
-	
+
 	sem := make(chan struct{}, maxConcurrent)
 	var wg sync.WaitGroup
-	
+
 	// Context with timeout
 	if wave.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, wave.Timeout)
 		defer cancel()
 	}
-	
+
 	// Dispatch each task
 	for _, task := range wave.Tasks {
 		wg.Add(1)
 		go func(t WaveTask) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore
 			select {
 			case sem <- struct{}{}:
@@ -109,18 +109,18 @@ func DispatchWave(ctx context.Context, d Dispatcher, wave *Wave) (*WaveResult, e
 				result.SetError(t.Agent+":"+t.Task, ctx.Err())
 				return
 			}
-			
+
 			// Execute task
 			r, err := d.Dispatch("", t.Agent, t.Task, t.Mode)
 			if err != nil {
 				result.SetError(t.Agent+":"+t.Task, err)
 				return
 			}
-			
+
 			result.SetResult(t.Agent+":"+t.Task, r)
 		}(task)
 	}
-	
+
 	wg.Wait()
 	return result, nil
 }
@@ -149,17 +149,17 @@ func NewBarrier(id string, expectedCount int) *Barrier {
 func (b *Barrier) Arrive() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.resolved {
 		return fmt.Errorf("barrier %s already resolved", b.id)
 	}
-	
+
 	b.arrivedCount++
 	if b.arrivedCount >= b.expectedCount {
 		b.resolved = true
 		b.cond.Broadcast()
 	}
-	
+
 	return nil
 }
 
@@ -219,14 +219,14 @@ func NewLockManager() *LockManager {
 // Acquire attempts to acquire a named lock
 func (lm *LockManager) Acquire(name string, holder string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-	
+
 	for time.Now().Before(deadline) {
 		if lm.tryAcquire(name, holder) {
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	
+
 	return fmt.Errorf("lock %s timeout after %v", name, timeout)
 }
 
@@ -234,7 +234,7 @@ func (lm *LockManager) Acquire(name string, holder string, timeout time.Duration
 func (lm *LockManager) tryAcquire(name string, holder string) bool {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	if existing, ok := lm.locks[name]; ok {
 		// Check if lock is stale (> 30 min)
 		if time.Since(existing.acquired) > 30*time.Minute {
@@ -248,7 +248,7 @@ func (lm *LockManager) tryAcquire(name string, holder string) bool {
 		}
 		return false
 	}
-	
+
 	lm.locks[name] = &Lock{
 		name:     name,
 		holder:   holder,
@@ -261,16 +261,16 @@ func (lm *LockManager) tryAcquire(name string, holder string) bool {
 func (lm *LockManager) Release(name string, holder string) error {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	lock, ok := lm.locks[name]
 	if !ok {
 		return fmt.Errorf("lock %s not found", name)
 	}
-	
+
 	if lock.holder != holder {
 		return fmt.Errorf("lock %s held by %s, not %s", name, lock.holder, holder)
 	}
-	
+
 	delete(lm.locks, name)
 	return nil
 }
@@ -279,7 +279,7 @@ func (lm *LockManager) Release(name string, holder string) error {
 func (lm *LockManager) Status(name string) (holder string, acquired time.Time, ok bool) {
 	lm.mu.RLock()
 	defer lm.mu.RUnlock()
-	
+
 	lock, ok := lm.locks[name]
 	if !ok {
 		return "", time.Time{}, false
@@ -291,7 +291,7 @@ func (lm *LockManager) Status(name string) (holder string, acquired time.Time, o
 func (lm *LockManager) CleanupStale(maxAge time.Duration) int {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
-	
+
 	count := 0
 	for name, lock := range lm.locks {
 		if time.Since(lock.acquired) > maxAge {

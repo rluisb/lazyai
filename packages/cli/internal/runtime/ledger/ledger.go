@@ -26,19 +26,19 @@ type Ledger struct {
 
 // Entry represents a single ledger record.
 type Entry struct {
-	Seq         int             `json:"seq"`
-	Timestamp   string          `json:"ts"`
-	Type        string          `json:"type"`
-	SessionID   string          `json:"session_id,omitempty"`
-	WorkflowID  string          `json:"workflow_run_id,omitempty"`
-	Agent       string          `json:"agent,omitempty"`
-	Data        json.RawMessage `json:"data"`
-	PrevHash    string          `json:"prev_hash"`
-	Hash        string          `json:"hash"`
-	Risk        string          `json:"risk,omitempty"`
-	InputHash   string          `json:"input_hash,omitempty"`
-	OutputHash  string          `json:"output_hash,omitempty"`
-	Redactions  []string        `json:"redactions,omitempty"`
+	Seq        int             `json:"seq"`
+	Timestamp  string          `json:"ts"`
+	Type       string          `json:"type"`
+	SessionID  string          `json:"session_id,omitempty"`
+	WorkflowID string          `json:"workflow_run_id,omitempty"`
+	Agent      string          `json:"agent,omitempty"`
+	Data       json.RawMessage `json:"data"`
+	PrevHash   string          `json:"prev_hash"`
+	Hash       string          `json:"hash"`
+	Risk       string          `json:"risk,omitempty"`
+	InputHash  string          `json:"input_hash,omitempty"`
+	OutputHash string          `json:"output_hash,omitempty"`
+	Redactions []string        `json:"redactions,omitempty"`
 }
 
 // secretKeys are fields that must be redacted before hashing.
@@ -114,7 +114,8 @@ func (l *Ledger) Append(entry *Entry) error {
 
 // computeHash computes the SHA-256 hash of an entry.
 // Uses pipe-delimited canonical form matching bash ledger.sh:
-//   seq|ts|type|session_id|JSON(data)|prev_hash
+//
+//	seq|ts|type|session_id|JSON(data)|prev_hash
 func (l *Ledger) computeHash(entry *Entry) string {
 	dataStr := string(entry.Data)
 	canonical := fmt.Sprintf("%d|%s|%s|%s|%s|%s",

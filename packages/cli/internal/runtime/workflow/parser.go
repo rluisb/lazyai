@@ -90,8 +90,8 @@ func ParseYAML(path string) (*Workflow, error) {
 		Name:        raw.Name,
 		Description: raw.Description,
 		Trigger:     raw.Trigger,
-		Version:       1,
-		CreatedAt:     time.Now(),
+		Version:     1,
+		CreatedAt:   time.Now(),
 	}
 
 	// Parse modes
@@ -115,14 +115,14 @@ func ParseYAML(path string) (*Workflow, error) {
 			Mode:        phase.Mode,
 			Feedforward: phase.Feedforward,
 		}
-		
+
 		// Parse metrics map to slice
 		for metricName, enabled := range phase.Metrics {
 			if enabled {
 				step.Metrics = append(step.Metrics, metricName)
 			}
 		}
-		
+
 		// Parse gate - can be string, null, or object
 		if phase.Gate != nil {
 			switch v := phase.Gate.(type) {
@@ -145,7 +145,7 @@ func ParseYAML(path string) (*Workflow, error) {
 				}
 			}
 		}
-		
+
 		wf.Steps = append(wf.Steps, step)
 	}
 
@@ -173,7 +173,7 @@ func (w *Workflow) Validate() error {
 			return fmt.Errorf("phase %s: agent is required", step.Name)
 		}
 	}
-	
+
 	// If no modes defined, create a default mode that runs all phases
 	if len(w.Config.Modes) == 0 {
 		allPhases := make([]string, len(w.Steps))
@@ -188,7 +188,7 @@ func (w *Workflow) Validate() error {
 		}
 		w.Config.DefaultMode = "default"
 	}
-	
+
 	if w.Config.DefaultMode == "" {
 		return fmt.Errorf("default_mode is required")
 	}
@@ -200,12 +200,12 @@ func (w *Workflow) Validate() error {
 
 // rawWorkflow is the YAML unmarshaling struct
 type rawWorkflow struct {
-	Name        string              `yaml:"name"`
-	Trigger     string              `yaml:"trigger"`
-	Description string              `yaml:"description"`
-	Modes       map[string]rawMode  `yaml:"modes"`
-	DefaultMode string              `yaml:"default_mode"`
-	Phases      []rawPhase          `yaml:"phases"`
+	Name        string             `yaml:"name"`
+	Trigger     string             `yaml:"trigger"`
+	Description string             `yaml:"description"`
+	Modes       map[string]rawMode `yaml:"modes"`
+	DefaultMode string             `yaml:"default_mode"`
+	Phases      []rawPhase         `yaml:"phases"`
 }
 
 type rawMode struct {
@@ -214,14 +214,14 @@ type rawMode struct {
 }
 
 type rawPhase struct {
-	Name        string            `yaml:"name"`
-	Agent       string            `yaml:"agent"`
-	Skill       string            `yaml:"skill"`
-	Mode        string            `yaml:"mode"`
-	Feedforward string            `yaml:"feedforward"`
-	Gate        interface{}       `yaml:"gate"`        // Can be string, null, or object
-	GatePrompt  string            `yaml:"gate_prompt"`
-	Metrics     map[string]bool   `yaml:"metrics"`     // Map of metric_name: true/false
+	Name        string          `yaml:"name"`
+	Agent       string          `yaml:"agent"`
+	Skill       string          `yaml:"skill"`
+	Mode        string          `yaml:"mode"`
+	Feedforward string          `yaml:"feedforward"`
+	Gate        interface{}     `yaml:"gate"` // Can be string, null, or object
+	GatePrompt  string          `yaml:"gate_prompt"`
+	Metrics     map[string]bool `yaml:"metrics"` // Map of metric_name: true/false
 }
 
 type rawGate struct {

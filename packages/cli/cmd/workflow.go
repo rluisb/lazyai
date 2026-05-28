@@ -7,11 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/runtime"
+	"github.com/rluisb/lazyai/packages/cli/internal/runtime/dispatch"
+	"github.com/rluisb/lazyai/packages/cli/internal/runtime/workflow"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-// Workflow represents a workflow definition
+// Workflow represents a workflow definition (legacy CLI format)
 type Workflow struct {
 	Name        string           `yaml:"name"`
 	Version     string           `yaml:"version"`
@@ -93,13 +96,13 @@ var workflowListCmd = &cobra.Command{
 				workflowPath := filepath.Join(workflowsDir, entry.Name())
 				data, err := os.ReadFile(workflowPath)
 				if err == nil {
-					var workflow Workflow
-					if err := yaml.Unmarshal(data, &workflow); err == nil {
+					var wf Workflow
+					if err := yaml.Unmarshal(data, &wf); err == nil {
 						fmt.Printf("  • %s", name)
-						if workflow.Description != "" {
-							fmt.Printf(" - %s", workflow.Description)
+						if wf.Description != "" {
+							fmt.Printf(" - %s", wf.Description)
 						}
-						fmt.Printf(" (%d phases)\n", len(workflow.Phases))
+						fmt.Printf(" (%d phases)\n", len(wf.Phases))
 						count++
 						continue
 					}
@@ -131,20 +134,20 @@ var workflowShowCmd = &cobra.Command{
 			return fmt.Errorf("workflow '%s' not found", workflowName)
 		}
 
-		var workflow Workflow
-		if err := yaml.Unmarshal(data, &workflow); err != nil {
+		var wf Workflow
+		if err := yaml.Unmarshal(data, &wf); err != nil {
 			return fmt.Errorf("error parsing workflow: %w", err)
 		}
 
-		fmt.Printf("Workflow: %s\n", workflow.Name)
-		fmt.Printf("Version: %s\n", workflow.Version)
-		if workflow.Description != "" {
-			fmt.Printf("Description: %s\n", workflow.Description)
+		fmt.Printf("Workflow: %s\n", wf.Name)
+		fmt.Printf("Version: %s\n", wf.Version)
+		if wf.Description != "" {
+			fmt.Printf("Description: %s\n", wf.Description)
 		}
 		fmt.Println()
 
 		fmt.Println("Phases:")
-		for i, phase := range workflow.Phases {
+		for i, phase := range wf.Phases {
 			fmt.Printf("  %d. %s\n", i+1, phase.Name)
 			fmt.Printf("     Agent: %s | Mode: %s\n", phase.Agent, phase.Mode)
 			if phase.Description != "" {
@@ -162,13 +165,13 @@ var workflowShowCmd = &cobra.Command{
 			}
 		}
 
-		if workflow.Metadata.EstimatedDuration != "" {
-			fmt.Printf("\nEstimated Duration: %s\n", workflow.Metadata.EstimatedDuration)
+		if wf.Metadata.EstimatedDuration != "" {
+			fmt.Printf("\nEstimated Duration: %s\n", wf.Metadata.EstimatedDuration)
 		}
-		if workflow.Metadata.Complexity != "" {
-			fmt.Printf("Complexity: %s\n", workflow.Metadata.Complexity)
+		if wf.Metadata.Complexity != "" {
+			fmt.Printf("Complexity: %s\n", wf.Metadata.Complexity)
 		}
-		if workflow.Metadata.RequiresApproval {
+		if wf.Metadata.RequiresApproval {
 			fmt.Println("Requires Approval: Yes")
 		}
 
@@ -192,14 +195,48 @@ var workflowRunCmd = &cobra.Command{
 			return fmt.Errorf("workflow '%s' not found", workflowName)
 		}
 
-		var workflow Workflow
-		if err := yaml.Unmarshal(data, &workflow); err != nil {
+		var wf Workflow
+		if err := yaml.Unmarshal(data, &wf); err != nil {
 			return fmt.Errorf("error parsing workflow: %w", err)
 		}
 
-		fmt.Printf("🚀 Executing workflow: %s\n", workflow.Name)
-		if workflow.Description != "" {
-			fmt.Printf("   %s\n", workflow.Description)
+		// Open runtime DB for workflow tracking
+		db, err := openRuntimeDB()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		// Create a minimal session for this workflow run
+		sessionID := os.Getenv("LAZYAI_SESSION")
+		if sessionID == "" {
+			sessionID = fmt.Sprintf("wf_%d", time.Now().Unix())
+		}
+
+		if err := ensureSession(db, sessionID); err != nil {
+			return fmt.Errorf("error ensuring session: %w", err)
+		}
+
+		// Create workflow manager with a mock dispatcher for CLI simulation
+		disp := dispatch.NewMockDispatcher()
+		_ = workflow.NewManager(db, nil, disp)
+
+		// Create workflow run record in DB
+		result := &workflow.RunResult{
+			WorkflowName: wf.Name,
+			SessionID:    sessionID,
+			Status:       "running",
+			CurrentStep:  0,
+			TotalSteps:   len(wf.Phases),
+			StartedAt:    time.Now(),
+		}
+		if err := createWorkflowRun(db, result); err != nil {
+			return fmt.Errorf("create workflow run record: %w", err)
+		}
+
+		fmt.Printf("🚀 Executing workflow: %s\n", wf.Name)
+		if wf.Description != "" {
+			fmt.Printf("   %s\n", wf.Description)
 		}
 		fmt.Println()
 
@@ -209,8 +246,9 @@ var workflowRunCmd = &cobra.Command{
 		}
 
 		// Execute phases
-		for i, phase := range workflow.Phases {
-			fmt.Printf("Phase %d/%d: %s\n", i+1, len(workflow.Phases), phase.Name)
+		for i, phase := range wf.Phases {
+			result.CurrentStep = i + 1
+			fmt.Printf("Phase %d/%d: %s\n", i+1, len(wf.Phases), phase.Name)
 			fmt.Printf("  Agent: %s | Mode: %s\n", phase.Agent, phase.Mode)
 			if phase.Description != "" {
 				fmt.Printf("  %s\n", phase.Description)
@@ -232,6 +270,8 @@ var workflowRunCmd = &cobra.Command{
 						var response string
 						fmt.Scanln(&response)
 						if strings.ToLower(response) != "y" {
+							result.Status = "halted"
+							_ = updateWorkflowRun(db, result)
 							fmt.Println("  ❌ Workflow halted by user")
 							return nil
 						}
@@ -249,7 +289,7 @@ var workflowRunCmd = &cobra.Command{
 
 				// Record to ledger
 				appendToLedger("workflow_phase_completed", map[string]string{
-					"workflow": workflow.Name,
+					"workflow": wf.Name,
 					"phase":    phase.Name,
 					"agent":    phase.Agent,
 				})
@@ -258,12 +298,41 @@ var workflowRunCmd = &cobra.Command{
 			fmt.Println()
 		}
 
+		// Mark complete
 		if dryRun {
+			result.Status = "dry_run"
 			fmt.Println("✅ Dry run complete. Use --dry-run=false to execute.")
 		} else {
+			result.Status = "completed"
 			fmt.Println("✅ Workflow completed successfully!")
 		}
+		now := time.Now()
+		result.CompletedAt = &now
+		_ = updateWorkflowRun(db, result)
 
+		return nil
+	},
+}
+
+var workflowSyncCmd = &cobra.Command{
+	Use:   "sync",
+	Short: "Sync workflow definitions to runtime database",
+	Long:  `Read workflow YAML files and sync them to the runtime database for tracking.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		db, err := openRuntimeDB()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		workflowsDir := filepath.Join(".opencode", "workflows")
+		wfMgr := workflow.NewManager(db, nil, nil)
+
+		if err := wfMgr.Sync(workflowsDir); err != nil {
+			return fmt.Errorf("sync workflows: %w", err)
+		}
+
+		fmt.Println("✅ Workflows synced to runtime database")
 		return nil
 	},
 }
@@ -274,6 +343,34 @@ func init() {
 	workflowCmd.AddCommand(workflowListCmd)
 	workflowCmd.AddCommand(workflowShowCmd)
 	workflowCmd.AddCommand(workflowRunCmd)
+	workflowCmd.AddCommand(workflowSyncCmd)
 	rootCmd.AddCommand(workflowCmd)
 	workflowCmd.GroupID = "runtime"
+}
+
+// createWorkflowRun inserts a workflow run record into the database.
+func createWorkflowRun(db *runtime.DB, result *workflow.RunResult) error {
+	res, err := db.Exec(
+		"INSERT INTO workflow_instances (workflow_name, session_id, status, current_step, total_steps, started_at) VALUES (?, ?, ?, ?, ?, ?)",
+		result.WorkflowName, result.SessionID, result.Status, result.CurrentStep, result.TotalSteps, result.StartedAt.Format(time.RFC3339),
+	)
+	if err != nil {
+		return fmt.Errorf("insert workflow instance: %w", err)
+	}
+	id, _ := res.LastInsertId()
+	result.InstanceID = int(id)
+	return nil
+}
+
+// updateWorkflowRun updates a workflow run record in the database.
+func updateWorkflowRun(db *runtime.DB, result *workflow.RunResult) error {
+	var completedAt interface{}
+	if result.CompletedAt != nil {
+		completedAt = result.CompletedAt.Format(time.RFC3339)
+	}
+	_, err := db.Exec(
+		"UPDATE workflow_instances SET status = ?, current_step = ?, result = ?, error_message = ?, completed_at = ? WHERE id = ?",
+		result.Status, result.CurrentStep, result.Result, result.ErrorMessage, completedAt, result.InstanceID,
+	)
+	return err
 }

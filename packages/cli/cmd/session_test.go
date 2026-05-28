@@ -86,20 +86,20 @@ func TestTimeFormat(t *testing.T) {
 	}
 }
 
-// BLOCKER: runSessionStart calls mgr.Start() which calls mgr.Get() which scans
-// started_at (TEXT) directly into time.Time. Go's sql.Scanner does not support
-// parsing RFC3339 strings into time.Time automatically. The INSERT succeeds but
-// the function returns an error before printing output.
 func TestSessionStartCreatesRow(t *testing.T) {
 	withTempDir(t)
 
 	goal := "integration-test-goal"
-	err := runSessionStart(&cobra.Command{}, []string{goal})
-	if err == nil {
-		t.Skip("BLOCKER: production code bug — session.Manager.Get/Start scan started_at TEXT into time.Time fails. Enable after fix.")
+	out := captureStdout(t, func() {
+		if err := runSessionStart(&cobra.Command{}, []string{goal}); err != nil {
+			t.Fatalf("runSessionStart failed: %v", err)
+		}
+	})
+	if !strings.Contains(out, "Session started:") {
+		t.Errorf("expected start output to contain 'Session started:', got:\n%s", out)
 	}
 
-	// Despite the error, the INSERT succeeded; verify the row exists.
+	// Verify the row exists.
 	db, err := openRuntimeDB()
 	if err != nil {
 		t.Fatalf("openRuntimeDB failed: %v", err)
@@ -111,16 +111,14 @@ func TestSessionStartCreatesRow(t *testing.T) {
 		t.Fatalf("failed to count sessions: %v", err)
 	}
 	if count != 1 {
-		t.Errorf("expected 1 active session row with goal %q (function errored but INSERT succeeded), got %d", goal, count)
+		t.Errorf("expected 1 active session row with goal %q, got %d", goal, count)
 	}
 }
 
-// BLOCKER: runSessionList calls mgr.List() which scans started_at TEXT into time.Time.
-// runSessionShow calls mgr.Get() with the same issue.
 func TestSessionListAndShow(t *testing.T) {
 	withTempDir(t)
 
-	// Create session directly via SQL to avoid the scan bug in mgr.Start
+	// Create session directly via SQL so list/show exercise timestamp parsing.
 	db, err := openRuntimeDB()
 	if err != nil {
 		t.Fatalf("openRuntimeDB failed: %v", err)
@@ -137,16 +135,22 @@ func TestSessionListAndShow(t *testing.T) {
 		t.Fatalf("failed to insert test session: %v", err)
 	}
 
-	// Test list — blocked by scan bug
-	listErr := runSessionList(&cobra.Command{}, []string{})
-	if listErr != nil {
-		t.Skip("BLOCKER: production code bug — session.Manager.List scans started_at TEXT into time.Time. Enable after fix.")
+	listOut := captureStdout(t, func() {
+		if err := runSessionList(&cobra.Command{}, []string{}); err != nil {
+			t.Fatalf("runSessionList failed: %v", err)
+		}
+	})
+	if !strings.Contains(listOut, sessionID) || !strings.Contains(listOut, goal) {
+		t.Errorf("expected list output to contain session ID and goal, got:\n%s", listOut)
 	}
 
-	// Test show — blocked by scan bug
-	showErr := runSessionShow(&cobra.Command{}, []string{sessionID})
-	if showErr != nil {
-		t.Skip("BLOCKER: production code bug — session.Manager.Get scans started_at TEXT into time.Time. Enable after fix.")
+	showOut := captureStdout(t, func() {
+		if err := runSessionShow(&cobra.Command{}, []string{sessionID}); err != nil {
+			t.Fatalf("runSessionShow failed: %v", err)
+		}
+	})
+	if !strings.Contains(showOut, sessionID) || !strings.Contains(showOut, goal) {
+		t.Errorf("expected show output to contain session ID and goal, got:\n%s", showOut)
 	}
 }
 

@@ -104,14 +104,19 @@ func (m *Manager) End(sessionID string) error {
 func (m *Manager) Get(sessionID string) (*Session, error) {
 	var s Session
 	var endedAt sql.NullString
-	var tags string
+	var model sql.NullString
+	var repo sql.NullString
+	var worktree sql.NullString
+	var summary sql.NullString
+	var tags sql.NullString
+	var startedAt string
 
 	err := m.db.QueryRow(
 		"SELECT id, started_at, ended_at, agent, model, goal, repo, worktree, status, token_total, summary, tags FROM sessions WHERE id = ?",
 		sessionID,
 	).Scan(
-		&s.ID, &s.StartedAt, &endedAt, &s.Agent, &s.Model, &s.Goal, &s.Repo, &s.Worktree,
-		&s.Status, &s.TokenTotal, &s.Summary, &tags,
+		&s.ID, &startedAt, &endedAt, &s.Agent, &model, &s.Goal, &repo, &worktree,
+		&s.Status, &s.TokenTotal, &summary, &tags,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("session not found: %s", sessionID)
@@ -120,13 +125,31 @@ func (m *Manager) Get(sessionID string) (*Session, error) {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
+	parsedStartedAt, err := time.Parse(time.RFC3339, startedAt)
+	if err != nil {
+		return nil, fmt.Errorf("parse started_at: %w", err)
+	}
+	s.StartedAt = parsedStartedAt
+
 	if endedAt.Valid {
 		t, _ := time.Parse(time.RFC3339, endedAt.String)
 		s.EndedAt = &t
 	}
+	if model.Valid {
+		s.Model = model.String
+	}
+	if repo.Valid {
+		s.Repo = repo.String
+	}
+	if worktree.Valid {
+		s.Worktree = worktree.String
+	}
+	if summary.Valid {
+		s.Summary = summary.String
+	}
 
-	if tags != "" {
-		s.Tags = strings.Split(tags, ",")
+	if tags.Valid && tags.String != "" {
+		s.Tags = strings.Split(tags.String, ",")
 	}
 
 	return &s, nil
@@ -146,22 +169,45 @@ func (m *Manager) List() ([]Session, error) {
 	for rows.Next() {
 		var s Session
 		var endedAt sql.NullString
-		var tags string
+		var model sql.NullString
+		var repo sql.NullString
+		var worktree sql.NullString
+		var summary sql.NullString
+		var tags sql.NullString
+		var startedAt string
 
 		if err := rows.Scan(
-			&s.ID, &s.StartedAt, &endedAt, &s.Agent, &s.Model, &s.Goal, &s.Repo, &s.Worktree,
-			&s.Status, &s.TokenTotal, &s.Summary, &tags,
+			&s.ID, &startedAt, &endedAt, &s.Agent, &model, &s.Goal, &repo, &worktree,
+			&s.Status, &s.TokenTotal, &summary, &tags,
 		); err != nil {
 			continue
 		}
+
+		parsedStartedAt, err := time.Parse(time.RFC3339, startedAt)
+		if err != nil {
+			continue
+		}
+		s.StartedAt = parsedStartedAt
 
 		if endedAt.Valid {
 			t, _ := time.Parse(time.RFC3339, endedAt.String)
 			s.EndedAt = &t
 		}
+		if model.Valid {
+			s.Model = model.String
+		}
+		if repo.Valid {
+			s.Repo = repo.String
+		}
+		if worktree.Valid {
+			s.Worktree = worktree.String
+		}
+		if summary.Valid {
+			s.Summary = summary.String
+		}
 
-		if tags != "" {
-			s.Tags = strings.Split(tags, ",")
+		if tags.Valid && tags.String != "" {
+			s.Tags = strings.Split(tags.String, ",")
 		}
 
 		sessions = append(sessions, s)

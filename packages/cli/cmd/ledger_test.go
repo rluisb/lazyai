@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 func TestSha256Hash(t *testing.T) {
@@ -211,5 +213,134 @@ func TestAppendToLedger(t *testing.T) {
 		if entries[1].PrevHash != entries[0].Hash {
 			t.Error("Hash chain is broken")
 		}
+	}
+}
+
+// ── Integration tests for runtime-backed ledger CLI commands ─────────────────
+
+func TestLedgerInitRuntime(t *testing.T) {
+	tmpDir := withTempDir(t)
+
+	out := captureStdout(t, func() {
+		if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+			t.Fatalf("runLedgerInit failed: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "Ledger initialized") {
+		t.Errorf("expected output to contain 'Ledger initialized', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+		t.Errorf("expected ledger file to exist at %s", ledgerPath)
+	}
+
+	entries, err := readLedger(ledgerPath)
+	if err != nil {
+		t.Fatalf("failed to read ledger: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("expected 1 entry, got %d", len(entries))
+	}
+	if len(entries) > 0 && entries[0].EventType != "genesis" {
+		t.Errorf("expected event type 'genesis', got '%s'", entries[0].EventType)
+	}
+}
+
+func TestLedgerAppendRuntime(t *testing.T) {
+	tmpDir := withTempDir(t)
+
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
+	}
+
+	out := captureStdout(t, func() {
+		if err := runLedgerAppend(&cobra.Command{}, []string{"test_event", "test", "data"}); err != nil {
+			t.Fatalf("runLedgerAppend failed: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "Entry appended") {
+		t.Errorf("expected output to contain 'Entry appended', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	entries, err := readLedger(ledgerPath)
+	if err != nil {
+		t.Fatalf("failed to read ledger: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Errorf("expected 2 entries, got %d", len(entries))
+	}
+
+	if len(entries) > 1 {
+		if entries[1].EventType != "test_event" {
+			t.Errorf("expected event type 'test_event', got '%s'", entries[1].EventType)
+		}
+		if entries[1].PrevHash != entries[0].Hash {
+			t.Errorf("hash chain broken: entry 1 prev_hash=%s, entry 0 hash=%s", entries[1].PrevHash, entries[0].Hash)
+		}
+	}
+}
+
+func TestLedgerShowRuntime(t *testing.T) {
+	tmpDir := withTempDir(t)
+
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
+	}
+	if err := runLedgerAppend(&cobra.Command{}, []string{"show_test", "show", "data"}); err != nil {
+		t.Fatalf("runLedgerAppend failed: %v", err)
+	}
+
+	out := captureStdout(t, func() {
+		if err := runLedgerShow(&cobra.Command{}, []string{}); err != nil {
+			t.Fatalf("runLedgerShow failed: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "show_test") {
+		t.Errorf("expected output to contain 'show_test', got:\n%s", out)
+	}
+	if !strings.Contains(out, "show data") {
+		t.Errorf("expected output to contain 'show data', got:\n%s", out)
+	}
+	if !strings.Contains(out, "Last") {
+		t.Errorf("expected output to contain 'Last', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+		t.Errorf("expected ledger file to exist at %s", ledgerPath)
+	}
+}
+
+func TestLedgerVerifyRuntime(t *testing.T) {
+	tmpDir := withTempDir(t)
+
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
+	}
+	if err := runLedgerAppend(&cobra.Command{}, []string{"verify_test", "verify", "data"}); err != nil {
+		t.Fatalf("runLedgerAppend failed: %v", err)
+	}
+
+	out := captureStdout(t, func() {
+		if err := runLedgerVerify(&cobra.Command{}, []string{}); err != nil {
+			t.Fatalf("runLedgerVerify failed: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "verified") {
+		t.Errorf("expected output to contain 'verified', got:\n%s", out)
+	}
+	if !strings.Contains(out, "Chain intact") {
+		t.Errorf("expected output to contain 'Chain intact', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+		t.Errorf("expected ledger file to exist at %s", ledgerPath)
 	}
 }

@@ -24,7 +24,7 @@ func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testi
 		PlanningRepoPath: dir,
 		Tools:            []types.ToolId{types.ToolIdOpenCode},
 		CLITools:         []string{"gh"},
-		EnableServers:    []string{"filesystem", "orchestrator"},
+		EnableServers:    []string{"filesystem", "memory"},
 		ProjectName:      "demo-app",
 		PlanningDir:      "specs",
 		SetupScope:       types.SetupScopeProject,
@@ -47,7 +47,7 @@ func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testi
 	if err != nil {
 		t.Fatalf("ReadStoreData: %v", err)
 	}
-	if got, want := storeData.Config.EnableServers, []string{"filesystem", "orchestrator"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+	if got, want := storeData.Config.EnableServers, []string{"filesystem", "memory"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("EnableServers = %#v, want %#v", got, want)
 	}
 	if len(storeData.Files) != 1 || storeData.Files[0].Owner != types.FileOwnerLibrary {

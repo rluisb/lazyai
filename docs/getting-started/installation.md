@@ -13,12 +13,6 @@ Install the CLI:
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
-Install the optional orchestrator MCP runtime:
-
-```bash
-go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
-```
-
 Install the diff viewer utility:
 
 ```bash
@@ -33,7 +27,6 @@ If you are working on LazyAI itself:
 git clone git@github.com:rluisb/lazyai.git
 cd lazyai
 cd packages/cli && go install ./cmd/lazyai-cli
-cd ../orchestrator && go install ./cmd/lazyai-orchestrator
 cd ../diffviewer && go install ./cmd/lazyai-diffviewer
 ```
 
@@ -61,14 +54,13 @@ lazyai-cli doctor
 
 ## Binary names
 
-LazyAI ships three Go command packages:
+LazyAI currently ships these Go command packages:
 
 ```bash
 lazyai-cli init
 lazyai-cli compile
 lazyai-cli doctor
 lazyai-cli status
-lazyai-orchestrator connect
 lazyai-diffviewer --help
 ```
 
@@ -87,3 +79,4 @@ Symlinked files are tracked in `.ai-setup.json` with `kind: "symlink"`.
 - [Quick Start](quick-start.md)
 - [How It Works](../concepts/how-it-works.md)
 - [CLI Reference](../cli/reference.md)
+- [Migration note for removed runtime surfaces](../migration/fortnite-orchestrator-removal.md)

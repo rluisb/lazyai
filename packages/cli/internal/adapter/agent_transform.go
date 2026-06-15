@@ -171,9 +171,8 @@ func opencodeReasoningEffort(thinking string) string {
 }
 
 // opencodeTextVerbosity derives `textVerbosity` from the source `risk:`
-// annotation. High-risk roles (planning, review) prefer terse output to
-// avoid overwhelming the orchestrator with noise; lower-risk roles get the
-// medium default.
+// annotation. High-risk roles (planning, review) prefer terse output;
+// lower-risk roles get the medium default.
 func opencodeTextVerbosity(risk int) string {
 	if risk >= 4 {
 		return "low"
@@ -299,9 +298,9 @@ var copilotAgentModelRe = regexp.MustCompile(`(?m)^model:\s*\S+\s*$`)
 // markdown. The yaml's body and prompt are preserved verbatim — only the
 // model line is touched.
 //
-// Lookup: the yaml's `name:` field maps to library/agents/<name>.md. If no
-// matching markdown exists (e.g., a Copilot-only agent whose tier we can't
-// derive), the function returns the input unchanged so the existing
+// Lookup: the yaml's `name:` field maps to `canonical/agents/<name>.md`. If no
+// matching markdown exists, the function returns the input unchanged so the
+// existing yaml stays authoritative.
 // hand-authored model pin remains in effect.
 func RewriteCopilotAgent(content []byte, ctx *AdapterContext) ([]byte, error) {
 	nameMatch := copilotAgentNameRe.FindSubmatch(content)
@@ -331,14 +330,14 @@ func RewriteCopilotAgent(content []byte, ctx *AdapterContext) ([]byte, error) {
 // first, falls back to disk under LibraryDir. Returns ("", false) when no
 // matching agent exists at either location.
 func loadLibraryAgentMd(ctx *AdapterContext, name string) ([]byte, bool) {
-	rel := filepath.ToSlash(filepath.Join("agents", name+".md"))
+	rel := filepath.ToSlash(filepath.Join("canonical/agents", name+".md"))
 	if ctx.LibraryFS != nil {
 		if data, err := fs.ReadFile(ctx.LibraryFS, rel); err == nil {
 			return data, true
 		}
 	}
 	if ctx.LibraryDir != "" {
-		path := filepath.Join(ctx.LibraryDir, "agents", name+".md")
+		path := filepath.Join(ctx.LibraryDir, "canonical", "agents", name+".md")
 		if data, err := os.ReadFile(path); err == nil {
 			return data, true
 		}

@@ -57,7 +57,7 @@ const (
 	AgentIdBuilder      AgentId = "builder"
 	AgentIdDocumenter   AgentId = "documenter"
 	AgentIdImplementor  AgentId = "implementor"
-	AgentIdOrchestrator AgentId = "orchestrator"
+	AgentIdPrimaryAgent AgentId = "primary-agent"
 	AgentIdPlanner      AgentId = "planner"
 	AgentIdRedTeam      AgentId = "red-team"
 	AgentIdReviewer     AgentId = "reviewer"
@@ -68,34 +68,38 @@ const (
 type SkillId string
 
 const (
-	SkillIdAntiSpeculation   SkillId = "anti-speculation"
-	SkillIdBugfix            SkillId = "bugfix"
-	SkillIdExtractStandards  SkillId = "extract-standards"
-	SkillIdHousekeeping      SkillId = "housekeeping"
-	SkillIdImpactCheck       SkillId = "impact-check"
-	SkillIdImplement         SkillId = "implement"
-	SkillIdIterate           SkillId = "iterate"
-	SkillIdMemoryWrite       SkillId = "memory-write"
-	SkillIdOrchestrate       SkillId = "orchestrate"
-	SkillIdParallelExecution SkillId = "parallel-execution"
-	SkillIdPlan              SkillId = "plan"
-	SkillIdProcessAudit      SkillId = "process-audit"
-	SkillIdProofOfConcept    SkillId = "proof-of-concept"
-	SkillIdResearch          SkillId = "research"
-	SkillIdReview            SkillId = "review"
-	SkillIdRpi               SkillId = "rpi"
-	SkillIdSelfImprove       SkillId = "self-improve"
-	SkillIdSpeckitAnalyze    SkillId = "speckit-analyze"
-	SkillIdSpeckitChecklist  SkillId = "speckit-checklist"
-	SkillIdSpeckitClarify    SkillId = "speckit-clarify"
-	SkillIdSpeckitConstitute SkillId = "speckit-constitution"
-	SkillIdSpeckitImplement  SkillId = "speckit-implement"
-	SkillIdSpeckitPlan       SkillId = "speckit-plan"
-	SkillIdSpeckitSpecify    SkillId = "speckit-specify"
-	SkillIdSpeckitTasks      SkillId = "speckit-tasks"
-	SkillIdSpike             SkillId = "spike"
-	SkillIdTddLoop           SkillId = "tdd-loop"
-	SkillIdUpdateMemory      SkillId = "update-memory"
+	SkillIdAntiSpeculation     SkillId = "anti-speculation"
+	SkillIdBugfix              SkillId = "bugfix"
+	SkillIdCodebaseExploration SkillId = "codebase-exploration"
+	SkillIdDiagnose            SkillId = "diagnose"
+	SkillIdExtractStandards    SkillId = "extract-standards"
+	SkillIdHousekeeping        SkillId = "housekeeping"
+	SkillIdImpactCheck         SkillId = "impact-check"
+	SkillIdImplement           SkillId = "implement"
+	SkillIdIterate             SkillId = "iterate"
+	SkillIdMemoryWrite         SkillId = "memory-write"
+	SkillIdOrchestrate         SkillId = "orchestrate"
+	SkillIdParallelExecution   SkillId = "parallel-execution"
+	SkillIdPlan                SkillId = "plan"
+	SkillIdPrReview            SkillId = "pr-review"
+	SkillIdProcessAudit        SkillId = "process-audit"
+	SkillIdProofOfConcept      SkillId = "proof-of-concept"
+	SkillIdResearch            SkillId = "research"
+	SkillIdReview              SkillId = "review"
+	SkillIdRpi                 SkillId = "rpi"
+	SkillIdSelfImprove         SkillId = "self-improve"
+	SkillIdSpeckitAnalyze      SkillId = "speckit-analyze"
+	SkillIdSpeckitChecklist    SkillId = "speckit-checklist"
+	SkillIdSpeckitClarify      SkillId = "speckit-clarify"
+	SkillIdSpeckitConstitute   SkillId = "speckit-constitution"
+	SkillIdSpeckitImplement    SkillId = "speckit-implement"
+	SkillIdSpeckitPlan         SkillId = "speckit-plan"
+	SkillIdSpeckitSpecify      SkillId = "speckit-specify"
+	SkillIdSpeckitTasks        SkillId = "speckit-tasks"
+	SkillIdSpike               SkillId = "spike"
+	SkillIdTddLoop             SkillId = "tdd-loop"
+	SkillIdTestFirstChange     SkillId = "test-first-change"
+	SkillIdUpdateMemory        SkillId = "update-memory"
 )
 
 // PromptId identifies a reusable prompt.
@@ -372,45 +376,18 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
+		AgentIdPrimaryAgent,
 		AgentIdBuilder,
-		AgentIdDocumenter,
-		AgentIdImplementor,
-		AgentIdOrchestrator,
 		AgentIdPlanner,
-		AgentIdRedTeam,
 		AgentIdReviewer,
 		AgentIdScout,
 	}
 
 	ALL_SKILLS = []SkillId{
-		SkillIdAntiSpeculation,
-		SkillIdBugfix,
-		SkillIdExtractStandards,
-		SkillIdHousekeeping,
-		SkillIdImpactCheck,
-		SkillIdImplement,
-		SkillIdIterate,
-		SkillIdMemoryWrite,
-		SkillIdOrchestrate,
-		SkillIdParallelExecution,
-		SkillIdPlan,
-		SkillIdProcessAudit,
-		SkillIdProofOfConcept,
-		SkillIdResearch,
-		SkillIdReview,
-		SkillIdRpi,
-		SkillIdSelfImprove,
-		SkillIdSpeckitAnalyze,
-		SkillIdSpeckitChecklist,
-		SkillIdSpeckitClarify,
-		SkillIdSpeckitConstitute,
-		SkillIdSpeckitImplement,
-		SkillIdSpeckitPlan,
-		SkillIdSpeckitSpecify,
-		SkillIdSpeckitTasks,
-		SkillIdSpike,
-		SkillIdTddLoop,
-		SkillIdUpdateMemory,
+		SkillIdCodebaseExploration,
+		SkillIdTestFirstChange,
+		SkillIdDiagnose,
+		SkillIdPrReview,
 	}
 
 	ALL_PROMPTS = []PromptId{

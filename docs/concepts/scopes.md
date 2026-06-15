@@ -28,7 +28,7 @@ lazyai-cli init \
   --tools opencode,claude-code,copilot \
   --name my-app \
   --preset standard \
-  --enable-servers orchestrator \
+  --enable-servers filesystem,memory \
   --no-interactive
 ```
 

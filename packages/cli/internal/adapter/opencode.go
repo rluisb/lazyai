@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,14 +72,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	// hand-tuned `permission.edit` value) across re-runs.
 	if !files.FileExists(jsoncPath) {
 		instructions := []any{openCodeInstructionsPath(ctx)}
-		defaultAgent := "orchestrator"
-		if ctx.FortniteMode {
-			instructions = []any{"AGENTS.md", "STARTUP.md"}
-			defaultAgent = "loop-driver"
-		}
 		defaultConfig := map[string]any{
 			"$schema":       "https://opencode.ai/config.json",
-			"default_agent": defaultAgent,
+			"default_agent": primaryAgentID,
 			"instructions":  instructions,
 			"permission": map[string]any{
 				"edit": "ask",
@@ -99,207 +93,52 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		})
 	}
 
-	if ctx.FortniteMode {
-		// --- Fortnite mode: install Fortnite agents, skills, scripts, workflows ---
+	if err := copyCanonicalPrimaryAgent(ctx,
+		filepath.Join(ocDir, "agents", "primary-agent.md"),
+		openCodePrimaryAgentContent,
+	); err != nil {
+		return nil, err
+	}
 
-		// Merge Fortnite AGENTS.md into project root via managed block.
-		// This preserves any existing root AGENTS.md content while ensuring
-		// the Fortnite agent registry is present.
-		rootAgentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
-		var fortniteAgentsContent []byte
-		if ctx.LibraryFS != nil {
-			data, err := fs.ReadFile(ctx.LibraryFS, "fortnite/AGENTS.md")
+	// Copy canonical generic agents. Primary-agent is sourced from the
+	// canonical library above; retired Fortnite/orchestrator agents are not
+	// part of the neutral adapter contract.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/agents",
+		SelectionKey: "agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ocDir, "agents", file)
+		},
+		WarnOnSkip: true,
+		Transform: func(content []byte) []byte {
+			out, err := RewriteAgentForOpenCode(content, ctx, "")
 			if err != nil {
-				return nil, fmt.Errorf("read fortnite AGENTS.md: %w", err)
+				adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
+				return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
 			}
-			fortniteAgentsContent = data
-		} else {
-			data, err := files.ReadFile(filepath.Join(ctx.LibraryDir, "fortnite", "AGENTS.md"))
-			if err != nil {
-				return nil, fmt.Errorf("read fortnite AGENTS.md: %w", err)
-			}
-			fortniteAgentsContent = data
-		}
+			return out
+		},
+		IncludeFile: func(file string) bool {
+			name := fileID(file)
+			return name != primaryAgentID && isCanonicalAgentFile(file)
+		},
+	}); err != nil {
+		return nil, err
+	}
 
-		_, modified, err := WriteManagedBlockToFile(
-			rootAgentsPath,
-			fortniteAgentsContent,
-			ManagedBlockStartMarker,
-			ManagedBlockEndMarker,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("merge managed block into root AGENTS.md: %w", err)
-		}
-		if modified {
-			relPath, _ := filepath.Rel(ctx.TargetDir, rootAgentsPath)
-			if relPath == "" {
-				relPath = rootAgentsPath
-			}
-			hash, _ := files.FileHash(rootAgentsPath)
-			ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-				Path:   relPath,
-				Hash:   hash,
-				Source: "fortnite/AGENTS.md",
-				Owner:  types.FileOwnerLibrary,
-			})
-		}
-
-		// Copy Fortnite STARTUP.md to .opencode/STARTUP.md.
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "fortnite",
-			SelectionKey: "fortniteStartup",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, file)
-			},
-			IncludeFile: func(file string) bool {
-				return file == "STARTUP.md"
-			},
-			WarnOnSkip: true,
-		}); err != nil {
-			return nil, err
-		}
-
-		// Recursively copy Fortnite scripts to .opencode/scripts/.
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "fortnite/scripts",
-			SelectionKey: "fortniteScripts",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, "scripts", file)
-			},
-			Recursive:  true,
-			WarnOnSkip: true,
-		}); err != nil {
-			return nil, err
-		}
-		if err := ChmodScriptsExecutable(filepath.Join(ocDir, "scripts")); err != nil {
-			adapterLog.Warn("chmod scripts failed", "adapter", "opencode", "error", err)
-		}
-
-		// Recursively copy Fortnite workflows to .opencode/workflows/.
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "fortnite/workflows",
-			SelectionKey: "fortniteWorkflows",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, "workflows", file)
-			},
-			Recursive:  true,
-			WarnOnSkip: true,
-		}); err != nil {
-			return nil, err
-		}
-
-		// Copy Fortnite agents (flat).
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "fortnite/agents",
-			SelectionKey: "fortniteAgents",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, "agents", file)
-			},
-			WarnOnSkip: true,
-			IncludeFile: func(file string) bool {
-				// Only copy actual agent definition files, not reference docs.
-				if filepath.Ext(file) != ".md" {
-					return false
-				}
-				name := fileID(file)
-				switch name {
-				case "DISPATCH-MATRIX", "FALLBACK-CHAINS", "OUTPUT-SCHEMAS",
-					"REPO-PROFILES", "SAFETY-BOUNDARIES", "TOOL-SCHEMAS", "_TEMPLATE":
-					return false
-				}
-				return true
-			},
-			Transform: func(content []byte) []byte {
-				out, err := RewriteAgentForOpenCode(content, ctx, "")
-				if err != nil {
-					adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
-					return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
-				}
-				return out
-			},
-		}); err != nil {
-			return nil, err
-		}
-
-		// Copy Fortnite skills (recursive, nested dirs).
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "fortnite/skills",
-			SelectionKey: "fortniteSkills",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, "skills", file)
-			},
-			Recursive:  true,
-			WarnOnSkip: true,
-		}); err != nil {
-			return nil, err
-		}
-	} else {
-		// --- Legacy mode: copy generic agents and skills ---
-
-		// Copy agents (excluding orchestrator unless enabled). The transform
-		// rewrites each source agent with opencode-schema frontmatter so
-		// `opencode debug agent <name>` can parse it.
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "agents",
-			SelectionKey: "agents",
-			ToDestPath: func(file string) string {
-				return filepath.Join(ocDir, "agents", file)
-			},
-			WarnOnSkip: true,
-			Transform: func(content []byte) []byte {
-				out, err := RewriteAgentForOpenCode(content, ctx, "")
-				if err != nil {
-					adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
-					return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
-				}
-				return out
-			},
-			IncludeFile: func(file string) bool {
-				name := fileID(file)
-				return name != "orchestrator"
-			},
-		}); err != nil {
-			return nil, err
-		}
-
-		// Orchestrator agent if enabled. It is the primary entry point
-		// (opencode's default_agent typically points here), so mode=primary.
-		if IsOrchestratorEnabled(ctx) {
-			raw := GetOrchestratorAgentContent(ctx)
-			content, err := RewriteAgentForOpenCode(raw, ctx, "primary")
-			if err != nil {
-				adapterLog.Warn("opencode orchestrator rewrite fell back to baseline", "adapter", "opencode", "error", err)
-				content = BuildOpenCodeAgentFrontmatter(raw, OpenCodeAgentOpts{Mode: "primary"})
-			}
-			if err := CopyWithRecord("agents/orchestrator.md",
-				filepath.Join(ocDir, "agents", "orchestrator.md"),
-				ctx, true,
-				func([]byte) []byte { return content },
-				0o644,
-			); err != nil {
-				return nil, err
-			}
-		}
-
-		// Copy skills (directory-per-skill layout).
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "skills",
-			SelectionKey: "skills",
-			ToDestPath: func(file string) string {
-				name := fileID(file)
-				return filepath.Join(ocDir, "skills", name, "SKILL.md")
-			},
-			WarnOnSkip: true,
-		}); err != nil {
-			return nil, err
-		}
+	// Copy skills (directory-per-skill layout).
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/skills",
+		SelectionKey: "skills",
+		ToDestPath: func(file string) string {
+			name := fileID(file)
+			return filepath.Join(ocDir, "skills", name, "SKILL.md")
+		},
+		WarnOnSkip: true,
+	}); err != nil {
+		return nil, err
 	}
 
 	// Copy opencode-native slash commands from library/opencode/commands/.

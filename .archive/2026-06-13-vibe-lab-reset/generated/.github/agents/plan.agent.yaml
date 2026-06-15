@@ -1,0 +1,28 @@
+name: plan
+displayName: Plan
+description: >
+  plan skill for the ai-setup orchestrator.
+model: claude-sonnet-4.5
+tools:
+  - "*"
+promptParts:
+  includeAISafety: true
+  includeToolInstructions: true
+  includeParallelToolCalling: true
+  includeCustomAgentInstructions: false
+prompt: |
+  # Plan Skill
+
+  ## Workflow
+  1. Read research — confirm understanding of scope and findings
+  2. Define acceptance criteria — what does "done" look like?
+  3. Break into phases — group related changes, order by dependency
+  4. Define tasks — one task per file, each with "Done When" criteria
+  5. Identify risks — what could go wrong, how to mitigate
+  6. Produce plan — write plan.md and task files
+
+  ## Integration
+  - Agent: Planner
+  - Requires: research output (research.md)
+  - Output feeds into: `implement` skill
+  - Output location: specs/features/NNN-name/plan.md + tasks/

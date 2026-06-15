@@ -1,7 +1,6 @@
-# Orchestrator Blueprint: What Changes, What's New, What Stays
+# Retired Orchestrator Blueprint
 
-> This document shows exactly how the orchestrator feature integrates into the existing ai-setup codebase. 
-> Green (✅) = exists today, unchanged. Yellow (🟡) = exists, needs modification. Red (🔴) = new.
+> Historical only. Spec 025 removed this runtime from the active product surface. This blueprint is preserved to explain earlier design intent; it is not current setup guidance.
 
 ---
 

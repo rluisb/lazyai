@@ -16,7 +16,7 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 		if err := runAddNonInteractive(
 			[]types.ToolId{types.ToolIdClaudeCode},
 			[]string{string(types.AgentIdBuilder)},
-			[]string{string(types.SkillIdPlan)},
+			[]string{string(types.SkillIdDiagnose)},
 		); err != nil {
 			t.Fatalf("runAddNonInteractive: %v", err)
 		}
@@ -26,7 +26,7 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	storeData := readSeededStoreData(t, dir)
 	assertToolSet(t, storeData.Config.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
 	assertAgentSet(t, storeData.Selections.Agents, types.AgentIdBuilder)
-	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdPlan)
+	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdDiagnose)
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist after adding claude-code")
 	}

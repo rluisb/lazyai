@@ -91,15 +91,23 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	// appropriate Anthropic alias (opus/sonnet/haiku) and emits a Claude
 	// Code-shaped frontmatter (drops tier/thinking/risk — Claude Code
 	// ignores them).
+	if err := copyCanonicalPrimaryAgent(ctx,
+		filepath.Join(claudeDir, "agents", "primary-agent.md"),
+		claudePrimaryAgentContent,
+	); err != nil {
+		return nil, err
+	}
+
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
-		SourceSubdir: "agents",
+		SourceSubdir: "canonical/agents",
 		SelectionKey: "agents",
 		ToDestPath: func(file string) string {
 			return filepath.Join(claudeDir, "agents", file)
 		},
 		IncludeFile: func(file string) bool {
-			return fileID(file) != "orchestrator"
+			name := fileID(file)
+			return name != primaryAgentID && isCanonicalAgentFile(file)
 		},
 		Transform: func(content []byte) []byte {
 			out, err := RewriteAgentForClaudeCode(content, ctx)
@@ -113,29 +121,10 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		return nil, err
 	}
 
-	// Orchestrator agent if enabled. Spec 012 / Task 002: ship at all scopes;
-	// the previous `!isGlobal` gate silently skipped it at global scope.
-	if IsOrchestratorEnabled(ctx) {
-		raw := GetOrchestratorAgentContent(ctx)
-		content, err := RewriteAgentForClaudeCode(raw, ctx)
-		if err != nil {
-			adapterLog.Warn("claude-code orchestrator rewrite fell back to verbatim copy", "adapter", "claude-code", "error", err)
-			content = raw
-		}
-		if err := CopyWithRecord("agents/orchestrator.md",
-			filepath.Join(claudeDir, "agents", "orchestrator.md"),
-			ctx, false,
-			func([]byte) []byte { return content },
-			0o644,
-		); err != nil {
-			return nil, err
-		}
-	}
-
 	// Copy skills.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
-		SourceSubdir: "skills",
+		SourceSubdir: "canonical/skills",
 		SelectionKey: "skills",
 		ToDestPath: func(file string) string {
 			name := fileID(file)
@@ -346,7 +335,7 @@ func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
 
 	var agentFiles []string
 	if ctx.LibraryFS != nil {
-		entries, err := fs.ReadDir(ctx.LibraryFS, "agents")
+		entries, err := fs.ReadDir(ctx.LibraryFS, "canonical/agents")
 		if err == nil {
 			for _, e := range entries {
 				if e.IsDir() {
@@ -356,7 +345,7 @@ func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
 			}
 		}
 	} else if ctx.LibraryDir != "" {
-		sourceDir := filepath.Join(ctx.LibraryDir, "agents")
+		sourceDir := filepath.Join(ctx.LibraryDir, "canonical", "agents")
 		for _, f := range files.ListDir(sourceDir) {
 			if files.IsDirectory(filepath.Join(sourceDir, f)) {
 				continue

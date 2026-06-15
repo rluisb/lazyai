@@ -185,11 +185,7 @@ func TestClaudeCode_CommandsAndOutputStylesScopeParity(t *testing.T) {
 	}
 }
 
-// TestClaudeCode_OrchestratorScopeParity is the regression guard for spec 012,
-// task 002: when `orchestrator` is in EnableServers, the orchestrator agent
-// must be emitted at every scope (the previous `!isGlobal` gate silently
-// skipped global).
-func TestClaudeCode_OrchestratorScopeParity(t *testing.T) {
+func TestClaudeCode_PrimaryAgentScopeParity(t *testing.T) {
 	cases := []struct {
 		name  string
 		scope types.SetupScope
@@ -201,31 +197,21 @@ func TestClaudeCode_OrchestratorScopeParity(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		t.Run("enabled_"+c.name, func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			ctx, target, home := newScopeTestContext(t, c.scope)
-			ctx.EnableServers = []string{"orchestrator"}
 
 			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
 				t.Fatalf("Install: %v", err)
 			}
 
-			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
-			if !files.FileExists(orch) {
-				t.Errorf("expected orchestrator agent at %q, missing", orch)
+			root := c.root(target, home)
+			primary := filepath.Join(root, "agents", "primary-agent.md")
+			if !files.FileExists(primary) {
+				t.Errorf("expected primary-agent at %q, missing", primary)
 			}
-		})
-
-		t.Run("disabled_"+c.name, func(t *testing.T) {
-			ctx, target, home := newScopeTestContext(t, c.scope)
-			// EnableServers intentionally unset.
-
-			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
-				t.Fatalf("Install: %v", err)
-			}
-
-			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
+			orch := filepath.Join(root, "agents", "orchestrator.md")
 			if files.FileExists(orch) {
-				t.Errorf("orchestrator agent present at %q despite being disabled", orch)
+				t.Errorf("orchestrator agent present at %q", orch)
 			}
 		})
 	}

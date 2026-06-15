@@ -6,7 +6,6 @@
 lazyai/
 ├── packages/
 │   ├── cli/             # Go CLI module and lazyai-cli command
-│   ├── orchestrator/    # Go orchestrator MCP runtime and lazyai-orchestrator command
 │   └── diffviewer/      # Go diff viewer utility and lazyai-diffviewer command
 ├── docs/                # MkDocs documentation site
 ├── .github/workflows/   # Go CI, release, docs
@@ -27,33 +26,28 @@ Node, npm, npx, and pnpm are not required for LazyAI development.
 ```bash
 git clone git@github.com:rluisb/lazyai.git
 cd lazyai
-cd packages/cli && go test ./...
-cd ../orchestrator && go test ./...
-cd ../diffviewer && go test ./...
+go test ./packages/cli/... ./packages/diffviewer/...
 ```
 
 ## Useful Go commands
 
 ```bash
-cd packages/cli && go test ./... && go vet ./...
-cd packages/orchestrator && go test ./... && go vet ./...
-cd packages/diffviewer && go test ./... && go vet ./...
+go test ./packages/cli/... ./packages/diffviewer/...
+go vet ./packages/cli/... ./packages/diffviewer/...
 ```
 
 Build local binaries:
 
 ```bash
-cd packages/cli && go build -o /tmp/lazyai-cli ./cmd/lazyai-cli
-cd packages/orchestrator && go build -o /tmp/lazyai-orchestrator ./cmd/lazyai-orchestrator
-cd packages/diffviewer && go build -o /tmp/lazyai-diffviewer ./cmd/lazyai-diffviewer
+go build -o /tmp/lazyai-cli ./packages/cli/cmd/lazyai-cli
+go build -o /tmp/lazyai-diffviewer ./packages/diffviewer/cmd/lazyai-diffviewer
 ```
 
 ## Install local commands
 
 ```bash
-cd packages/cli && go install ./cmd/lazyai-cli
-cd packages/orchestrator && go install ./cmd/lazyai-orchestrator
-cd packages/diffviewer && go install ./cmd/lazyai-diffviewer
+go install ./packages/cli/cmd/lazyai-cli
+go install ./packages/diffviewer/cmd/lazyai-diffviewer
 lazyai-cli --help
 ```
 

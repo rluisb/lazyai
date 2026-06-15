@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# bin/startup-self-heal — Repair the current CLI surface when startup drift is detected.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CLI=""
+EVENT="startup"
+QUIET=false
+
+usage() {
+  cat <<'EOF'
+Usage: bin/startup-self-heal --cli <claude|opencode|pi|copilot|antigravity> [--event <name>] [--quiet]
+EOF
+}
+log() {
+  if ! $QUIET; then
+    printf '[startup-self-heal] %s\n' "$*"
+  fi
+}
+
+warn() {
+  printf '[startup-self-heal] WARN: %s\n' "$*" >&2
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --cli)
+      CLI="${2:-}"
+      shift 2
+      ;;
+    --event)
+      EVENT="${2:-}"
+      shift 2
+      ;;
+    --quiet)
+      QUIET=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+case "$CLI" in
+  claude|opencode|pi|copilot|antigravity) ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+doctor_cmd=("$REPO_ROOT/bin/doctor" --surface "$CLI" --quiet)
+inject_cmd=("$REPO_ROOT/bin/inject" --surface "$CLI")
+DOCTOR_OUTPUT=""
+run_doctor() {
+  if DOCTOR_OUTPUT="$("${doctor_cmd[@]}" 2>&1)"; then
+    return 0
+  fi
+  return 1
+}
+
+emit_doctor_output() {
+  if ! $QUIET && [ -n "$DOCTOR_OUTPUT" ]; then
+    printf '%s\n' "$DOCTOR_OUTPUT" >&2
+  fi
+}
+
+if run_doctor; then
+  log "$CLI surface healthy for $EVENT"
+  exit 0
+fi
+
+emit_doctor_output
+warn "$CLI surface drift detected during $EVENT; regenerating current CLI artifacts"
+if ! "${inject_cmd[@]}"; then
+  warn "Scoped inject failed for $CLI"
+  exit 1
+fi
+
+if run_doctor; then
+  log "$CLI surface repaired for $EVENT"
+  exit 0
+fi
+
+emit_doctor_output
+warn "$CLI surface still unhealthy after scoped regeneration"
+exit 1

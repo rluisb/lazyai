@@ -29,27 +29,27 @@ func TestRewriteAgentForClaudeCode_EmitsDescription(t *testing.T) {
 	}
 }
 
-// TestLibraryAgentsHaveDescription asserts every source agent in the
-// embedded library declares a non-empty `description:` field. Claude Code
-// rejects agents that omit it, so missing this field on any library agent
-// produces a parse error on fresh install (#208).
-func TestLibraryAgentsHaveDescription(t *testing.T) {
+// TestLibraryCanonicalAgentsHaveDescription asserts every active canonical
+// source agent in the embedded library declares a non-empty `description:`
+// field. Claude Code rejects agents that omit it, so missing this field on
+// any canonical agent produces a parse error on fresh install.
+func TestLibraryCanonicalAgentsHaveDescription(t *testing.T) {
 	libFS := library.GetLibraryFS()
 	if libFS == nil {
 		t.Fatal("library.GetLibraryFS returned nil")
 	}
-	entries, err := fs.ReadDir(libFS, "agents")
+	entries, err := fs.ReadDir(libFS, "canonical/agents")
 	if err != nil {
-		t.Fatalf("read agents dir: %v", err)
+		t.Fatalf("read canonical agents dir: %v", err)
 	}
 	if len(entries) == 0 {
-		t.Fatal("library agents directory is empty")
+		t.Fatal("library canonical agents directory is empty")
 	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
 			continue
 		}
-		data, err := fs.ReadFile(libFS, "agents/"+e.Name())
+		data, err := fs.ReadFile(libFS, "canonical/agents/"+e.Name())
 		if err != nil {
 			t.Errorf("read %q: %v", e.Name(), err)
 			continue

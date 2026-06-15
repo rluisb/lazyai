@@ -181,31 +181,11 @@ lazyai-cli workspace switch my-project
 lazyai-cli workspace status
 ```
 
-## Workflow
+## Runtime migration note
 
-Execute structured workflows defined in `.opencode/workflows/*.yaml`.
+Legacy `workflow` and orchestration CLI commands were removed during the runtime refactor.
 
-### List Workflows
-
-```bash
-lazyai-cli workflow list
-```
-
-### Show Workflow Details
-
-```bash
-lazyai-cli workflow show <workflow-name>
-```
-
-### Run a Workflow
-
-```bash
-# Dry run by default — shows what would execute
-lazyai-cli workflow run <workflow-name>
-
-# Actually execute
-lazyai-cli workflow run <workflow-name> --dry-run=false
-```
+See `../migration/fortnite-orchestrator-removal.md` for replacements and rollback guidance.
 
 ## Agent Message Bus
 

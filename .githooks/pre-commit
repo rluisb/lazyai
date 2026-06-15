@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+go run ./packages/cli/internal/tokenrent/cmd/token-rent-check

@@ -1,16 +1,15 @@
 # LazyAI
 
-Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
+Scaffold a canonical, multi-tool AI development environment from one CLI.
 
-`lazyai-cli` initializes and maintains a **tool-agnostic canonical layer** under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and optional MCP servers so teams can adopt a consistent AI operating system with minimal configuration.
+`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and an MCP catalog so teams can keep one managed source of truth.
 
 ## What it does
 
 - **One-time setup**: `lazyai-cli init` scaffolds canonical files, tool-native directories, and an MCP catalog.
 - **Compile**: `lazyai-cli compile` regenerates per-tool configs from the canonical source of truth.
 - **Update**: `lazyai-cli update` refreshes library content while preserving customizations.
-- **Doctor**: `lazyai-cli doctor` checks drift, missing files, and skill state.
-- **Orchestration** (opt-in): `lazyai-cli init --enable-servers orchestrator` scaffolds chain/team/workflow definitions and registers the local orchestrator MCP runtime.
+- **Doctor**: `lazyai-cli doctor` checks drift, missing files, metadata gaps, and environment health.
 
 ## Where to start
 
@@ -24,16 +23,12 @@ Scaffold a canonical, multi-tool AI development environment from one CLI, with o
 
 ```text
 lazyai-cli (Go binary)
-   │ init ──▶ .ai/ (canonical)
-   │ compile ──▶ .opencode/ + .claude/ + .github/ + .vscode/
-   │ doctor ──▶ .ai-setup.json / .ai-setup.db (manifest + SQLite)
-   │
-   └── optional orchestrator MCP server
-         └── lazyai-orchestrator (Go runtime)
-             └── catalog, state, handoffs, prompt composition
+   │ init/update ──▶ .ai/ (canonical)
+   │ compile ─────▶ .opencode/ + .claude/ + .github/ + .vscode/
+   │ doctor ──────▶ .ai-setup.json / .ai-setup.db
 ```
 
-The execution path uses **local native agents** (Claude Code, OpenCode, Copilot) directly. A2A is an optional config seam only; remote/network execution is not the default.
+The execution path uses local native agents directly. A2A remains a config seam only; remote/network execution is not the default.
 
 ## Status
 

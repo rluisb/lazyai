@@ -11,12 +11,10 @@ Complete reference for all `lazyai-cli` commands.
 - [Health Checks](#health-checks)
 - [Audit Trail](#audit-trail)
 - [Validation](#validation)
-- [Task Queue](#task-queue)
+- [Migration Note](#migration-note)
 - [Agent Message Bus](#agent-message-bus)
 - [Metrics Dashboard](#metrics-dashboard)
 - [Memory Vault](#memory-vault)
-- [Evaluation Harness](#evaluation-harness)
-- [Workflow Execution](#workflow-execution)
 - [Workspace](#workspace)
 - [Completion](#completion)
 
@@ -35,18 +33,15 @@ Initialize the AI development environment.
 | `--scope` | Setup scope (`project`, `global`, `workspace`) |
 | `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`) |
 | `--preset` | Preset configuration (`minimal`, `standard`, `full`, `custom`) |
-| `--enable-servers` | MCP servers to enable (`orchestrator`, `filesystem`, `memory`) |
+| `--enable-servers` | MCP servers to enable (for example: `filesystem`, `memory`, `ripgrep`) |
 | `--name` | Project name |
 | `--no-interactive` | Run without interactive prompts |
-| `--plain-opencode` | Use plain OpenCode scaffolding without Fortnite multi-agent mode |
 | `--force` | Overwrite existing files |
 | `--dry-run` | Preview changes without writing |
 
 **OpenCode default behavior:**
 
-When OpenCode is selected, `init` defaults to the **Fortnite/OpenCode runtime**. The default install includes Fortnite agents, skills, scripts, and workflows, plus `AGENTS.md`, `.opencode/STARTUP.md`, and `opencode.jsonc` with `default_agent: loop-driver`.
-
-To opt out and install legacy/generic OpenCode assets, use `--plain-opencode`.
+When OpenCode is selected, `init` installs the neutral canonical adapter path. `.opencode/opencode.jsonc` uses `default_agent: primary-agent`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
 
 **Examples:**
 
@@ -54,11 +49,8 @@ To opt out and install legacy/generic OpenCode assets, use `--plain-opencode`.
 # Interactive setup
 lazyai-cli init
 
-# Non-interactive with OpenCode (Fortnite runtime by default)
+# Non-interactive with OpenCode
 lazyai-cli init --tools opencode --preset standard --no-interactive
-
-# Opt out of Fortnite runtime
-lazyai-cli init --tools opencode --plain-opencode --no-interactive
 ```
 
 ---
@@ -143,13 +135,11 @@ Run health checks on the environment.
 - File integrity (managed files present and unmodified)
 - Stray AGENTS.md files in specs/
 - Metadata gaps in spec frontmatter
-- Stale Claude MCP entries referencing legacy orchestrator
 - Dependencies: sqlite3, git, jq, bash
 - Providers: ollama (localhost:11434), openai (API key)
 - Disk space usage
-- Orchestrator binary on PATH
-
 **Example:**
+
 ```bash
 lazyai-cli doctor
 ```
@@ -166,7 +156,7 @@ lazyai-cli doctor
   Modified 0
   Stray AGENTS.md 0
   Metadata gaps 0
-  Stale MCP entries 0
+  Health warnings 2
 
 🩺 Environment Health Checks
 
@@ -177,7 +167,6 @@ lazyai-cli doctor
   ⚠️  Provider: ollama       | Ollama not running on localhost:11434
   ✅ Provider: openai        | API key configured
   ✅ Disk space              | 45% used
-  ⚠️  Orchestrator binary     | lazyai-orchestrator not on PATH
 ```
 
 ---
@@ -275,66 +264,14 @@ lazyai-cli validate skills
 
 ---
 
-## Task Queue
+## Migration Note
 
-### `task create [description]`
+The `task`, `workflow`, `orchestration`, and `mcp-setup` command surfaces were removed during the runtime refactor.
 
-Create a new task.
+Use:
 
-**Arguments:**
-- `description` (required): Task description
-
-**Example:**
-```bash
-lazyai-cli task create "Implement login page"
-```
-
----
-
-### `task list`
-
-List all tasks.
-
-**Example:**
-```bash
-lazyai-cli task list
-```
-
-**Output:**
-```
-Tasks:
-───────────────────────────────────────────────────────────────
-  task_1234567890 [pending] Implement login page
-  task_1234567889 [claimed] Fix navigation bug | Claimed by: builder
-```
-
----
-
-### `task claim [task-id]`
-
-Claim a task for processing.
-
-**Arguments:**
-- `task-id` (required): Task ID to claim
-
-**Example:**
-```bash
-lazyai-cli task claim task_1234567890
-```
-
----
-
-### `task complete [task-id]`
-
-Mark a task as completed.
-
-**Arguments:**
-- `task-id` (required): Task ID to complete
-
-**Example:**
-```bash
-lazyai-cli task complete task_1234567890
-```
+- `docs/migration/fortnite-orchestrator-removal.md` for user-facing migration and rollback guidance
+- `lazyai-cli create`, `lazyai-cli list`, and adapter-managed files for current scaffolding flows
 
 ---
 
@@ -488,88 +425,9 @@ lazyai-cli memory search database
 
 ---
 
-## Evaluation Harness
-
-### `eval list`
-
-List available evaluation suites.
-
-**Example:**
-```bash
-lazyai-cli eval list
-```
-
----
-
-### `eval run [suite-name]`
-
-Run an evaluation suite.
-
-**Arguments:**
-- `suite-name` (required): Name of the evaluation suite
-
-**Note:** Evaluation logic is currently a stub. The command validates the suite exists and records the attempt to the ledger, but does not yet execute the suite.
-
-**Example:**
-```bash
-lazyai-cli eval run agent-quality
-```
-
----
-
-## Workflow Execution
-
-Workflows are defined in `.opencode/workflows/*.yaml`.
-
-### `workflow list`
-
-List available workflows.
-
-**Example:**
-```bash
-lazyai-cli workflow list
-```
-
----
-
-### `workflow show [workflow-name]`
-
-Show workflow details.
-
-**Arguments:**
-- `workflow-name` (required): Name of the workflow
-
-**Example:**
-```bash
-lazyai-cli workflow show rpi
-```
-
----
-
-### `workflow run [workflow-name]`
-
-Execute a workflow.
-
-**Arguments:**
-- `workflow-name` (required): Name of the workflow
-
-**Flags:**
-- `--dry-run`: Show what would be executed without running (default: `true`)
-
-**Note:** By default, `workflow run` operates in dry-run mode. Use `--dry-run=false` to actually execute phases.
-
-**Example:**
-```bash
-# Dry run (default)
-lazyai-cli workflow run rpi
-
-# Actual execution
-lazyai-cli workflow run rpi --dry-run=false
-```
-
----
 
 ## Workspace
+
 
 Manage multi-project workspaces.
 
@@ -914,7 +772,7 @@ lazyai-cli sidecar doctor
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `LAZYAI_AGENT` | Current agent name | `orchestrator` |
+| `LAZYAI_AGENT` | Current agent name | `primary-agent` |
 | `LAZYAI_DB_PATH` | Database file path | `.specify/lazyai.db` |
 | `LAZYAI_LEDGER_PATH` | Ledger file path | `.specify/ledger.jsonl` |
 

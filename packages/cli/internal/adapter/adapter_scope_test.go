@@ -24,7 +24,7 @@ func newScopeTestContext(t *testing.T, scope types.SetupScope) (*AdapterContext,
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
 			Agents: []types.AgentId{"builder"},
-			Skills: []types.SkillId{"implement"},
+			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}
 	return ctx, target, home

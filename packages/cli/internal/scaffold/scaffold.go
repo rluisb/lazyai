@@ -39,32 +39,27 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		result.Errors = append(result.Errors, fmt.Errorf("mcp: %w", err))
 	}
 
-	// Step 3: Orchestration definitions.
-	if err := ScaffoldOrchestration(ctx.TargetDir, libFS, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.Features); err != nil {
-		result.Errors = append(result.Errors, fmt.Errorf("orchestration: %w", err))
-	}
-
-	// Step 4: Specs directory structure.
+	// Step 3: Specs directory structure.
 	if planningPath != "" {
 		if err := ScaffoldSpecs(planningPath, ctx.SetupScope, libFS, ctx.SpecsDirs, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("specs: %w", err))
 		}
 	}
 
+	// Housekeeping files.
 	if planningPath != "" {
 		if err := ScaffoldHousekeeping(planningPath, ctx.Housekeeping); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("housekeeping: %w", err))
 		}
 	}
 
-	// Step 5: Templates and rules.
+	// Step 4: Templates and rules.
 	if planningPath != "" {
 		if err := ScaffoldTemplatesRules(planningPath, libFS, ctx.Templates, ctx.Rules, fileRecords, ctx.Strategy, ctx.PerFileOverrides, ctx.CoverageThreshold); err != nil {
 			result.Errors = append(result.Errors, fmt.Errorf("templates-rules: %w", err))
 		}
 	}
 
-	// Step 6: Infrastructure files.
 	infraPath := ctx.TargetDir
 	if planningPath != "" {
 		infraPath = planningPath
@@ -139,7 +134,6 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 					SetupScope:    ctx.SetupScope,
 					WorkspaceRoot: ctx.WorkspaceRoot,
 					LibraryFS:     ctx.LibraryFS,
-					FortniteMode:  ctx.FortniteMode,
 				}
 				warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
 				for _, w := range warnings {

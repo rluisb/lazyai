@@ -31,7 +31,7 @@ func TestResolve_OpenCodeNeverReturnsClaude(t *testing.T) {
 	}
 }
 
-// risk=5 promotes any non-frontier tier to frontier. The orchestrator is the
+// risk=5 promotes any non-frontier tier to frontier. The primary-agent is the
 // canonical case: declared Balanced (router-shaped) but Risk 5 (wrong route
 // cascades), so we want the catalog's frontier pick — without changing the
 // spec.Tier the agent author wrote.

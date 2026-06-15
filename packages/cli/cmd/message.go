@@ -37,7 +37,7 @@ var messageSendCmd = &cobra.Command{
 		// Get from agent from env or default
 		fromAgent := os.Getenv("LAZYAI_AGENT")
 		if fromAgent == "" {
-			fromAgent = "orchestrator"
+			fromAgent = "primary-agent"
 		}
 
 		priority, _ := cmd.Flags().GetString("priority")
@@ -142,7 +142,7 @@ var messageBroadcastCmd = &cobra.Command{
 
 		fromAgent := os.Getenv("LAZYAI_AGENT")
 		if fromAgent == "" {
-			fromAgent = "orchestrator"
+			fromAgent = "primary-agent"
 		}
 
 		priority, _ := cmd.Flags().GetString("priority")
@@ -160,7 +160,7 @@ var messageBroadcastCmd = &cobra.Command{
 		defer SafeCloseDB(database)
 
 		// Always include common agents
-		agents := []string{"orchestrator", "builder", "planner", "reviewer", "scout"}
+		agents := []string{"primary-agent", "builder", "planner", "reviewer", "scout"}
 
 		// Also get agents from tasks table
 		rows, err := database.Query("SELECT DISTINCT agent FROM tasks WHERE agent IS NOT NULL")

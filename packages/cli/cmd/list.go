@@ -18,7 +18,7 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list [category]",
 	Short: "List installed artifacts",
-	Long:  "List all installed agents, skills, workflows, and other artifacts in the current setup.",
+	Long:  "List installed agents, skills, prompts, and other tracked artifacts in the current setup.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runList,
 }
@@ -129,7 +129,6 @@ func classifyPath(path string) string {
 		{"spec/adrs/", "adrs"},
 		{"spec/memory/", "memory"},
 		{"spec/prompts/", "prompts"},
-		{".ai/orchestration/", "orchestration"},
 		{".ai/", "config"},
 		{".github/", "github"},
 		{".husky/", "husky"},
@@ -174,21 +173,20 @@ func outputListStyled(groups []artifactGroup, verbose bool) error {
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Dimmed)
 
 	typeEmoji := map[string]string{
-		"agents":        "🤖",
-		"skills":        "⚡",
-		"templates":     "📄",
-		"rules":         "📏",
-		"commands":      "⌨️",
-		"standards":     "📐",
-		"adrs":          "📋",
-		"memory":        "🧠",
-		"prompts":       "💬",
-		"orchestration": "🎛️",
-		"config":        "⚙️",
-		"github":        "🐙",
-		"husky":         "🐕",
-		"pre-commit":    "🪝",
-		"other":         "📁",
+		"agents":     "🤖",
+		"skills":     "⚡",
+		"templates":  "📄",
+		"rules":      "📏",
+		"commands":   "⌨️",
+		"standards":  "📐",
+		"adrs":       "📋",
+		"memory":     "🧠",
+		"prompts":    "💬",
+		"config":     "⚙️",
+		"github":     "🐙",
+		"husky":      "🐕",
+		"pre-commit": "🪝",
+		"other":      "📁",
 	}
 
 	emoji := func(t string) string {

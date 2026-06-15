@@ -1,0 +1,1417 @@
+#!/usr/bin/env bash
+# bin/doctor — Health check for vibe-lab generated adapters and guardrails.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CANON_DIR="$REPO_ROOT/canonical"
+AGENTS_SKILLS_DIR="$REPO_ROOT/.agents/skills"
+AGENTS_AGENTS_DIR="$REPO_ROOT/.agents/agents"
+AGENTS_HOOKS_DIR="$REPO_ROOT/.agents/hooks"
+AGENTS_WORKFLOWS_DIR="$REPO_ROOT/.agents/workflows"
+TEST_HOOKS=false
+QUIET=false
+SURFACE="all"
+FAILURES=0
+WARNINGS=0
+ASSERTIONS=0
+
+usage() {
+  cat <<'EOF'
+Usage: bin/doctor [--test-hooks] [--quiet] [--surface <all|claude|opencode|pi|copilot|antigravity>]
+EOF
+}
+
+validate_surface() {
+  case "$1" in
+    all|claude|opencode|pi|copilot|antigravity) ;;
+    *) printf 'bin/doctor — unsupported surface: %s\n' "$1" >&2; exit 2 ;;
+  esac
+}
+
+uses_claude() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "claude" ]; }
+uses_opencode() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "opencode" ]; }
+uses_pi() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "pi" ]; }
+uses_copilot() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "copilot" ]; }
+uses_antigravity() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "antigravity" ]; }
+scoped_mode() { [ "$SURFACE" != "all" ]; }
+
+opencode_config_paths() {
+  [ -f "$REPO_ROOT/opencode.json" ] && printf '%s\n' "$REPO_ROOT/opencode.json"
+  [ -f "$REPO_ROOT/opencode.jsonc" ] && printf '%s\n' "$REPO_ROOT/opencode.jsonc"
+}
+
+validate_jsonc_file() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+def strip_comments(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and i + 1 < len(src):
+            nxt = src[i + 1]
+            if nxt == "/":
+                i += 2
+                while i < len(src) and src[i] not in "\r\n":
+                    i += 1
+                continue
+            if nxt == "*":
+                i += 2
+                while i + 1 < len(src) and not (src[i] == "*" and src[i + 1] == "/"):
+                    i += 1
+                i += 2
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+def strip_trailing_commas(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == ",":
+            j = i + 1
+            while j < len(src) and src[j].isspace():
+                j += 1
+            if j < len(src) and src[j] in "}]":
+                i += 1
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+json.loads(strip_trailing_commas(strip_comments(text)))
+PY
+}
+
+
+opencode_instruction_state() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+
+def strip_comments(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and i + 1 < len(src):
+            nxt = src[i + 1]
+            if nxt == "/":
+                i += 2
+                while i < len(src) and src[i] not in "\r\n":
+                    i += 1
+                continue
+            if nxt == "*":
+                i += 2
+                while i + 1 < len(src) and not (src[i] == "*" and src[i + 1] == "/"):
+                    i += 1
+                i += 2
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+def strip_trailing_commas(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == ",":
+            j = i + 1
+            while j < len(src) and src[j].isspace():
+                j += 1
+            if j < len(src) and src[j] in "}]":
+                i += 1
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+if path.suffix == ".jsonc":
+    text = strip_trailing_commas(strip_comments(text))
+data = json.loads(text)
+if not isinstance(data, dict):
+    raise SystemExit(2)
+instructions = data.get("instructions")
+if instructions is None:
+    raise SystemExit(1)
+if not isinstance(instructions, list) or not all(isinstance(item, str) for item in instructions):
+    raise SystemExit(2)
+if "AGENTS.md" in instructions:
+    raise SystemExit(0)
+raise SystemExit(2)
+PY
+}
+
+validate_opencode_package_module() {
+  local package_json="$REPO_ROOT/.opencode/package.json"
+  [ -f "$package_json" ] || return 1
+  python3 - "$package_json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+data = json.loads(path.read_text())
+if not isinstance(data, dict):
+    raise SystemExit(1)
+if data.get("type") != "module":
+    raise SystemExit(1)
+PY
+}
+
+validate_secret_refs_in_json() {
+  local kind="$1"
+  local file="$2"
+  python3 - "$kind" "$file" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+kind = sys.argv[1]
+path = pathlib.Path(sys.argv[2])
+text = path.read_text()
+
+def strip_comments(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and i + 1 < len(src):
+            nxt = src[i + 1]
+            if nxt == "/":
+                i += 2
+                while i < len(src) and src[i] not in "\r\n":
+                    i += 1
+                continue
+            if nxt == "*":
+                i += 2
+                while i + 1 < len(src) and not (src[i] == "*" and src[i + 1] == "/"):
+                    i += 1
+                i += 2
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+def strip_trailing_commas(src: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(src):
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            i += 1
+            continue
+        if ch == "\"":
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == ",":
+            j = i + 1
+            while j < len(src) and src[j].isspace():
+                j += 1
+            if j < len(src) and src[j] in "}]":
+                i += 1
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+if path.suffix == ".jsonc":
+    text = strip_trailing_commas(strip_comments(text))
+data = json.loads(text)
+allowed_patterns = [r"\$\{[A-Za-z0-9_]+\}"]
+if kind == "opencode":
+    allowed_patterns.append(r"\{env:[A-Za-z0-9_]+\}")
+sensitive_key = re.compile(r"(api[-_]?key|token|secret|password|authorization|bearer|auth)", re.IGNORECASE)
+sensitive_env_name = re.compile(r"(api|token|secret|password|auth|key)", re.IGNORECASE)
+problems = []
+
+def has_env_ref(value: str) -> bool:
+    return any(re.search(pattern, value) for pattern in allowed_patterns)
+
+def walk(node, path_parts, parent_key=None):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            walk(value, path_parts + [key], key)
+        return
+    if isinstance(node, list):
+        for index, value in enumerate(node):
+            walk(value, path_parts + [str(index)], parent_key)
+        return
+    if not isinstance(node, str):
+        return
+    key = path_parts[-1] if path_parts else ""
+    sensitive = bool(sensitive_key.search(key))
+    if parent_key in {"env", "environment"} and sensitive_env_name.search(key):
+        sensitive = True
+    if len(path_parts) >= 2 and path_parts[-2] == "headers" and sensitive_key.search(key):
+        sensitive = True
+    if sensitive and node and not has_env_ref(node):
+        problems.append(".".join(path_parts))
+
+walk(data, [])
+if problems:
+    print(", ".join(problems))
+    raise SystemExit(1)
+PY
+}
+
+validate_opencode_config() {
+  local file="$1"
+  case "$file" in
+    *.json) python3 -m json.tool "$file" >/dev/null 2>&1 ;;
+    *.jsonc) validate_jsonc_file "$file" >/dev/null 2>&1 ;;
+    *) return 2 ;;
+  esac
+}
+
+opencode_config_label() {
+  case "$1" in
+    *.json) printf '%s valid JSON' "$(basename "$1")" ;;
+    *.jsonc) printf '%s valid JSONC' "$(basename "$1")" ;;
+    *) printf '%s valid config' "$(basename "$1")" ;;
+  esac
+}
+
+opencode_config_error_label() {
+  case "$1" in
+    *.json) printf '%s invalid JSON' "$(basename "$1")" ;;
+    *.jsonc) printf '%s invalid JSONC' "$(basename "$1")" ;;
+    *) printf '%s invalid config' "$(basename "$1")" ;;
+  esac
+}
+
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --test-hooks)
+        TEST_HOOKS=true
+        shift
+        ;;
+      --quiet)
+        QUIET=true
+        shift
+        ;;
+      --surface)
+        SURFACE="${2:-}"
+        validate_surface "$SURFACE"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        usage >&2
+        printf 'bin/doctor — unknown argument: %s\n' "$1" >&2
+        exit 2
+        ;;
+    esac
+  done
+}
+
+ok() { $QUIET || printf '  [OK]   %s\n' "$*"; }
+warn() { printf '  [WARN] %s\n' "$*" >&2; WARNINGS=$((WARNINGS + 1)); }
+fail() { printf '  [FAIL] %s\n' "$*" >&2; FAILURES=$((FAILURES + 1)); }
+section() { $QUIET || printf '\n── %s ──\n' "$*"; }
+pass_assert() { ASSERTIONS=$((ASSERTIONS + 1)); ok "$*"; }
+fail_assert() { ASSERTIONS=$((ASSERTIONS + 1)); fail "$*"; }
+
+context_files_for_surface() {
+  uses_opencode && printf '%s\n' AGENTS.md
+  uses_pi && [ "$SURFACE" = "pi" ] && printf '%s\n' AGENTS.md
+  uses_copilot && printf '%s\n' AGENTS.md
+  uses_antigravity && printf '%s\n' AGENTS.md
+  uses_claude && printf '%s\n' CLAUDE.md
+}
+
+skill_adapter_dirs_for_surface() {
+  uses_claude && printf '%s\n' "$REPO_ROOT/.claude/skills"
+  uses_opencode && printf '%s\n' "$REPO_ROOT/.opencode/skills"
+  uses_pi && printf '%s\n' "$REPO_ROOT/.pi/skills"
+}
+
+frontmatter_field() {
+  local file="$1"
+  local key="$2"
+  awk -v key="$key" '/^---/{c++; next} c==1 { if ($0 ~ "^" key ":") { sub("^" key ":[[:space:]]*", ""); print; exit } }' "$file"
+}
+
+agent_adapter_marker() {
+  local surface="$1"
+  local name="$2"
+  printf '<!-- vibe-lab:managed kind=agent surface=%s name=%s source=.agents/agents/%s.md -->' "$surface" "$name" "$name"
+}
+
+check_agent_adapter_file() {
+  local surface="$1"
+  local name="$2"
+  local path="$3"
+  local marker
+  marker="$(agent_adapter_marker "$surface" "$name")"
+  if [ ! -f "$path" ]; then
+    fail "Missing ${surface^} agent adapter: $name"
+    return
+  fi
+  ok "${surface^} agent adapter: $name"
+  if grep -Fq "$marker" "$path"; then
+    ok "${surface^} agent adapter $name has ownership marker"
+  else
+    fail "${surface^} agent adapter $name missing ownership marker"
+  fi
+}
+
+
+source_hash() {
+  python3 - "$REPO_ROOT" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+patterns = [
+    "canonical/*.md",
+    ".agents/skills/*/SKILL.md",
+    ".agents/agents/*.md",
+    ".agents/hooks/*/POLICY.md",
+    ".agents/workflows/*.md",
+]
+paths = []
+for pattern in patterns:
+    paths.extend(root.glob(pattern))
+
+hasher = hashlib.sha256()
+for path in sorted(p for p in paths if p.is_file()):
+    rel = path.relative_to(root).as_posix()
+    hasher.update(rel.encode("utf-8"))
+    hasher.update(b"\0")
+    hasher.update(path.read_bytes())
+    hasher.update(b"\0")
+print(hasher.hexdigest())
+PY
+}
+
+policy_hash() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+extract_denied_prefixes() {
+  python3 - "$1" <<'PY'
+import pathlib
+import re
+import sys
+
+policy = pathlib.Path(sys.argv[1])
+in_denied = False
+prefixes = []
+for line in policy.read_text().splitlines():
+    if line.startswith("## "):
+        in_denied = line.strip() == "## Denied Commands"
+        continue
+    if in_denied:
+        prefixes.extend(re.findall(r"`([^`]+)`", line))
+
+seen = set()
+for prefix in prefixes:
+    if prefix not in seen:
+        print(prefix)
+        seen.add(prefix)
+if not seen:
+    sys.exit(1)
+PY
+}
+
+check_canonical_sources() {
+  section "Canonical Sources"
+  local required=(
+    constitution.md
+    clean-code.md
+    engineering-principles.md
+    artifact-rules.md
+    skill-template.md
+    agent-template.md
+    hook-template.md
+    policy-template.md
+    workflow-template.md
+    clarification-levels.md
+    learning-template.md
+    tdd-planning.md
+    caveman-ai-memory.md
+    llm-engineering-relationships.md
+  )
+  for file in "${required[@]}"; do
+    if [ -f "$CANON_DIR/$file" ]; then
+      ok "$file exists"
+    else
+      fail "$file missing"
+    fi
+  done
+}
+
+check_generated_context() {
+  section "Generated Context Files"
+  local expected_hash
+  expected_hash="$(source_hash)"
+  local files=()
+  if scoped_mode; then
+    mapfile -t files < <(context_files_for_surface)
+  else
+    files=(AGENTS.md CLAUDE.md)
+  fi
+  for name in "${files[@]}"; do
+    local file="$REPO_ROOT/$name"
+    if [ ! -f "$file" ]; then
+      fail "$name missing — run bin/inject"
+      continue
+    fi
+    if grep -q "GENERATED FILE" "$file"; then
+      ok "$name has generation banner"
+    else
+      warn "$name missing generation banner"
+    fi
+    local embedded
+    embedded="$(grep -o 'Source hash: [a-f0-9]\{64\}' "$file" 2>/dev/null | head -1 | sed 's/Source hash: //')"
+    if [ "$embedded" = "$expected_hash" ]; then
+      ok "$name source hash current"
+    else
+      warn "$name source hash stale — run bin/inject"
+    fi
+  done
+}
+
+check_workflows() {
+  section "Workflows"
+  if [ ! -d "$AGENTS_WORKFLOWS_DIR" ]; then
+    fail "Canonical workflows directory missing"
+    return
+  fi
+
+  local context_files=()
+  if scoped_mode; then
+    mapfile -t context_files < <(context_files_for_surface)
+  else
+    context_files=(AGENTS.md CLAUDE.md)
+  fi
+
+  local required_sections=(
+    "## Trigger"
+    "## Inputs"
+    "## Purpose"
+    "## Four Points"
+    "## Behavior Scenario"
+    "## TDD Mode"
+    "## Steps"
+    "## Adapters"
+    "## Exit Gate"
+    "## Failure"
+  )
+
+  for workflow_md in "$AGENTS_WORKFLOWS_DIR"/*.md; do
+    [ -f "$workflow_md" ] || continue
+    local name fm_name desc
+    name="$(basename "$workflow_md" .md)"
+    fm_name="$(frontmatter_field "$workflow_md" name)"
+    desc="$(frontmatter_field "$workflow_md" description)"
+    [ "$fm_name" = "$name" ] && ok "Workflow $name frontmatter name matches" || fail "Workflow $name name mismatch"
+    [ -n "$desc" ] && ok "Workflow $name description present" || fail "Workflow $name description missing"
+    local section
+    for section in "${required_sections[@]}"; do
+      if grep -Fq "$section" "$workflow_md"; then
+        ok "Workflow $name includes ${section#\#\# }"
+      else
+        fail "Workflow $name missing ${section#\#\# }"
+      fi
+    done
+    if ! scoped_mode; then
+      local doc="$REPO_ROOT/docs/workflows/$name.md"
+      [ -f "$doc" ] && ok "Workflow doc exists: docs/workflows/$name.md" || fail "Workflow doc missing: docs/workflows/$name.md"
+    fi
+    local context_name
+    for context_name in "${context_files[@]}"; do
+      local context_file="$REPO_ROOT/$context_name"
+      [ -f "$context_file" ] || continue
+      if grep -Fq "## Shared Workflows" "$context_file" && grep -Fq -- "- **$name**:" "$context_file"; then
+        ok "$context_name lists workflow $name"
+      else
+        fail "$context_name missing workflow $name catalog entry"
+      fi
+    done
+  done
+}
+
+check_skill_adapters() {
+  section "Skills"
+  if [ ! -d "$AGENTS_SKILLS_DIR" ]; then
+    fail "Canonical skills directory missing"
+    return
+  fi
+  local adapter_dirs=()
+  if scoped_mode; then
+    mapfile -t adapter_dirs < <(skill_adapter_dirs_for_surface)
+  else
+    adapter_dirs=("$REPO_ROOT/.claude/skills" "$REPO_ROOT/.opencode/skills" "$REPO_ROOT/.pi/skills")
+  fi
+  for adapter_dir in "${adapter_dirs[@]}"; do
+    [ -d "$adapter_dir" ] || fail "Skill adapter directory missing: ${adapter_dir#$REPO_ROOT/}"
+  done
+
+  for adapter_dir in "${adapter_dirs[@]}"; do
+    [ -d "$adapter_dir" ] || continue
+    for adapter in "$adapter_dir"/*; do
+      [ -e "$adapter" ] || [ -L "$adapter" ] || continue
+      local adapter_name
+      adapter_name="$(basename "$adapter")"
+      if [ ! -f "$AGENTS_SKILLS_DIR/$adapter_name/SKILL.md" ]; then
+        fail "Stale skill adapter: ${adapter#$REPO_ROOT/}"
+      fi
+    done
+  done
+
+  for skill_md in "$AGENTS_SKILLS_DIR"/*/SKILL.md; do
+    [ -f "$skill_md" ] || continue
+    local dir name desc
+    dir="$(dirname "$skill_md")"
+    name="$(basename "$dir")"
+    desc="$(frontmatter_field "$skill_md" description)"
+    local fm_name
+    fm_name="$(frontmatter_field "$skill_md" name)"
+
+    if ! scoped_mode; then
+      if [[ ! "$name" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+        fail "Skill $name: invalid kebab-case name"
+      elif [ "$fm_name" = "$name" ]; then
+        ok "Skill $name frontmatter name matches"
+      else
+        fail "Skill $name: frontmatter name '$fm_name' does not match directory"
+      fi
+      if [ -n "$desc" ] && [ "${#desc}" -le 1024 ]; then
+        ok "Skill $name description present"
+      else
+        fail "Skill $name description missing or too long"
+      fi
+    fi
+
+    for adapter_dir in "${adapter_dirs[@]}"; do
+      local adapter="$adapter_dir/$name"
+      local rel="${adapter#$REPO_ROOT/}"
+      if [ ! -L "$adapter" ]; then
+        fail "Skill adapter missing or not symlink: $rel"
+      elif [ ! -e "$adapter" ]; then
+        fail "Skill adapter broken symlink: $rel"
+      elif [ "$(readlink "$adapter")" != "../../.agents/skills/$name" ]; then
+        fail "Skill adapter wrong target: $rel -> $(readlink "$adapter")"
+      else
+        ok "Skill adapter exists: $rel"
+      fi
+    done
+
+    if ! scoped_mode && [ -d "$dir/scripts" ]; then
+      for script in "$dir/scripts"/*; do
+        [ -f "$script" ] || continue
+        case "$script" in
+          *.sh) [ -x "$script" ] && ok "Skill $name script executable: ${script#$dir/}" || warn "Skill $name shell script not executable: ${script#$dir/}" ;;
+          *.py|*.rb|*.js|*.ts) ok "Skill $name support script present: ${script#$dir/}" ;;
+          *) warn "Skill $name script has unsupported extension: ${script#$dir/}" ;;
+        esac
+      done
+    fi
+  done
+}
+
+check_agent_adapters() {
+  section "Agents"
+  if [ ! -d "$AGENTS_AGENTS_DIR" ]; then
+    ok "No canonical agents directory"
+    return
+  fi
+  local check_claude=false
+  local check_opencode=false
+  local check_copilot=false
+  if uses_claude; then
+    check_claude=true
+  fi
+  if uses_opencode; then
+    check_opencode=true
+  fi
+  if uses_copilot; then
+    check_copilot=true
+  fi
+  if ! $check_claude && ! $check_opencode && ! $check_copilot; then
+    ok "Current surface does not generate agent adapters"
+    return
+  fi
+  for agent_md in "$AGENTS_AGENTS_DIR"/*.md; do
+    [ -f "$agent_md" ] || continue
+    local name fm_name desc
+    name="$(basename "$agent_md" .md)"
+    fm_name="$(frontmatter_field "$agent_md" name)"
+    desc="$(frontmatter_field "$agent_md" description)"
+    if ! scoped_mode; then
+      [ "$fm_name" = "$name" ] && ok "Agent $name frontmatter name matches" || fail "Agent $name name mismatch"
+      [ -n "$desc" ] && ok "Agent $name description present" || fail "Agent $name description missing"
+      if grep -q '^model:' "$agent_md"; then
+        fail "Agent $name has host-specific model in canonical frontmatter"
+      fi
+    fi
+    if $check_claude; then
+      check_agent_adapter_file claude "$name" "$REPO_ROOT/.claude/agents/$name.md"
+    fi
+    if $check_opencode; then
+      check_agent_adapter_file opencode "$name" "$REPO_ROOT/.opencode/agents/$name.md"
+    fi
+    if $check_copilot; then
+      check_agent_adapter_file copilot "$name" "$REPO_ROOT/.github/agents/$name.agent.md"
+    fi
+  done
+  return 0
+}
+
+check_hook_adapters() {
+  section "Hooks"
+  [ -d "$AGENTS_HOOKS_DIR" ] || { ok "No canonical hooks directory"; return; }
+  local check_claude=false
+  local check_opencode=false
+  local check_copilot=false
+  local check_antigravity=false
+  uses_claude && check_claude=true
+  uses_opencode && check_opencode=true
+  uses_copilot && check_copilot=true
+  uses_antigravity && check_antigravity=true
+  if ! $check_claude && ! $check_opencode && ! $check_copilot && ! $check_antigravity; then
+    ok "Current surface does not generate hook adapters"
+    return
+  fi
+  for hook_dir in "$AGENTS_HOOKS_DIR"/*/; do
+    [ -d "$hook_dir" ] || continue
+    local name policy hook expected embedded
+    name="$(basename "$hook_dir")"
+    policy="$hook_dir/POLICY.md"
+    hook="$REPO_ROOT/.claude/hooks/$name.sh"
+    if [ ! -f "$policy" ]; then
+      fail "Hook $name missing POLICY.md"
+      continue
+    fi
+    ok "Hook $name policy exists"
+    expected="$(policy_hash "$policy")"
+    if $check_claude; then
+      if [ -x "$hook" ]; then
+        ok "Claude hook executable: $name"
+        embedded="$(grep -o 'Policy hash: [a-f0-9]\{64\}' "$hook" 2>/dev/null | head -1 | sed 's/Policy hash: //' || true)"
+        [ "$embedded" = "$expected" ] && ok "Claude hook $name policy hash current" || warn "Claude hook $name policy hash stale"
+      else
+        fail "Claude hook missing or not executable: $name"
+      fi
+    fi
+    if $check_copilot; then
+      local copilot_hook="$REPO_ROOT/.github/hooks/$name.sh"
+      local copilot_json="$REPO_ROOT/.github/hooks/$name.json"
+      if [ -x "$copilot_hook" ]; then
+        ok "Copilot hook executable: $name"
+        embedded="$(grep -o 'Policy hash: [a-f0-9]\{64\}' "$copilot_hook" 2>/dev/null | head -1 | sed 's/Policy hash: //' || true)"
+        [ "$embedded" = "$expected" ] && ok "Copilot hook $name policy hash current" || warn "Copilot hook $name policy hash stale"
+      else
+        fail "Copilot hook missing or not executable: $name"
+      fi
+      if [ -f "$copilot_json" ] && python3 -m json.tool "$copilot_json" >/dev/null 2>&1; then
+        ok "Copilot hook config $name is valid JSON"
+        local expected_event
+        case "$name" in
+          block-destructive-shell) expected_event="preToolUse" ;;
+          startup-self-heal) expected_event="sessionStart" ;;
+          objective-workflow-gate) expected_event="agentStop" ;;
+          caveman-memory-promotion) expected_event="sessionEnd" ;;
+          *) expected_event="" ;;
+        esac
+        if [ -n "$expected_event" ]; then
+          if grep -q "\"$expected_event\"" "$copilot_json"; then
+            ok "Copilot hook config $name declares event $expected_event"
+          else
+            fail "Copilot hook config $name does not declare event $expected_event"
+          fi
+        fi
+      else
+        fail "Copilot hook config $name missing or invalid JSON"
+      fi
+    fi
+    if $check_antigravity; then
+      local antigravity_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/$name.sh"
+      if [ -x "$antigravity_hook" ]; then
+        ok "Antigravity hook executable: $name"
+        embedded="$(grep -o 'Policy hash: [a-f0-9]\{64\}' "$antigravity_hook" 2>/dev/null | head -1 | sed 's/Policy hash: //' || true)"
+        [ "$embedded" = "$expected" ] && ok "Antigravity hook $name policy hash current" || warn "Antigravity hook $name policy hash stale"
+      else
+        fail "Antigravity hook missing or not executable: $name"
+      fi
+    fi
+  done
+
+  if $check_opencode; then
+    if validate_opencode_package_module; then
+      ok "OpenCode package metadata declares ESM"
+    else
+      fail "OpenCode package metadata missing or not type=module — run bin/inject"
+    fi
+    local plugin="$REPO_ROOT/.opencode/plugins/vibe-lab-hooks.js"
+    if [ -f "$plugin" ]; then
+      ok "OpenCode hook plugin exists"
+      local block_policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
+      if [ -f "$block_policy" ]; then
+        local expected_block_hash embedded_block_hash
+        expected_block_hash="$(policy_hash "$block_policy")"
+        embedded_block_hash="$(grep -o 'Block policy hash: [a-f0-9]\{64\}' "$plugin" 2>/dev/null | head -1 | sed 's/Block policy hash: //')"
+        [ "$embedded_block_hash" = "$expected_block_hash" ] && ok "OpenCode block policy hash current" || warn "OpenCode block policy hash stale"
+      fi
+      local startup_policy="$AGENTS_HOOKS_DIR/startup-self-heal/POLICY.md"
+      if [ -f "$startup_policy" ]; then
+        local expected_startup_hash embedded_startup_hash
+        expected_startup_hash="$(policy_hash "$startup_policy")"
+        embedded_startup_hash="$(grep -o 'Startup policy hash: [a-f0-9]\{64\}' "$plugin" 2>/dev/null | head -1 | sed 's/Startup policy hash: //')"
+        [ "$embedded_startup_hash" = "$expected_startup_hash" ] && ok "OpenCode startup policy hash current" || warn "OpenCode startup policy hash stale"
+      fi
+      local objective_policy="$AGENTS_HOOKS_DIR/objective-workflow-gate/POLICY.md"
+      if [ -f "$objective_policy" ]; then
+        local expected_objective_hash embedded_objective_hash
+        expected_objective_hash="$(policy_hash "$objective_policy")"
+        embedded_objective_hash="$(grep -o 'Objective gate policy hash: [a-f0-9]\{64\}' "$plugin" 2>/dev/null | head -1 | sed 's/Objective gate policy hash: //')"
+        [ "$embedded_objective_hash" = "$expected_objective_hash" ] && ok "OpenCode objective gate policy hash current" || warn "OpenCode objective gate policy hash stale"
+      fi
+    else
+      fail "OpenCode hook plugin missing — run bin/inject"
+    fi
+  fi
+
+  if $check_claude; then
+    local settings="$REPO_ROOT/.claude/settings.json"
+    if [ -f "$settings" ] && python3 -m json.tool "$settings" >/dev/null 2>&1; then
+      ok ".claude/settings.json valid JSON"
+      if grep -q "block-destructive-shell" "$settings"; then
+        ok "Claude settings include block-destructive-shell"
+      else
+        warn "Claude settings missing block-destructive-shell"
+      fi
+      if grep -q "startup-self-heal" "$settings"; then
+        ok "Claude settings include startup-self-heal"
+      else
+        warn "Claude settings missing startup-self-heal"
+      fi
+      if grep -q "objective-workflow-gate" "$settings"; then
+        ok "Claude settings include objective-workflow-gate"
+      else
+        warn "Claude settings missing objective-workflow-gate"
+      fi
+    else
+      fail ".claude/settings.json missing or invalid"
+    fi
+  fi
+
+  if $check_antigravity; then
+    local settings="$REPO_ROOT/.gemini/settings.json"
+    if [ -f "$settings" ] && python3 -m json.tool "$settings" >/dev/null 2>&1; then
+      ok ".gemini/settings.json valid JSON"
+      if grep -q "block-destructive-shell" "$settings"; then
+        ok "Antigravity settings include block-destructive-shell"
+      else
+        warn "Antigravity settings missing block-destructive-shell"
+      fi
+      if grep -q "startup-self-heal" "$settings"; then
+        ok "Antigravity settings include startup-self-heal"
+      else
+        warn "Antigravity settings missing startup-self-heal"
+      fi
+      if grep -q "objective-workflow-gate" "$settings"; then
+        ok "Antigravity settings include objective-workflow-gate"
+      else
+        warn "Antigravity settings missing objective-workflow-gate"
+      fi
+    else
+      fail ".gemini/settings.json missing or invalid"
+    fi
+  fi
+}
+
+check_tdd_contract() {
+  section "TDD Contract"
+  [ -f "$CANON_DIR/tdd-planning.md" ] && ok "canonical/tdd-planning.md exists" || fail "canonical/tdd-planning.md missing"
+  grep -q "Existing tests MUST NOT" "$CANON_DIR/tdd-planning.md" && ok "TDD test-preservation rule present" || fail "TDD test-preservation rule missing"
+  grep -q "tdd-planning" "$AGENTS_SKILLS_DIR/test-first-change/SKILL.md" && ok "test-first-change references TDD planning" || fail "test-first-change missing TDD planning reference"
+  for agent in researcher planner implementer; do
+    local file="$AGENTS_AGENTS_DIR/$agent.md"
+    if [ -f "$file" ] && grep -q "TDD" "$file"; then
+      ok "Agent $agent includes TDD planning contract"
+    else
+      fail "Agent $agent missing TDD planning contract"
+    fi
+  done
+}
+
+check_project_config_guardrails() {
+  section "Project Config Guardrails"
+  if uses_opencode || ! scoped_mode; then
+    local configs=()
+    mapfile -t configs < <(opencode_config_paths)
+    if [ "${#configs[@]}" -eq 0 ]; then
+      warn "No root OpenCode config present — AGENTS.md instructions attachment cannot be enforced"
+    else
+      local attached=false
+      local config
+      for config in "${configs[@]}"; do
+        if opencode_instruction_state "$config"; then
+          ok "$(basename "$config") attaches AGENTS.md"
+          attached=true
+        else
+          case "$?" in
+            1) ok "$(basename "$config") does not set instructions" ;;
+            2) fail "$(basename "$config") instructions missing AGENTS.md or have invalid shape" ;;
+            *) fail "$(basename "$config") instructions could not be inspected" ;;
+          esac
+        fi
+        if validate_secret_refs_in_json opencode "$config" >/tmp/vibe-lab-doctor-secret-check.$$ 2>/dev/null; then
+          ok "$(basename "$config") avoids literal secret values"
+        else
+          local secret_paths
+          secret_paths="$(cat /tmp/vibe-lab-doctor-secret-check.$$ 2>/dev/null || true)"
+          fail "$(basename "$config") contains literal secret-looking values${secret_paths:+: $secret_paths}"
+        fi
+        rm -f /tmp/vibe-lab-doctor-secret-check.$$
+      done
+      if ! $attached; then
+        fail "No root OpenCode config attaches AGENTS.md"
+      fi
+    fi
+  fi
+  if uses_claude || ! scoped_mode; then
+    local mcp="$REPO_ROOT/.mcp.json"
+    if [ -f "$mcp" ]; then
+      if python3 -m json.tool "$mcp" >/dev/null 2>&1; then
+        ok ".mcp.json valid JSON"
+      else
+        fail ".mcp.json invalid JSON"
+      fi
+      if validate_secret_refs_in_json claude "$mcp" >/tmp/vibe-lab-doctor-secret-check.$$ 2>/dev/null; then
+        ok ".mcp.json avoids literal secret values"
+      else
+        local secret_paths
+        secret_paths="$(cat /tmp/vibe-lab-doctor-secret-check.$$ 2>/dev/null || true)"
+        fail ".mcp.json contains literal secret-looking values${secret_paths:+: $secret_paths}"
+      fi
+      rm -f /tmp/vibe-lab-doctor-secret-check.$$
+    else
+      ok ".mcp.json not present"
+    fi
+  fi
+}
+
+check_memory_contract() {
+  section "Caveman + ai-memory"
+  [ -f "$CANON_DIR/caveman-ai-memory.md" ] && ok "canonical/caveman-ai-memory.md exists" || fail "canonical/caveman-ai-memory.md missing"
+  grep -q "caveman-ai-memory" "$AGENTS_SKILLS_DIR/caveman/SKILL.md" && ok "caveman references memory balance" || fail "caveman missing memory balance reference"
+  grep -q "Caveman Bridge" "$AGENTS_SKILLS_DIR/memory-promotion/SKILL.md" && ok "memory-promotion has caveman bridge" || fail "memory-promotion missing caveman bridge"
+}
+
+check_environment() {
+  section "Environment"
+  if uses_claude || ! scoped_mode; then
+    command -v python3 >/dev/null 2>&1 && ok "python3 found" || warn "python3 not found — hooks fail closed"
+  fi
+  if uses_opencode || ! scoped_mode; then
+    local config found=false
+    while IFS= read -r config; do
+      found=true
+      if validate_opencode_config "$config"; then
+        ok "$(opencode_config_label "$config")"
+      else
+        fail "$(opencode_config_error_label "$config")"
+      fi
+    done < <(opencode_config_paths)
+    if ! $found; then
+      ok "No root OpenCode config present"
+    fi
+  fi
+}
+
+check_unsupported_pi_surfaces() {
+  section "Unsupported Pi Surfaces"
+  if ! uses_pi && scoped_mode; then
+    ok "Current surface does not use Pi outputs"
+    return
+  fi
+  local path found=false
+  for path in "$REPO_ROOT/.pi/agents" "$REPO_ROOT/.pi/hooks"; do
+    if [ -e "$path" ] || [ -L "$path" ]; then
+      found=true
+      fail "Unsupported Pi surface present: ${path#$REPO_ROOT/}"
+    fi
+  done
+  if ! $found; then
+    ok "No unsupported Pi agents/hooks surfaces"
+  fi
+  local config="$REPO_ROOT/.agents/config/cli-adapters.yml"
+  if [ -f "$config" ]; then
+    if python3 - "$config" <<'PY'
+import pathlib
+import sys
+
+lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
+in_pi = False
+bad = []
+for line in lines:
+    stripped = line.strip()
+    if line.startswith("  ") and not line.startswith("    ") and stripped.endswith(":"):
+        in_pi = stripped == "pi:"
+        continue
+    if in_pi and stripped in {"- agents", "- hooks", "- enhancers"}:
+        bad.append(stripped[2:])
+if bad:
+    print(", ".join(bad))
+    sys.exit(1)
+PY
+    then
+      ok ".agents/config/cli-adapters.yml keeps Pi skills-only"
+    else
+      fail ".agents/config/cli-adapters.yml claims unsupported Pi agents/hooks"
+    fi
+  fi
+}
+
+run_claude_hook_case() {
+  local label="$1"
+  local input="$2"
+  local expected="$3"
+  local hook="$REPO_ROOT/.claude/hooks/block-destructive-shell.sh"
+  local actual
+  actual="$(printf '%s' "$input" | "$hook" >/dev/null; printf '%s' "$?")"
+  if [ "$actual" -eq "$expected" ]; then
+    pass_assert "block-destructive-shell $label"
+  else
+    fail_assert "block-destructive-shell $label exited $actual (expected $expected)"
+  fi
+}
+
+run_claude_objective_gate_case() {
+  local label="$1"
+  local input="$2"
+  local expected="$3"
+  local hook="$REPO_ROOT/.claude/hooks/objective-workflow-gate.sh"
+  local tmp actual
+  tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-objective-gate.XXXXXX")"
+  actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
+  if [ "$actual" -ne 0 ]; then
+    fail_assert "objective-workflow-gate $label exited $actual"
+  elif python3 - "$tmp" "$expected" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+text = path.read_text()
+if expected == "allow":
+    if text.strip():
+        raise SystemExit(1)
+else:
+    data = json.loads(text)
+    if data.get("decision") != "block" or not data.get("reason"):
+        raise SystemExit(1)
+PY
+  then
+    pass_assert "objective-workflow-gate $label"
+  else
+    fail_assert "objective-workflow-gate $label output mismatch"
+  fi
+  rm -f "$tmp"
+}
+
+run_copilot_hook_case() {
+  local label="$1"
+  local input="$2"
+  local expected="$3"
+  local hook="$REPO_ROOT/.github/hooks/block-destructive-shell.sh"
+  local actual
+  actual="$(printf '%s' "$input" | "$hook" >/dev/null; printf '%s' "$?")"
+  if [ "$actual" -eq "$expected" ]; then
+    pass_assert "block-destructive-shell Copilot $label"
+  else
+    fail_assert "block-destructive-shell Copilot $label exited $actual (expected $expected)"
+  fi
+}
+
+run_copilot_objective_gate_case() {
+  local label="$1"
+  local input="$2"
+  local expected="$3"
+  local hook="$REPO_ROOT/.github/hooks/objective-workflow-gate.sh"
+  local tmp actual
+  tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-copilot-objective-gate.XXXXXX")"
+  actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
+  if [ "$actual" -ne 0 ]; then
+    fail_assert "objective-workflow-gate Copilot $label exited $actual"
+  elif python3 - "$tmp" "$expected" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+text = path.read_text()
+if expected == "allow":
+    if text.strip():
+        raise SystemExit(1)
+else:
+    data = json.loads(text)
+    if data.get("decision") != "block" or not data.get("reason"):
+        raise SystemExit(1)
+PY
+  then
+    pass_assert "objective-workflow-gate Copilot $label"
+  else
+    fail_assert "objective-workflow-gate Copilot $label output mismatch"
+  fi
+  rm -f "$tmp"
+}
+
+run_antigravity_hook_case() {
+  local label="$1"
+  local input="$2"
+  local expected_exit="$3"
+  local expected_decision="$4"
+  local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/block-destructive-shell.sh"
+  local tmp actual
+  tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-antigravity-hook.XXXXXX")"
+  actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
+  if [ "$actual" -ne "$expected_exit" ]; then
+    fail_assert "block-destructive-shell Antigravity $label exited $actual (expected $expected_exit)"
+  elif python3 - "$tmp" "$expected_decision" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+try:
+    data = json.loads(path.read_text())
+    if data.get("decision") != expected:
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+PY
+  then
+    pass_assert "block-destructive-shell Antigravity $label"
+  else
+    fail_assert "block-destructive-shell Antigravity $label output mismatch"
+  fi
+  rm -f "$tmp"
+}
+
+run_antigravity_objective_gate_case() {
+  local label="$1"
+  local input="$2"
+  local expected_exit="$3"
+  local expected_decision="$4"
+  local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/objective-workflow-gate.sh"
+  local tmp actual
+  tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-antigravity-gate.XXXXXX")"
+  actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
+  if [ "$actual" -ne "$expected_exit" ]; then
+    fail_assert "objective-workflow-gate Antigravity $label exited $actual (expected $expected_exit)"
+  elif python3 - "$tmp" "$expected_decision" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+try:
+    data = json.loads(path.read_text())
+    if data.get("decision") != expected:
+        sys.exit(1)
+    if expected == "deny" and not data.get("reason"):
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+PY
+  then
+    pass_assert "objective-workflow-gate Antigravity $label"
+  else
+    fail_assert "objective-workflow-gate Antigravity $label output mismatch"
+  fi
+  rm -f "$tmp"
+}
+
+run_opencode_hook_tests() {
+  local plugin="$REPO_ROOT/.opencode/plugins/vibe-lab-hooks.js"
+  if [ ! -f "$plugin" ]; then
+    fail_assert "OpenCode plugin missing"
+    return
+  fi
+  if node --input-type=module - "$plugin" "$REPO_ROOT" <<'JS' >/dev/null
+const pluginPath = process.argv[2];
+const repoRoot = process.argv[3];
+const mod = await import(pluginPath);
+const hooks = await mod.VibeLabHooks({ directory: repoRoot });
+if (typeof hooks.event !== "function") throw new Error("startup event hook missing");
+await hooks.event({ event: { type: "session.created" } });
+const before = hooks["tool.execute.before"];
+await before({ tool: "bash" }, { args: { command: "printf ok" } });
+await before({ tool: "read" }, { args: {} });
+let denied = false;
+try {
+  await before({ tool: "bash" }, { args: { command: "rm -rf /" } });
+} catch {
+  denied = true;
+}
+if (!denied) throw new Error("denied command was allowed");
+let missing = false;
+try {
+  await before({ tool: "bash" }, { args: {} });
+} catch {
+  missing = true;
+}
+if (!missing) throw new Error("missing command was allowed");
+let gateDenied = false;
+try {
+  await hooks.event({ event: { type: "session.idle", lastAssistantMessage: "Done. Implemented the change." } });
+} catch {
+  gateDenied = true;
+}
+if (!gateDenied) throw new Error("objective gate allowed completion without evidence");
+await hooks.event({ event: { type: "session.idle", lastAssistantMessage: "Done.\n\nVerification: bin/doctor --test-hooks passed." } });
+await hooks.event({ event: { type: "message.updated", message: { role: "assistant", content: "Done. Implemented the change." } } });
+gateDenied = false;
+try {
+  await hooks.event({ event: { type: "session.idle" } });
+} catch {
+  gateDenied = true;
+}
+if (!gateDenied) throw new Error("objective gate ignored stored assistant completion without evidence");
+JS
+  then
+    pass_assert "OpenCode plugin smoke runs startup, Bash guard, and objective workflow gate"
+  else
+    fail_assert "OpenCode plugin smoke failed"
+  fi
+}
+
+check_hook_functionality() {
+  section "Hook Functionality"
+  if ! $TEST_HOOKS; then
+    ok "Hook functionality skipped (use --test-hooks)"
+    return
+  fi
+  if uses_claude; then
+    local startup_hook="$REPO_ROOT/.claude/hooks/startup-self-heal.sh"
+    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Claude hook runs" || fail_assert "startup-self-heal Claude hook failed"
+    local hook="$REPO_ROOT/.claude/hooks/block-destructive-shell.sh"
+    [ -x "$hook" ] || { fail_assert "block-destructive-shell hook missing or not executable"; return; }
+    local objective_hook="$REPO_ROOT/.claude/hooks/objective-workflow-gate.sh"
+    [ -x "$objective_hook" ] || { fail_assert "objective-workflow-gate hook missing or not executable"; return; }
+    local policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
+    local denied_prefixes=()
+    if [ -f "$policy" ]; then
+      mapfile -t denied_prefixes < <(extract_denied_prefixes "$policy") || fail_assert "block-destructive-shell policy has no deterministic denied command spans"
+    fi
+    [ "${#denied_prefixes[@]}" -gt 0 ] || fail_assert "block-destructive-shell denied prefix list empty"
+
+    run_claude_objective_gate_case "blocks completion claim without evidence" '{"hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"Done. Implemented the change."}' block
+    run_claude_objective_gate_case "allows completion claim with verification" '{"hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"Done.\n\nVerification: bin/doctor --test-hooks passed."}' allow
+    run_claude_objective_gate_case "allows repeated stop feedback turn" '{"hook_event_name":"Stop","stop_hook_active":true,"last_assistant_message":"Done. Implemented the change."}' allow
+
+    run_claude_hook_case "fails closed on malformed JSON" '{' 2
+    run_claude_hook_case "fails closed on missing Bash command" '{"tool_name":"Bash","tool_input":{}}' 2
+    run_claude_hook_case "fails closed on non-string Bash command" '{"tool_name":"Bash","tool_input":{"command":42}}' 2
+    for prefix in "${denied_prefixes[@]}"; do
+      run_claude_hook_case "denies $prefix" "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"$prefix\"}}" 2
+    done
+    run_claude_hook_case "allows safe Bash" '{"tool_name":"Bash","tool_input":{"command":"printf ok"}}' 0
+    run_claude_hook_case "passes non-Bash" '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' 0
+  fi
+  if uses_copilot; then
+    local startup_hook="$REPO_ROOT/.github/hooks/startup-self-heal.sh"
+    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Copilot hook runs" || fail_assert "startup-self-heal Copilot hook failed"
+    local hook="$REPO_ROOT/.github/hooks/block-destructive-shell.sh"
+    [ -x "$hook" ] || { fail_assert "block-destructive-shell Copilot hook missing or not executable"; return; }
+    local objective_hook="$REPO_ROOT/.github/hooks/objective-workflow-gate.sh"
+    [ -x "$objective_hook" ] || { fail_assert "objective-workflow-gate Copilot hook missing or not executable"; return; }
+    local policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
+    local denied_prefixes=()
+    if [ -f "$policy" ]; then
+      mapfile -t denied_prefixes < <(extract_denied_prefixes "$policy") || fail_assert "block-destructive-shell policy has no deterministic denied command spans"
+    fi
+    [ "${#denied_prefixes[@]}" -gt 0 ] || fail_assert "block-destructive-shell denied prefix list empty"
+
+    run_copilot_objective_gate_case "blocks completion claim without evidence" '{"eventName":"agentStop","lastAssistantMessage":"Done. Implemented the change."}' block
+    run_copilot_objective_gate_case "allows completion claim with verification" '{"eventName":"agentStop","lastAssistantMessage":"Done.\n\nVerification: bin/doctor --test-hooks passed."}' allow
+
+    run_copilot_hook_case "fails closed on malformed JSON" '{' 2
+    run_copilot_hook_case "fails closed on missing Bash command" '{"toolName":"bash","toolInput":{}}' 2
+    run_copilot_hook_case "fails closed on non-string Bash command" '{"toolName":"bash","toolInput":{"command":42}}' 2
+    for prefix in "${denied_prefixes[@]}"; do
+      run_copilot_hook_case "denies $prefix" "{\"toolName\":\"bash\",\"toolInput\":{\"command\":\"$prefix\"}}" 2
+    done
+    run_copilot_hook_case "allows safe Bash" '{"toolName":"bash","toolInput":{"command":"printf ok"}}' 0
+    run_copilot_hook_case "passes non-Bash" '{"toolName":"read","toolInput":{"file_path":"README.md"}}' 0
+  fi
+  if uses_antigravity; then
+    local startup_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/startup-self-heal.sh"
+    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Antigravity hook runs" || fail_assert "startup-self-heal Antigravity hook failed"
+    local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/block-destructive-shell.sh"
+    [ -x "$hook" ] || { fail_assert "block-destructive-shell Antigravity hook missing or not executable"; return; }
+    local objective_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/objective-workflow-gate.sh"
+    [ -x "$objective_hook" ] || { fail_assert "objective-workflow-gate Antigravity hook missing or not executable"; return; }
+    local policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
+    local denied_prefixes=()
+    if [ -f "$policy" ]; then
+      mapfile -t denied_prefixes < <(extract_denied_prefixes "$policy") || fail_assert "block-destructive-shell policy has no deterministic denied command spans"
+    fi
+    [ "${#denied_prefixes[@]}" -gt 0 ] || fail_assert "block-destructive-shell denied prefix list empty"
+
+    run_antigravity_objective_gate_case "blocks completion claim without evidence" '{"eventName":"AfterAgent","lastAssistantMessage":"Done. Implemented the change."}' 2 deny
+    run_antigravity_objective_gate_case "allows completion claim with verification" '{"eventName":"AfterAgent","lastAssistantMessage":"Done.\n\nVerification: bin/doctor --test-hooks passed."}' 0 allow
+
+    run_antigravity_hook_case "fails closed on malformed JSON" '{' 2 deny
+    run_antigravity_hook_case "fails closed on missing Bash command" '{"toolName":"run_shell_command","toolInput":{}}' 2 deny
+    run_antigravity_hook_case "fails closed on non-string Bash command" '{"toolName":"run_shell_command","toolInput":{"command":42}}' 2 deny
+    for prefix in "${denied_prefixes[@]}"; do
+      run_antigravity_hook_case "denies $prefix" "{\"toolName\":\"run_shell_command\",\"toolInput\":{\"command\":\"$prefix\"}}" 2 deny
+    done
+    run_antigravity_hook_case "allows safe Bash" '{"toolName":"run_shell_command","toolInput":{"command":"printf ok"}}' 0 allow
+    run_antigravity_hook_case "passes non-Bash" '{"toolName":"read_file","toolInput":{"file_path":"README.md"}}' 0 allow
+  fi
+  if uses_opencode; then
+    run_opencode_hook_tests
+  fi
+}
+
+main() {
+  parse_args "$@"
+  $QUIET || {
+    printf 'bin/doctor — vibe-lab health check\n'
+    printf 'Repo: %s\n\n' "$REPO_ROOT"
+  }
+  check_canonical_sources
+  check_generated_context
+  check_workflows
+  check_skill_adapters
+  if ! scoped_mode || uses_claude || uses_opencode || uses_copilot || uses_antigravity; then
+    check_agent_adapters
+    check_hook_adapters
+  fi
+  if ! scoped_mode; then
+    check_tdd_contract
+    check_memory_contract
+  fi
+  check_environment
+  check_project_config_guardrails
+  check_unsupported_pi_surfaces
+  check_hook_functionality
+  $QUIET || printf '\nSummary: %s failure(s), %s warning(s)\n' "$FAILURES" "$WARNINGS"
+  [ "$FAILURES" -eq 0 ] || exit 1
+}
+
+main "$@"

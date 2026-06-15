@@ -89,7 +89,7 @@ var configSetCmd = &cobra.Command{
 			// If config doesn't exist, create a new one
 			config = &LazyAIConfig{
 				Agent: AgentConfig{
-					DefaultAgent: "orchestrator",
+					DefaultAgent: "primary-agent",
 					DefaultModel: "gpt-4",
 				},
 				Database: DatabaseConfig{
@@ -168,7 +168,7 @@ var configInitCmd = &cobra.Command{
 
 		config := &LazyAIConfig{
 			Agent: AgentConfig{
-				DefaultAgent: "orchestrator",
+				DefaultAgent: "primary-agent",
 				DefaultModel: "gpt-4",
 			},
 			Database: DatabaseConfig{

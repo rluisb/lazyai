@@ -37,15 +37,19 @@ type SkillContract struct {
 	MCPTools    []string
 }
 
-// LoadSkillContracts walks the library skills and agents directories and
-// returns contract records for markdown files with a frontmatter name.
+// LoadSkillContracts walks the active canonical skills and agents directories
+// and returns contract records for markdown files with a frontmatter name.
 func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 	if libFS == nil {
 		return nil, fmt.Errorf("LoadSkillContracts: libFS is nil")
 	}
 
 	var contracts []SkillContract
-	for _, dir := range []string{"skills", "agents"} {
+	dirs := []string{"canonical/skills", "canonical/agents"}
+	if _, err := fs.ReadDir(libFS, "canonical"); err != nil {
+		dirs = []string{"skills", "agents"}
+	}
+	for _, dir := range dirs {
 		entries, err := fs.ReadDir(libFS, dir)
 		if err != nil {
 			// Directory may not exist in minimal libraries.

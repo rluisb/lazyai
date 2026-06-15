@@ -7,10 +7,7 @@
 //   - runtime/db: Connection management, transactions, WAL mode
 //   - runtime/migrate: Versioned schema migrations
 //   - runtime/session: Session lifecycle, dispatches, parallel tasks
-//   - runtime/taskqueue: Atomic claiming, DLQ, zombie sweep
-//   - runtime/workflow: YAML execution, phase dispatch
 //   - runtime/ledger: Hash chain, locking, redaction
-//   - runtime/dispatch: Agent execution interface
 //
 // All tables use TEXT for timestamps (ISO-8601 UTC) and INTEGER for booleans (0/1).
 package runtime

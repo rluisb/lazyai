@@ -26,10 +26,14 @@ const (
 // curation manifest. Command/chatmode/prompt inventories are intentionally not
 // mixed into this Wave 0 check.
 var CurationCoverageRoots = []string{
+	"antigravity",
 	"canonical/agents",
 	"canonical/hooks",
 	"canonical/skills",
+	"claudecode/hooks",
+	"copilot/hooks",
 	"hooks",
+	"opencode/plugins",
 	"root",
 	"rules",
 	"skills",
@@ -37,6 +41,7 @@ var CurationCoverageRoots = []string{
 	"templates",
 	"tool-agents",
 	"tool-templates",
+	"workflows",
 }
 
 // ProvenanceManifest records where canonical embedded assets came from and the

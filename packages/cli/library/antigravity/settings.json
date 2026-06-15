@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/objective-workflow-gate.sh",
+            "name": "objective-workflow-gate",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/block-destructive-shell.sh",
+            "name": "block-destructive-shell",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ],
+        "matcher": "run_shell_command"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/startup-self-heal.sh",
+            "name": "startup-self-heal",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume"
+      }
+    ]
+  }
+}

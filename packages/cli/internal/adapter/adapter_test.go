@@ -35,23 +35,23 @@ func createTestFS() fstest.MapFS {
 		"canonical/agents/scout.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("scout", "Test scout agent."),
 		},
+		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("evidence-verifier", "Test evidence verifier agent."),
+		},
 		"agents/extra.md": &fstest.MapFile{
 			Data: []byte("---\nname: Extra\ndescription: Test unselected agent.\nmodel: opus\n---\n\n# Extra\n\nYou are not selected by default."),
 		},
-		"skills/implement.md": &fstest.MapFile{
-			Data: []byte("---\nname: implement\ndescription: Implementation skill\n---\n\n# Implement\n\nImplement features."),
-		},
-		"canonical/skills/codebase-exploration.md": &fstest.MapFile{
+		"skills/codebase-exploration.md": &fstest.MapFile{
 			Data: canonicalSkillFixture("codebase-exploration", "Explore code paths."),
 		},
-		"canonical/skills/test-first-change.md": &fstest.MapFile{
+		"skills/test-first-change.md": &fstest.MapFile{
 			Data: canonicalSkillFixture("test-first-change", "Drive changes through tests."),
 		},
-		"canonical/skills/diagnose.md": &fstest.MapFile{
+		"skills/diagnose.md": &fstest.MapFile{
 			Data: canonicalSkillFixture("diagnose", "Diagnose failures."),
 		},
-		"canonical/skills/pr-review.md": &fstest.MapFile{
-			Data: canonicalSkillFixture("pr-review", "Review pull requests."),
+		"skills/issue-triage.md": &fstest.MapFile{
+			Data: canonicalSkillFixture("issue-triage", "Triage issues."),
 		},
 		"tool-agents/agents-dir.md": &fstest.MapFile{
 			Data: []byte("# Agents Directory\n\nThis directory contains agent definitions."),
@@ -118,6 +118,60 @@ func createTestFS() fstest.MapFS {
 		},
 		"claudecode/output-styles/explanatory.md": &fstest.MapFile{
 			Data: []byte("---\nname: Explanatory\ndescription: Detailed responses\nkeep-coding-instructions: true\n---\n\nExplanatory style body."),
+		},
+		"claudecode/hooks/block-destructive-shell.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"claudecode/hooks/objective-workflow-gate.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"claudecode/hooks/startup-self-heal.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"claudecode/hooks/caveman-memory-promotion.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"copilot/hooks/block-destructive-shell.json": &fstest.MapFile{
+			Data: []byte("{\"version\":1}"),
+		},
+		"copilot/hooks/block-destructive-shell.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"copilot/hooks/objective-workflow-gate.json": &fstest.MapFile{
+			Data: []byte("{\"version\":1}"),
+		},
+		"copilot/hooks/objective-workflow-gate.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"copilot/hooks/startup-self-heal.json": &fstest.MapFile{
+			Data: []byte("{\"version\":1}"),
+		},
+		"copilot/hooks/startup-self-heal.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"copilot/hooks/caveman-memory-promotion.json": &fstest.MapFile{
+			Data: []byte("{\"version\":1}"),
+		},
+		"copilot/hooks/caveman-memory-promotion.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"opencode/plugins/vibe-lab-hooks.js": &fstest.MapFile{
+			Data: []byte("export const VibeLabHooks = () => ({})\n"),
+		},
+		"antigravity/settings.json": &fstest.MapFile{
+			Data: []byte("{\"hooks\":{}}\n"),
+		},
+		"antigravity/hooks/vibe-lab/block-destructive-shell.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"antigravity/hooks/vibe-lab/objective-workflow-gate.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"antigravity/hooks/vibe-lab/startup-self-heal.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+		},
+		"antigravity/hooks/vibe-lab/caveman-memory-promotion.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
 	}
 }
@@ -447,6 +501,114 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	if !hasDiagnose {
 		t.Error("no tracked record for diagnose.agent.yaml")
 	}
+}
+
+func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{types.AgentIdBuilder},
+		Skills: []types.SkillId{types.SkillIdDiagnose},
+	}
+
+	adapter := &ClaudeCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("ClaudeCode Install failed: %v", err)
+	}
+
+	for _, rel := range []string{
+		".claude/hooks/block-destructive-shell.sh",
+		".claude/hooks/objective-workflow-gate.sh",
+		".claude/hooks/startup-self-heal.sh",
+		".claude/hooks/caveman-memory-promotion.sh",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
+			t.Fatalf("expected %s: %v", rel, err)
+		}
+	}
+
+	settings, err := os.ReadFile(filepath.Join(targetDir, ".claude", "settings.json"))
+	if err != nil {
+		t.Fatalf("read settings.json: %v", err)
+	}
+	for _, want := range []string{
+		"block-destructive-shell.sh",
+		"startup-self-heal.sh",
+		"objective-workflow-gate.sh",
+	} {
+		if !strings.Contains(string(settings), want) {
+			t.Fatalf("settings.json missing hook reference %q: %s", want, string(settings))
+		}
+	}
+}
+
+func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{types.AgentIdBuilder},
+		Skills: []types.SkillId{types.SkillIdDiagnose},
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "vibe-lab-hooks.js")
+	data, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("read hook plugin: %v", err)
+	}
+	if !strings.Contains(string(data), "VibeLabHooks") {
+		t.Fatalf("hook plugin missing export: %s", string(data))
+	}
+}
+
+func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Skills: []types.SkillId{types.SkillIdDiagnose, types.SkillIdIssueTriage},
+	}
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	for _, rel := range []string{
+		".pi/skills/diagnose/SKILL.md",
+		".pi/skills/issue-triage/SKILL.md",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
+			t.Fatalf("expected %s: %v", rel, err)
+		}
+	}
+	assertMissing(t, filepath.Join(targetDir, ".pi", "agents"))
+	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
+}
+
+func TestAntigravityAdapter_Install_MinimalSurface(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity Install failed: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(targetDir, ".gemini", "settings.json")); err != nil {
+		t.Fatalf("expected .gemini/settings.json: %v", err)
+	}
+	for _, rel := range []string{
+		".gemini/hooks/vibe-lab/block-destructive-shell.sh",
+		".gemini/hooks/vibe-lab/objective-workflow-gate.sh",
+		".gemini/hooks/vibe-lab/startup-self-heal.sh",
+		".gemini/hooks/vibe-lab/caveman-memory-promotion.sh",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
+			t.Fatalf("expected %s: %v", rel, err)
+		}
+	}
+	assertMissing(t, filepath.Join(targetDir, ".gemini", "agents"))
+	assertMissing(t, filepath.Join(targetDir, ".gemini", "skills"))
 }
 
 // --- Test: Disk fallback mode ---

@@ -88,7 +88,7 @@ Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup
 
 | Package | Category | Rationale |
 |---|---|---|
-| `internal/adapter` | `setup-core` | Implements tool-specific output for OpenCode, Claude Code, Copilot, MCP, and related adapter contracts. |
+| `internal/adapter` | `setup-core` | Implements tool-specific output for OpenCode, Claude Code, Copilot, OMP/Pi, Antigravity, hook runtimes, MCP, and related adapter contracts. |
 | `internal/auth` | `ops-runtime-extra` | Probes provider authentication state used by auth-aware setup and runtime-adjacent checks. |
 | `internal/compiler` | `setup-core` | Compiles canonical fragments and validates agent contracts for generated setup output. |
 | `internal/configmerge` | `setup-core` | Merges generated and existing config files while preserving supported user customizations. |

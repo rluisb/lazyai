@@ -24,14 +24,14 @@ Commands NOT matching the denied patterns are allowed through without comment.
 ## Fail-Closed Semantics
 
 If the hook adapter cannot be loaded or fails to execute:
+- **Claude**: The hook must return exit code 2 (block) or structured deny output.
+- **opencode**: The plugin must throw an error to block the command.
+- **Pi**: Not supported. No project-local hook mechanism verified.
 
-- **Claude Code**: The hook must return exit code 2 (block) or structured deny output.
-- **OpenCode**: The plugin must throw an error to block the command.
-
-If the adapter fails silently, the command proceeds. This is a known limitation — document it in project operations notes when this policy is adopted.
+If the adapter fails silently (e.g., plugin load failure in opencode), the command proceeds. This is a known limitation documented in OPERATIONS.md.
 
 ## Implementation Notes
 
 - Each CLI adapter implements this policy natively in its own mechanism.
 - The deny list uses exact string/prefix matching, not regex, to avoid false negatives from shell escaping edge cases.
-- This file is documentation, not a runtime contract. The generated adapters are the runtime artifacts.
+- The canonical policy (this file) is documentation, not a runtime contract. The generated adapters are the runtime artifacts

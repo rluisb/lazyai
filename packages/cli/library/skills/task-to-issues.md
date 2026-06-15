@@ -1,30 +1,17 @@
 ---
 name: task-to-issues
-description: Extract actionable tasks from meeting notes, PR descriptions, specs, or other unstructured text into tracked issues with context and acceptance criteria.
-trigger: /task-to-issues
-phase: plan
-techniques: [chain-of-thought]
-output_schema:
-  sections:
-    - Source Analysis
-    - Extracted Issues
-    - Deduplication Report
-consumes:
-  - unstructured text (notes, threads, specs)
-  - issue tracker access (when available)
-produces_for:
-  - issue-triage (newly created issues)
-  - plan (implementation tracking)
+description: Use when extracting actionable tasks from meeting notes, Slack threads, PR descriptions, specs, or other unstructured text. Converts ephemeral notes into tracked issues with context, acceptance criteria, deduplication, and learning capture.
 ---
 
 # Task to Issues
 
 ## When to Use
 
+Use this skill when:
 - The user pastes notes and asks to create tickets or track them.
 - A thread, PR, RFC, retro, or spec contains multiple action items.
 - The user says something should not fall through the cracks.
-- A task list needs tracked implementation issues.
+- A PRD task list needs tracked implementation issues.
 
 Do not use for a single obvious task or text with no concrete action items.
 
@@ -57,6 +44,12 @@ Assignee: <name | unknown>
 Source: <link or note reference>
 ```
 
+## Learning Capture
+
+Use `canonical/learning-template.md` after completion when extraction reveals a reusable classification rule, template, trap, or workflow pattern.
+
+Store raw findings in `.vibe-lab/sessions/learning-YYYY-MM-DD-<slug>.md`. Promote durable facts only through `memory-promotion`.
+
 ## Constraints
 
 - Do not create vague issues without acceptance criteria.
@@ -71,3 +64,9 @@ Source: <link or note reference>
 - [ ] P0 items are flagged.
 - [ ] Source-to-issue mapping is documented.
 - [ ] Reusable learnings were captured or intentionally skipped.
+
+## Related Skills
+
+- `issue-triage` — classify incoming issues after creation.
+- `diagnose` — investigate confirmed bugs.
+- `memory-promotion` — promote reusable learnings after approval.

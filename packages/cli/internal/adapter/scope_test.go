@@ -21,11 +21,16 @@ func TestIsScopeSupported(t *testing.T) {
 		{types.ToolIdOpenCode, types.SetupScopeGlobal, true},
 		{types.ToolIdOpenCode, types.SetupScopeWorkspace, true},
 		{types.ToolIdCopilot, types.SetupScopeProject, true},
-		{types.ToolIdCopilot, types.SetupScopeGlobal, true}, // now supported with probe gating
+		{types.ToolIdCopilot, types.SetupScopeGlobal, true},
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, true},
+		{types.ToolIdPi, types.SetupScopeProject, true},
+		{types.ToolIdPi, types.SetupScopeWorkspace, true},
+		{types.ToolIdPi, types.SetupScopeGlobal, false},
+		{types.ToolIdAntigravity, types.SetupScopeProject, true},
+		{types.ToolIdAntigravity, types.SetupScopeWorkspace, true},
+		{types.ToolIdAntigravity, types.SetupScopeGlobal, false},
 		{types.ToolId("gemini"), types.SetupScopeProject, false},
 		{types.ToolId("codex"), types.SetupScopeGlobal, false},
-		{types.ToolId("pi"), types.SetupScopeWorkspace, false},
 	}
 	for _, tc := range tests {
 		got := IsScopeSupported(tc.tool, tc.scope)
@@ -60,11 +65,18 @@ func TestResolveToolRoot_AllPairs(t *testing.T) {
 		// copilot
 		{types.ToolIdCopilot, types.SetupScopeProject, want{filepath.Join(target, ".github"), false}},
 		{types.ToolIdCopilot, types.SetupScopeWorkspace, want{filepath.Join(target, ".github"), false}},
-		{types.ToolIdCopilot, types.SetupScopeGlobal, want{filepath.Join(home, ".copilot"), false}}, // now supported
-		// removed tools
+		{types.ToolIdCopilot, types.SetupScopeGlobal, want{filepath.Join(home, ".copilot"), false}},
+		// pi
+		{types.ToolIdPi, types.SetupScopeProject, want{filepath.Join(target, ".pi"), false}},
+		{types.ToolIdPi, types.SetupScopeWorkspace, want{filepath.Join(target, ".pi"), false}},
+		{types.ToolIdPi, types.SetupScopeGlobal, want{"", true}},
+		// antigravity
+		{types.ToolIdAntigravity, types.SetupScopeProject, want{filepath.Join(target, ".gemini"), false}},
+		{types.ToolIdAntigravity, types.SetupScopeWorkspace, want{filepath.Join(target, ".gemini"), false}},
+		{types.ToolIdAntigravity, types.SetupScopeGlobal, want{"", true}},
+		// unsupported tools
 		{types.ToolId("gemini"), types.SetupScopeProject, want{"", true}},
 		{types.ToolId("codex"), types.SetupScopeGlobal, want{"", true}},
-		{types.ToolId("pi"), types.SetupScopeWorkspace, want{"", true}},
 	}
 
 	for _, c := range cases {

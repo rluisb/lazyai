@@ -73,9 +73,16 @@ func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 	}
 
 	var contracts []SkillContract
-	dirs := []string{"canonical/skills", "canonical/agents"}
-	if _, err := fs.ReadDir(libFS, "canonical"); err != nil {
-		dirs = []string{"skills", "agents"}
+	var dirs []string
+	if _, err := fs.ReadDir(libFS, "skills"); err == nil {
+		dirs = append(dirs, "skills")
+	} else if _, err := fs.ReadDir(libFS, "canonical/skills"); err == nil {
+		dirs = append(dirs, "canonical/skills")
+	}
+	if _, err := fs.ReadDir(libFS, "canonical/agents"); err == nil {
+		dirs = append(dirs, "canonical/agents")
+	} else if _, err := fs.ReadDir(libFS, "agents"); err == nil {
+		dirs = append(dirs, "agents")
 	}
 	for _, dir := range dirs {
 		entries, err := fs.ReadDir(libFS, dir)

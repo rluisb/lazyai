@@ -34,10 +34,12 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	settingsPath := filepath.Join(claudeDir, "settings.json")
 	rulesDir := filepath.Join(claudeDir, "rules")
+	hooksDir := filepath.Join(claudeDir, "hooks")
 	sampleRulePath := filepath.Join(rulesDir, "typescript.md")
 
 	_ = files.EnsureDir(claudeDir)
 	_ = files.EnsureDir(rulesDir)
+	_ = files.EnsureDir(hooksDir)
 	_ = files.EnsureDir(filepath.Join(claudeDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(claudeDir, "agents"))
 
@@ -54,6 +56,40 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		"permissions": map[string]any{
 			"allow": []any{},
 			"deny":  []any{},
+		},
+		"hooks": map[string]any{
+			"PreToolUse": []any{
+				map[string]any{
+					"hooks": []any{
+						map[string]any{
+							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/block-destructive-shell.sh",
+							"type":    "command",
+						},
+					},
+					"matcher": "Bash",
+				},
+			},
+			"SessionStart": []any{
+				map[string]any{
+					"hooks": []any{
+						map[string]any{
+							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/startup-self-heal.sh",
+							"type":    "command",
+						},
+					},
+					"matcher": "startup|resume",
+				},
+			},
+			"Stop": []any{
+				map[string]any{
+					"hooks": []any{
+						map[string]any{
+							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/objective-workflow-gate.sh",
+							"type":    "command",
+						},
+					},
+				},
+			},
 		},
 	}
 	preExisted := files.FileExists(settingsPath)
@@ -124,7 +160,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	// Copy skills.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
-		SourceSubdir: "canonical/skills",
+		SourceSubdir: "skills",
 		SelectionKey: "skills",
 		ToDestPath: func(file string) string {
 			name := fileID(file)
@@ -147,6 +183,18 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	}
 
 	// Copy Claude Code output styles (starter set).
+
+	// Copy generated hook scripts.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "claudecode/hooks",
+		ToDestPath: func(file string) string {
+			return filepath.Join(hooksDir, file)
+		},
+		Mode: 0o755,
+	}); err != nil {
+		return nil, err
+	}
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "claudecode/output-styles",

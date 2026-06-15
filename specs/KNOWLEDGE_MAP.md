@@ -29,6 +29,7 @@
 | 023 | Repository cleanup — local hazard cleanup, legacy package audit, and spec hygiene proposal | ✅ Complete | `feature/repo-cleanup` |
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
 | 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, rollback, manifest, product-boundary, four-point, command-category, large-file seam, and minimality contracts | ✅ Issues #229–#236 merged — runtime refactor complete | `specs/025-lazyai-runtime-refactor/` |
+| 026 | vibe-lab alignment — embedded skills shipping, full parity skills/agents, runtime hooks, Pi/Antigravity adapters, workflow catalog, and manifest/doc drift closure | ✅ Local implementation complete — pending human review | `specs/refactors/026-vibe-lab-alignment/` |
 
 ## Standards
 
@@ -42,26 +43,26 @@
 |----------|-----|-----------|
 | Scope resolver as single source of truth for tool paths | — | Eliminates per-adapter `isGlobal` branching; easy to extend for new tools |
 | Deep-merge with backup-on-first-touch for config files | — | Preserves user-authored keys across re-runs; one `.bak` sidecar only |
-| Copilot unsupported at global scope | — | No upstream concept for global Copilot config |
-| Codex split root: `.codex/` for config, `.agents/skills/` for skills | — | Matches upstream Codex CLI conventions |
+| Copilot global scope is probe-gated, not forbidden | — | `copilot` CLI or `~/.copilot/` must exist before user-scope files are emitted |
+| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts such as Copilot `.agent.yaml` and OpenCode `.opencode/opencode.jsonc` |
+| Pi is skills-only; Antigravity is minimal `.gemini` settings + hooks | `specs/adrs/004-vibe-lab-alignment-contract.md` | Matches verified baseline breadth without reviving unsupported agents or workflow runtime behavior |
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |
-| `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all 5 adapters; clean internal migration |
+| `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all supported adapters; clean internal migration |
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
 | OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
 | OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
-| LazyAI owns runtime; vibe-lab supplies principles/adapters | `specs/adrs/003-lazyai-runtime-boundary.md` | Prevents category error; keeps runtime behavior in LazyAI while gating Fortnite/orchestrator excision behind evidence, rollback, and neutral adapter contracts |
 
 ## Packages Reference
 
 | Package | Purpose |
 |---------|---------|
-| `packages/cli/internal/adapter/scope.go` | `ResolveToolRoot`, `ResolveCodexRoots`, `IsScopeSupported`, `ErrScopeUnsupported` |
+| `packages/cli/internal/adapter/scope.go` | `ResolveToolRoot`, `IsScopeSupported`, `ErrScopeUnsupported` for Claude, OpenCode, Copilot, Pi, and Antigravity |
 | `packages/cli/internal/adapter/mcp_compiler.go` | `CompileMCPForTool`, per-tool compile functions (scope-aware via `CompileContext`) |
 | `packages/cli/internal/configmerge/` | `MergeJSONFile`, `MergeTOMLFile` — deep-merge with `.bak` |
-| `packages/cli/internal/globalpaths/` | Home-dir roots for all tools; `ResolveCodexSkillsGlobalDir` |
+| `packages/cli/internal/globalpaths/` | Home-dir roots for global-capable tools |
 | `packages/cli/internal/scaffold/root.go` | Single emitter for memory docs (`memoryDocDestPath`) |
-| `library/commands/*.toml` | Gemini custom slash command templates |
-| `library/chatmodes/*.chatmode.md` | Copilot chat mode templates |
+| `packages/cli/internal/adapter/pi.go` | Pi skills-only adapter (`.pi/skills/<name>/SKILL.md`) |
+| `packages/cli/internal/adapter/antigravity.go` | Minimal `.gemini` adapter (`settings.json` + hook scripts) |
 | `packages/cli/internal/scaffold/root.go#fillClaudeMdPlaceholders` | Hybrid template-placeholder substitution (mechanical auto-infer + subjective fill-in markers) |
 | `packages/cli/internal/adapter/opencode_frontmatter.go` | `BuildOpenCodeAgentFrontmatter` — emits opencode-schema YAML frontmatter, drops incompatible source fields |
 | `packages/cli/internal/adapter/opencode_validate.go` | `ValidateOpenCodeInstall` — post-install opencode debug checks via injectable `CmdRunner` |

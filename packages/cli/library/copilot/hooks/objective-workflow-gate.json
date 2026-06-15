@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "${COPILOT_PROJECT_DIR:-$PWD}/.github/hooks/objective-workflow-gate.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

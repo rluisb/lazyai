@@ -1,25 +1,13 @@
 ---
 name: issue-triage
-description: Classify bug reports and error messages by severity, deduplication, ownership, and next action before implementation.
-trigger: /issue-triage
-phase: triage
-techniques: [chain-of-thought]
-output_schema:
-  sections:
-    - Duplicate Check
-    - Severity Classification
-    - Triage Decision
-consumes:
-  - bug report or error message
-  - issue tracker access (when available)
-produces_for:
-  - diagnose (confirmed bugs)
+description: Use when a bug report, error message, alert, or issue needs classification, deduplication, severity, ownership, refinement, and reusable triage learning before implementation.
 ---
 
 # Issue Triage
 
 ## When to Use
 
+Use this skill when:
 - A new bug report or error arrives without clear categorization.
 - The user asks whether an issue is known or where it belongs.
 - An unlabeled backlog needs sorting.
@@ -52,6 +40,12 @@ Missing Info: <none | requested detail>
 Next Action: <diagnose | close | wait for info | route>
 ```
 
+## Learning Capture
+
+Use `canonical/learning-template.md` when triage reveals a reusable classification rule, ownership rule, severity trap, or routing pattern.
+
+Raw triage learnings go to `.vibe-lab/sessions/learning-YYYY-MM-DD-<slug>.md`. Durable promotion requires `memory-promotion` approval.
+
 ## Constraints
 
 - Do not debug during triage unless the fix is an obvious one-liner and user asked for it.
@@ -67,3 +61,9 @@ Next Action: <diagnose | close | wait for info | route>
 - [ ] Missing info requested if needed.
 - [ ] Triage decision documented.
 - [ ] Reusable learning captured or intentionally skipped.
+
+## Related Skills
+
+- `diagnose` — debug after triage.
+- `task-to-issues` — create issues from unstructured text.
+- `memory-promotion` — promote reusable triage knowledge.

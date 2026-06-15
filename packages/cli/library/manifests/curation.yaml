@@ -113,20 +113,11 @@ entries:
     token_rent_relevant: false
   - path: packages/cli/library/skills/diagnose.md
     kind: skill
-    category: setup-core
-    adapter_targets: [none]
-    reason_kept: Setup library skill retained for diagnosis workflow guidance;
-      canonical/skills/diagnose.md is the adapter-emitted version.
-    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
-      the asset without depending on vibe-lab at runtime.
-    token_rent_relevant: false
-  - path: packages/cli/library/skills/evidence-verifier.md
-    kind: skill
-    category: setup-core
-    adapter_targets: [none]
-    reason_kept: Setup library skill retained for evidence verification guidance.
-    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
-      the asset without depending on vibe-lab at runtime.
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity diagnosis skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
     token_rent_relevant: false
   - path: packages/cli/library/skills/extract-standards.md
     kind: skill
@@ -170,11 +161,11 @@ entries:
     token_rent_relevant: false
   - path: packages/cli/library/skills/issue-triage.md
     kind: skill
-    category: setup-core
-    adapter_targets: [none]
-    reason_kept: Setup library skill retained for issue triage guidance.
-    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
-      the asset without depending on vibe-lab at runtime.
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity issue-triage skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
     token_rent_relevant: false
   - path: packages/cli/library/skills/iterate.md
     kind: skill
@@ -346,11 +337,11 @@ entries:
     token_rent_relevant: false
   - path: packages/cli/library/skills/task-to-issues.md
     kind: skill
-    category: setup-core
-    adapter_targets: [none]
-    reason_kept: Setup library skill retained for extracting tasks into tracked issues.
-    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
-      the asset without depending on vibe-lab at runtime.
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity task-to-issues skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
     token_rent_relevant: false
   - path: packages/cli/library/skills/tdd-loop.md
     kind: skill
@@ -730,6 +721,410 @@ entries:
     reason_kept: Hook policy retained for gated RPI setup support.
     reason_compressed_or_changed: Embedded as repository-local policy configuration
       without requiring a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/canonical/agents/evidence-verifier.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical evidence verification agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Curated from the current vibe-lab baseline into
+      the LazyAI-neutral canonical agent schema.
+    token_rent_relevant: true
+  - path: packages/cli/library/skills/adhd-engineer.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity ADHD-engineer skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/architecture-review.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity architecture-review skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/caveman.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity caveman skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/codebase-exploration.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity codebase-exploration skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/create-agent.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity create-agent skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/create-hook.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity create-hook skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/create-skill.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity create-skill skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/create-workflow.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity create-workflow skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/doc-backed-clarify.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity doc-backed-clarify skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/fast-feedback.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity fast-feedback skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/four-point-vibe-coding.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity four-point-vibe-coding skill emitted to supported tool
+      adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/handoff.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity handoff skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/memory-promotion.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity memory-promotion skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/no-workarounds.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity no-workarounds skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/project-guardrails-init.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity project-guardrails-init skill emitted to supported tool
+      adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/skill-authoring.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity skill-authoring skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/tdd-planning.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity tdd-planning skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/test-first-change.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity test-first-change skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/zoom-out.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Full parity zoom-out skill emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/caveman-memory-promotion.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Advisory hook policy retained for caveman summary routing guidance.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's standalone hook-policy library.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/objective-workflow-gate.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Objective workflow gate policy retained for verification-evidence guidance.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's standalone hook-policy library.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/startup-self-heal.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Startup self-heal policy retained for scoped repair guidance.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's standalone hook-policy library.
+    token_rent_relevant: false
+  - path: packages/cli/library/claudecode/hooks/block-destructive-shell.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [claude-code]
+    reason_kept: Claude runtime hook script emitted for destructive shell blocking.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/claudecode/hooks/caveman-memory-promotion.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [claude-code]
+    reason_kept: Claude advisory caveman hook script retained with no automatic
+      memory writes.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/claudecode/hooks/objective-workflow-gate.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [claude-code]
+    reason_kept: Claude runtime hook script emitted for objective completion gating.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/claudecode/hooks/startup-self-heal.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [claude-code]
+    reason_kept: Claude advisory startup hook script emitted for scoped repair.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/block-destructive-shell.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook event descriptor emitted for destructive shell blocking.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/block-destructive-shell.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook script emitted for destructive shell blocking.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/caveman-memory-promotion.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot advisory caveman hook descriptor emitted without automatic
+      memory writes.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/caveman-memory-promotion.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot advisory caveman hook script retained without automatic
+      memory writes.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/objective-workflow-gate.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook event descriptor emitted for objective completion gating.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/objective-workflow-gate.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook script emitted for objective completion gating.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/startup-self-heal.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook event descriptor emitted for startup self-heal.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/hooks/startup-self-heal.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [copilot]
+    reason_kept: Copilot hook script emitted for startup self-heal.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/opencode/plugins/vibe-lab-hooks.js
+    kind: hook
+    category: adapter-support
+    adapter_targets: [opencode]
+    reason_kept: OpenCode runtime plugin emitted for startup repair, shell blocking,
+      and objective gating.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/settings.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity settings surface retained for minimal .gemini hook wiring.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/vibe-lab/block-destructive-shell.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity hook script emitted for destructive shell blocking.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/vibe-lab/caveman-memory-promotion.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity advisory caveman hook retained without automatic memory writes.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/vibe-lab/objective-workflow-gate.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity hook script emitted for objective completion gating.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/vibe-lab/startup-self-heal.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity startup hook script emitted for scoped repair.
+    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/adversarial-review.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/bugfix.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/code-review.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/documentation.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/feature.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/refactor.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/spike.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/verified-research.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Workflow reference retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/verified-research/templates/artifact-set.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Verified research template retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/verified-research/templates/checklist.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Verified research template retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
+    token_rent_relevant: false
+  - path: packages/cli/library/workflows/verified-research/templates/prompt-template.md
+    kind: workflow
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Verified research template retained for documentation-only parity.
+    reason_compressed_or_changed: Copied from the current vibe-lab baseline into
+      LazyAI's docs-only workflow catalog.
     token_rent_relevant: false
 exclusions:
   - path: packages/cli/library/canonical/commands

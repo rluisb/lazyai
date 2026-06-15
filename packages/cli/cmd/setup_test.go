@@ -152,7 +152,7 @@ func TestRunSetupListOutputsDeterministicJSON(t *testing.T) {
 	for _, target := range result.Targets {
 		gotTargets = append(gotTargets, target.ID)
 	}
-	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,opencode"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,opencode,pi"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 	if len(result.Agents) != 1 || result.Agents[0].ID != "test-agent" {
@@ -197,8 +197,8 @@ func TestRunSetupListGlobalFiltersUnsupportedTargets(t *testing.T) {
 		t.Fatalf("scopeFilter = %q, want global", result.ScopeFilter)
 	}
 	for _, target := range result.Targets {
-		if target.ID == "pi" {
-			t.Fatal("did not expect pi in global list output")
+		if target.ID == "pi" || target.ID == "antigravity" {
+			t.Fatalf("did not expect %s in global list output", target.ID)
 		}
 		if got := strings.Join(target.SupportedScopes, ","); got != "global" {
 			t.Fatalf("target %s supported scopes = %q, want global", target.ID, got)

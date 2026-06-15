@@ -15,7 +15,7 @@ func TestOutputCoverageIsExhaustive(t *testing.T) {
 
 func TestOutputTargetsAllKnownTools(t *testing.T) {
 	tools := []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdAntigravity,
 	}
 	for _, tool := range tools {
 		entries, err := OutputTargetsForTool(tool)
@@ -82,6 +82,29 @@ func TestOutputMappingCopilotSkillsRewritesExt(t *testing.T) {
 	}
 	if target.RewriteSuffix != ".agent.yaml" {
 		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, ".agent.yaml")
+	}
+}
+
+func TestOutputMappingPiSkillsDirPerItem(t *testing.T) {
+	target, ok := LookupOutputTarget(types.ToolIdPi, AssetKindSkills)
+	if !ok {
+		t.Fatal("pi has no skills target")
+	}
+	if target.Shape != ShapeDirPerItem {
+		t.Errorf("pi skills Shape=%q, want %q", target.Shape, ShapeDirPerItem)
+	}
+	if target.SourceSubdir != "skills" {
+		t.Errorf("pi skills SourceSubdir=%q, want skills", target.SourceSubdir)
+	}
+}
+
+func TestOutputMappingAntigravitySkillsNone(t *testing.T) {
+	target, ok := LookupOutputTarget(types.ToolIdAntigravity, AssetKindSkills)
+	if !ok {
+		t.Fatal("antigravity has no skills target")
+	}
+	if target.Shape != ShapeNone {
+		t.Errorf("antigravity skills Shape=%q, want %q", target.Shape, ShapeNone)
 	}
 }
 

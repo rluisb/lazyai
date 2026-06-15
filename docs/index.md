@@ -2,7 +2,7 @@
 
 Scaffold a canonical, multi-tool AI development environment from one CLI.
 
-`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and an MCP catalog so teams can keep one managed source of truth. LazyAI owns this runtime/product surface; vibe-lab informs principles, assets, and adapter expectations, but is not a runtime dependency.
+`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, GitHub Copilot, OMP/Pi, and Antigravity. It ships with bundled agents, skills, templates, rules, hook runtimes, a workflow catalog, and an MCP catalog so teams can keep one managed source of truth. LazyAI owns this runtime/product surface; vibe-lab informs principles, assets, and adapter expectations, but is not a runtime dependency.
 
 ## What it does
 
@@ -35,7 +35,7 @@ See [Product Boundaries](concepts/product-boundaries.md) for the command and int
 ```text
 lazyai-cli (Go binary)
    │ init/update ──▶ .ai/ (canonical)
-   │ compile ─────▶ .opencode/ + .claude/ + .github/ + .vscode/
+   │ compile ─────▶ .opencode/ + .claude/ + .github/ + .vscode/ + .pi/ + .gemini/
    │ doctor ──────▶ .ai-setup.json / .ai-setup.db
 ```
 

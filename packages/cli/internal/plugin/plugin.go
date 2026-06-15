@@ -59,8 +59,8 @@ func Build(libFS fs.FS, outDir, version string) (BuildResult, error) {
 	}
 	total++
 
-	// Agents: library/agents/*.md → outDir/agents/*.md (strip forbidden fields).
-	n, err := copyAgents(libFS, "agents", filepath.Join(outDir, "agents"))
+	// Agents: library/canonical/agents/*.md → outDir/agents/*.md (strip forbidden fields).
+	n, err := copyAgents(libFS, "canonical/agents", filepath.Join(outDir, "agents"))
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("copy agents: %w", err)
 	}

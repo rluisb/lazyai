@@ -124,13 +124,21 @@ func TestGetLibraryFS_CanReadAgents(t *testing.T) {
 func TestGetLibraryFS_CanReadSkills(t *testing.T) {
 	libFS := GetLibraryFS()
 
-	entries, err := fs.ReadDir(libFS, "canonical/skills")
+	entries, err := fs.ReadDir(libFS, "skills")
 	if err != nil {
-		t.Fatalf("failed to read canonical skills directory: %v", err)
+		t.Fatalf("failed to read skills directory: %v", err)
 	}
 
-	if len(entries) < 3 {
-		t.Errorf("expected at least 3 canonical skill files, got %d", len(entries))
+	if len(entries) < 10 {
+		t.Errorf("expected at least 10 skill files, got %d", len(entries))
+	}
+
+	data, err := fs.ReadFile(libFS, "skills/issue-triage.md")
+	if err != nil {
+		t.Fatalf("failed to read skills/issue-triage.md: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("skills/issue-triage.md is empty")
 	}
 }
 

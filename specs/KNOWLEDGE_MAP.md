@@ -28,7 +28,7 @@
 | 022 | Speckit workflow alignment | ✅ Complete | archived top-level spec; workspace-root follow-up noted in tasks |
 | 023 | Repository cleanup — local hazard cleanup, legacy package audit, and spec hygiene proposal | ✅ Complete | `feature/repo-cleanup` |
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
-| 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, and rollback contracts | 🚧 Phase 5 implemented — final human gate pending | `specs/025-lazyai-runtime-refactor/` |
+| 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, rollback, manifest, product-boundary, four-point, command-category, large-file seam, and minimality contracts | ✅ Issues #229–#236 merged — runtime refactor complete | `specs/025-lazyai-runtime-refactor/` |
 
 ## Standards
 

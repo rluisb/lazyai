@@ -79,7 +79,7 @@ Checks:
 - Dependency health (sqlite3, git, jq, bash)
 - Provider status (ollama, openai)
 - Disk space
-- Orchestrator binary on PATH
+- LazyAI runtime boundary checks for active setup artifacts
 
 ### JSON Output
 
@@ -183,9 +183,9 @@ lazyai-cli workspace status
 
 ## Runtime migration note
 
-Legacy `workflow` and orchestration CLI commands were removed during the runtime refactor.
+Legacy `task`, `workflow`, `orchestration`, `mcp-setup`, and obsolete `eval` CLI commands were removed during the runtime refactor. Repository harness scripts are not replacements for those product commands.
 
-See `../migration/fortnite-orchestrator-removal.md` for replacements and rollback guidance.
+See `../migration/fortnite-orchestrator-removal.md` and `../concepts/product-boundaries.md` for replacements, rollback guidance, and current command ownership.
 
 ## Agent Message Bus
 

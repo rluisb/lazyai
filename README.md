@@ -14,6 +14,17 @@ Learn more in [How It Works](docs/concepts/how-it-works.md).
 
 ---
 
+## What is supported
+
+- **Supported runtime/product:** the shipped `lazyai-cli` binary, canonical `.ai/` setup model, adapter/compiler output for supported tools, active embedded library assets, and local runtime-adjacent commands such as sessions, ledger, memory, metrics, secrets, and backups.
+- **Not a runtime dependency:** vibe-lab supplies principles, assets, and adapter expectations that inform LazyAI, but LazyAI owns the Go runtime and product surface.
+- **Repository harness only:** scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal` support maintainers of this repository; they are not shipped LazyAI CLI commands.
+- **Retired/archived:** Fortnite defaults, the old orchestrator runtime, obsolete eval/task/workflow surfaces, and files under `archive/` are historical or migration material, not supported active runtime.
+
+See [Product Boundaries](docs/concepts/product-boundaries.md) for the command and internal-package inventory.
+
+---
+
 ## Commands
 
 ### Session Management
@@ -277,7 +288,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [Claude Code](docs/concepts/tools.md#claude-code)
 - [GitHub Copilot](docs/concepts/tools.md#github-copilot)
 
-> **Note:** OpenCode now installs the neutral canonical adapter path with `primary-agent` as the default agent. Fortnite/OpenCode runtime assets are no longer installed by default.
+> **Note:** OpenCode now installs the neutral canonical adapter path with `primary-agent` as the default agent. Fortnite-era OpenCode defaults are retired from the active default path and are not installed by default.
 
 ---
 
@@ -291,6 +302,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 | Quick Start | [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md) |
 | Installation | [docs/getting-started/installation.md](docs/getting-started/installation.md) |
 | How It Works | [docs/concepts/how-it-works.md](docs/concepts/how-it-works.md) |
+| Product Boundaries | [docs/concepts/product-boundaries.md](docs/concepts/product-boundaries.md) |
 | Scopes | [docs/concepts/scopes.md](docs/concepts/scopes.md) |
 | Presets | [docs/concepts/presets.md](docs/concepts/presets.md) |
 | Tools | [docs/concepts/tools.md](docs/concepts/tools.md) |

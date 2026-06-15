@@ -88,6 +88,7 @@ nav:
       - Scopes: concepts/scopes.md
       - Presets: concepts/presets.md
       - Tools: concepts/tools.md
+      - Product Boundaries: concepts/product-boundaries.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

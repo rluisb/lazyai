@@ -1,6 +1,8 @@
 # Migration: Fortnite / orchestrator removal
 
-This refactor removes Fortnite-specific OpenCode defaults and replaces the old orchestrator entry path with the neutral canonical adapter path.
+This refactor removes Fortnite-specific OpenCode defaults and the old orchestrator runtime path from the active LazyAI product surface, replacing them with the neutral canonical adapter path.
+
+LazyAI owns the shipped runtime/product. vibe-lab supplies principles, assets, and adapter expectations only; it is not a runtime dependency or fallback runtime.
 
 ## Who is affected
 
@@ -36,7 +38,7 @@ OpenCode projects no longer get Fortnite-only runtime content by default:
 - `loop-driver`
 - generated `orchestrator` agent entry files
 - `.opencode/STARTUP.md`
-- Fortnite workflows, scripts, and bundled orchestration defaults
+- Fortnite workflows, scripts, bundled orchestration defaults, and obsolete eval/task/workflow runtime surfaces
 
 ## How to migrate an existing project
 
@@ -64,6 +66,8 @@ OpenCode projects no longer get Fortnite-only runtime content by default:
 
 LazyAI removes managed legacy agent files during update when they still match the tracked library copy. User-edited or user-owned files are preserved. If you intentionally keep custom Fortnite-era assets, treat them as local customizations, not supported defaults.
 
+For boundary categories and current command ownership, see [Product Boundaries](../concepts/product-boundaries.md).
+
 ## Rollback / pinning
 
 `lazyai-cli update-self --version <tag>` now accepts exact release tags, including slash-containing tags such as:
@@ -80,4 +84,4 @@ lazyai-cli update-self --version pre-refactor-025-phase-2
 
 ## Scope of this note
 
-This note covers the adapter/default-path migration. Later phases of Spec 025 will still remove or rewrite CLI command surfaces that depend on heavy orchestration packages. Those removals must land with separate verification and rollback records.
+This note covers migration away from retired Fortnite/orchestrator defaults. Current supported setup and runtime-adjacent surfaces are listed in [Product Boundaries](../concepts/product-boundaries.md) and [CLI Reference](../cli/reference.md); archived orchestrator/eval/taskqueue material remains historical context unless a future issue explicitly reclassifies it.

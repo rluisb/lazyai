@@ -1,0 +1,848 @@
+version: 1
+library_root: packages/cli/library
+entries:
+  - path: packages/cli/library/canonical/agents/builder.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical implementation agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
+      the LazyAI-neutral canonical schema.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/planner.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical planning agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
+      the LazyAI-neutral canonical schema.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/primary-agent.md
+    kind: agent
+    category: setup-core
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Default LazyAI runtime entry point for adapter-generated setups.
+    reason_compressed_or_changed: LazyAI-authored dispatcher kept independent of retired runtime surfaces.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/reviewer.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical review agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
+      the LazyAI-neutral canonical schema.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/scout.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical research agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
+      the LazyAI-neutral canonical schema.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/skills/codebase-exploration.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical exploration skill emitted to adapters for grounded code searches.
+    reason_compressed_or_changed: Compressed from a fuller skill into a small LazyAI canonical workflow.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/skills/diagnose.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical diagnosis skill emitted to adapters for root-cause debugging.
+    reason_compressed_or_changed: Compressed from a fuller skill into a small LazyAI canonical workflow.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/skills/pr-review.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical PR review skill emitted to adapters for review workflows.
+    reason_compressed_or_changed: Compressed from a fuller skill into a small LazyAI canonical workflow.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/skills/test-first-change.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Canonical test-first skill emitted to adapters for behavior-changing work.
+    reason_compressed_or_changed: Compressed from a fuller skill into a small LazyAI canonical workflow.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/hooks/pre-commit.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Documents the canonical pre-commit responsibility for the embedded
+      LazyAI library.
+    reason_compressed_or_changed: LazyAI-authored note scoped to token-rent
+      verification without changing token-rent behavior.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/hooks/session-start.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Keeps lightweight session-start guardrails available in the
+      canonical library.
+    reason_compressed_or_changed: Curated to LazyAI session context without a vibe-lab runtime dependency.
+    token_rent_relevant: true
+  - path: packages/cli/library/agents/builder.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/documenter.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/implementor.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/orchestrator.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content for existing
+      references only.
+    reason_compressed_or_changed: Not reintroduced into adapter output; current
+      runtime uses canonical LazyAI agents instead.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/planner.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/red-team.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/reviewer.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/agents/scout.md
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as non-adapter legacy library content while canonical
+      agents are the emitted path.
+    reason_compressed_or_changed: Not part of current adapter output mapping; kept
+      reviewable until a future cleanup removes legacy assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/builder.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot schema fixture while current Copilot output
+      is generated from canonical markdown.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/orchestrator.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot schema fixture while current Copilot output
+      is generated from canonical markdown.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping and not
+      reintroduced as runtime orchestration.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/planner.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot schema fixture while current Copilot output
+      is generated from canonical markdown.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/reviewer.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot schema fixture while current Copilot output
+      is generated from canonical markdown.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/scout.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot schema fixture while current Copilot output
+      is generated from canonical markdown.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/rpi/rpi-implementor.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/rpi/rpi-planner.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/copilot/agents/rpi/rpi-researcher.agent.yaml
+    kind: agent
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
+    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
+      to validate schema compatibility.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/anti-speculation.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for local workflow guidance outside
+      the canonical adapter set.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/bugfix.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for bugfix workflow guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/chain-verify.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for verification workflow guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/diagnose.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for diagnosis workflow guidance;
+      canonical/skills/diagnose.md is the adapter-emitted version.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/extract-standards.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for standards extraction guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/housekeeping.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for maintenance guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/impact-check.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for post-change impact review guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/implement.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for implementation guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/improve-codebase-architecture.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for architecture improvement guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/iterate.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for iteration guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/memory-write.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for memory-writing guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/orchestrate.md
+    kind: skill
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained for existing setup-library references, not as active
+      LazyAI orchestration runtime.
+    reason_compressed_or_changed: Not adapter-emitted; canonical LazyAI assets remain the runtime path.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/parallel-execution.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for scoped parallel execution guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/plan.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for planning guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/populate/SKILL.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Skill directory template retained for populating skill-compatible assets.
+    reason_compressed_or_changed: Kept as a minimal Agent Skills-compatible SKILL.md
+      seed without runtime dependency on vibe-lab.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/process-audit.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for process audit guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/proof-of-concept.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for proof-of-concept guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/red-team-plan.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for adversarial planning guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/research.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for research guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/review.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for review guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/rpi.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for gated RPI workflow guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/self-improve.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for self-improvement guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-analyze.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for setup-core analysis guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-checklist.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for checklist guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-clarify.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for clarification guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-constitution.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for constitution guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-implement.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for implementation guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-plan.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for planning guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-specify.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for specification guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/speckit-tasks.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Speckit workflow skill retained for task breakdown guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/spike.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for spike guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/tdd-loop.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for TDD loop guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/update-memory.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for knowledge update guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/root/AGENTS.template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [claude-code, opencode]
+    reason_kept: Root instruction template emitted for tools that consume
+      AGENTS-style instructions.
+    reason_compressed_or_changed: Curated LazyAI root template assembled from
+      embedded fragments and local setup context.
+    token_rent_relevant: false
+  - path: packages/cli/library/root/copilot-instructions.template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [copilot]
+    reason_kept: Root instruction template emitted for GitHub Copilot repository
+      instructions.
+    reason_compressed_or_changed: Curated LazyAI root template assembled from
+      embedded fragments and local setup context.
+    token_rent_relevant: false
+  - path: packages/cli/library/tool-templates/shared/root.template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Shared tool root template used by the compiler for supported
+      adapter outputs.
+    reason_compressed_or_changed: Curated to a single shared template instead of
+      per-tool duplicated runtime assets.
+    token_rent_relevant: false
+  - path: packages/cli/library/tool-agents/agents-dir.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Directory-level context file emitted beside adapter agents.
+    reason_compressed_or_changed: Compressed to a small context note that works across supported tools.
+    token_rent_relevant: false
+  - path: packages/cli/library/tool-agents/root-dir.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Root-level context file emitted into tool directories.
+    reason_compressed_or_changed: Compressed to a small context note that works across supported tools.
+    token_rent_relevant: false
+  - path: packages/cli/library/tool-agents/skills-dir.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Directory-level context file emitted beside adapter skills.
+    reason_compressed_or_changed: Compressed to a small context note that works across supported tools.
+    token_rent_relevant: false
+  - path: packages/cli/library/tool-agents/templates-dir.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Directory-level context file emitted beside adapter templates.
+    reason_compressed_or_changed: Compressed to a small context note that works across supported tools.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/adr.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Speckit-style template emitted to adapter template surfaces and
+      setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/audit-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Audit template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/bugfix-rca-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Bugfix RCA template emitted to adapter template surfaces and setup
+      scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/checklist-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Checklist template emitted to adapter template surfaces and setup
+      scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/code-review-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Code review template emitted to adapter template surfaces and setup
+      scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/housekeeping-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Housekeeping template emitted to adapter template surfaces and
+      setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/ledger-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Ledger template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/plan-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Plan template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/poc-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Proof-of-concept template emitted to adapter template surfaces and
+      setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/postmortem-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Postmortem template emitted to adapter template surfaces and setup
+      scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/spec-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Specification template emitted to adapter template surfaces and
+      setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/spike-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Spike template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/standard.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Standard template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/task-harness-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Task harness template emitted to adapter template surfaces and
+      setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/tasks-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Tasks template emitted to adapter template surfaces and setup scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/tech-debt-template.md
+    kind: template
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Tech-debt template emitted to adapter template surfaces and setup
+      scaffolds.
+    reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/access.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for scaffolded LazyAI planning repos.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/agent-security.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for agent security guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/agent-state.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for agent state guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/auto-recovery.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for recovery workflow guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/code-style.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for code style guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/cost.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for cost-aware agent usage.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/review.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for review guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/security.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for security guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/self-consistency.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for self-consistency checks.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/structured-feedback.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for structured feedback handling.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/testing.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for test expectations.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/tool-use.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for safe tool usage.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/typescript.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for TypeScript-specific guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/rules/workflow.md
+    kind: rule
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter project rule available for workflow guidance.
+    reason_compressed_or_changed: Curated as standalone markdown instead of depending on a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/standards/starter/agent-security.md
+    kind: standard
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter standard seeded into LazyAI-managed specs/standards trees.
+    reason_compressed_or_changed: Curated as a compact starter standard instead of a
+      full external knowledge-base dependency.
+    token_rent_relevant: false
+  - path: packages/cli/library/standards/starter/context-loading.md
+    kind: standard
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter standard seeded into LazyAI-managed specs/standards trees.
+    reason_compressed_or_changed: Curated as a compact starter standard instead of a
+      full external knowledge-base dependency.
+    token_rent_relevant: false
+  - path: packages/cli/library/standards/starter/error-handling.md
+    kind: standard
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter standard seeded into LazyAI-managed specs/standards trees.
+    reason_compressed_or_changed: Curated as a compact starter standard instead of a
+      full external knowledge-base dependency.
+    token_rent_relevant: false
+  - path: packages/cli/library/standards/starter/orchestration-patterns.md
+    kind: standard
+    category: legacy-exclusion
+    adapter_targets: [none]
+    reason_kept: Retained as a starter standard for existing setup content, not as
+      active orchestration runtime.
+    reason_compressed_or_changed: Curated as documentation only; no retired runtime
+      surface is emitted by adapters.
+    token_rent_relevant: false
+  - path: packages/cli/library/standards/starter/test-patterns.md
+    kind: standard
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Starter standard seeded into LazyAI-managed specs/standards trees.
+    reason_compressed_or_changed: Curated as a compact starter standard instead of a
+      full external knowledge-base dependency.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/pre-commit
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Hook asset retained for local repository setup support.
+    reason_compressed_or_changed: Embedded as a repository-local script without
+      requiring a vibe-lab checkout.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/rpi-gate-check.yml
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Hook policy retained for gated RPI setup support.
+    reason_compressed_or_changed: Embedded as repository-local policy configuration
+      without requiring a vibe-lab checkout.
+    token_rent_relevant: false
+exclusions:
+  - path: packages/cli/library/canonical/commands
+    kind: command
+    category: legacy-exclusion
+    reason_dropped: Command category curation is intentionally outside Wave 0;
+      provenance still hash-covers canonical command files.
+  - path: packages/cli/library/claudecode/commands
+    kind: command
+    category: legacy-exclusion
+    reason_dropped: Tool command category inventory belongs to separate command-boundary work.
+  - path: packages/cli/library/opencode/commands
+    kind: command
+    category: legacy-exclusion
+    reason_dropped: Tool command category inventory belongs to separate command-boundary work.
+  - path: packages/cli/library/chatmodes
+    kind: chatmode
+    category: legacy-exclusion
+    reason_dropped: Chatmode inventory is outside the requested curation surface for Wave 0.
+  - path: packages/cli/library/prompts
+    kind: prompt
+    category: legacy-exclusion
+    reason_dropped: Prompt inventory is outside the requested curation surface for Wave 0.

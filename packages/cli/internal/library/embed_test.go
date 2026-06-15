@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -134,5 +135,24 @@ func TestReadFS_RootTemplate(t *testing.T) {
 	}
 	if len(data) == 0 {
 		t.Error("root/AGENTS.template.md is empty")
+	}
+}
+
+func TestReadFS_PrimaryAgentAndRootTemplateExposeFourPointContract(t *testing.T) {
+	fsys := testLibFS()
+	for _, path := range []string{
+		"canonical/agents/primary-agent.md",
+		"root/AGENTS.template.md",
+	} {
+		data, err := files.ReadFS(fsys, path)
+		if err != nil {
+			t.Fatalf("ReadFS %s: %v", path, err)
+		}
+		content := string(data)
+		for _, want := range []string{"WHAT", "HOW", "DON'T WANT", "VALIDATE"} {
+			if !strings.Contains(content, want) {
+				t.Fatalf("%s missing four-point marker %q", path, want)
+			}
+		}
 	}
 }

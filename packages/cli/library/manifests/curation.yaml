@@ -22,7 +22,8 @@ entries:
     category: setup-core
     adapter_targets: [claude-code, opencode, copilot]
     reason_kept: Default LazyAI runtime entry point for adapter-generated setups.
-    reason_compressed_or_changed: LazyAI-authored dispatcher kept independent of retired runtime surfaces.
+    reason_compressed_or_changed: LazyAI-authored entry point now promotes
+      four-point intake while staying independent of retired runtime surfaces.
     token_rent_relevant: true
   - path: packages/cli/library/canonical/agents/reviewer.md
     kind: agent
@@ -498,8 +499,8 @@ entries:
     adapter_targets: [claude-code, opencode]
     reason_kept: Root instruction template emitted for tools that consume
       AGENTS-style instructions.
-    reason_compressed_or_changed: Curated LazyAI root template assembled from
-      embedded fragments and local setup context.
+    reason_compressed_or_changed: Curated LazyAI root template now exposes the
+      four-point work contract with embedded fragments and local setup context.
     token_rent_relevant: false
   - path: packages/cli/library/root/copilot-instructions.template.md
     kind: template

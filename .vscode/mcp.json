@@ -1,0 +1,66 @@
+{
+  "servers": {
+    "codegraph": {
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "command": "codegraph",
+      "type": "stdio"
+    },
+    "filesystem": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
+    "graphify": {
+      "args": [
+        "query"
+      ],
+      "command": "graphify",
+      "type": "stdio"
+    },
+    "memoria": {
+      "args": [
+        "-y",
+        "@byronwade/memoria"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
+    "memory": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
+    "obsidian": {
+      "args": [
+        "mcp"
+      ],
+      "command": "ob",
+      "type": "stdio"
+    },
+    "qmd": {
+      "args": [
+        "mcp"
+      ],
+      "command": "qmd",
+      "type": "stdio"
+    },
+    "ripgrep": {
+      "args": [
+        "-y",
+        "mcp-ripgrep"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    }
+  }
+}

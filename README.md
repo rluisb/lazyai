@@ -1,8 +1,8 @@
 # LazyAI
 
-A CLI-first AI operating system for software teams. Define your AI setup once in a canonical format, then compile it to any supported AI tool.
+A setup engine for AI toolchains. `lazyai-cli` defines your AI assistant setup once in a canonical format, then compiles and updates it across every supported AI tool — OpenCode, Claude Code, GitHub Copilot, Pi, Antigravity, and friends.
 
-`lazyai-cli` uses a **canonical source → compile** model:
+`lazyai-cli` follows a **canonical source → compile** model:
 
 1. `init` scaffolds a tool-agnostic canonical layer under `.ai/`
 2. You edit rules, agents, and templates in one place
@@ -10,14 +10,18 @@ A CLI-first AI operating system for software teams. Define your AI setup once in
 4. `update` refreshes managed files from the bundled library
 5. `doctor` checks health and drift
 
+**Setup-core is the default product.** `init`, `compile`, `update`, `doctor`, `add`, `build-plugin`, `validate`, and the workspace/sidecar commands are the engine. Runtime-adjacent commands (sessions, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) still ship in the same binary today, but they are transitional extras outside setup-core on the path to explicit opt-in modules — see [ADR-005](specs/adrs/005-core-vs-optional-modules.md) and [Product Boundaries](docs/concepts/product-boundaries.md).
+
 Learn more in [How It Works](docs/concepts/how-it-works.md).
+
 
 ---
 
 ## What is supported
 
-- **Supported runtime/product:** the shipped `lazyai-cli` binary, canonical `.ai/` setup model, adapter/compiler output for supported tools, active embedded library assets, and local runtime-adjacent commands such as sessions, ledger, memory, metrics, secrets, and backups.
-- **Not a runtime dependency:** vibe-lab supplies principles, assets, and adapter expectations that inform LazyAI, but LazyAI owns the Go runtime and product surface.
+- **Default product (setup-core):** the shipped `lazyai-cli` binary, canonical `.ai/` setup model, adapter/compiler output for OpenCode, Claude Code, GitHub Copilot, Pi, and Antigravity, and the active embedded library assets. See [ADR-005](specs/adrs/005-core-vs-optional-modules.md) for the framing.
+- **Transitional runtime extras:** runtime-adjacent command families (sessions, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) still ship today, but they are outside the default setup-core product boundary and are being staged toward explicit opt-in module semantics in a follow-up phase.
+- **Not a runtime dependency:** vibe-lab supplies principles, assets, and adapter expectations that inform LazyAI, but LazyAI owns the Go runtime and product surface. See [ADR-004](specs/adrs/004-vibe-lab-alignment-contract.md) for the alignment contract.
 - **Repository harness only:** scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal` support maintainers of this repository; they are not shipped LazyAI CLI commands.
 - **Retired/archived:** Fortnite defaults, the old orchestrator runtime, obsolete eval/task/workflow surfaces, and files under `archive/` are historical or migration material, not supported active runtime.
 
@@ -27,178 +31,45 @@ See [Product Boundaries](docs/concepts/product-boundaries.md) for the command an
 
 ## Commands
 
-### Session Management
-Track AI agent sessions with SQLite persistence:
+### Setup-core examples
 
-```bash
-lazyai-cli session start "Implement auth feature"
-# → Session started: ses_1234567890
-
-lazyai-cli session list
-# → 🟢 ses_1234567890 | Implement auth feature | 2026-05-24T00:08:16Z
-
-lazyai-cli session show ses_1234567890
-# → Shows session details and dispatch history
-
-lazyai-cli session end ses_1234567890
-# → ✅ Session ended
-```
-
-### Health Checks
-Validate environment before work:
+Core setup commands are the default product surface:
 
 ```bash
 lazyai-cli doctor
-# → Checks: file integrity, stray files, metadata gaps,
-# →        sqlite3, git, jq, bash, ollama, openai, disk space
-
-lazyai-cli doctor --json
-# → Machine-readable output for CI integration
-```
-
-### Audit Trail
-Immutable hash-chained ledger for accountability:
-
-```bash
-lazyai-cli ledger init
-# → Initializes .specify/ledger.jsonl
-
-lazyai-cli ledger append dispatch "agent=builder task=auth"
-# → Appends event with SHA-256 hash
-
-lazyai-cli ledger verify
-# → Verifies chain integrity
-
-lazyai-cli ledger show 5
-# → Shows last 5 entries
-```
-
-### Validation
-Check agent and skill file structure:
-
-```bash
-lazyai-cli validate agents
-# → Checks dispatch parameters, tool schemas, common mistakes
+# → Checks file integrity, metadata, migrations, env dependencies, and setup drift
 
 lazyai-cli validate skills
-# → Checks skill structure
-```
+# → Checks skill structure and common mistakes
 
-### Workspace
-Manage multi-project workspaces:
-
-```bash
 lazyai-cli workspace add /path/to/project --name my-project
 lazyai-cli workspace switch my-project
-lazyai-cli workspace list
 lazyai-cli workspace status
-```
 
-### Retired runtime surfaces
-The task queue and workflow CLI surfaces were removed in the runtime refactor.
-Use the migration note for replacements and rollback guidance:
-
-```text
-docs/migration/fortnite-orchestrator-removal.md
-```
-
-### Agent Message Bus
-SQLite-based messaging between agents:
-
-```bash
-lazyai-cli message send builder "Need help" "Can you review the auth code?"
-# → ✅ Message sent: msg_1234567890
-
-lazyai-cli message recv builder
-# → Marks unread messages as read and shows recent messages
-
-lazyai-cli message broadcast "All hands" "System update at 2pm"
-# → ✅ Broadcast sent to 5 agents
-```
-
-### Git Integration
-Auto-commit with safety confirmation:
-
-```bash
-lazyai-cli git sync
-# → Shows files to be committed, asks for confirmation
-# → Use --force to skip confirmation
-```
-
-### Backup
-Create and restore backups:
-
-```bash
-lazyai-cli backup create
-# → Creates lazyai-backup-YYYYMMDD_HHMMSS.tar.gz
-
-lazyai-cli backup restore <backup-file>
-# → Restores from backup (asks for confirmation; use --force to skip)
-```
-
-### Secrets
-Store and retrieve secrets:
-
-```bash
-lazyai-cli secret set api-key "sk-..."
-lazyai-cli secret get api-key
-# → Secrets use OS keychain when available; fallback to ~/.lazyai/secrets/
-# → Not encrypted at rest — do not use for production credentials
-```
-
-### Notifications
-Configure and send notifications:
-
-```bash
-lazyai-cli notify config --webhook https://hooks.example.com/notify
-# → Webhook URL stored in local config
-
-lazyai-cli notify send "Build complete"
-lazyai-cli notify test
-```
-
-### Metrics Dashboard
-Track performance and generate dashboards:
-
-```bash
-lazyai-cli metrics list
-# → Shows recent quality metrics
-
-lazyai-cli metrics export
-# → Exports to Prometheus format (metrics.prom)
-# → Writes file to current directory
-
-lazyai-cli metrics dashboard
-# → Generates HTML dashboard (dashboard.html)
-# → Writes file to current directory
-```
-
-### Completion
-Generate shell completion scripts:
-
-```bash
 source <(lazyai-cli completion bash)
-source <(lazyai-cli completion zsh)
-lazyai-cli completion fish | source
 ```
 
-### Memory Vault
-Long-term institutional memory:
+### Transitional runtime extras (selected examples)
+
+These commands still ship today, but they are secondary surfaces outside setup-core. The examples below are intentionally brief; see the [CLI Reference](docs/cli/reference.md) for the full categorized inventory.
 
 ```bash
-lazyai-cli memory save "Always test database migrations" --type lesson --tags database
-# → ✅ Memory saved: 20260523_225222_lesson.md
-
+lazyai-cli session start "Implement auth feature"
+lazyai-cli ledger verify
+lazyai-cli message send builder "Need help" "Can you review the auth code?"
+lazyai-cli git sync
+lazyai-cli backup create
+lazyai-cli secret set api-key "sk-..."
+lazyai-cli notify test
+lazyai-cli metrics dashboard
 lazyai-cli memory list
-# → Shows all saved memories
-
-lazyai-cli memory search database
-# → Searches memories by content
 ```
 
+See [CLI Reference](docs/cli/reference.md) and [Product Boundaries](docs/concepts/product-boundaries.md) for the full categorized command inventory.
 
 ### Runtime migration note
-Legacy workflow/orchestration commands were removed in the runtime refactor.
+
+Legacy workflow/orchestration/taskqueue surfaces were removed in the runtime refactor.
 See `docs/migration/fortnite-orchestrator-removal.md`.
 
 ---
@@ -287,6 +158,8 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [OpenCode](docs/concepts/tools.md#opencode)
 - [Claude Code](docs/concepts/tools.md#claude-code)
 - [GitHub Copilot](docs/concepts/tools.md#github-copilot)
+- [OMP/Pi](docs/concepts/tools.md#omppi)
+- [Antigravity](docs/concepts/tools.md#antigravity)
 
 > **Note:** OpenCode now installs the neutral canonical adapter path with `primary-agent` as the default agent. Fortnite-era OpenCode defaults are retired from the active default path and are not installed by default.
 
@@ -308,7 +181,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 | Tools | [docs/concepts/tools.md](docs/concepts/tools.md) |
 | CLI Reference | [docs/cli/reference.md](docs/cli/reference.md) |
 | MCP Integration | [docs/integration/mcp.md](docs/integration/mcp.md) |
-| Orchestration | [docs/integration/orchestration.md](docs/integration/orchestration.md) |
+| Runtime removal note | [docs/integration/orchestration.md](docs/integration/orchestration.md) |
 | Contributing | [docs/development/contributing.md](docs/development/contributing.md) |
 | Release Process | [docs/development/release.md](docs/development/release.md) |
 | FAQ | [docs/troubleshooting/faq.md](docs/troubleshooting/faq.md) |

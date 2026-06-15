@@ -28,7 +28,7 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	}
 
 	settingsPath := filepath.Join(geminiDir, "settings.json")
-	hooksDir := filepath.Join(geminiDir, "hooks", "vibe-lab")
+	hooksDir := filepath.Join(geminiDir, "hooks", "lazyai")
 	_ = files.EnsureDir(geminiDir)
 	_ = files.EnsureDir(hooksDir)
 

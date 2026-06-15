@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Detect when a caveman summary may contain reusable knowledge and route it to `memory-promotion` without writing memory automatically.
+Keep the caveman-to-memory review workflow documented without claiming an emitted runtime hook where none is wired today.
 
 ## Events
 
-- Claude Code: `PreCompact`, `SessionEnd`
-- OpenCode plugin: `experimental.session.compacting`, `session.idle`
-- OMP/Pi: markdown-only advisory unless runtime hook support is verified
+- Generated adapters: none
+- Manual workflow: after caveman summaries, diagnosis, triage, or handoff work
+- OMP/Pi: markdown-only advisory unless runtime hook support is explicitly implemented later
 
 ## Decision
 
-- Allow: normal compaction/session end when no caveman summary is present.
-- Warn: caveman summary contains decision, trap, convention, root cause, or reusable template.
+- Allow: normal compaction/session end when no promotion review is needed.
+- Warn: a caveman summary contains reusable knowledge and should be reviewed through the `memory-promotion` skill.
 - Deny: never. This is advisory only.
 
 ## Proposal Template
@@ -27,6 +27,14 @@ Evidence: <observed fact>
 Draft:
 - <context-rich reusable fact>
 ```
+
+## Runtime
+
+- Claude Code: no caveman-memory-promotion runtime hook is emitted.
+- OpenCode: no caveman-memory-promotion plugin event is emitted.
+- Copilot: no caveman-memory-promotion hook descriptor is emitted.
+- Antigravity: no caveman-memory-promotion hook is emitted.
+- OMP/Pi: no runtime hook is emitted.
 
 ## Safety Guardrails
 

@@ -23,13 +23,13 @@ Prefer narrow checks over broad suites:
 For vibe-lab skill work, the default loop is:
 
 ```bash
-bin/inject
-bin/doctor
+lazyai-cli compile
+lazyai-cli doctor
 ```
 
 ## Choosing the Check
 
-- Skill content or symlink changed: run `bin/inject`, then `bin/doctor`.
+- Skill content or symlink changed: run `lazyai-cli compile`, then `lazyai-cli doctor`.
 - Generated context changed: inspect the generated catalog entry for the changed skill.
 - Script logic changed: run the script on the normal project path.
 - Documentation-only change: run the generator or checker that consumes the doc, if one exists.

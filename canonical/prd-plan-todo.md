@@ -40,7 +40,7 @@ docs/prd/<slug>.md
 For project-local private planning, use:
 
 ```text
-.vibe-lab/tasks/<slug>.md
+specs/tasks/<slug>.md
 ```
 
 ## 1. PRD

@@ -26,7 +26,7 @@ Every implementation plan chooses a TDD mode from `canonical/tdd-planning.md` be
 3. Name the red test file(s), test case(s), and expected failure.
 4. Record existing tests that must remain intact.
 5. Define green criteria and the smallest verification command.
-6. Add the TDD plan to the task plan or standalone `.vibe-lab/tdd/<slug>.md` for heavy-aggressive/required work.
+6. Add the TDD plan to the task plan or standalone `specs/tdd/<slug>.md` for heavy-aggressive/required work.
 
 ## TDD Plan Template
 

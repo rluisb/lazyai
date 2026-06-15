@@ -1,23 +1,25 @@
-# Artifact Rules
+ # Artifact Rules
 
 ## Canonical Source
 
-- Canonical artifacts live under `.agents/` or `canonical/`; CLI-specific outputs are generated.
-- Do not duplicate canonical content under `.claude/`, `.opencode/`, or `.pi/`.
-- Run `bin/inject` after canonical artifact changes.
-- Run `bin/doctor` and `tests/test-provenance-drift.sh` before treating adapters as current.
+- Canonical artifacts live under `packages/cli/library/` for emitted library content; `.agents/` is the repo-level maintainer source that `bin/inject` consumes.
+- Generated CLI-specific outputs (`.claude/`, `.opencode/`, `.github/`, `.pi/`, `.gemini/`) must not be hand-edited; regenerate with `lazyai-cli compile`.
+- Run `lazyai-cli compile` after canonical artifact changes to propagate to tool-native surfaces.
+- Run `lazyai-cli doctor` before treating adapter output as current.
 
 ## Artifact Shapes
 
 - Rule or policy: one markdown file unless runtime enforcement is needed.
-- Agent: one `.agents/agents/<name>.md` file.
-- Skill: `.agents/skills/<name>/SKILL.md`; optional `scripts/`, `references/`, and `assets/` are allowed when justified.
-- Hook: `.agents/hooks/<name>/POLICY.md`; optional scripts support Claude Code, and generated OpenCode plugins provide parity where possible.
-- Workflow: `.agents/workflows/<name>.md` or `.agents/workflows/<name>.yml` once workflow support is enabled.
+- Agent: one canonical agent file under `packages/cli/library/canonical/agents/<name>.md`.
+- Skill: `packages/cli/library/skills/<name>.md` with skill frontmatter; emitted per-tool as `<tool-dir>/skills/<name>/SKILL.md`.
+- Hook: `packages/cli/library/hooks/<name>.md` with hook frontmatter; emitted per-tool as native hook config plus scripts.
+- Command: `packages/cli/library/opencode/commands/<name>.md` or `claudecode/commands/<name>.md` depending on the originating tool surface.
 
 ## Compatibility
 
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
-- OpenCode supports skills, agents, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
+- OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
+- Copilot uses `.github/agents/*.agent.yaml` and `.github/copilot-instructions.md`.
 - OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
-- If a capability cannot be represented for one CLI, document the limitation in the artifact and make `bin/doctor` warn.
+- Antigravity is minimal `.gemini/settings.json` plus `.gemini/hooks/` scripts; no separate skills or agents are emitted.
+- If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.

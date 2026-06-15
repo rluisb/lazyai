@@ -30,7 +30,7 @@ Use for normal feature, bugfix, parser, validation, or API work.
 
 Use for security, money, data loss, migrations, concurrency, or high-regression-risk work.
 
-- Artifact: standalone `.vibe-lab/tdd/<slug>.md` or feature spec section.
+ Artifact: standalone `specs/tdd/<slug>.md` or feature spec section.
 - Include: unit, integration/contract, failure, boundary, and regression tests.
 - Validate: focused tests plus the smallest suite proving the integration boundary.
 

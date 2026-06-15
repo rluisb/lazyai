@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/objective-workflow-gate.sh",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/lazyai/objective-workflow-gate.sh",
             "name": "objective-workflow-gate",
             "timeout": 5000,
             "type": "command"
@@ -16,26 +16,13 @@
       {
         "hooks": [
           {
-            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/block-destructive-shell.sh",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/lazyai/block-destructive-shell.sh",
             "name": "block-destructive-shell",
             "timeout": 5000,
             "type": "command"
           }
         ],
         "matcher": "run_shell_command"
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/startup-self-heal.sh",
-            "name": "startup-self-heal",
-            "timeout": 5000,
-            "type": "command"
-          }
-        ],
-        "matcher": "startup|resume"
       }
     ]
   }

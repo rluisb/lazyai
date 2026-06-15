@@ -4,7 +4,7 @@ Use after `task-to-issues`, `issue-triage`, `diagnose`, or any workflow that dis
 
 ## Storage Ladder
 
-1. Session note: `.vibe-lab/sessions/learning-YYYY-MM-DD-<slug>.md` for raw findings.
+1. Session note: `specs/memory/sessions/learning-YYYY-MM-DD-<slug>.md` for raw findings.
 2. Memory proposal: `memory-promotion` when the finding is likely to recur.
 3. Canonical rule/template: only after explicit approval or repeated evidence.
 

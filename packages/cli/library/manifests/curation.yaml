@@ -266,7 +266,7 @@ entries:
   - path: packages/cli/library/skills/speckit-analyze.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for setup-core analysis guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -274,7 +274,7 @@ entries:
   - path: packages/cli/library/skills/speckit-checklist.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for checklist guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -282,7 +282,7 @@ entries:
   - path: packages/cli/library/skills/speckit-clarify.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for clarification guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -290,7 +290,7 @@ entries:
   - path: packages/cli/library/skills/speckit-constitution.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for constitution guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -298,7 +298,7 @@ entries:
   - path: packages/cli/library/skills/speckit-implement.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for implementation guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -306,7 +306,7 @@ entries:
   - path: packages/cli/library/skills/speckit-plan.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for planning guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -314,7 +314,7 @@ entries:
   - path: packages/cli/library/skills/speckit-specify.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for specification guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -322,7 +322,7 @@ entries:
   - path: packages/cli/library/skills/speckit-tasks.md
     kind: skill
     category: setup-core
-    adapter_targets: [none]
+    adapter_targets: [claude-code, opencode, copilot, pi]
     reason_kept: Speckit workflow skill retained for task breakdown guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
@@ -915,26 +915,11 @@ entries:
     reason_kept: Claude runtime hook script emitted for destructive shell blocking.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/claudecode/hooks/caveman-memory-promotion.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [claude-code]
-    reason_kept: Claude advisory caveman hook script retained with no automatic
-      memory writes.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
   - path: packages/cli/library/claudecode/hooks/objective-workflow-gate.sh
     kind: hook
     category: adapter-support
     adapter_targets: [claude-code]
     reason_kept: Claude runtime hook script emitted for objective completion gating.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/claudecode/hooks/startup-self-heal.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [claude-code]
-    reason_kept: Claude advisory startup hook script emitted for scoped repair.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
   - path: packages/cli/library/copilot/hooks/block-destructive-shell.json
@@ -951,22 +936,6 @@ entries:
     reason_kept: Copilot hook script emitted for destructive shell blocking.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/copilot/hooks/caveman-memory-promotion.json
-    kind: hook
-    category: adapter-support
-    adapter_targets: [copilot]
-    reason_kept: Copilot advisory caveman hook descriptor emitted without automatic
-      memory writes.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/hooks/caveman-memory-promotion.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [copilot]
-    reason_kept: Copilot advisory caveman hook script retained without automatic
-      memory writes.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
   - path: packages/cli/library/copilot/hooks/objective-workflow-gate.json
     kind: hook
     category: adapter-support
@@ -981,26 +950,11 @@ entries:
     reason_kept: Copilot hook script emitted for objective completion gating.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/copilot/hooks/startup-self-heal.json
-    kind: hook
-    category: adapter-support
-    adapter_targets: [copilot]
-    reason_kept: Copilot hook event descriptor emitted for startup self-heal.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/hooks/startup-self-heal.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [copilot]
-    reason_kept: Copilot hook script emitted for startup self-heal.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/opencode/plugins/vibe-lab-hooks.js
+  - path: packages/cli/library/opencode/plugins/lazyai-hooks.js
     kind: hook
     category: adapter-support
     adapter_targets: [opencode]
-    reason_kept: OpenCode runtime plugin emitted for startup repair, shell blocking,
-      and objective gating.
+    reason_kept: OpenCode runtime plugin emitted for shell blocking and objective gating.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
   - path: packages/cli/library/antigravity/settings.json
@@ -1010,32 +964,18 @@ entries:
     reason_kept: Antigravity settings surface retained for minimal .gemini hook wiring.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/antigravity/hooks/vibe-lab/block-destructive-shell.sh
+  - path: packages/cli/library/antigravity/hooks/lazyai/block-destructive-shell.sh
     kind: hook
     category: adapter-support
     adapter_targets: [antigravity]
     reason_kept: Antigravity hook script emitted for destructive shell blocking.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/antigravity/hooks/vibe-lab/caveman-memory-promotion.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [antigravity]
-    reason_kept: Antigravity advisory caveman hook retained without automatic memory writes.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/antigravity/hooks/vibe-lab/objective-workflow-gate.sh
+  - path: packages/cli/library/antigravity/hooks/lazyai/objective-workflow-gate.sh
     kind: hook
     category: adapter-support
     adapter_targets: [antigravity]
     reason_kept: Antigravity hook script emitted for objective completion gating.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
-    token_rent_relevant: false
-  - path: packages/cli/library/antigravity/hooks/vibe-lab/startup-self-heal.sh
-    kind: hook
-    category: adapter-support
-    adapter_targets: [antigravity]
-    reason_kept: Antigravity startup hook script emitted for scoped repair.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
   - path: packages/cli/library/workflows/adversarial-review.md

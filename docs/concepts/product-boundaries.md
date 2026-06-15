@@ -14,7 +14,7 @@ Excluded: optional operational state such as session records and metrics, reposi
 
 ### `ops-runtime-extra`
 
-Included when a shipped CLI command or package operates local runtime-adjacent state around a setup: sessions, ledger/audit records, memory, messages, metrics, costs, secrets, notifications, backups, and authentication probes.
+Included when a shipped CLI command or package operates local runtime-adjacent state around a setup: sessions, ledger/audit records, memory, messages, metrics, costs, secrets, notifications, backups, and authentication probes. These commands still ship today, but they are transitional extras outside the default setup-core product boundary while explicit module lifecycle semantics are still pending.
 
 Excluded: setup compilation itself, repo-maintainer scripts, generated-source maintenance, and retired orchestrator/eval/taskqueue command surfaces.
 
@@ -40,7 +40,7 @@ Excluded: the active `primary-agent` canonical adapter path, current `lazyai-cli
 | `bin/doctor`, `bin/inject`, `bin/startup-self-heal` | Repository harness scripts, not shipped CLI commands | `dev-harness` |
 | `archive/`, retired `docs/orchestrator-*`, and retired Fortnite/orchestrator/eval references | Historical or rollback material | `retired/archived` |
 
-The CLI reference documents shipped `lazyai-cli` commands only. Repository scripts under `bin/` may be useful for maintainers, but they are not product commands and should not be presented as user-facing LazyAI runtime surface.
+The CLI reference documents shipped `lazyai-cli` commands only. Repository scripts under `bin/` may be useful for maintainers, but they are not product commands and should not be presented as user-facing LazyAI runtime surface. Likewise, `ops-runtime-extra` commands are listed for completeness, but they are secondary/transitional surfaces rather than the default product headline.
 
 ## Top-level CLI command inventory
 

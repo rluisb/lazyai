@@ -2,56 +2,70 @@ name: Lint
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.26'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
 
-    - name: Run go fmt
-      run: |
-        cd packages/cli
-        if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
-          echo "❌ Code is not formatted. Run 'gofmt -w .'"
-          gofmt -l .
-          exit 1
-        fi
-        echo "✅ Code is properly formatted"
+      - name: Run go fmt
+        run: |
+          cd packages/cli
+          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
+            echo "❌ Code is not formatted. Run 'gofmt -w .'"
+            gofmt -l .
+            exit 1
+          fi
+          echo "✅ Code is properly formatted"
 
-    - name: Run go vet
-      run: |
-        cd packages/cli
-        go vet ./...
+      - name: Run go vet
+        run: |
+          cd packages/cli
+          go vet ./...
 
-    - name: Install staticcheck
-      run: go install honnef.co/go/tools/cmd/staticcheck@latest
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
-    - name: Run staticcheck
-      run: |
-        cd packages/cli
-        staticcheck ./...
-      continue-on-error: true
+      - name: Run staticcheck
+        run: |
+          cd packages/cli
+          staticcheck ./...
+        continue-on-error: true
+
+  drift-scan:
+    name: Banned-token drift scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run drift scan
+        run: |
+          if [ ! -x tests/scripts/drift-scan.sh ]; then
+            chmod +x tests/scripts/drift-scan.sh
+          fi
+          tests/scripts/drift-scan.sh
 
   yaml-lint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install yamllint
-      run: pip install yamllint
+      - name: Install yamllint
+        run: pip install yamllint
 
-    - name: Lint YAML files
-      run: |
-        yamllint -d relaxed .opencode/workflows/ || true
-        yamllint -d relaxed .github/workflows/ || true
+      - name: Lint YAML files
+        run: |
+          yamllint -d relaxed .opencode/workflows/ || true
+          yamllint -d relaxed .github/workflows/ || true

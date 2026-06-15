@@ -37,6 +37,7 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	// tool directory; root context docs are handled elsewhere.
 	keyFiles := []string{
 		".opencode/opencode.jsonc",
+		".opencode/package.json",
 		".opencode/agents/primary-agent.md",
 		".opencode/agents/builder.md",
 		".opencode/skills/diagnose/SKILL.md",
@@ -485,5 +486,78 @@ func TestOpenCodeAdapter_Install_PrimaryAgentMode(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "STARTUP.md")); err == nil {
 		t.Error("STARTUP.md should not be installed")
+	}
+}
+func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfg, err := jsonc.ReadJSONCFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+	skills, ok := cfg["skills"].(map[string]any)
+	if !ok {
+		t.Fatalf("skills = %T, want object", cfg["skills"])
+	}
+	paths, ok := skills["paths"].([]any)
+	if !ok || len(paths) != 1 || paths[0] != "skills" {
+		t.Fatalf("skills.paths = %v, want [skills]", skills["paths"])
+	}
+	permission, ok := cfg["permission"].(map[string]any)
+	if !ok {
+		t.Fatalf("permission = %T, want object", cfg["permission"])
+	}
+	if got, _ := permission["bash"].(string); got != "ask" {
+		t.Fatalf("permission.bash = %q, want ask", got)
+	}
+	if got, _ := permission["edit"].(string); got != "ask" {
+		t.Fatalf("permission.edit = %q, want ask", got)
+	}
+	skillPerm, ok := permission["skill"].(map[string]any)
+	if !ok {
+		t.Fatalf("permission.skill = %T, want object", permission["skill"])
+	}
+	if got, _ := skillPerm["*"].(string); got != "allow" {
+		t.Fatalf("permission.skill[*] = %q, want allow", got)
+	}
+}
+func TestOpenCodeAdapter_PackageJSONUsesModuleType(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	packageData, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "package.json"))
+	if err != nil {
+		t.Fatalf("read package.json: %v", err)
+	}
+	if !strings.Contains(string(packageData), `"type": "module"`) {
+		t.Fatalf("package.json missing type=module:\n%s", packageData)
 	}
 }

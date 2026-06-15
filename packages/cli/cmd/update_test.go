@@ -97,18 +97,19 @@ func TestUpdateNonInteractiveRemovesKnownStrayAgentsArtifacts(t *testing.T) {
 
 func TestRemoveLegacyAgentsDeletesUnmodifiedLibraryAgents(t *testing.T) {
 	dir := t.TempDir()
-	legacyAgentPath := filepath.Join(dir, ".opencode", "agents", "builder.md")
+	// "documenter" is a truly retired agent (per legacyAgentPaths in update.go)
+	legacyAgentPath := filepath.Join(dir, ".opencode", "agents", "documenter.md")
 	if err := os.MkdirAll(filepath.Dir(legacyAgentPath), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(legacyAgentPath, []byte("# legacy builder\n"), 0o644); err != nil {
+	if err := os.WriteFile(legacyAgentPath, []byte("# legacy documenter\n"), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
 	hash, _ := files.FileHash(legacyAgentPath)
 	tracked := []types.TrackedFile{
 		{
-			Path:  ".opencode/agents/builder.md",
+			Path:  ".opencode/agents/documenter.md",
 			Hash:  hash,
 			Owner: types.FileOwnerLibrary,
 		},

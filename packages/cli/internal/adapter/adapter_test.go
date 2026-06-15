@@ -125,12 +125,6 @@ func createTestFS() fstest.MapFS {
 		"claudecode/hooks/objective-workflow-gate.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
-		"claudecode/hooks/startup-self-heal.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"claudecode/hooks/caveman-memory-promotion.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
 		"copilot/hooks/block-destructive-shell.json": &fstest.MapFile{
 			Data: []byte("{\"version\":1}"),
 		},
@@ -143,34 +137,16 @@ func createTestFS() fstest.MapFS {
 		"copilot/hooks/objective-workflow-gate.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
-		"copilot/hooks/startup-self-heal.json": &fstest.MapFile{
-			Data: []byte("{\"version\":1}"),
-		},
-		"copilot/hooks/startup-self-heal.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"copilot/hooks/caveman-memory-promotion.json": &fstest.MapFile{
-			Data: []byte("{\"version\":1}"),
-		},
-		"copilot/hooks/caveman-memory-promotion.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"opencode/plugins/vibe-lab-hooks.js": &fstest.MapFile{
-			Data: []byte("export const VibeLabHooks = () => ({})\n"),
+		"opencode/plugins/lazyai-hooks.js": &fstest.MapFile{
+			Data: []byte("export const LazyAIHooks = () => ({})\n"),
 		},
 		"antigravity/settings.json": &fstest.MapFile{
 			Data: []byte("{\"hooks\":{}}\n"),
 		},
-		"antigravity/hooks/vibe-lab/block-destructive-shell.sh": &fstest.MapFile{
+		"antigravity/hooks/lazyai/block-destructive-shell.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
-		"antigravity/hooks/vibe-lab/objective-workflow-gate.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"antigravity/hooks/vibe-lab/startup-self-heal.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"antigravity/hooks/vibe-lab/caveman-memory-promotion.sh": &fstest.MapFile{
+		"antigravity/hooks/lazyai/objective-workflow-gate.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
 	}
@@ -518,8 +494,6 @@ func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
 	for _, rel := range []string{
 		".claude/hooks/block-destructive-shell.sh",
 		".claude/hooks/objective-workflow-gate.sh",
-		".claude/hooks/startup-self-heal.sh",
-		".claude/hooks/caveman-memory-promotion.sh",
 	} {
 		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
 			t.Fatalf("expected %s: %v", rel, err)
@@ -532,12 +506,14 @@ func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
 	}
 	for _, want := range []string{
 		"block-destructive-shell.sh",
-		"startup-self-heal.sh",
 		"objective-workflow-gate.sh",
 	} {
 		if !strings.Contains(string(settings), want) {
 			t.Fatalf("settings.json missing hook reference %q: %s", want, string(settings))
 		}
+	}
+	if strings.Contains(string(settings), "startup-self-heal.sh") {
+		t.Fatalf("settings.json should not reference startup-self-heal.sh: %s", string(settings))
 	}
 }
 
@@ -553,12 +529,12 @@ func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
 		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "vibe-lab-hooks.js")
+	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "lazyai-hooks.js")
 	data, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read hook plugin: %v", err)
 	}
-	if !strings.Contains(string(data), "VibeLabHooks") {
+	if !strings.Contains(string(data), "LazyAIHooks") {
 		t.Fatalf("hook plugin missing export: %s", string(data))
 	}
 }
@@ -598,10 +574,8 @@ func TestAntigravityAdapter_Install_MinimalSurface(t *testing.T) {
 		t.Fatalf("expected .gemini/settings.json: %v", err)
 	}
 	for _, rel := range []string{
-		".gemini/hooks/vibe-lab/block-destructive-shell.sh",
-		".gemini/hooks/vibe-lab/objective-workflow-gate.sh",
-		".gemini/hooks/vibe-lab/startup-self-heal.sh",
-		".gemini/hooks/vibe-lab/caveman-memory-promotion.sh",
+		".gemini/hooks/lazyai/block-destructive-shell.sh",
+		".gemini/hooks/lazyai/objective-workflow-gate.sh",
 	} {
 		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
 			t.Fatalf("expected %s: %v", rel, err)

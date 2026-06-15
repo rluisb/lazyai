@@ -69,17 +69,6 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 					"matcher": "Bash",
 				},
 			},
-			"SessionStart": []any{
-				map[string]any{
-					"hooks": []any{
-						map[string]any{
-							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/startup-self-heal.sh",
-							"type":    "command",
-						},
-					},
-					"matcher": "startup|resume",
-				},
-			},
 			"Stop": []any{
 				map[string]any{
 					"hooks": []any{

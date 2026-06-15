@@ -7,7 +7,7 @@ description: Use when creating or modifying vibe-lab skills or adjacent artifact
 
 ## When to Use
 
-Use this skill when creating, renaming, or modifying a skill under `.agents/skills/`, or when updating the templates that skills depend on.
+Use this skill when creating, renaming, or modifying a skill under `packages/cli/library/skills/`, or when updating the templates that skills depend on.
 
 For agents, hooks, policies, and workflows, use the canonical templates in `canonical/` first; use `create-agent`, `create-hook`, or `create-workflow` when scaffolding a new artifact.
 
@@ -26,7 +26,7 @@ Skills are progressive-disclosure artifacts: keep `SKILL.md` concise, move optio
 ## Required Shape
 
 ```text
-.agents/skills/<skill>/
+packages/cli/library/skills/<skill>/
 ├── SKILL.md       # required
 ├── scripts/       # optional
 ├── references/    # optional
@@ -39,9 +39,9 @@ Skills are progressive-disclosure artifacts: keep `SKILL.md` concise, move optio
 
 After changing a skill or template:
 
-1. Run `bin/inject`.
-2. Run `bin/doctor`.
-3. Run `tests/test-provenance-drift.sh`.
+1. Run `lazyai-cli compile`.
+2. Run `lazyai-cli doctor`.
+3. Run targeted tests for any affected adapter output.
 4. Confirm generated catalogs describe the artifact clearly.
 
 ## Constraints

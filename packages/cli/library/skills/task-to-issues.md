@@ -48,7 +48,7 @@ Source: <link or note reference>
 
 Use `canonical/learning-template.md` after completion when extraction reveals a reusable classification rule, template, trap, or workflow pattern.
 
-Store raw findings in `.vibe-lab/sessions/learning-YYYY-MM-DD-<slug>.md`. Promote durable facts only through `memory-promotion`.
+Store raw findings in `specs/memory/sessions/learning-YYYY-MM-DD-<slug>.md`. Promote durable facts only through `memory-promotion`.
 
 ## Constraints
 

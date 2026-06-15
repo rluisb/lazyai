@@ -27,11 +27,11 @@ Use `canonical/hook-template.md`.
 
 1. Confirm whether the policy must block, warn, or only document behavior.
 2. Choose a kebab-case hook name.
-3. Write `.agents/hooks/<name>/POLICY.md` with purpose, events, decision rules, runtime, and fail-closed behavior.
+3. Write `packages/cli/library/hooks/<name>.md` with purpose, events, decision rules, runtime, and fail-closed behavior.
 4. Map Claude Code lifecycle events to OpenCode plugin events where possible.
 5. Add scripts only for runtime behavior; keep them non-interactive and fail-closed for safety hooks.
-6. Run `bin/inject` to generate Claude hook scripts/settings and OpenCode plugins.
-7. Run `bin/doctor` and `tests/test-provenance-drift.sh`.
+6. Run `lazyai-cli compile` to generate Claude hook scripts/settings and OpenCode plugins.
+7. Run `lazyai-cli doctor` to verify output consistency.
 
 ## Event Mapping
 
@@ -40,7 +40,7 @@ Use `canonical/hook-template.md`.
 - Claude `SessionStart` ↔ OpenCode `session.created`.
 - Claude `PreCompact` / `PostCompact` ↔ OpenCode `experimental.session.compacting` or `session.compacted`.
 - Claude `UserPromptSubmit` ↔ OpenCode `tui.prompt.append` when prompt mutation is needed.
-- If no equivalent exists, document the unsupported adapter and make `bin/doctor` warn.
+- If no equivalent exists, document the unsupported adapter and make `lazyai-cli doctor` warn.
 
 ## Constraints
 

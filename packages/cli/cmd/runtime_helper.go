@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/runtime"
 )
@@ -22,7 +21,7 @@ func getRuntimeDBPath() string {
 }
 
 // openRuntimeDB opens the runtime database, creating it if necessary,
-// and upgrades SchemaV1 databases to SchemaV2 before returning.
+// and upgrades legacy runtime databases to SchemaV2 before returning.
 func openRuntimeDB() (*runtime.DB, error) {
 	dbPath := getRuntimeDBPath()
 
@@ -356,29 +355,6 @@ func validateRuntimeSchema(db *runtime.DB) error {
 func removeRuntimeArtifacts(path string) error {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("remove %s: %w", path, err)
-	}
-	return nil
-}
-
-// ensureSession creates a session row if it does not already exist.
-// This prevents FK constraint failures when task_queue or workflow_instances
-// reference a session_id that has no corresponding sessions row.
-func ensureSession(db *runtime.DB, sessionID string) error {
-	var exists int
-	err := db.QueryRow("SELECT 1 FROM sessions WHERE id = ?", sessionID).Scan(&exists)
-	if err == nil {
-		return nil // already exists
-	}
-	if err != sql.ErrNoRows {
-		return fmt.Errorf("check session: %w", err)
-	}
-
-	_, err = db.Exec(
-		"INSERT INTO sessions (id, started_at, agent, status) VALUES (?, ?, ?, ?)",
-		sessionID, time.Now().UTC().Format(time.RFC3339), "cli", "active",
-	)
-	if err != nil {
-		return fmt.Errorf("create session: %w", err)
 	}
 	return nil
 }

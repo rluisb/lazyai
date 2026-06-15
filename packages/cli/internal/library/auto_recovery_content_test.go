@@ -44,36 +44,11 @@ func TestAutoRecoveryPolicyRequiresHumanConfirmationForUnsafeRecovery(t *testing
 	assertContainsAll(t, "rules/auto-recovery.md", content, required)
 }
 
-func TestOrchestratorGuidanceReferencesSafeRecoveryPolicy(t *testing.T) {
-	t.Parallel()
-
-	paths := []string{
-		"skills/orchestrate.md",
-		"agents/orchestrator.md",
-	}
-	required := []string{
-		"Safe Auto-Recovery Policy",
-		"auto-allowed",
-		"Human-gated",
-		"failure cause/evidence",
-		"retry limit",
-		"idempotency/safety check",
-		"recovery is deferred",
-	}
-
-	for _, path := range paths {
-		content := readLibraryFile(t, path)
-		assertContainsAll(t, path, content, required)
-	}
-}
-
 func TestAutoRecoveryGuidanceDoesNotClaimRuntimeAutonomy(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
 		"rules/auto-recovery.md",
-		"skills/orchestrate.md",
-		"agents/orchestrator.md",
 	}
 	for _, path := range paths {
 		content := strings.ToLower(readLibraryFile(t, path))

@@ -17,6 +17,7 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 		adapter          ToolAdapter
 		primaryAgentPath string
 		orchestratorPath string
+		retiredSkillPath string
 		assertConfig     func(t *testing.T, targetDir string)
 	}{
 		{
@@ -24,6 +25,7 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 			adapter:          &OpenCodeAdapter{},
 			primaryAgentPath: filepath.Join(".opencode", "agents", "primary-agent.md"),
 			orchestratorPath: filepath.Join(".opencode", "agents", "orchestrator.md"),
+			retiredSkillPath: filepath.Join(".opencode", "skills", "orchestrate", "SKILL.md"),
 			assertConfig: func(t *testing.T, targetDir string) {
 				t.Helper()
 				cfg, err := jsonc.ReadJSONCFile(filepath.Join(targetDir, ".opencode", OpenCodeConfigFilename))
@@ -48,12 +50,14 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 			adapter:          &ClaudeCodeAdapter{},
 			primaryAgentPath: filepath.Join(".claude", "agents", "primary-agent.md"),
 			orchestratorPath: filepath.Join(".claude", "agents", "orchestrator.md"),
+			retiredSkillPath: filepath.Join(".claude", "skills", "orchestrate", "SKILL.md"),
 		},
 		{
 			name:             "copilot",
 			adapter:          &CopilotAdapter{},
 			primaryAgentPath: filepath.Join(".github", "agents", "primary-agent.agent.yaml"),
 			orchestratorPath: filepath.Join(".github", "agents", "orchestrator.agent.yaml"),
+			retiredSkillPath: filepath.Join(".github", "agents", "orchestrate.agent.yaml"),
 		},
 	}
 
@@ -68,6 +72,7 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 			if tc.assertConfig != nil {
 				tc.assertConfig(t, targetDir)
 			}
+			assertMissing(t, filepath.Join(targetDir, tc.retiredSkillPath))
 		})
 	}
 }

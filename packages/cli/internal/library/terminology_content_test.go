@@ -34,27 +34,12 @@ func TestKnowledgeMapIncludesLightweightTerminologySection(t *testing.T) {
 	assertContainsAll(t, "KNOWLEDGE_MAP.md", content, required)
 }
 
-func TestOrchestrateAlignsVocabularyBeforeDispatch(t *testing.T) {
-	t.Parallel()
-
-	content := readLibraryFile(t, "skills/orchestrate.md")
-
-	required := []string{
-		"vocabulary alignment",
-		"before dispatch",
-		"HITL",
-		"terminology decision",
-	}
-	assertContainsAll(t, "skills/orchestrate.md", content, required)
-}
-
 func TestTerminologyGuidanceDoesNotIntroduceRuntimeInfrastructure(t *testing.T) {
 	t.Parallel()
 
 	contents := map[string]string{
 		"skills/speckit-clarify.md": readLibraryFile(t, "skills/speckit-clarify.md"),
 		"KNOWLEDGE_MAP.md":          readRootKnowledgeMap(t),
-		"skills/orchestrate.md":     readLibraryFile(t, "skills/orchestrate.md"),
 	}
 	for path, content := range contents {
 		content := strings.ToLower(content)

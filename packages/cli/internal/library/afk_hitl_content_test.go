@@ -21,21 +21,6 @@ func TestSpeckitTasksDefinesAFKHITLMarkers(t *testing.T) {
 	assertContainsAll(t, "skills/speckit-tasks.md", content, required)
 }
 
-func TestOrchestrateDefinesCupcakeSignalMappingForDispatch(t *testing.T) {
-	t.Parallel()
-
-	content := readLibraryFile(t, "skills/orchestrate.md")
-
-	required := []string{
-		"plan_attested",
-		"AFK",
-		"HITL",
-		"src/ writes",
-		"plan_attested = true",
-	}
-	assertContainsAll(t, "skills/orchestrate.md", content, required)
-}
-
 func TestParallelExecutionDefinesAFKHITLWaveGating(t *testing.T) {
 	t.Parallel()
 
@@ -56,7 +41,6 @@ func TestAFKHITLGuidanceDoesNotClaimNewEnforcement(t *testing.T) {
 
 	paths := []string{
 		"skills/speckit-tasks.md",
-		"skills/orchestrate.md",
 		"skills/parallel-execution.md",
 	}
 	for _, path := range paths {

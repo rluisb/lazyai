@@ -25,7 +25,7 @@ entries:
     source_repo: github.com/rluisb/lazyai
     source_ref: feature/230-236-library-manifests baseline; recorded 2026-06-15
     source_path: packages/cli/library/canonical/agents/primary-agent.md
-    local_sha256: 6c91e323a34874cc21b22547af3a885eb12ee659078d30e8f96bd6bcafeccdd6
+    local_sha256: 4090a8ca0962084d08ac797015993169374949c15c66cd788f455044e8778abe
     mode: LazyAI-authored
     notes: LazyAI runtime entry point; explicitly excludes retired runtime concepts.
   - path: packages/cli/library/canonical/agents/reviewer.md

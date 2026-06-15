@@ -1,0 +1,32 @@
+# Per-role model assignment across CLIs
+# One optimal model per role per CLI. No tiers, no profiles.
+
+agents:
+  planner:
+    claude:   claude-opus-4-8
+    opencode: ollama-cloud/deepseek-v4-pro
+    omp:      ollama-cloud/deepseek-v4-pro
+  researcher:
+    claude:   claude-opus-4-8
+    opencode: openai/gpt-5.5-fast
+    omp:      openai/gpt-5.5-fast
+  evidence-verifier:
+    claude:   claude-opus-4-8
+    opencode: openai/gpt-5.5
+    omp:      openai/gpt-5.5
+  implementer:
+    claude:   claude-sonnet-4-7
+    opencode: ollama-cloud/kimi-k2.6:cloud
+    omp:      ollama-cloud/kimi-k2.6:cloud
+  reviewer:
+    claude:   claude-sonnet-4-7
+    opencode: openai/gpt-5.5
+    omp:      openai/gpt-5.5
+  deployer:
+    claude:   claude-haiku-4-2
+    opencode: ollama-cloud/nemotron-3-super
+    omp:      ollama-cloud/nemotron-3-super
+  responder:
+    claude:   claude-haiku-4-2
+    opencode: ollama-cloud/kimi-k2.6:cloud
+    omp:      ollama-cloud/kimi-k2.6:cloud

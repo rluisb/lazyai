@@ -35,9 +35,9 @@ func TestDefaultMcpServersForPreset(t *testing.T) {
 	}
 
 	full := defaultMcpServersForPreset(McpPresetFull)
-	// Full includes all catalog servers (12 after removing context7, brave-search).
-	if len(full) < 12 {
-		t.Fatalf("full count = %d, want at least 12 (includes graphify + obsidian from Spec 022/E3)", len(full))
+	// Full includes every catalog server.
+	if len(full) < 11 {
+		t.Fatalf("full count = %d, want at least 11", len(full))
 	}
 	if full[0] != "atlassian" || full[len(full)-1] != "ripgrep" {
 		t.Fatalf("full ordering = %#v, want sorted catalog IDs", full)
@@ -47,8 +47,8 @@ func TestDefaultMcpServersForPreset(t *testing.T) {
 func TestDefaultMcpSelectionPreservesExplicitSelection(t *testing.T) {
 	t.Parallel()
 
-	selected := defaultMcpSelection([]string{"orchestrator"}, McpPresetMinimal)
-	if want := []string{"orchestrator"}; !reflect.DeepEqual(selected, want) {
+	selected := defaultMcpSelection([]string{"memory"}, McpPresetMinimal)
+	if want := []string{"memory"}; !reflect.DeepEqual(selected, want) {
 		t.Fatalf("selected = %#v, want %#v", selected, want)
 	}
 }

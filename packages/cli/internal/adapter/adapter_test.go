@@ -22,11 +22,38 @@ func createTestFS() fstest.MapFS {
 		"agents/builder.md": &fstest.MapFile{
 			Data: []byte("---\nname: Builder\ndescription: Test builder agent.\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
 		},
+		"canonical/agents/primary-agent.md": &fstest.MapFile{
+			Data: []byte("# Primary Agent\n\nDefault LazyAI runtime entry point."),
+		},
+		"canonical/agents/builder.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("builder", "Test builder agent."),
+		},
+		"canonical/agents/planner.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("planner", "Test planner agent."),
+		},
+		"canonical/agents/reviewer.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("reviewer", "Test reviewer agent."),
+		},
+		"canonical/agents/scout.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("scout", "Test scout agent."),
+		},
 		"agents/orchestrator.md": &fstest.MapFile{
 			Data: []byte("---\nname: Orchestrator\ndescription: Test orchestrator agent.\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
 		},
 		"skills/implement.md": &fstest.MapFile{
 			Data: []byte("---\nname: implement\ndescription: Implementation skill\n---\n\n# Implement\n\nImplement features."),
+		},
+		"canonical/skills/codebase-exploration.md": &fstest.MapFile{
+			Data: canonicalSkillFixture("codebase-exploration", "Explore code paths."),
+		},
+		"canonical/skills/test-first-change.md": &fstest.MapFile{
+			Data: canonicalSkillFixture("test-first-change", "Drive changes through tests."),
+		},
+		"canonical/skills/diagnose.md": &fstest.MapFile{
+			Data: canonicalSkillFixture("diagnose", "Diagnose failures."),
+		},
+		"canonical/skills/pr-review.md": &fstest.MapFile{
+			Data: canonicalSkillFixture("pr-review", "Review pull requests."),
 		},
 		"tool-agents/agents-dir.md": &fstest.MapFile{
 			Data: []byte("# Agents Directory\n\nThis directory contains agent definitions."),
@@ -111,7 +138,7 @@ func createTestAdapterContext(t *testing.T) (*AdapterContext, string) {
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
 			Agents: []types.AgentId{"builder"},
-			Skills: []types.SkillId{"implement"},
+			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}, targetDir
 }
@@ -359,37 +386,6 @@ func TestCopyWithRecord_ForceOverwrite(t *testing.T) {
 	}
 }
 
-// --- Test: readOrchestratorAgentSource from fs.FS ---
-
-func TestReadOrchestratorAgentSource_FromFS(t *testing.T) {
-	ctx, _ := createTestAdapterContext(t)
-	result := readOrchestratorAgentSource(ctx)
-
-	if result == "" {
-		t.Fatal("readOrchestratorAgentSource returned empty string")
-	}
-	if len(result) < 20 {
-		t.Errorf("orchestrator agent source seems too short: %q", result[:min(50, len(result))])
-	}
-}
-
-// --- Test: readOrchestratorAgentSource fallback ---
-
-func TestReadOrchestratorAgentSource_Fallback(t *testing.T) {
-	ctx := &AdapterContext{
-		LibraryFS: nil, // No FS
-	}
-	result := readOrchestratorAgentSource(ctx)
-
-	if result == "" {
-		t.Fatal("fallback should return hardcoded content")
-	}
-	// Verify fallback content includes key markers.
-	if len(result) < 10 {
-		t.Errorf("fallback content seems too short")
-	}
-}
-
 // --- Test: OpenCode adapter with fs.FS ---
 
 func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
@@ -398,7 +394,6 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		Agents: types.ALL_AGENTS[:],
 		Skills: types.ALL_SKILLS[:],
 	}
-	ctx.EnableServers = []string{"orchestrator"}
 
 	adapter := &OpenCodeAdapter{}
 	records, err := adapter.Install(ctx)
@@ -415,9 +410,9 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	// tool directory; root context docs are handled elsewhere.
 	keyFiles := []string{
 		".opencode/opencode.jsonc",
+		".opencode/agents/primary-agent.md",
 		".opencode/agents/builder.md",
-		".opencode/agents/orchestrator.md",
-		".opencode/skills/implement/SKILL.md",
+		".opencode/skills/diagnose/SKILL.md",
 	}
 	// The pre-unification .json variant must never be produced on a fresh install.
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
@@ -428,6 +423,9 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected file %s was not created", f)
 		}
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "orchestrator.md")); err == nil {
+		t.Error("orchestrator.md should not be installed")
 	}
 	for _, f := range []string{
 		".opencode/AGENTS.md",
@@ -496,14 +494,14 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 
 	// --- Skill transformed to agent YAML format ---
 	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	skillAgentFile := filepath.Join(agentsDir, "implement.agent.yaml")
+	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
 	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
 		t.Error("skill agent .agent.yaml was not created")
 	}
 	data, _ := os.ReadFile(skillAgentFile)
 	content := string(data)
-	if !strings.Contains(content, "name: implement") {
-		t.Error("skill agent missing 'name: implement' in YAML")
+	if !strings.Contains(content, "name: diagnose") {
+		t.Error("skill agent missing 'name: diagnose' in YAML")
 	}
 
 	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
@@ -515,20 +513,20 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
 	}
 	hasPreFlight := false
-	hasImplement := false
+	hasDiagnose := false
 	for _, rec := range ctx.FileRecords {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
-		case ".github/agents/implement.agent.yaml":
-			hasImplement = true
+		case ".github/agents/diagnose.agent.yaml":
+			hasDiagnose = true
 		}
 	}
 	if !hasPreFlight {
 		t.Error("no tracked record for preflight-task-framing.prompt.md")
 	}
-	if !hasImplement {
-		t.Error("no tracked record for implement.agent.yaml")
+	if !hasDiagnose {
+		t.Error("no tracked record for diagnose.agent.yaml")
 	}
 }
 
@@ -600,7 +598,7 @@ func TestOpenCodeAdapter_GlobalScope_UsesGlobalPath(t *testing.T) {
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
 			Agents: []types.AgentId{"builder"},
-			Skills: []types.SkillId{"implement"},
+			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}
 
@@ -646,7 +644,7 @@ func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
 			Agents: []types.AgentId{"builder"},
-			Skills: []types.SkillId{"implement"},
+			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}
 
@@ -670,7 +668,7 @@ func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
 		Agents: []types.AgentId{"builder"},
-		Skills: []types.SkillId{"implement"},
+		Skills: []types.SkillId{types.SkillIdDiagnose},
 	}
 
 	// Seed a pre-existing opencode.json with a user-authored key that must
@@ -753,7 +751,7 @@ func TestOpenCodeAdapter_InstallsCommandsAndModes(t *testing.T) {
 				Strategy:   types.ConflictStrategyAlign,
 				Selections: AdapterSelections{
 					Agents: []types.AgentId{"builder"},
-					Skills: []types.SkillId{"implement"},
+					Skills: []types.SkillId{types.SkillIdDiagnose},
 					// Leaving OpenCodeCommands / OpenCodeModes unset means
 					// "install all" — the wizard will populate these later.
 				},
@@ -792,7 +790,7 @@ func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
 			Agents:           []types.AgentId{"builder"},
-			Skills:           []types.SkillId{"implement"},
+			Skills:           []types.SkillId{types.SkillIdDiagnose},
 			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
 		},
@@ -877,7 +875,7 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 				Strategy:   types.ConflictStrategyAlign,
 				Selections: AdapterSelections{
 					Agents: []types.AgentId{"builder"},
-					Skills: []types.SkillId{"implement"},
+					Skills: []types.SkillId{types.SkillIdDiagnose},
 				},
 			}
 
@@ -1039,45 +1037,7 @@ func TestClaudeCodeCommandsFrontmatter(t *testing.T) {
 	}
 }
 
-// TestGetOrchestratorAgentContent_SpaceDelimitedTools verifies that the
-// orchestrator agent uses space-delimited tools (spec 012 task 004).
-func TestGetOrchestratorAgentContent_SpaceDelimitedTools(t *testing.T) {
-	ctx, _ := createTestAdapterContext(t)
-
-	content := GetOrchestratorAgentContent(ctx)
-	contentStr := string(content)
-
-	// Should contain "tools: " followed by space-separated values, not commas.
-	if !strings.Contains(contentStr, "tools: ") {
-		t.Fatal("no tools line in orchestrator agent")
-	}
-
-	// Parse the tools line to verify it's space-separated.
-	lines := strings.Split(contentStr, "\n")
-	var toolsLine string
-	for _, line := range lines {
-		if strings.HasPrefix(line, "tools: ") {
-			toolsLine = line
-			break
-		}
-	}
-
-	if toolsLine == "" {
-		t.Fatal("could not find tools line")
-	}
-
-	// Check that there are no commas (space-delimited, not comma-delimited).
-	if strings.Contains(toolsLine, ",") {
-		t.Errorf("orchestrator tools should be space-separated, got: %s", toolsLine)
-	}
-
-	// Verify some expected tools are present.
-	if !strings.Contains(toolsLine, "list_catalog") || !strings.Contains(toolsLine, "start_chain") {
-		t.Errorf("expected tools missing from: %s", toolsLine)
-	}
-}
-
-// --- Test: OpenCode adapter Fortnite mode install ---
+// --- Test: OpenCode adapter primary-agent install ---
 
 func testRepoRoot(t *testing.T) string {
 	t.Helper()
@@ -1086,223 +1046,6 @@ func testRepoRoot(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
-}
-
-func TestOpenCodeAdapter_Install_FortniteMode(t *testing.T) {
-	targetDir := t.TempDir()
-	repoRoot := testRepoRoot(t)
-	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
-
-	ctx := &AdapterContext{
-		TargetDir:    targetDir,
-		SetupScope:   types.SetupScopeProject,
-		LibraryFS:    libFS,
-		Strategy:     types.ConflictStrategyAlign,
-		Selections:   AdapterSelections{},
-		FortniteMode: true,
-	}
-
-	adapter := &OpenCodeAdapter{}
-	_, err := adapter.Install(ctx)
-	if err != nil {
-		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
-	}
-
-	// Parse opencode.jsonc
-	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
-	cfg, err := jsonc.ReadJSONCFile(cfgPath)
-	if err != nil {
-		t.Fatalf("read opencode.jsonc: %v", err)
-	}
-
-	// Assert default_agent == loop-driver
-	if da, ok := cfg["default_agent"].(string); !ok || da != "loop-driver" {
-		t.Errorf("default_agent = %q, want %q", da, "loop-driver")
-	}
-
-	// Assert instructions contain AGENTS.md and STARTUP.md
-	rawInstr, ok := cfg["instructions"].([]any)
-	if !ok || len(rawInstr) == 0 {
-		t.Fatalf("instructions must be non-empty array, got %T", cfg["instructions"])
-	}
-	var instr []string
-	for _, v := range rawInstr {
-		if s, ok := v.(string); ok {
-			instr = append(instr, s)
-		}
-	}
-	if !sliceContains(instr, "AGENTS.md") {
-		t.Errorf("instructions missing AGENTS.md: %v", instr)
-	}
-	if !sliceContains(instr, "STARTUP.md") {
-		t.Errorf("instructions missing STARTUP.md: %v", instr)
-	}
-
-	// Assert .opencode/STARTUP.md exists
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "STARTUP.md")); os.IsNotExist(err) {
-		t.Error(".opencode/STARTUP.md was not created")
-	}
-
-	// Assert root AGENTS.md exists
-	if _, err := os.Stat(filepath.Join(targetDir, "AGENTS.md")); os.IsNotExist(err) {
-		t.Error("root AGENTS.md was not created")
-	}
-
-	// Assert root AGENTS.md contains managed block markers and loop-driver
-	rootAgentsData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("read root AGENTS.md: %v", err)
-	}
-	rootAgentsContent := string(rootAgentsData)
-	if !strings.Contains(rootAgentsContent, ManagedBlockStartMarker) {
-		t.Errorf("root AGENTS.md missing managed block start marker")
-	}
-	if !strings.Contains(rootAgentsContent, ManagedBlockEndMarker) {
-		t.Errorf("root AGENTS.md missing managed block end marker")
-	}
-	if !strings.Contains(rootAgentsContent, "loop-driver") {
-		t.Errorf("root AGENTS.md missing loop-driver reference")
-	}
-
-	// Assert .opencode/scripts exists
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "scripts")); os.IsNotExist(err) {
-		t.Error(".opencode/scripts was not created")
-	}
-
-	// Assert .opencode/workflows exists
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "workflows")); os.IsNotExist(err) {
-		t.Error(".opencode/workflows was not created")
-	}
-
-	// Assert the 8 Fortnite agents exist under .opencode/agents/
-	fortniteAgents := []string{
-		"loop-driver.md",
-		"engine-control.md",
-		"loot-hawk.md",
-		"turbo-crank.md",
-		"wall-builder.md",
-		"shield-audit.md",
-		"rift-deploy.md",
-		"respawn-crew.md",
-	}
-	for _, name := range fortniteAgents {
-		path := filepath.Join(targetDir, ".opencode", "agents", name)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			t.Errorf("Fortnite agent %s was not installed", name)
-		}
-	}
-
-	// Assert non-agent reference files are NOT copied to .opencode/agents/
-	referenceDocs := []string{
-		"DISPATCH-MATRIX.md",
-		"FALLBACK-CHAINS.md",
-		"OUTPUT-SCHEMAS.md",
-		"REPO-PROFILES.md",
-		"SAFETY-BOUNDARIES.md",
-		"TOOL-SCHEMAS.md",
-		"_TEMPLATE.md",
-	}
-	for _, name := range referenceDocs {
-		path := filepath.Join(targetDir, ".opencode", "agents", name)
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Errorf("reference doc %s should NOT be installed in .opencode/agents/", name)
-		}
-	}
-}
-
-func TestOpenCodeAdapter_Install_FortniteMode_PreservesExistingRootAgents(t *testing.T) {
-	targetDir := t.TempDir()
-	repoRoot := testRepoRoot(t)
-	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
-
-	// Seed an existing root AGENTS.md with user content.
-	existingContent := "# My Project\n\nThis is my custom project overview.\n"
-	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(existingContent), 0o644); err != nil {
-		t.Fatalf("seed existing AGENTS.md: %v", err)
-	}
-
-	ctx := &AdapterContext{
-		TargetDir:    targetDir,
-		SetupScope:   types.SetupScopeProject,
-		LibraryFS:    libFS,
-		Strategy:     types.ConflictStrategyAlign,
-		Selections:   AdapterSelections{},
-		FortniteMode: true,
-	}
-
-	adapter := &OpenCodeAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
-	}
-
-	// Read back root AGENTS.md
-	data, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("read root AGENTS.md: %v", err)
-	}
-	content := string(data)
-
-	// Must preserve existing user content
-	if !strings.Contains(content, "My Project") {
-		t.Error("existing user content was lost")
-	}
-	if !strings.Contains(content, "This is my custom project overview") {
-		t.Error("existing user content was lost")
-	}
-
-	// Must contain managed block markers
-	if !strings.Contains(content, ManagedBlockStartMarker) {
-		t.Error("root AGENTS.md missing managed block start marker")
-	}
-	if !strings.Contains(content, ManagedBlockEndMarker) {
-		t.Error("root AGENTS.md missing managed block end marker")
-	}
-
-	// Must contain Fortnite content (loop-driver)
-	if !strings.Contains(content, "loop-driver") {
-		t.Error("root AGENTS.md missing loop-driver reference")
-	}
-}
-
-func TestOpenCodeAdapter_Install_FortniteMode_Idempotent(t *testing.T) {
-	targetDir := t.TempDir()
-	repoRoot := testRepoRoot(t)
-	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
-
-	ctx := &AdapterContext{
-		TargetDir:    targetDir,
-		SetupScope:   types.SetupScopeProject,
-		LibraryFS:    libFS,
-		Strategy:     types.ConflictStrategyAlign,
-		Selections:   AdapterSelections{},
-		FortniteMode: true,
-	}
-
-	adapter := &OpenCodeAdapter{}
-
-	// First install
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("first install failed: %v", err)
-	}
-
-	firstData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("read AGENTS.md after first install: %v", err)
-	}
-
-	// Second install (idempotent)
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("second install failed: %v", err)
-	}
-
-	secondData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("read AGENTS.md after second install: %v", err)
-	}
-
-	if string(firstData) != string(secondData) {
-		t.Error("second install mutated AGENTS.md; expected idempotent behavior")
-	}
 }
 
 func TestMergeManagedBlock_CreateNew(t *testing.T) {
@@ -1352,46 +1095,41 @@ func TestMergeManagedBlock_ReplaceExistingBlock(t *testing.T) {
 	}
 }
 
-func TestOpenCodeAdapter_Install_PlainOpenCodeMode(t *testing.T) {
+func TestOpenCodeAdapter_Install_PrimaryAgentMode(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := testRepoRoot(t)
 	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
 
 	ctx := &AdapterContext{
-		TargetDir:    targetDir,
-		SetupScope:   types.SetupScopeProject,
-		LibraryFS:    libFS,
-		Strategy:     types.ConflictStrategyAlign,
-		Selections:   AdapterSelections{},
-		FortniteMode: false,
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{},
 	}
 
 	adapter := &OpenCodeAdapter{}
 	_, err := adapter.Install(ctx)
 	if err != nil {
-		t.Fatalf("OpenCode Install (plain) failed: %v", err)
+		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	// Parse opencode.jsonc
 	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
 	cfg, err := jsonc.ReadJSONCFile(cfgPath)
 	if err != nil {
 		t.Fatalf("read opencode.jsonc: %v", err)
 	}
-
-	// Assert default_agent is NOT loop-driver (legacy uses orchestrator)
-	if da, ok := cfg["default_agent"].(string); ok && da == "loop-driver" {
-		t.Errorf("plain mode default_agent should not be loop-driver, got %q", da)
+	if da, ok := cfg["default_agent"].(string); !ok || da != "primary-agent" {
+		t.Errorf("default_agent = %q, want primary-agent", da)
 	}
-
-	// Assert generic legacy agent exists (e.g., builder)
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "builder.md")); os.IsNotExist(err) {
-		t.Error("plain mode: generic agent builder.md was not installed")
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "primary-agent.md")); os.IsNotExist(err) {
+		t.Error("primary-agent.md was not installed")
 	}
-
-	// Assert a Fortnite-only agent does NOT exist
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "loop-driver.md")); err == nil {
-		t.Error("plain mode: Fortnite agent loop-driver.md should not exist")
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "orchestrator.md")); err == nil {
+		t.Error("orchestrator.md should not be installed")
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "STARTUP.md")); err == nil {
+		t.Error("STARTUP.md should not be installed")
 	}
 }
 

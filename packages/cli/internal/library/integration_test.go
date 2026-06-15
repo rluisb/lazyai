@@ -26,12 +26,11 @@ func TestGetLibraryFS_EmbeddedFSContainsExpectedFiles(t *testing.T) {
 
 	// Check that key directories exist.
 	expectedDirs := []string{
-		"agents",
-		"skills",
+		"canonical/agents",
+		"canonical/skills",
 		"constitution",
 		"tool-agents",
 		"mcp",
-		"orchestration",
 		"rules",
 		"infra",
 		"root",
@@ -104,36 +103,34 @@ func contains(s, sub string) bool {
 func TestGetLibraryFS_CanReadAgents(t *testing.T) {
 	libFS := GetLibraryFS()
 
-	entries, err := fs.ReadDir(libFS, "agents")
+	entries, err := fs.ReadDir(libFS, "canonical/agents")
 	if err != nil {
-		t.Fatalf("failed to read agents directory: %v", err)
+		t.Fatalf("failed to read canonical agents directory: %v", err)
 	}
 
-	// We expect at least a few agent files.
 	if len(entries) < 3 {
-		t.Errorf("expected at least 3 agent files, got %d", len(entries))
+		t.Errorf("expected at least 3 canonical agent files, got %d", len(entries))
 	}
 
-	// Check that we can read a known agent file.
-	data, err := fs.ReadFile(libFS, "agents/builder.md")
+	data, err := fs.ReadFile(libFS, "canonical/agents/builder.md")
 	if err != nil {
-		t.Fatalf("failed to read agents/builder.md: %v", err)
+		t.Fatalf("failed to read canonical/agents/builder.md: %v", err)
 	}
 	if len(data) == 0 {
-		t.Error("agents/builder.md is empty")
+		t.Error("canonical/agents/builder.md is empty")
 	}
 }
 
 func TestGetLibraryFS_CanReadSkills(t *testing.T) {
 	libFS := GetLibraryFS()
 
-	entries, err := fs.ReadDir(libFS, "skills")
+	entries, err := fs.ReadDir(libFS, "canonical/skills")
 	if err != nil {
-		t.Fatalf("failed to read skills directory: %v", err)
+		t.Fatalf("failed to read canonical skills directory: %v", err)
 	}
 
 	if len(entries) < 3 {
-		t.Errorf("expected at least 3 skill files, got %d", len(entries))
+		t.Errorf("expected at least 3 canonical skill files, got %d", len(entries))
 	}
 }
 
@@ -173,22 +170,6 @@ func TestGetLibraryFS_CanReadConstitution(t *testing.T) {
 		}
 		if len(data) == 0 {
 			t.Errorf("%s is empty", f)
-		}
-	}
-}
-
-func TestGetLibraryFS_CanReadOrchestration(t *testing.T) {
-	libFS := GetLibraryFS()
-
-	subdirs := []string{"orchestration/chains", "orchestration/skills", "orchestration/teams", "orchestration/workflows"}
-	for _, dir := range subdirs {
-		entries, err := fs.ReadDir(libFS, dir)
-		if err != nil {
-			t.Errorf("failed to read %s: %v", dir, err)
-			continue
-		}
-		if len(entries) == 0 {
-			t.Errorf("%s is empty", dir)
 		}
 	}
 }

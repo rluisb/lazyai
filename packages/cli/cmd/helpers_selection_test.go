@@ -16,9 +16,9 @@ func TestBuildScaffoldContextHonorsExplicitPhase1Selections(t *testing.T) {
 		Phase1: &wizard.Phase1Result{
 			Scope:         types.SetupScopeProject,
 			Tools:         []types.ToolId{types.ToolIdOpenCode},
-			Skills:        []types.SkillId{types.SkillIdImplement, types.SkillIdPlan},
+			Skills:        []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview},
 			Agents:        []types.AgentId{types.AgentIdBuilder},
-			EnableServers: []string{"filesystem", "orchestrator"},
+			EnableServers: []string{"filesystem", "memory"},
 			ProjectName:   "demo-app",
 		},
 		Phase2: &wizard.Phase2Result{
@@ -35,10 +35,10 @@ func TestBuildScaffoldContextHonorsExplicitPhase1Selections(t *testing.T) {
 	if want := []types.AgentId{types.AgentIdBuilder}; !reflect.DeepEqual(ctx.Agents, want) {
 		t.Fatalf("Agents = %#v, want %#v", ctx.Agents, want)
 	}
-	if want := []types.SkillId{types.SkillIdImplement, types.SkillIdPlan}; !reflect.DeepEqual(ctx.Skills, want) {
+	if want := []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview}; !reflect.DeepEqual(ctx.Skills, want) {
 		t.Fatalf("Skills = %#v, want %#v", ctx.Skills, want)
 	}
-	if want := []string{"filesystem", "orchestrator"}; !reflect.DeepEqual(ctx.EnableServers, want) {
+	if want := []string{"filesystem", "memory"}; !reflect.DeepEqual(ctx.EnableServers, want) {
 		t.Fatalf("EnableServers = %#v, want %#v", ctx.EnableServers, want)
 	}
 }

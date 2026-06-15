@@ -1,0 +1,52 @@
+# CLI Adapter Configuration
+# Design documentation for current generated support boundaries.
+# `bin/inject` is the active generator; keep this file aligned with it.
+
+adapters:
+   claude:
+      output_file: CLAUDE.md
+      supports:
+         - skills
+         - agents
+         - hooks
+   opencode:
+      output_file: AGENTS.md
+      supports:
+         - skills
+         - agents
+         - hooks
+   pi:
+      output_file: AGENTS.md
+      supports:
+         - skills
+   copilot:
+      output_file: AGENTS.md
+      supports:
+         - skills
+         - agents
+         - hooks
+   antigravity:
+      output_file: AGENTS.md
+      supports:
+         - skills
+# Validation rules
+validation:
+   hooks:
+      allowed_events:
+         - PreToolUse
+         - PostToolUse
+         - Stop
+         - SubagentStop
+         - SessionStart
+         - SessionEnd
+         - UserPromptSubmit
+         - PreCompact
+         - Notification
+   skills:
+      required_frontmatter:
+         - name
+         - description
+   agents:
+      required_frontmatter:
+         - name
+         - description

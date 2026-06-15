@@ -1,6 +1,6 @@
 # How It Works
 
-`lazyai-cli` uses a **canonical source → compile** model. You edit one tool-agnostic layer; `lazyai-cli` generates the rest.
+`lazyai-cli` uses a canonical-source-to-compile model. You edit one tool-agnostic layer; `lazyai-cli` generates the tool-native files.
 
 ## Canonical source
 
@@ -13,34 +13,26 @@ The canonical layer lives under `.ai/`:
 │   ├── constraints.md
 │   ├── quality-gates.md
 │   └── uncertainty.md
-├── mcp.json
-└── orchestration/         # when orchestrator is enabled
-    ├── chains/
-    ├── teams/
-    ├── workflows/
-    └── skills/
-        ├── domains/
-        └── modes/
+└── mcp.json
 ```
 
-This is where you make changes. Everything in `.ai/` is human-editable and version-controllable.
+This layer is human-editable and version-controllable.
 
 ## Compiled output
 
-From `.ai/`, `lazyai-cli compile` generates tool-native files:
+From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 
 - `AGENTS.md` — root instructions for all tools
 - `.opencode/` — OpenCode agents, skills, commands, and MCP config
 - `.claude/` — Claude Code rules, agents, skills, and `.mcp.json`
 - `.github/` — Copilot instructions and prompt files
 - `.vscode/` — VS Code MCP config
-- per-tool orchestrator guidance (when enabled)
 
 ## Workflow
 
 1. **Initialize once**: `lazyai-cli init`
 2. **Edit canonical files**: change rules, agents, or templates in `.ai/`
-3. **Recompile**: `lazyai-cli compile` (or `lazyai-cli update` to refresh library content)
+3. **Recompile**: `lazyai-cli compile` or `lazyai-cli update`
 4. **Verify**: `lazyai-cli doctor` checks drift and missing files
 
 ## Manifest tracking
@@ -74,7 +66,7 @@ This powers `lazyai-cli status`, `lazyai-cli doctor`, and `lazyai-cli update`.
 
 Backups are written under `.ai-setup-backup/` with relative paths preserved.
 
-## TOML defaults (optional)
+## TOML defaults
 
 You can provide CLI defaults via TOML:
 
@@ -85,6 +77,5 @@ Precedence: `CLI flags > project TOML > global TOML > built-in defaults`
 
 ## Execution model
 
-- **Local native agents** are the intended execution path (Claude Code, OpenCode, Copilot).
-- **A2A** is a config/seam only and is not remote/network execution by default.
-- The optional `lazyai-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.
+- Local native agents are the intended execution path: Claude Code, OpenCode, and Copilot.
+- A2A is a config seam only and is not remote/network execution by default.

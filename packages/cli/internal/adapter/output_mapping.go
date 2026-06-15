@@ -80,7 +80,7 @@ type OutputTarget struct {
 	// RewriteSuffix is the new extension (incl. dot) when Shape == ShapeRewriteExt.
 	RewriteSuffix string
 	// IncludeFile is an optional filter; when non-nil, returning false skips
-	// the file. Used e.g. to exclude orchestrator from the bulk agents copy.
+	// the file.
 	IncludeFile func(filename string) bool
 	// Notes documents *why* a particular mapping exists, surfaced in test
 	// failures and in the `info` command.
@@ -97,22 +97,19 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		return outputMappings
 	}
 
-	// Spec 022: orchestrator is now a first-class agent with the
-	// Orchestrator→Workers→Synthesizer topology. It should be installed
-	// alongside other agents.
-	allAgents := func(file string) bool { return true }
+	canonicalAgents := func(file string) bool { return isCanonicalAgentFile(file) }
 
 	m := map[types.ToolId]map[AssetKind]OutputTarget{
 		types.ToolIdClaudeCode: {
 			AssetKindAgents: {
 				Tool: types.ToolIdClaudeCode, Kind: AssetKindAgents,
-				SourceSubdir: "agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: allAgents,
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: canonicalAgents,
 				Notes: "Claude Code reads agents from .claude/agents/<name>.md",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdClaudeCode, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
+				SourceSubdir: "canonical/skills", DestSubdir: "skills",
 				Shape: ShapeDirPerItem,
 				Notes: "Claude Code reads skills as .claude/skills/<name>/SKILL.md",
 			},
@@ -148,13 +145,13 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdOpenCode: {
 			AssetKindAgents: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindAgents,
-				SourceSubdir: "agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: allAgents,
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: canonicalAgents,
 				Notes: "OpenCode reads agents from .opencode/agents/<name>.md after frontmatter rewrite",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
+				SourceSubdir: "canonical/skills", DestSubdir: "skills",
 				Shape: ShapeDirPerItem,
 			},
 			AssetKindTemplates: {
@@ -188,13 +185,13 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdCopilot: {
 			AssetKindAgents: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindAgents,
-				SourceSubdir: "copilot/agents", DestSubdir: "agents",
-				Shape: ShapeFlat,
-				Notes: "Copilot agents at .github/agents/",
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.yaml", IncludeFile: canonicalAgents,
+				Notes: "Copilot agents are generated from canonical markdown into .github/agents/<name>.agent.yaml",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "agents",
+				SourceSubdir: "canonical/skills", DestSubdir: "agents",
 				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.yaml",
 				Notes: "Copilot has no native skills; library skills are converted to .agent.yaml",
 			},

@@ -29,20 +29,35 @@ func createMinimalLibraryFS() fstest.MapFS {
 			Data: []byte("# Uncertainty\n\nProject: {{PROJECT_NAME}}"),
 		},
 
-		// Agents
-		"agents/builder.md": &fstest.MapFile{
-			Data: []byte("---\nname: Builder\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
+		// Canonical agents
+		"canonical/agents/primary-agent.md": &fstest.MapFile{
+			Data: []byte("---\nname: primary-agent\ndescription: Default LazyAI runtime entry point.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 5\n---\n\n# Primary Agent\n\nDispatch work.\n"),
 		},
-		"agents/orchestrator.md": &fstest.MapFile{
-			Data: []byte("---\nname: Orchestrator\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
+		"canonical/agents/builder.md": &fstest.MapFile{
+			Data: []byte("---\nname: builder\ndescription: Test builder agent.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\n---\n\n# Builder\n\nYou are a builder.\n"),
+		},
+		"canonical/agents/planner.md": &fstest.MapFile{
+			Data: []byte("---\nname: planner\ndescription: Test planner agent.\ntier: frontier\ntemperature: 0.1\nthinking: high\nrisk: 4\n---\n\n# Planner\n\nYou are a planner.\n"),
+		},
+		"canonical/agents/reviewer.md": &fstest.MapFile{
+			Data: []byte("---\nname: reviewer\ndescription: Test reviewer agent.\ntier: frontier\ntemperature: 0.1\nthinking: high\nrisk: 4\n---\n\n# Reviewer\n\nYou are a reviewer.\n"),
+		},
+		"canonical/agents/scout.md": &fstest.MapFile{
+			Data: []byte("---\nname: scout\ndescription: Test scout agent.\ntier: balanced\ntemperature: 0.0\nthinking: none\nrisk: 1\n---\n\n# Scout\n\nYou are a scout.\n"),
 		},
 
-		// Skills
-		"skills/implement.md": &fstest.MapFile{
-			Data: []byte("---\nname: implement\n---\n\n# Implement\n\nImplement features."),
+		// Canonical skills
+		"canonical/skills/codebase-exploration.md": &fstest.MapFile{
+			Data: []byte("---\nname: codebase-exploration\ndescription: Explore code.\ntier: balanced\nthinking: low\nrisk: 2\n---\n\n# Codebase Exploration\n\nExplore code paths.\n"),
 		},
-		"skills/plan.md": &fstest.MapFile{
-			Data: []byte("---\nname: plan\n---\n\n# Plan\n\nPlan features."),
+		"canonical/skills/test-first-change.md": &fstest.MapFile{
+			Data: []byte("---\nname: test-first-change\ndescription: Test first changes.\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# Test First Change\n\nDrive changes through tests.\n"),
+		},
+		"canonical/skills/diagnose.md": &fstest.MapFile{
+			Data: []byte("---\nname: diagnose\ndescription: Diagnose failures.\ntier: frontier\nthinking: high\nrisk: 4\n---\n\n# Diagnose\n\nDiagnose bugs.\n"),
+		},
+		"canonical/skills/pr-review.md": &fstest.MapFile{
+			Data: []byte("---\nname: pr-review\ndescription: Review changes.\ntier: frontier\nthinking: high\nrisk: 4\n---\n\n# PR Review\n\nReview changes.\n"),
 		},
 
 		// Tool agents (context files)
@@ -67,19 +82,6 @@ func createMinimalLibraryFS() fstest.MapFS {
 		},
 		"root/copilot-instructions.template.md": &fstest.MapFile{
 			Data: []byte("# Copilot Instructions\n\nUse workspace instructions."),
-		},
-		// Orchestration minimal structure
-		"orchestration/chains/feature.json": &fstest.MapFile{
-			Data: []byte(`{"name":"feature","steps":[]}`),
-		},
-		"orchestration/skills/domains/backend.md": &fstest.MapFile{
-			Data: []byte("---\nname: backend\n---\n\n# Backend"),
-		},
-		"orchestration/teams/feature-team.json": &fstest.MapFile{
-			Data: []byte(`{"name":"feature-team"}`),
-		},
-		"orchestration/workflows/rpi.json": &fstest.MapFile{
-			Data: []byte(`{"name":"rpi"}`),
 		},
 
 		// Specs structure

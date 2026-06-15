@@ -80,11 +80,9 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 		agentSelect := huh.NewMultiSelect[string]().
 			Title("Which agents to add?").
 			Options(
+				huh.NewOption("Primary Agent", "primary-agent"),
 				huh.NewOption("Builder", "builder"),
-				huh.NewOption("Documenter", "documenter"),
-				huh.NewOption("Orchestrator", "orchestrator"),
 				huh.NewOption("Planner", "planner"),
-				huh.NewOption("Red Team", "red-team"),
 				huh.NewOption("Reviewer", "reviewer"),
 				huh.NewOption("Scout", "scout"),
 			).
@@ -102,16 +100,10 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 		skillSelect := huh.NewMultiSelect[string]().
 			Title("Which skills to add?").
 			Options(
-				huh.NewOption("Anti-Speculation", "anti-speculation"),
-				huh.NewOption("Extract Standards", "extract-standards"),
-				huh.NewOption("Implement", "implement"),
-				huh.NewOption("Iterate", "iterate"),
-				huh.NewOption("Memory Write", "memory-write"),
-				huh.NewOption("Orchestrate", "orchestrate"),
-				huh.NewOption("Parallel Execution", "parallel-execution"),
-				huh.NewOption("Plan", "plan"),
-				huh.NewOption("Research", "research"),
-				huh.NewOption("TDD Loop", "tdd-loop"),
+				huh.NewOption("Codebase Exploration", "codebase-exploration"),
+				huh.NewOption("Test First Change", "test-first-change"),
+				huh.NewOption("Diagnose", "diagnose"),
+				huh.NewOption("PR Review", "pr-review"),
 			).
 			Value(&skillStrs)
 

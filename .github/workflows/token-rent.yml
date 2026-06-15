@@ -1,0 +1,33 @@
+name: Token Rent
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/cli/library/canonical/**'
+      - 'packages/cli/internal/tokenrent/**'
+      - '.githooks/pre-commit'
+      - '.github/workflows/token-rent.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/cli/library/canonical/**'
+      - 'packages/cli/internal/tokenrent/**'
+      - '.githooks/pre-commit'
+      - '.github/workflows/token-rent.yml'
+
+jobs:
+  token-rent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: |
+            packages/cli/go.sum
+            packages/diffviewer/go.sum
+
+      - name: Canonical library budget
+        run: go run ./packages/cli/internal/tokenrent/cmd/token-rent-check

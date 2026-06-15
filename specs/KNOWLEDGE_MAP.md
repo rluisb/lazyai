@@ -28,6 +28,7 @@
 | 022 | Speckit workflow alignment | ✅ Complete | archived top-level spec; workspace-root follow-up noted in tasks |
 | 023 | Repository cleanup — local hazard cleanup, legacy package audit, and spec hygiene proposal | ✅ Complete | `feature/repo-cleanup` |
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
+| 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, and rollback contracts | 🚧 Phase 5 implemented — final human gate pending | `specs/025-lazyai-runtime-refactor/` |
 
 ## Standards
 
@@ -48,6 +49,7 @@
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
 | OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
 | OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
+| LazyAI owns runtime; vibe-lab supplies principles/adapters | `specs/adrs/003-lazyai-runtime-boundary.md` | Prevents category error; keeps runtime behavior in LazyAI while gating Fortnite/orchestrator excision behind evidence, rollback, and neutral adapter contracts |
 
 ## Packages Reference
 

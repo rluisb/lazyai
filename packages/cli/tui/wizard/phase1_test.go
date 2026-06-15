@@ -14,7 +14,7 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:         types.SetupScopeProject,
 		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-		Skills:        []types.SkillId{types.SkillIdImplement},
+		Skills:        []types.SkillId{types.SkillIdDiagnose},
 		Agents:        []types.AgentId{types.AgentIdBuilder},
 		McpPreset:     McpPresetRecommended,
 		ProjectName:   "demo-app",
@@ -53,7 +53,7 @@ func TestBuildPhase1Result(t *testing.T) {
 			t.Parallel()
 
 			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCopilot}
-			skills := []types.SkillId{types.SkillIdImplement, types.SkillIdPlan}
+			skills := []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview}
 			agents := []types.AgentId{types.AgentIdBuilder, types.AgentIdReviewer}
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
@@ -86,14 +86,14 @@ func TestBuildPhase1Result(t *testing.T) {
 			}
 
 			tools[0] = types.ToolIdClaudeCode
-			skills[0] = types.SkillIdResearch
+			skills[0] = types.SkillIdCodebaseExploration
 			agents[0] = types.AgentIdScout
 			cliTools[0] = "rtk"
 			servers[0] = "memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
 				t.Fatalf("result.Tools was not copied")
 			}
-			if result.Skills[0] != types.SkillIdImplement {
+			if result.Skills[0] != types.SkillIdDiagnose {
 				t.Fatalf("result.Skills was not copied")
 			}
 			if result.Agents[0] != types.AgentIdBuilder {
@@ -170,7 +170,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:       types.SetupScopeProject,
 		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-		Skills:      []types.SkillId{types.SkillIdImplement, types.SkillIdPlan},
+		Skills:      []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview},
 		Agents:      []types.AgentId{types.AgentIdBuilder},
 		McpPreset:   McpPresetRecommended,
 		ProjectName: "demo-app",
@@ -182,7 +182,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	}
 
 	skillInfo := phase1StepInfoFor(3, types.SetupScopeProject, defaults)
-	if got, want := skillInfo.Title(), "Setup Context — 3/9: Skills (previous: implement, plan)"; got != want {
+	if got, want := skillInfo.Title(), "Setup Context — 3/9: Skills (previous: diagnose, pr-review)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 

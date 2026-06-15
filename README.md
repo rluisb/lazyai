@@ -38,8 +38,8 @@ Validate environment before work:
 
 ```bash
 lazyai-cli doctor
-# → Checks: file integrity, stray files, metadata gaps, stale MCP entries,
-# →        sqlite3, git, jq, bash, ollama, openai, disk space, orchestrator binary
+# → Checks: file integrity, stray files, metadata gaps,
+# →        sqlite3, git, jq, bash, ollama, openai, disk space
 
 lazyai-cli doctor --json
 # → Machine-readable output for CI integration
@@ -83,21 +83,12 @@ lazyai-cli workspace list
 lazyai-cli workspace status
 ```
 
-### Task Queue
-SQLite-backed task queue with atomic claiming:
+### Retired runtime surfaces
+The task queue and workflow CLI surfaces were removed in the runtime refactor.
+Use the migration note for replacements and rollback guidance:
 
-```bash
-lazyai-cli task create "Implement login page"
-# → ✅ Task created: task_1234567890
-
-lazyai-cli task list
-# → Shows all tasks with status
-
-lazyai-cli task claim task_1234567890
-# → ✅ Task claimed (atomic, prevents duplicates)
-
-lazyai-cli task complete task_1234567890
-# → ✅ Task completed
+```text
+docs/migration/fortnite-orchestrator-removal.md
 ```
 
 ### Agent Message Bus
@@ -194,30 +185,10 @@ lazyai-cli memory search database
 # → Searches memories by content
 ```
 
-### Evaluation Harness
-Measure agent quality over time:
 
-```bash
-lazyai-cli eval list
-# → Shows available evaluation suites
-
-lazyai-cli eval run agent-quality
-# → Runs evaluation suite (currently a stub; records attempt to ledger)
-```
-
-### Workflow Execution
-Execute structured workflows:
-
-```bash
-# Workflows are defined in .opencode/workflows/*.yaml
-# See .opencode/workflows/rpi.yaml for example
-
-# Dry run by default (shows what would execute)
-lazyai-cli workflow run rpi
-
-# Actual execution
-lazyai-cli workflow run rpi --dry-run=false
-```
+### Runtime migration note
+Legacy workflow/orchestration commands were removed in the runtime refactor.
+See `docs/migration/fortnite-orchestrator-removal.md`.
 
 ---
 
@@ -306,7 +277,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [Claude Code](docs/concepts/tools.md#claude-code)
 - [GitHub Copilot](docs/concepts/tools.md#github-copilot)
 
-> **Note:** When OpenCode is selected, LazyAI defaults to the Fortnite/OpenCode runtime. Use `--plain-opencode` to opt out and install legacy/generic OpenCode assets instead.
+> **Note:** OpenCode now installs the neutral canonical adapter path with `primary-agent` as the default agent. Fortnite/OpenCode runtime assets are no longer installed by default.
 
 ---
 
@@ -340,7 +311,6 @@ Requirements:
 
 ```bash
 cd packages/cli && go test ./...
-cd ../orchestrator && go test ./...
 cd ../diffviewer && go test ./...
 ```
 

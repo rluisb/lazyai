@@ -1,0 +1,98 @@
+schema_version: "1.0"
+
+preset:
+   id: "speckit-vibe-lab-preset"
+   name: "Vibe-Lab"
+   version: "0.2.3"
+   description: "vibe-lab templates and command overrides for four-point framing,
+      anti-speculation, test-first tasks, and verification truth."
+   author: "vibe-lab"
+   repository: "https://github.com/your-org/vibe-lab"
+   license: "MIT"
+
+requires:
+   speckit_version: ">=0.6.0"
+
+provides:
+   templates:
+      - type: "template"
+        name: "constitution-template"
+        file: "templates/constitution-template.md"
+        description: "Project constitution template with four-point boundaries."
+        replaces: "constitution-template"
+      - type: "template"
+        name: "spec-template"
+        file: "templates/spec-template.md"
+        description: "Feature specification template with WHAT/WHY separation and
+           explicit ambiguity markers."
+        replaces: "spec-template"
+      - type: "template"
+        name: "plan-template"
+        file: "templates/plan-template.md"
+        description: "Implementation plan template for simplest viable changes,
+           boundaries, risks, and verification."
+        replaces: "plan-template"
+      - type: "template"
+        name: "tasks-template"
+        file: "templates/tasks-template.md"
+        description: "Task list template that preserves test-first ordering and per-task
+           acceptance checks."
+        replaces: "tasks-template"
+      - type: "template"
+        name: "checklist-template"
+        file: "templates/checklist-template.md"
+        description: "Checklist template for ambiguity, anti-speculation, runtime
+           claims, and validation evidence."
+        replaces: "checklist-template"
+      - type: "command"
+        name: "speckit.constitution"
+        file: "commands/speckit.constitution.md"
+        description: "Constitution command override for four-point operating principles."
+        replaces: "speckit.constitution"
+      - type: "command"
+        name: "speckit.specify"
+        file: "commands/speckit.specify.md"
+        description: "Specification command override that blocks silent guessing and
+           keeps ambiguity explicit."
+        replaces: "speckit.specify"
+      - type: "command"
+        name: "speckit.clarify"
+        file: "commands/speckit.clarify.md"
+        description: "Clarify command override for material four-point unknowns without
+           speculative defaults."
+        replaces: "speckit.clarify"
+      - type: "command"
+        name: "speckit.plan"
+        file: "commands/speckit.plan.md"
+        description: "Planning command override for simplest viable plans, boundaries,
+           risks, and TDD mode."
+        replaces: "speckit.plan"
+      - type: "command"
+        name: "speckit.tasks"
+        file: "commands/speckit.tasks.md"
+        description: "Tasks command override for dependency-ordered, test-first
+           execution with acceptance checks."
+        replaces: "speckit.tasks"
+      - type: "command"
+        name: "speckit.analyze"
+        file: "commands/speckit.analyze.md"
+        description: "Analyze command override for four-point consistency and
+           verification truth."
+        replaces: "speckit.analyze"
+      - type: "command"
+        name: "speckit.implement"
+        file: "commands/speckit.implement.md"
+        description: "Implement command override for explicit task execution and
+           smallest failing checks."
+        replaces: "speckit.implement"
+      - type: "command"
+        name: "speckit.checklist"
+        file: "commands/speckit.checklist.md"
+        description: "Checklist command override for anti-speculation and
+           verification-truth requirement reviews."
+        replaces: "speckit.checklist"
+
+tags:
+   - "four-point"
+   - "vibe-lab"
+   - "methodology"

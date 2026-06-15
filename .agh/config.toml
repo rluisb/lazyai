@@ -1,0 +1,3 @@
+[defaults]
+agent = "codex-coder"
+provider = "codex"

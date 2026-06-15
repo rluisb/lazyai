@@ -6,7 +6,6 @@ LazyAI packages are Go submodules. Use the command package path plus either `@la
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
-go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
 
@@ -16,7 +15,6 @@ Use the same command path with a version suffix:
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
-go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@v0.1.0
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@v0.1.0
 ```
 
@@ -27,14 +25,12 @@ The version suffix is the module version selected by Go, but the Git tags in thi
 | Module | Git tag format | User install suffix |
 |---|---|---|
 | `packages/cli` | `packages/cli/vX.Y.Z` | `@vX.Y.Z` |
-| `packages/orchestrator` | `packages/orchestrator/vX.Y.Z` | `@vX.Y.Z` |
 | `packages/diffviewer` | `packages/diffviewer/vX.Y.Z` | `@vX.Y.Z` |
 
 Examples for a coordinated `v0.1.0` release:
 
 ```bash
 git tag packages/cli/v0.1.0
-git tag packages/orchestrator/v0.1.0
 git tag packages/diffviewer/v0.1.0
 ```
 

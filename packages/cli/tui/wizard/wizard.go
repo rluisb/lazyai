@@ -77,11 +77,6 @@ type WizardConfig struct {
 	// scaffolding to the tool's own CLI instead of direct-write.
 	CLIDriveCLI bool
 
-	// CLIPlainOpenCode, when true, disables Fortnite multi-agent mode for
-	// OpenCode scaffolding. Default false (Fortnite mode enabled when opencode
-	// is selected).
-	CLIPlainOpenCode bool
-
 	// CLILocalSecrets, when true, routes Claude Code MCP/settings writes to
 	// .claude/settings.local.json (gitignored) instead of the committed
 	// surfaces (.mcp.json / .claude/settings.json). Opt-in; default false.

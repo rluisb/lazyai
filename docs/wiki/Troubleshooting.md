@@ -20,7 +20,7 @@ lazyai-cli --help
 
 ## `go install ...@latest` installs an old version
 
-LazyAI uses submodule tags. Confirm the package has a prefixed tag such as `packages/cli/vX.Y.Z`, `packages/orchestrator/vX.Y.Z`, or `packages/diffviewer/vX.Y.Z`.
+LazyAI uses submodule tags. Confirm the package has a prefixed tag such as `packages/cli/vX.Y.Z` or `packages/diffviewer/vX.Y.Z`.
 
 If needed, install a pinned version:
 
@@ -28,30 +28,16 @@ If needed, install a pinned version:
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 ```
 
-## Orchestrator MCP server does not start
+## Retired runtime MCP entry remains in my config
 
-Install the runtime and verify the generated MCP command:
-
-```bash
-go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
-lazyai-orchestrator --help
-```
-
-MCP configs should invoke:
-
-```json
-{
-  "command": "lazyai-orchestrator",
-  "args": ["connect"]
-}
-```
-
-Then run:
+Remove the retired server entry from hand-edited MCP configs, then regenerate/check managed files:
 
 ```bash
 lazyai-cli compile
 lazyai-cli doctor
 ```
+
+For compatibility and rollback notes, see the migration guide: <https://rluisb.github.io/lazyai/migration/fortnite-orchestrator-removal/>.
 
 ## npm or npx commands no longer work
 

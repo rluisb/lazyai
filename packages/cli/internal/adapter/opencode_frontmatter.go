@@ -55,7 +55,7 @@ type OpenCodeAgentOpts struct {
 	Model string
 	// Mode is opencode's primary/subagent/all selector. Defaults to
 	// "subagent" — matches what real-world OpenCode subagent configs use.
-	// Pass "primary" explicitly for the orchestrator agent.
+	// Pass "primary" explicitly for the primary-agent entry point.
 	Mode string
 	// Temperature is the agent's sampling temperature (0.0–1.0+). Emitted
 	// only when non-zero. Defaults are inherited from opencode otherwise.

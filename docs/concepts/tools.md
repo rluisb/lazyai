@@ -12,7 +12,7 @@
 - **MCP config:** `.opencode/opencode.jsonc`
 - **Special behavior:** agent YAML frontmatter is stripped and a `<!-- Recommended model: ... -->` comment is injected when a `model:` frontmatter key exists
 
-> **Default behavior:** When OpenCode is selected during `init`, LazyAI defaults to the **Fortnite/OpenCode runtime**. The default install includes Fortnite agents, skills, scripts, and workflows, plus `AGENTS.md`, `.opencode/STARTUP.md`, and `opencode.jsonc` with `default_agent: loop-driver`. Use `--plain-opencode` to opt out and install legacy/generic OpenCode assets instead.
+> **Default behavior:** When OpenCode is selected during `init`, LazyAI installs the neutral canonical adapter path. The OpenCode config uses `default_agent: primary-agent`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
 
 ## Claude Code
 
@@ -41,7 +41,7 @@
 | MCP config | `.opencode.jsonc` | `.mcp.json` | `.vscode/mcp.json` |
 | Agent directories | Yes | Yes | Prompts only |
 | Skill directories | Yes | Yes | Prompts only |
-| Orchestrator guidance | `.opencode/agents/orchestrator.md` | `.claude/agents/orchestrator.md` | `.github/prompts/orchestrator.prompt.md` |
+| Primary agent entry | `.opencode/agents/primary-agent.md` | `.claude/agents/primary-agent.md` | `.github/agents/primary-agent.agent.yaml` |
 
 ## Tool selection during init
 

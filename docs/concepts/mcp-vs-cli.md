@@ -31,17 +31,18 @@ LazyAI exposes the same capabilities through two interfaces: **MCP servers** (co
 
 ## When MCP Is Worth the Overhead
 
-- **Stateful sessions** — `memory` and `orchestrator` maintain context across multiple agent turns.
+- **Stateful knowledge** — `memory` maintains context across multiple agent turns.
 - **Remote APIs** — `atlassian` and `brave-search` abstract OAuth and rate limits.
 - **Interactive exploration** — `playwright` snapshots and clicks are naturally request/response.
-- **Agent orchestration** — The `orchestrator` MCP server exposes workflow control that has no CLI equivalent.
+
+The retired LazyAI orchestration runtime is not part of the active MCP catalog. See [Migration: Fortnite / orchestrator removal](../migration/fortnite-orchestrator-removal.md) for compatibility guidance.
 
 ## Recommended Preset Adjustments
 
 If you are token-constrained (e.g., large monorepos, long-running agents):
 
 1. **Disable `filesystem` and `ripgrep` MCP servers** — rely on CLI file ops and `rg` instead.
-2. **Keep `memory`, `playwright`, `atlassian`, and `orchestrator` enabled** — these have no CLI equivalent.
+2. **Keep `memory`, `playwright`, and `atlassian` enabled when you need state, browser interaction, or SaaS APIs.**
 3. **Use `qmd` and `codegraph` via whichever interface is closer to the task** — CLI for batch, MCP for inline.
 
 ## Configuration

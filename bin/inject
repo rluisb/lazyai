@@ -1,0 +1,1449 @@
+#!/usr/bin/env bash
+# bin/inject — Generate per-CLI context, skill adapters, agent adapters, hook adapters, and workflow catalogs.
+
+set -euo pipefail
+export LC_ALL=C
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CANON_DIR="$REPO_ROOT/canonical"
+AGENTS_SKILLS_DIR="$REPO_ROOT/.agents/skills"
+AGENTS_AGENTS_DIR="$REPO_ROOT/.agents/agents"
+AGENTS_HOOKS_DIR="$REPO_ROOT/.agents/hooks"
+AGENTS_WORKFLOWS_DIR="$REPO_ROOT/.agents/workflows"
+DRY_RUN=false
+CLEAN=false
+SURFACE="all"
+
+RUNTIME_CORE_FILES=(
+  constitution.md
+  clean-code.md
+  engineering-principles.md
+  artifact-rules.md
+  clarification-levels.md
+  tdd-planning.md
+  caveman-ai-memory.md
+  llm-engineering-relationships.md
+)
+
+REFERENCE_CATALOG=(
+  "agent-template.md|creating or modifying agents"
+  "skill-template.md|creating or modifying skills"
+  "hook-template.md|creating or modifying hooks"
+  "policy-template.md|writing policies"
+  "workflow-template.md|writing workflows"
+  "learning-template.md|capturing reusable lessons"
+  "prd-plan-todo.md|planning non-Spec Kit work"
+  "cookbook-recipe.md|creating or documenting a recipe"
+  "self-assessment.md|assessing project or personal readiness"
+  "mcp-setup.md|adding or configuring MCP servers"
+)
+
+log() { printf '[inject] %s\n' "$*"; }
+warn() { printf '[inject] WARN: %s\n' "$*" >&2; }
+fail() { printf '[inject] FAIL: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Usage: bin/inject [--dry-run] [--clean] [--surface <all|claude|opencode|pi|copilot|antigravity>]
+EOF
+}
+
+validate_surface() {
+  case "$1" in
+    all|claude|opencode|pi|copilot|antigravity) ;;
+    *) fail "Unsupported surface '$1'" ;;
+  esac
+}
+
+uses_claude() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "claude" ]; }
+uses_opencode() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "opencode" ]; }
+uses_pi() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "pi" ]; }
+uses_copilot() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "copilot" ]; }
+uses_antigravity() { [ "$SURFACE" = "all" ] || [ "$SURFACE" = "antigravity" ]; }
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
+      --clean)
+        CLEAN=true
+        shift
+        ;;
+      --surface)
+        SURFACE="${2:-}"
+        validate_surface "$SURFACE"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        usage >&2
+        fail "Unknown argument '$1'"
+        ;;
+    esac
+  done
+}
+
+skill_adapter_dirs() {
+  uses_claude && printf '%s\n' "$REPO_ROOT/.claude/skills"
+  uses_opencode && printf '%s\n' "$REPO_ROOT/.opencode/skills"
+  uses_pi && printf '%s\n' "$REPO_ROOT/.pi/skills"
+}
+
+atomic_write() {
+  local dest="$1"
+  local content="$2"
+  local tmp
+  if $DRY_RUN; then
+    log "[DRY RUN] Would write $dest (${#content} bytes)"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dest")"
+  tmp="$(mktemp "${dest}.XXXXXX")"
+  printf '%s' "$content" > "$tmp"
+  mv -f "$tmp" "$dest"
+}
+
+remove_symlink_if_present() {
+  local path="$1"
+  if [ -L "$path" ]; then
+    if $DRY_RUN; then
+      log "[DRY RUN] Would remove symlink $path"
+    else
+      rm -f "$path"
+    fi
+  fi
+}
+
+frontmatter_field() {
+  local file="$1"
+  local key="$2"
+  awk -v key="$key" '/^---/{c++; next} c==1 { if ($0 ~ "^" key ":") { sub("^" key ":[[:space:]]*", ""); print; exit } }' "$file"
+}
+
+strip_frontmatter() {
+  local file="$1"
+  awk 'BEGIN{in_fm=0; seen=0} /^---$/ && seen==0 {in_fm=1; seen=1; next} /^---$/ && in_fm==1 {in_fm=0; next} in_fm==0 {print}' "$file" | sed '1{/^$/d;}'
+}
+
+source_hash() {
+  python3 - "$REPO_ROOT" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+patterns = [
+    "canonical/*.md",
+    ".agents/skills/*/SKILL.md",
+    ".agents/agents/*.md",
+    ".agents/hooks/*/POLICY.md",
+    ".agents/workflows/*.md",
+]
+paths = []
+for pattern in patterns:
+    paths.extend(root.glob(pattern))
+
+hasher = hashlib.sha256()
+for path in sorted(p for p in paths if p.is_file()):
+    rel = path.relative_to(root).as_posix()
+    hasher.update(rel.encode("utf-8"))
+    hasher.update(b"\0")
+    hasher.update(path.read_bytes())
+    hasher.update(b"\0")
+print(hasher.hexdigest())
+PY
+}
+
+policy_hash() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+extract_denied_prefixes() {
+  python3 - "$1" <<'PY'
+import pathlib
+import re
+import sys
+
+policy = pathlib.Path(sys.argv[1])
+in_denied = False
+prefixes = []
+for line in policy.read_text().splitlines():
+    if line.startswith("## "):
+        in_denied = line.strip() == "## Denied Commands"
+        continue
+    if in_denied:
+        prefixes.extend(re.findall(r"`([^`]+)`", line))
+
+seen = set()
+for prefix in prefixes:
+    if prefix not in seen:
+        print(prefix)
+        seen.add(prefix)
+if not seen:
+    sys.exit(1)
+PY
+}
+
+python_list_literal() {
+  python3 - "$@" <<'PY'
+import sys
+print(repr(list(sys.argv[1:])))
+PY
+}
+
+js_array_literal() {
+  python3 - "$@" <<'PY'
+import json
+import sys
+print(json.dumps(list(sys.argv[1:])))
+PY
+}
+
+agent_adapter_marker() {
+  local surface="$1"
+  local name="$2"
+  printf '<!-- vibe-lab:managed kind=agent surface=%s name=%s source=.agents/agents/%s.md -->' "$surface" "$name" "$name"
+}
+
+build_agent_adapter_content() {
+  local surface="$1"
+  local name="$2"
+  local desc="$3"
+  local body="$4"
+  local mode="$5"
+  local marker content
+  marker="$(agent_adapter_marker "$surface" "$name")"
+  case "$surface" in
+    claude)
+      content="---"$'\n'
+      content+="name: $name"$'\n'
+      content+="description: \"$desc\""$'\n'
+      content+="---"$'\n\n'
+      ;;
+    opencode)
+      content="---"$'\n'
+      content+="description: \"$desc\""$'\n'
+      content+="---"$'\n\n'
+      ;;
+    *)
+      fail "Unsupported agent adapter surface '$surface'"
+      ;;
+  esac
+  if [ "$mode" = "managed" ]; then
+    content+="$marker"$'\n\n'
+  fi
+  content+="$body"$'\n'
+  printf '%s' "$content"
+}
+
+build_copilot_agent_adapter_content() {
+  local name="$1"
+  local desc="$2"
+  local body="$3"
+  local mode="$4"
+  local marker content tools
+  marker="$(agent_adapter_marker copilot "$name")"
+  # Copilot requires a tools array; map common capabilities to Copilot tool names
+  tools='["read", "search", "edit", "shell"]'
+  content="---"$'\n'
+  content+="name: $name"$'\n'
+  content+="description: \"$desc\""$'\n'
+  content+="tools: $tools"$'\n'
+  content+="---"$'\n\n'
+  if [ "$mode" = "managed" ]; then
+    content+="$marker"$'\n\n'
+  fi
+  content+="$body"$'\n'
+  printf '%s' "$content"
+}
+
+ensure_agent_adapter_slot() {
+  local dest="$1"
+  local surface="$2"
+  local name="$3"
+  local legacy_content="$4"
+  local marker
+  marker="$(agent_adapter_marker "$surface" "$name")"
+  [ ! -e "$dest" ] && return 0
+  [ -f "$dest" ] || fail "Refusing to overwrite non-file agent adapter ${dest#$REPO_ROOT/}"
+  if grep -Fq "$marker" "$dest"; then
+    return 0
+  fi
+  local current
+  current="$(<"$dest")"
+  [ "$current" = "$legacy_content" ] && return 0
+  fail "Refusing to overwrite user-owned agent adapter ${dest#$REPO_ROOT/}; rename it or add a distinct agent name"
+}
+
+validate_claude_settings_json() {
+  local settings="$REPO_ROOT/.claude/settings.json"
+  [ -f "$settings" ] || return 0
+  python3 -m json.tool "$settings" >/dev/null 2>&1 || fail "Existing .claude/settings.json is invalid JSON; fix it before running bin/inject"
+}
+
+render_opencode_json_with_instructions() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+data = json.loads(path.read_text())
+if not isinstance(data, dict):
+    raise SystemExit("Root OpenCode config must be a JSON object")
+instructions = data.get("instructions")
+if instructions is None:
+    instructions = []
+elif not isinstance(instructions, list) or not all(isinstance(item, str) for item in instructions):
+    raise SystemExit("OpenCode instructions must be an array of strings")
+if "AGENTS.md" not in instructions:
+    instructions.append("AGENTS.md")
+data["instructions"] = instructions
+sys.stdout.write(json.dumps(data, indent=2) + "\n")
+PY
+}
+
+merge_opencode_instructions() {
+  local json="$REPO_ROOT/opencode.json"
+  local jsonc="$REPO_ROOT/opencode.jsonc"
+  if [ -f "$json" ]; then
+    local content current
+    content="$(render_opencode_json_with_instructions "$json")" || fail "Unable to merge OpenCode instructions into opencode.json"
+    current="$(<"$json")"
+    if [ "$content" != "$current" ]; then
+      atomic_write "$json" "$content"
+      log "Ensured OpenCode instructions attachment in opencode.json"
+    fi
+    return 0
+  fi
+  if [ -f "$jsonc" ]; then
+    warn "opencode.jsonc is validate-only for instructions; add AGENTS.md manually"
+  fi
+}
+
+render_opencode_package_json() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if path.exists():
+    data = json.loads(path.read_text() or "{}")
+else:
+    data = {}
+if not isinstance(data, dict):
+    raise SystemExit(".opencode/package.json must be a JSON object")
+existing_type = data.get("type")
+if existing_type not in (None, "module"):
+    raise SystemExit('.opencode/package.json type must be "module" for the generated ESM plugin')
+data["type"] = "module"
+sys.stdout.write(json.dumps(data, indent=2) + "\n")
+PY
+}
+
+ensure_opencode_package_module() {
+  local package_json="$REPO_ROOT/.opencode/package.json"
+  local content current
+  content="$(render_opencode_package_json "$package_json")" || fail "Unable to ensure OpenCode package module type"
+  current=""
+  if [ -f "$package_json" ]; then
+    current="$(<"$package_json")"
+  fi
+  if [ "$content" != "$current" ]; then
+    atomic_write "$package_json" "$content"
+    log "Ensured OpenCode package module type"
+  fi
+}
+
+build_skill_catalog() {
+  local catalog=""
+  [ -d "$AGENTS_SKILLS_DIR" ] || { printf '%s' "$catalog"; return; }
+  for skill_md in "$AGENTS_SKILLS_DIR"/*/SKILL.md; do
+    [ -f "$skill_md" ] || continue
+    local name desc
+    name="$(basename "$(dirname "$skill_md")")"
+    desc="$(frontmatter_field "$skill_md" description)"
+    [ -n "$desc" ] || desc="$name skill"
+    catalog+="- **$name**: $desc"$'\n'
+  done
+  printf '%s' "$catalog"
+}
+
+build_agent_catalog() {
+  local catalog=""
+  [ -d "$AGENTS_AGENTS_DIR" ] || { printf '%s' "$catalog"; return; }
+  for agent_md in "$AGENTS_AGENTS_DIR"/*.md; do
+    [ -f "$agent_md" ] || continue
+    local name desc
+    name="$(basename "$agent_md" .md)"
+    desc="$(frontmatter_field "$agent_md" description)"
+    [ -n "$desc" ] || desc="$name agent"
+    catalog+="- **$name**: $desc"$'\n'
+  done
+  printf '%s' "$catalog"
+}
+
+build_hook_catalog() {
+  local catalog=""
+  [ -d "$AGENTS_HOOKS_DIR" ] || { printf '%s' "$catalog"; return; }
+  for hook_dir in "$AGENTS_HOOKS_DIR"/*/; do
+    [ -d "$hook_dir" ] || continue
+    local name policy desc
+    name="$(basename "$hook_dir")"
+    policy="$hook_dir/POLICY.md"
+    [ -f "$policy" ] || continue
+    desc="$(awk 'BEGIN{p=0} /^## Purpose/{p=1; next} p==1 && NF {print; exit}' "$policy")"
+    [ -n "$desc" ] || desc="$name hook policy"
+    catalog+="- **$name**: $desc"$'\n'
+  done
+  printf '%s' "$catalog"
+}
+
+build_workflow_catalog() {
+  local catalog=""
+  [ -d "$AGENTS_WORKFLOWS_DIR" ] || { printf '%s' "$catalog"; return; }
+  for workflow_md in "$AGENTS_WORKFLOWS_DIR"/*.md; do
+    [ -f "$workflow_md" ] || continue
+    local name desc
+    name="$(basename "$workflow_md" .md)"
+    desc="$(frontmatter_field "$workflow_md" description)"
+    [ -n "$desc" ] || desc="$name workflow"
+    catalog+="- **$name**: $desc"$'\n'
+  done
+  printf '%s' "$catalog"
+}
+
+generate_context_file() {
+  local dest="$1"
+  local header="$2"
+  local hash skills agents hooks workflows content
+  hash="$(source_hash)"
+  skills="$(build_skill_catalog)"
+  agents="$(build_agent_catalog)"
+  hooks="$(build_hook_catalog)"
+  workflows="$(build_workflow_catalog)"
+
+  content="$header"$'\n\n'
+  content+="<!-- GENERATED FILE — do not edit manually. Run bin/inject to regenerate. -->"$'\n'
+  content+="<!-- Source hash: $hash -->"$'\n\n'
+
+  for canon_name in "${RUNTIME_CORE_FILES[@]}"; do
+    local canon="$CANON_DIR/$canon_name"
+    [ -f "$canon" ] || continue
+    content+="<!-- $(basename "$canon") -->"$'\n'
+    content+="$(<"$canon")"$'\n\n'
+  done
+
+  content+="## On-Demand References"$'\n\n'
+  content+="Read these only when the trigger matches the current task:"$'\n\n'
+  for entry in "${REFERENCE_CATALOG[@]}"; do
+    local ref_file trigger
+    ref_file="${entry%%|*}"
+    trigger="${entry#*|}"
+    [ -f "$CANON_DIR/$ref_file" ] || continue
+    content+="- canonical/$ref_file — read when $trigger."$'\n'
+  done
+  content+=$'\n'
+
+  if [ -n "$skills" ]; then
+    content+="## Shared Skills"$'\n\n'
+    content+="$skills"$'\n'
+  fi
+  if [ -n "$agents" ]; then
+    content+="## Shared Agents"$'\n\n'
+    content+="$agents"$'\n'
+  fi
+  if [ -n "$workflows" ]; then
+    content+="## Shared Workflows"$'\n\n'
+    content+="$workflows"$'\n'
+  fi
+  if [ -n "$hooks" ]; then
+    content+="## Shared Hooks"$'\n\n'
+    content+="$hooks"$'\n'
+  fi
+
+  remove_symlink_if_present "$dest"
+  atomic_write "$dest" "$content"
+  log "Generated context: ${dest#$REPO_ROOT/}"
+}
+
+sync_skill_adapters() {
+  [ -d "$AGENTS_SKILLS_DIR" ] || return 0
+  local adapter_dirs=()
+  mapfile -t adapter_dirs < <(skill_adapter_dirs)
+  for adapter_dir in "${adapter_dirs[@]}"; do
+    if $DRY_RUN; then
+      [ -d "$adapter_dir" ] || log "[DRY RUN] Would create ${adapter_dir#$REPO_ROOT/}"
+    else
+      mkdir -p "$adapter_dir"
+    fi
+    for entry in "$adapter_dir"/*; do
+      [ -e "$entry" ] || [ -L "$entry" ] || continue
+      local name
+      name="$(basename "$entry")"
+      if [ ! -f "$AGENTS_SKILLS_DIR/$name/SKILL.md" ]; then
+        if $DRY_RUN; then
+          log "[DRY RUN] Would prune stale skill adapter ${entry#$REPO_ROOT/}"
+        else
+          rm -rf "$entry"
+        fi
+      fi
+    done
+  done
+  if [ "$SURFACE" = "all" ]; then
+    if $DRY_RUN; then
+      [ -d "$REPO_ROOT/docs/skills" ] || log "[DRY RUN] Would create docs/skills"
+    else
+      mkdir -p "$REPO_ROOT/docs/skills"
+    fi
+    for doc in "$REPO_ROOT/docs/skills"/*.md; do
+      [ -f "$doc" ] || continue
+      local name
+      name="$(basename "$doc" .md)"
+      if [ ! -f "$AGENTS_SKILLS_DIR/$name/SKILL.md" ]; then
+        if $DRY_RUN; then
+          log "[DRY RUN] Would prune stale skill doc ${doc#$REPO_ROOT/}"
+        else
+          rm -f "$doc"
+        fi
+      fi
+    done
+  fi
+
+  for skill_md in "$AGENTS_SKILLS_DIR"/*/SKILL.md; do
+    [ -f "$skill_md" ] || continue
+    local name
+    name="$(basename "$(dirname "$skill_md")")"
+    for adapter_dir in "${adapter_dirs[@]}"; do
+      local link="$adapter_dir/$name"
+      if $DRY_RUN; then
+        if [ -e "$link" ] && [ ! -L "$link" ]; then
+          log "[DRY RUN] Would replace non-symlink skill adapter ${link#$REPO_ROOT/}"
+        fi
+        log "[DRY RUN] Would symlink ${link#$REPO_ROOT/}"
+      else
+        if [ -e "$link" ] && [ ! -L "$link" ]; then
+          rm -rf "$link"
+        fi
+        if [ -L "$link" ]; then
+          rm -f "$link"
+        fi
+        ln -s "../../.agents/skills/$name" "$link"
+      fi
+    done
+    if [ "$SURFACE" = "all" ]; then
+      atomic_write "$REPO_ROOT/docs/skills/$name.md" "$(<"$skill_md")"$'\n'
+    fi
+  done
+}
+
+sync_reference_docs() {
+  [ "$SURFACE" = "all" ] || return 0
+  mkdir -p "$REPO_ROOT/docs/canonical"
+  for canon in "$CANON_DIR"/*.md; do
+    [ -f "$canon" ] || continue
+    atomic_write "$REPO_ROOT/docs/canonical/$(basename "$canon")" "$(<"$canon")"$'\n'
+  done
+  mkdir -p "$REPO_ROOT/docs/workflows"
+  for doc in "$REPO_ROOT/docs/workflows"/*.md; do
+    [ -f "$doc" ] || continue
+    local name
+    name="$(basename "$doc" .md)"
+    if [ ! -f "$AGENTS_WORKFLOWS_DIR/$name.md" ]; then
+      if $DRY_RUN; then
+        log "[DRY RUN] Would prune stale workflow doc ${doc#$REPO_ROOT/}"
+      else
+        rm -f "$doc"
+      fi
+    fi
+  done
+  for workflow in "$AGENTS_WORKFLOWS_DIR"/*.md; do
+    [ -f "$workflow" ] || continue
+    atomic_write "$REPO_ROOT/docs/workflows/$(basename "$workflow")" "$(<"$workflow")"$'\n'
+  done
+  if [ -f "$REPO_ROOT/BLUEPRINT.md" ]; then
+    atomic_write "$REPO_ROOT/docs/BLUEPRINT.md" "$(<"$REPO_ROOT/BLUEPRINT.md")"$'\n'
+  fi
+}
+
+generate_agent_adapters() {
+  [ -d "$AGENTS_AGENTS_DIR" ] || return 0
+  local write_claude=false
+  local write_opencode=false
+  local write_copilot=false
+  if uses_claude; then
+    write_claude=true
+  fi
+  if uses_opencode; then
+    write_opencode=true
+  fi
+  if uses_copilot; then
+    write_copilot=true
+  fi
+  if $write_claude; then
+    mkdir -p "$REPO_ROOT/.claude/agents"
+  fi
+  if $write_opencode; then
+    mkdir -p "$REPO_ROOT/.opencode/agents"
+  fi
+  if $write_copilot; then
+    mkdir -p "$REPO_ROOT/.github/agents"
+  fi
+  for agent_md in "$AGENTS_AGENTS_DIR"/*.md; do
+    [ -f "$agent_md" ] || continue
+    local name desc body claude_content opencode_content copilot_content claude_legacy opencode_legacy copilot_legacy
+    name="$(basename "$agent_md" .md)"
+    desc="$(frontmatter_field "$agent_md" description)"
+    body="$(strip_frontmatter "$agent_md")"
+    claude_content="$(build_agent_adapter_content claude "$name" "$desc" "$body" managed)"
+    opencode_content="$(build_agent_adapter_content opencode "$name" "$desc" "$body" managed)"
+    copilot_content="$(build_copilot_agent_adapter_content "$name" "$desc" "$body" managed)"
+    claude_legacy="$(build_agent_adapter_content claude "$name" "$desc" "$body" legacy)"
+    opencode_legacy="$(build_agent_adapter_content opencode "$name" "$desc" "$body" legacy)"
+    copilot_legacy="$(build_copilot_agent_adapter_content "$name" "$desc" "$body" legacy)"
+    if $write_claude; then
+      ensure_agent_adapter_slot "$REPO_ROOT/.claude/agents/$name.md" claude "$name" "$claude_legacy"
+      atomic_write "$REPO_ROOT/.claude/agents/$name.md" "$claude_content"
+    fi
+    if $write_opencode; then
+      ensure_agent_adapter_slot "$REPO_ROOT/.opencode/agents/$name.md" opencode "$name" "$opencode_legacy"
+      atomic_write "$REPO_ROOT/.opencode/agents/$name.md" "$opencode_content"
+    fi
+    if $write_copilot; then
+      ensure_agent_adapter_slot "$REPO_ROOT/.github/agents/$name.agent.md" copilot "$name" "$copilot_legacy"
+      atomic_write "$REPO_ROOT/.github/agents/$name.agent.md" "$copilot_content"
+    fi
+  done
+  return 0
+}
+
+claude_hook_script() {
+  local name="$1"
+  local hash="$2"
+  shift 2
+  if [ "$name" = "block-destructive-shell" ]; then
+    local denied_literal
+    denied_literal="$(python_list_literal "$@")"
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json, os, sys
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    sys.exit(2)
+
+if data.get("tool_name") != "Bash":
+    sys.exit(0)
+
+tool_input = data.get("tool_input")
+if not isinstance(tool_input, dict):
+    sys.exit(2)
+command = tool_input.get("command")
+if not isinstance(command, str):
+    sys.exit(2)
+command = command.strip()
+denied_prefixes = $denied_literal
+if any(command == p or command.startswith(p + " ") for p in denied_prefixes):
+    print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Destructive shell command blocked by vibe-lab policy"}}))
+    sys.exit(2)
+sys.exit(0)
+PY
+SCRIPT
+  elif [ "$name" = "startup-self-heal" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+REPO_ROOT="\$(cd "\$(dirname "\$0")/../.." && pwd)"
+"\$REPO_ROOT/bin/startup-self-heal" --cli claude --event session-start --quiet || true
+SCRIPT
+  elif [ "$name" = "objective-workflow-gate" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s\n' 'objective-workflow-gate requires python3' >&2
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json
+import os
+import re
+import sys
+
+BLOCK_REASON = "Completion claim observed without verification evidence. Add a Verification/Tests/Checks line with observed command/result, or state Blocked/Not run with the reason."
+
+
+def block(reason):
+    print(json.dumps({"decision": "block", "reason": reason}, separators=(",", ":")))
+    sys.exit(0)
+
+
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    block("objective-workflow-gate could not parse Stop hook JSON")
+
+if not isinstance(data, dict):
+    block("objective-workflow-gate expected a JSON object")
+
+event = data.get("hook_event_name") or data.get("hookEventName")
+if event and event != "Stop":
+    sys.exit(0)
+
+if data.get("stop_hook_active") is True:
+    sys.exit(0)
+
+message = data.get("last_assistant_message")
+if not isinstance(message, str):
+    block("objective-workflow-gate could not observe last_assistant_message")
+
+completion_line = re.compile(r"^\\s*(?:[-*]\\s*)?(?:done|complete|completed|implemented|fixed|changed|updated|shipped)\\b", re.I)
+completion_phrase = re.compile(r"\\b(?:i(?:'ve| have)?\\s+)?(?:completed|implemented|fixed|updated|changed)\\b", re.I)
+negated = re.compile(r"\\b(?:not|not yet|could not|unable to|blocked|in progress)\\b", re.I)
+evidence = re.compile(r"^\\s*(?:[-*]\\s*)?(?:verification|validation|validated|tests?|checks?|smoke|evidence)\\s*:", re.I | re.M)
+blocker = re.compile(r"^\\s*(?:[-*]\\s*)?(?:blocked|not run|could not run|missing prerequisite)\\b|\\b(?:verification|validation|tests?)\\s+not\\s+run\\b", re.I | re.M)
+
+claims_completion = False
+for line in message.splitlines():
+    if completion_line.search(line) or completion_phrase.search(line):
+        if not negated.search(line):
+            claims_completion = True
+            break
+
+if claims_completion and not evidence.search(message) and not blocker.search(message):
+    block(BLOCK_REASON)
+
+sys.exit(0)
+PY
+SCRIPT
+  else
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+# Advisory policy hook for $name. No runtime block is configured yet.
+exit 0
+SCRIPT
+  fi
+}
+
+generate_claude_settings() {
+  local settings="$REPO_ROOT/.claude/settings.json"
+  mkdir -p "$REPO_ROOT/.claude/hooks"
+  local block_hook=""
+  local startup_hook=""
+  local objective_hook=""
+  [ -x "$REPO_ROOT/.claude/hooks/block-destructive-shell.sh" ] && block_hook='${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/block-destructive-shell.sh'
+  [ -x "$REPO_ROOT/.claude/hooks/startup-self-heal.sh" ] && startup_hook='${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/startup-self-heal.sh'
+  [ -x "$REPO_ROOT/.claude/hooks/objective-workflow-gate.sh" ] && objective_hook='${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/objective-workflow-gate.sh'
+  python3 - "$settings" "$block_hook" "$startup_hook" "$objective_hook" <<'PY'
+import json
+import pathlib
+import sys
+
+settings = pathlib.Path(sys.argv[1])
+block_hook = sys.argv[2]
+startup_hook = sys.argv[3]
+objective_hook = sys.argv[4]
+if settings.exists():
+    try:
+        data = json.loads(settings.read_text())
+    except Exception as exc:
+        raise SystemExit(f"Existing .claude/settings.json is invalid JSON: {exc}")
+else:
+    data = {}
+
+hooks = data.setdefault("hooks", {})
+pre = hooks.setdefault("PreToolUse", [])
+pre[:] = [h for h in pre if "block-destructive-shell" not in json.dumps(h)]
+if block_hook:
+    pre.append({
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": block_hook}],
+    })
+if not pre:
+    hooks.pop("PreToolUse", None)
+
+session = hooks.setdefault("SessionStart", [])
+session[:] = [h for h in session if "startup-self-heal" not in json.dumps(h)]
+if startup_hook:
+    session.append({
+        "matcher": "startup|resume",
+        "hooks": [{"type": "command", "command": startup_hook}],
+    })
+if not session:
+    hooks.pop("SessionStart", None)
+
+stop = hooks.setdefault("Stop", [])
+stop[:] = [h for h in stop if "objective-workflow-gate" not in json.dumps(h)]
+if objective_hook:
+    stop.append({
+        "hooks": [{"type": "command", "command": objective_hook}],
+    })
+if not stop:
+    hooks.pop("Stop", None)
+
+if not hooks:
+    data.pop("hooks", None)
+settings.parent.mkdir(parents=True, exist_ok=True)
+settings.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+PY
+}
+
+copilot_hook_json() {
+  local event_name="$1"
+  local hook_name="$2"
+  cat <<JSON
+{
+  "version": 1,
+  "hooks": {
+    "$event_name": [
+      {
+        "type": "command",
+        "bash": "\${COPILOT_PROJECT_DIR:-\$PWD}/.github/hooks/$hook_name.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
+JSON
+}
+
+copilot_hook_script() {
+  local name="$1"
+  local hash="$2"
+  shift 2
+  if [ "$name" = "block-destructive-shell" ]; then
+    local denied_literal
+    denied_literal="$(python_list_literal "$@")"
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json, os, sys
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    sys.exit(2)
+
+tool_name = data.get("toolName") or data.get("tool_name")
+if tool_name not in ("bash", "Bash"):
+    sys.exit(0)
+
+tool_input = data.get("toolInput") or data.get("tool_input")
+command = None
+if isinstance(tool_input, dict):
+    command = tool_input.get("command")
+elif isinstance(tool_input, str):
+    command = tool_input
+else:
+    command = data.get("command")
+
+if not isinstance(command, str):
+    sys.exit(2)
+
+command = command.strip()
+denied_prefixes = $denied_literal
+if any(command == p or command.startswith(p + " ") for p in denied_prefixes):
+    print("Destructive shell command blocked by vibe-lab policy", file=sys.stderr)
+    sys.exit(2)
+sys.exit(0)
+PY
+SCRIPT
+  elif [ "$name" = "startup-self-heal" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+REPO_ROOT="\$(cd "\$(dirname "\$0")/../.." && pwd)"
+"\$REPO_ROOT/bin/startup-self-heal" --cli copilot --event session-start --quiet || true
+SCRIPT
+  elif [ "$name" = "objective-workflow-gate" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s\n' 'objective-workflow-gate requires python3' >&2
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json
+import os
+import re
+import sys
+
+BLOCK_REASON = "Completion claim observed without verification evidence. Add a Verification/Tests/Checks line with observed command/result, or state Blocked/Not run with the reason."
+
+
+def block(reason):
+    print(json.dumps({"decision": "block", "reason": reason}, separators=(",", ":")))
+    sys.exit(0)
+
+
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    block("objective-workflow-gate could not parse agentStop hook JSON")
+
+if not isinstance(data, dict):
+    block("objective-workflow-gate expected a JSON object")
+
+event = data.get("eventName") or data.get("event_name") or data.get("hook_event_name") or data.get("hookEventName")
+if event and event not in ("agentStop", "Stop"):
+    sys.exit(0)
+
+message = data.get("lastAssistantMessage") or data.get("last_assistant_message")
+if not isinstance(message, str):
+    block("objective-workflow-gate could not observe lastAssistantMessage")
+
+completion_line = re.compile(r"^\\s*(?:[-*]\\s*)?(?:done|complete|completed|implemented|fixed|changed|updated|shipped)\\b", re.I)
+completion_phrase = re.compile(r"\\b(?:i(?:'ve| have)?\\s+)?(?:completed|implemented|fixed|updated|changed)\\b", re.I)
+negated = re.compile(r"\\b(?:not|not yet|could not|unable to|blocked|in progress)\\b", re.I)
+evidence = re.compile(r"^\\s*(?:[-*]\\s*)?(?:verification|validation|validated|tests?|checks?|smoke|evidence)\\s*:", re.I | re.M)
+blocker = re.compile(r"^\\s*(?:[-*]\\s*)?(?:blocked|not run|could not run|missing prerequisite)\\b|\\b(?:verification|validation|tests?)\\s+not\\s+run\\b", re.I | re.M)
+
+claims_completion = False
+for line in message.splitlines():
+    if completion_line.search(line) or completion_phrase.search(line):
+        if not negated.search(line):
+            claims_completion = True
+            break
+
+if claims_completion and not evidence.search(message) and not blocker.search(message):
+    block(BLOCK_REASON)
+
+sys.exit(0)
+PY
+SCRIPT
+  else
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+# Advisory policy hook for $name. No runtime block is configured yet.
+exit 0
+SCRIPT
+  fi
+}
+
+generate_antigravity_settings() {
+  local settings="$REPO_ROOT/.gemini/settings.json"
+  mkdir -p "$REPO_ROOT/.gemini/hooks/vibe-lab"
+  local block_hook=""
+  local startup_hook=""
+  local objective_hook=""
+  [ -x "$REPO_ROOT/.gemini/hooks/vibe-lab/block-destructive-shell.sh" ] && block_hook='$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/block-destructive-shell.sh'
+  [ -x "$REPO_ROOT/.gemini/hooks/vibe-lab/startup-self-heal.sh" ] && startup_hook='$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/startup-self-heal.sh'
+  [ -x "$REPO_ROOT/.gemini/hooks/vibe-lab/objective-workflow-gate.sh" ] && objective_hook='$GEMINI_PROJECT_DIR/.gemini/hooks/vibe-lab/objective-workflow-gate.sh'
+  python3 - "$settings" "$block_hook" "$startup_hook" "$objective_hook" <<'PY'
+import json
+import pathlib
+import sys
+
+settings = pathlib.Path(sys.argv[1])
+block_hook = sys.argv[2]
+startup_hook = sys.argv[3]
+objective_hook = sys.argv[4]
+if settings.exists():
+    try:
+        data = json.loads(settings.read_text())
+    except Exception as exc:
+        raise SystemExit(f"Existing .gemini/settings.json is invalid JSON: {exc}")
+else:
+    data = {}
+
+hooks = data.setdefault("hooks", {})
+
+pre = hooks.setdefault("BeforeTool", [])
+pre[:] = [h for h in pre if "block-destructive-shell" not in json.dumps(h)]
+if block_hook:
+    pre.append({
+        "matcher": "run_shell_command",
+        "hooks": [{
+            "name": "block-destructive-shell",
+            "type": "command",
+            "command": block_hook,
+            "timeout": 5000
+        }]
+    })
+if not pre:
+    hooks.pop("BeforeTool", None)
+
+session = hooks.setdefault("SessionStart", [])
+session[:] = [h for h in session if "startup-self-heal" not in json.dumps(h)]
+if startup_hook:
+    session.append({
+        "matcher": "startup|resume",
+        "hooks": [{
+            "name": "startup-self-heal",
+            "type": "command",
+            "command": startup_hook,
+            "timeout": 5000
+        }]
+    })
+if not session:
+    hooks.pop("SessionStart", None)
+
+stop = hooks.setdefault("AfterAgent", [])
+stop[:] = [h for h in stop if "objective-workflow-gate" not in json.dumps(h)]
+if objective_hook:
+    stop.append({
+        "hooks": [{
+            "name": "objective-workflow-gate",
+            "type": "command",
+            "command": objective_hook,
+            "timeout": 5000
+        }]
+    })
+if not stop:
+    hooks.pop("AfterAgent", None)
+
+if not hooks:
+    data.pop("hooks", None)
+settings.parent.mkdir(parents=True, exist_ok=True)
+settings.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+PY
+}
+
+antigravity_hook_script() {
+  local name="$1"
+  local hash="$2"
+  shift 2
+  if [ "$name" = "block-destructive-shell" ]; then
+    local denied_literal
+    denied_literal="$(python_list_literal "$@")"
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo '{"decision": "deny", "reason": "Python3 is required but not found"}'
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json, os, sys
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    print(json.dumps({"decision": "deny", "reason": "Failed to parse JSON input"}))
+    sys.exit(2)
+
+tool_name = data.get("toolName") or data.get("tool_name")
+if tool_name not in ("run_shell_command", "run_shell", "Bash", "bash"):
+    print(json.dumps({"decision": "allow"}))
+    sys.exit(0)
+
+tool_input = data.get("toolInput") or data.get("tool_input")
+command = None
+if isinstance(tool_input, dict):
+    command = tool_input.get("command")
+elif isinstance(tool_input, str):
+    command = tool_input
+else:
+    command = data.get("command")
+
+if not isinstance(command, str):
+    print(json.dumps({"decision": "deny", "reason": "No command string found"}))
+    sys.exit(2)
+
+command = command.strip()
+denied_prefixes = $denied_literal
+if any(command == p or command.startswith(p + " ") for p in denied_prefixes):
+    print(json.dumps({"decision": "deny", "reason": "Destructive shell command blocked by vibe-lab policy"}))
+    sys.exit(2)
+
+print(json.dumps({"decision": "allow"}))
+sys.exit(0)
+PY
+SCRIPT
+  elif [ "$name" = "startup-self-heal" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+REPO_ROOT="\$(cd "\$(dirname "\$0")/../../.." && pwd)"
+"\$REPO_ROOT/bin/startup-self-heal" --cli antigravity --event session-start --quiet || true
+SCRIPT
+  elif [ "$name" = "objective-workflow-gate" ]; then
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo '{"decision": "deny", "reason": "Python3 is required but not found"}'
+  exit 2
+fi
+input="\$(cat)"
+
+JSON_INPUT="\$input" python3 - <<'PY'
+import json
+import os
+import re
+import sys
+
+BLOCK_REASON = "Completion claim observed without verification evidence. Add a Verification/Tests/Checks line with observed command/result, or state Blocked/Not run with the reason."
+
+
+def block(reason):
+    print(json.dumps({"decision": "deny", "reason": reason}, separators=(",", ":")))
+    sys.exit(2)
+
+
+try:
+    data = json.loads(os.environ.get("JSON_INPUT", ""))
+except Exception:
+    block("objective-workflow-gate could not parse AfterAgent hook JSON")
+
+if not isinstance(data, dict):
+    block("objective-workflow-gate expected a JSON object")
+
+event = data.get("eventName") or data.get("event_name") or data.get("hook_event_name") or data.get("hookEventName")
+if event and event not in ("AfterAgent", "Stop"):
+    print(json.dumps({"decision": "allow"}))
+    sys.exit(0)
+
+message = data.get("lastAssistantMessage") or data.get("last_assistant_message")
+if not isinstance(message, str):
+    block("objective-workflow-gate could not observe lastAssistantMessage")
+
+completion_line = re.compile(r"^\\s*(?:[-*]\\s*)?(?:done|complete|completed|implemented|fixed|changed|updated|shipped)\\b", re.I)
+completion_phrase = re.compile(r"\\b(?:i(?:'ve| have)?\\s+)?(?:completed|implemented|fixed|updated|changed)\\b", re.I)
+negated = re.compile(r"\\b(?:not|not yet|could not|unable to|blocked|in progress)\\b", re.I)
+evidence = re.compile(r"^\\s*(?:[-*]\\s*)?(?:verification|validation|validated|tests?|checks?|smoke|evidence)\\s*:", re.I | re.M)
+blocker = re.compile(r"^\\s*(?:[-*]\\s*)?(?:blocked|not run|could not run|missing prerequisite)\\b|\\b(?:verification|validation|tests?)\\s+not\\s+run\\b", re.I | re.M)
+
+claims_completion = False
+for line in message.splitlines():
+    if completion_line.search(line) or completion_phrase.search(line):
+        if not negated.search(line):
+            claims_completion = True
+            break
+
+if claims_completion and not evidence.search(message) and not blocker.search(message):
+    block(BLOCK_REASON)
+
+print(json.dumps({"decision": "allow"}))
+sys.exit(0)
+PY
+SCRIPT
+  else
+    cat <<SCRIPT
+#!/usr/bin/env bash
+# Generated by bin/inject. Do not edit manually.
+# Policy hash: $hash
+# Advisory policy hook for $name. No runtime block is configured yet.
+echo '{"decision": "allow"}'
+exit 0
+SCRIPT
+  fi
+}
+
+generate_opencode_plugin() {
+  local plugin="$REPO_ROOT/.opencode/plugins/vibe-lab-hooks.js"
+  local block_hash="none"
+  local startup_hash="none"
+  local objective_hash="none"
+  local denied_js
+  denied_js="$(js_array_literal "$@")"
+  if [ -f "$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md" ]; then
+    block_hash="$(policy_hash "$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md")"
+  fi
+  if [ -f "$AGENTS_HOOKS_DIR/startup-self-heal/POLICY.md" ]; then
+    startup_hash="$(policy_hash "$AGENTS_HOOKS_DIR/startup-self-heal/POLICY.md")"
+  fi
+  if [ -f "$AGENTS_HOOKS_DIR/objective-workflow-gate/POLICY.md" ]; then
+    objective_hash="$(policy_hash "$AGENTS_HOOKS_DIR/objective-workflow-gate/POLICY.md")"
+  fi
+  local content gate_js
+  gate_js="$(cat <<'JS'
+const objectiveGateBlockReason = "Completion claim observed without verification evidence. Add a Verification/Tests/Checks line with observed command/result, or state Blocked/Not run with the reason.";
+
+const completionLinePattern = /^\s*(?:[-*]\s*)?(?:done|complete|completed|implemented|fixed|changed|updated|shipped)\b/i;
+const completionPhrasePattern = /\b(?:i(?:'ve| have)?\s+)?(?:completed|implemented|fixed|updated|changed)\b/i;
+const negatedCompletionPattern = /\b(?:not|not yet|could not|unable to|blocked|in progress)\b/i;
+const evidencePattern = /^\s*(?:[-*]\s*)?(?:verification|validation|validated|tests?|checks?|smoke|evidence)\s*:/im;
+const blockerPattern = /^\s*(?:[-*]\s*)?(?:blocked|not run|could not run|missing prerequisite)\b|\b(?:verification|validation|tests?)\s+not\s+run\b/im;
+
+const firstString = (...values) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return "";
+};
+
+const textFromParts = (parts) => {
+  if (!Array.isArray(parts)) return "";
+  return parts
+    .map((part) => firstString(part?.text, part?.content))
+    .filter((part) => part.length > 0)
+    .join("\n");
+};
+
+const assistantTextFromEvent = (event) => {
+  const message = event?.message ?? event?.properties?.message ?? event?.data?.message;
+  const role = message?.role ?? event?.role ?? event?.properties?.role;
+  if (role && role !== "assistant") return "";
+  return firstString(
+    event?.lastAssistantMessage,
+    event?.last_assistant_message,
+    event?.assistantMessage,
+    event?.text,
+    event?.properties?.text,
+    message?.content,
+    message?.text,
+    textFromParts(message?.parts),
+  );
+};
+
+const claimsCompletion = (message) => message
+  .split(/\r?\n/)
+  .some((line) => (completionLinePattern.test(line) || completionPhrasePattern.test(line)) && !negatedCompletionPattern.test(line));
+
+const objectiveGateReason = (message) => {
+  if (typeof message !== "string" || message.length === 0) return "";
+  if (!claimsCompletion(message)) return "";
+  if (evidencePattern.test(message) || blockerPattern.test(message)) return "";
+  return objectiveGateBlockReason;
+};
+JS
+)"
+  content="// Generated by bin/inject. Do not edit manually."$'\n'
+  content+="// Block policy hash: $block_hash"$'\n'
+  content+="// Startup policy hash: $startup_hash"$'\n'
+  content+="// Objective gate policy hash: $objective_hash"$'\n\n'
+  content+="$gate_js"$'\n'
+  content+="import { spawnSync as nodeSpawnSync } from \"node:child_process\";"$'\n'
+  content+="import path from \"node:path\";"$'\n\n'
+  content+="export const VibeLabHooks = async ({ directory = process.cwd(), spawnSync = nodeSpawnSync } = {}) => {"$'\n'
+  content+="  let lastAssistantMessage = \"\";"$'\n'
+  content+="  return {"$'\n'
+  content+="  event: async ({ event }) => {"$'\n'
+  content+="    if (event.type === \"message.updated\") {"$'\n'
+  content+="      const message = assistantTextFromEvent(event);"$'\n'
+  content+="      if (message) lastAssistantMessage = message;"$'\n'
+  content+="      return;"$'\n'
+  content+="    }"$'\n'
+  content+="    if (event.type === \"session.idle\") {"$'\n'
+  content+="      const message = assistantTextFromEvent(event) || lastAssistantMessage;"$'\n'
+  content+="      const reason = objectiveGateReason(message);"$'\n'
+  content+="      if (reason) throw new Error(reason);"$'\n'
+  content+="      return;"$'\n'
+  content+="    }"$'\n'
+  content+="    if (event.type !== \"session.created\") return;"$'\n'
+  content+="    const result = spawnSync(path.join(directory, \"bin\", \"startup-self-heal\"), [\"--cli\", \"opencode\", \"--event\", \"session.created\", \"--quiet\"], { stdio: \"inherit\" });"$'\n'
+  content+="    if (typeof result.status === \"number\" && result.status !== 0) {"$'\n'
+  content+="      console.warn(\"[vibe-lab] startup self-heal did not fully repair opencode (exit \" + result.status + \")\");"$'\n'
+  content+="    }"$'\n'
+  content+="  },"$'\n'
+  content+="  \"tool.execute.before\": async (input, output) => {"$'\n'
+  content+="    if (input.tool !== \"bash\") return;"$'\n'
+  content+="    const command = output.args?.command;"$'\n'
+  content+="    if (typeof command !== \"string\") {"$'\n'
+  content+="      throw new Error(\"Bash command must be a string for vibe-lab policy\");"$'\n'
+  content+="    }"$'\n'
+  content+="    const trimmed = command.trim();"$'\n'
+  content+="    const denied = $denied_js;"$'\n'
+  content+="    if (denied.some((prefix) => trimmed === prefix || trimmed.startsWith(prefix))) {"$'\n'
+  content+="      throw new Error(\"Destructive shell command blocked by vibe-lab policy\");"$'\n'
+  content+="    }"$'\n'
+  content+="  },"$'\n'
+  content+="  };"$'\n'
+  content+="};"$'\n'
+  atomic_write "$plugin" "$content"
+}
+
+generate_hook_adapters() {
+  [ -d "$AGENTS_HOOKS_DIR" ] || return 0
+  local do_claude=false
+  local do_opencode=false
+  local do_copilot=false
+  local do_antigravity=false
+  if uses_claude; then
+    do_claude=true
+  fi
+  if uses_opencode; then
+    do_opencode=true
+  fi
+  if uses_copilot; then
+    do_copilot=true
+  fi
+  if uses_antigravity; then
+    do_antigravity=true
+  fi
+  if $do_claude; then
+    validate_claude_settings_json
+    mkdir -p "$REPO_ROOT/.claude/hooks"
+  fi
+  if $do_opencode; then
+    mkdir -p "$REPO_ROOT/.opencode/plugins"
+  fi
+  if $do_copilot; then
+    mkdir -p "$REPO_ROOT/.github/hooks"
+  fi
+  if $do_antigravity; then
+    mkdir -p "$REPO_ROOT/.gemini/hooks/vibe-lab"
+  fi
+  local block_policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
+  local block_denied=()
+  if [ -f "$block_policy" ]; then
+    mapfile -t block_denied < <(extract_denied_prefixes "$block_policy") || fail "block-destructive-shell policy has no deterministic denied command spans"
+  fi
+  for hook_dir in "$AGENTS_HOOKS_DIR"/*/; do
+    [ -d "$hook_dir" ] || continue
+    local name policy hash script dest
+    name="$(basename "$hook_dir")"
+    policy="$hook_dir/POLICY.md"
+    [ -f "$policy" ] || { warn "Skipping hook $name without POLICY.md"; continue; }
+    hash="$(policy_hash "$policy")"
+    if [ "$name" = "block-destructive-shell" ]; then
+      script="$(claude_hook_script "$name" "$hash" "${block_denied[@]}")"
+    else
+      script="$(claude_hook_script "$name" "$hash")"
+    fi
+    if $do_claude; then
+      dest="$REPO_ROOT/.claude/hooks/$name.sh"
+      atomic_write "$dest" "$script"
+      if ! $DRY_RUN; then chmod +x "$dest"; fi
+    fi
+    if $do_copilot; then
+      local copilot_script
+      if [ "$name" = "block-destructive-shell" ]; then
+        copilot_script="$(copilot_hook_script "$name" "$hash" "${block_denied[@]}")"
+      else
+        copilot_script="$(copilot_hook_script "$name" "$hash")"
+      fi
+      dest="$REPO_ROOT/.github/hooks/$name.sh"
+      atomic_write "$dest" "$copilot_script"
+      if ! $DRY_RUN; then chmod +x "$dest"; fi
+
+      local event_name
+      case "$name" in
+        block-destructive-shell) event_name="preToolUse" ;;
+        startup-self-heal) event_name="sessionStart" ;;
+        objective-workflow-gate) event_name="agentStop" ;;
+        caveman-memory-promotion) event_name="sessionEnd" ;;
+        *) event_name="" ;;
+      esac
+      if [ -n "$event_name" ]; then
+        local json_dest="$REPO_ROOT/.github/hooks/$name.json"
+        local json_content
+        json_content="$(copilot_hook_json "$event_name" "$name")"
+        atomic_write "$json_dest" "$json_content"
+      fi
+    fi
+    if $do_antigravity; then
+      local antigravity_script
+      if [ "$name" = "block-destructive-shell" ]; then
+        antigravity_script="$(antigravity_hook_script "$name" "$hash" "${block_denied[@]}")"
+      else
+        antigravity_script="$(antigravity_hook_script "$name" "$hash")"
+      fi
+      dest="$REPO_ROOT/.gemini/hooks/vibe-lab/$name.sh"
+      atomic_write "$dest" "$antigravity_script"
+      if ! $DRY_RUN; then chmod +x "$dest"; fi
+    fi
+  done
+  if $do_claude; then
+    generate_claude_settings
+  fi
+  if $do_copilot; then
+    : # copilot settings are skipped
+  fi
+  if $do_antigravity; then
+    generate_antigravity_settings
+  fi
+  if $do_opencode; then
+    generate_opencode_plugin "${block_denied[@]}"
+  fi
+  return 0
+}
+
+prune_unsupported_pi_surfaces() {
+  uses_pi || return 0
+  for path in "$REPO_ROOT/.pi/agents" "$REPO_ROOT/.pi/hooks"; do
+    [ -e "$path" ] || [ -L "$path" ] || continue
+    if $DRY_RUN; then
+      log "[DRY RUN] Would remove unsupported Pi surface ${path#$REPO_ROOT/}"
+    else
+      rm -rf "$path"
+    fi
+  done
+}
+
+clean_artifacts() {
+  warn "--clean is conservative; remove generated adapters manually if needed."
+}
+
+main() {
+  parse_args "$@"
+  if $CLEAN; then
+    clean_artifacts
+    return 0
+  fi
+  [ -d "$CANON_DIR" ] || fail "Missing canonical directory"
+  [ -f "$CANON_DIR/constitution.md" ] || fail "Missing canonical/constitution.md"
+  [ -f "$CANON_DIR/clean-code.md" ] || fail "Missing canonical/clean-code.md"
+  [ -f "$CANON_DIR/engineering-principles.md" ] || fail "Missing canonical/engineering-principles.md"
+  [ -f "$CANON_DIR/llm-engineering-relationships.md" ] || fail "Missing canonical/llm-engineering-relationships.md"
+
+  log "Starting injection (dry_run=$DRY_RUN, surface=$SURFACE)"
+  if uses_claude; then
+    validate_claude_settings_json
+  fi
+  if uses_opencode; then
+    merge_opencode_instructions
+    ensure_opencode_package_module
+  fi
+  sync_skill_adapters
+  prune_unsupported_pi_surfaces
+  sync_reference_docs
+  generate_agent_adapters
+  generate_hook_adapters
+  if uses_opencode || uses_pi || uses_copilot || uses_antigravity; then
+    generate_context_file "$REPO_ROOT/AGENTS.md" "# How We Work (Constitution)"
+  fi
+  if uses_claude; then
+    generate_context_file "$REPO_ROOT/CLAUDE.md" "# CLAUDE.md"
+  fi
+  log "Injection complete. Restart affected CLI sessions for changes to take effect."
+}
+
+main "$@"

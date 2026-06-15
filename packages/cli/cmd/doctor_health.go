@@ -112,17 +112,6 @@ func runEnhancedHealthChecks() []HealthCheck {
 	}
 	checks = append(checks, check)
 
-	// 8. Check lazyai-orchestrator binary
-	check = HealthCheck{Name: "Orchestrator binary", Checked: checkedAt}
-	if _, err := exec.LookPath("lazyai-orchestrator"); err == nil {
-		check.Status = "pass"
-		check.Detail = "Found on PATH"
-	} else {
-		check.Status = "warn"
-		check.Detail = "lazyai-orchestrator not on PATH"
-	}
-	checks = append(checks, check)
-
 	return checks
 }
 

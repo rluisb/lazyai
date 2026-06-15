@@ -56,6 +56,36 @@ updated_by: planner
 		t.Fatalf("expected metadata gaps, got %#v", payload["metadataGaps"])
 	}
 }
+func TestDoctorJSONOmitsLegacyStaleMcpSection(t *testing.T) {
+	dir := t.TempDir()
+	writeDoctorManifest(t, dir)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}`), 0o644); err != nil {
+		t.Fatalf("write .claude.json: %v", err)
+	}
+
+	cmd := newDoctorCommand(dir, true)
+	stdout, _ := captureOutput(t, func() {
+		_ = runDoctor(cmd, nil)
+	})
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("unmarshal output: %v\noutput=%s", err, stdout)
+	}
+	if _, ok := payload["staleMcpEntries"]; ok {
+		t.Fatalf("doctor JSON should not expose staleMcpEntries: %#v", payload)
+	}
+}
 
 func TestDoctorLegacyMetadataGapIsWarningOnly(t *testing.T) {
 	dir := t.TempDir()

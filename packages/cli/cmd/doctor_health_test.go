@@ -22,9 +22,9 @@ func TestGetDiskUsage(t *testing.T) {
 func TestRunEnhancedHealthChecks(t *testing.T) {
 	checks := runEnhancedHealthChecks()
 
-	// Should return at least 8 checks
-	if len(checks) < 8 {
-		t.Errorf("Expected at least 8 health checks, got %d", len(checks))
+	// Should return at least 7 checks.
+	if len(checks) < 7 {
+		t.Errorf("Expected at least 7 health checks, got %d", len(checks))
 	}
 
 	// Verify all checks have required fields
@@ -45,6 +45,11 @@ func TestRunEnhancedHealthChecks(t *testing.T) {
 		// Status should be one of: pass, warn, fail
 		if check.Status != "pass" && check.Status != "warn" && check.Status != "fail" {
 			t.Errorf("Check %d has invalid status: %s", i, check.Status)
+		}
+	}
+	for _, check := range checks {
+		if check.Name == "legacy runtime binary" {
+			t.Fatal("legacy runtime binary check should be removed")
 		}
 	}
 

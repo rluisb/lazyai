@@ -64,8 +64,8 @@ func TestOutputMappingClaudeCodeAgents(t *testing.T) {
 	if target.IncludeFile == nil {
 		t.Fatal("claude agents must have an IncludeFile filter")
 	}
-	if !target.IncludeFile("orchestrator.md") {
-		t.Error("orchestrator should be included — it is a first-class agent per Spec 022")
+	if target.IncludeFile("orchestrator.md") {
+		t.Error("orchestrator must be excluded from neutral agent mappings")
 	}
 	if !target.IncludeFile("scout.md") {
 		t.Error("scout should be included in bulk agent copy")

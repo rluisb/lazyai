@@ -36,6 +36,60 @@ func selectionSet[T ~string](items []T) map[T]bool {
 	return m
 }
 
+const primaryAgentID = "primary-agent"
+
+var canonicalAgentIDs = map[string]struct{}{
+	primaryAgentID: {},
+	"builder":      {},
+	"planner":      {},
+	"reviewer":     {},
+	"scout":        {},
+}
+
+func isCanonicalAgentFile(file string) bool {
+	_, ok := canonicalAgentIDs[fileID(file)]
+	return ok
+}
+
+func copyCanonicalPrimaryAgent(ctx *AdapterContext, dest string, transform func([]byte) []byte) error {
+	return CopyWithRecord("canonical/agents/primary-agent.md", dest, ctx, true, transform, 0o644)
+}
+
+func openCodePrimaryAgentContent(source []byte) []byte {
+	body := frontmatter.StripFrontmatter(source)
+	return BuildOpenCodeAgentFrontmatter(body, OpenCodeAgentOpts{
+		Name:        primaryAgentID,
+		Description: "Default LazyAI runtime entry point",
+		Mode:        "primary",
+	})
+}
+
+func claudePrimaryAgentContent(source []byte) []byte {
+	body := trimLeadingNewlines(frontmatter.StripFrontmatter(source))
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("name: primary-agent\n")
+	b.WriteString("description: Default LazyAI runtime entry point\n")
+	b.WriteString("---\n\n")
+	b.Write(body)
+	return []byte(b.String())
+}
+
+func copilotPrimaryAgentContent(source []byte) []byte {
+	body := strings.TrimRight(string(frontmatter.StripFrontmatter(source)), "\n")
+	var b strings.Builder
+	b.WriteString("name: primary-agent\n")
+	b.WriteString("description: Default LazyAI runtime entry point\n")
+	b.WriteString("model: gpt-4.1\n")
+	b.WriteString("prompt: |\n")
+	for _, line := range strings.Split(body, "\n") {
+		b.WriteString("  ")
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return []byte(b.String())
+}
+
 // MergeManagedBlock merges newManagedContent into existing content using managed
 // block markers. If existing is empty, returns content wrapped in markers. If
 // existing has no markers, appends the managed block. If existing has markers,
@@ -584,67 +638,6 @@ func InstallRootTemplateIfMissing(ctx *AdapterContext, recordPath, destPath, tem
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// Orchestrator helpers
-// ---------------------------------------------------------------------------
-
-// Fallback orchestrator tool names when the agent source file is unavailable.
-var fallbackOrchestratorTools = []string{
-	"list_catalog",
-	"compose_agent",
-	"start_chain",
-	"advance_chain",
-	"get_status",
-	"get_budget",
-	"retry_step",
-	"escalate_step",
-	"handoff",
-}
-
-// IsOrchestratorEnabled reports whether the orchestrator MCP server is enabled.
-func IsOrchestratorEnabled(ctx *AdapterContext) bool {
-	for _, s := range ctx.EnableServers {
-		if s == "orchestrator" {
-			return true
-		}
-	}
-	return false
-}
-
-// readOrchestratorAgentSource reads the orchestrator agent source file,
-// falling back to a hardcoded default if the file is missing.
-func readOrchestratorAgentSource(ctx *AdapterContext) string {
-	libFS := ctx.LibraryFS
-	if libFS != nil {
-		data, err := fs.ReadFile(libFS, "agents/orchestrator.md")
-		if err == nil {
-			return string(data)
-		}
-	} else if ctx.LibraryDir != "" {
-		sourcePath := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
-		if files.FileExists(sourcePath) {
-			data, err := files.ReadFile(sourcePath)
-			if err == nil {
-				return string(data)
-			}
-		}
-	}
-
-	// Fallback
-	lines := []string{
-		"---",
-		"name: Orchestrator",
-		"model: opus",
-		fmt.Sprintf("tools: %s", strings.Join(fallbackOrchestratorTools, " ")),
-		"---",
-		"",
-		"# Orchestrator Agent",
-		"",
-		"Use the orchestration MCP runtime to coordinate multi-agent execution.",
-	}
-	return strings.Join(lines, "\n")
-}
-
 // ReadSampleRuleContent reads the TypeScript sample rule from the library.
 // Returns an error if the file is not found (not a silent skip).
 func ReadSampleRuleContent(ctx *AdapterContext) ([]byte, error) {
@@ -698,18 +691,6 @@ func ExtractTools(content string) []string {
 		return result
 	}
 	return nil
-}
-
-// ReadOrchestratorTools returns the tools list from the orchestrator agent.
-func ReadOrchestratorTools(ctx *AdapterContext) []string {
-	source := readOrchestratorAgentSource(ctx)
-	tools := ExtractTools(source)
-	if len(tools) > 0 {
-		return tools
-	}
-	result := make([]string, len(fallbackOrchestratorTools))
-	copy(result, fallbackOrchestratorTools)
-	return result
 }
 
 // StripFrontmatterAndInjectModel strips YAML frontmatter and injects the model
@@ -791,67 +772,6 @@ func EnsureModeAgentFrontmatter(content string) string {
 		bodyStr = "\n" + bodyStr
 	}
 	return "---\n" + strings.Join(lines, "\n") + "\n---\n" + bodyStr
-}
-
-// GetOrchestratorAgentContent returns the orchestrator agent content with
-// whitespace-delimited tools in the frontmatter (per Claude Code spec).
-func GetOrchestratorAgentContent(ctx *AdapterContext) []byte {
-	source := readOrchestratorAgentSource(ctx)
-	return []byte(NormalizeToolsFrontmatter(source, "space"))
-}
-
-// GetOrchestratorSkillContent returns the orchestrator as a skill file.
-func GetOrchestratorSkillContent(ctx *AdapterContext) []byte {
-	source := readOrchestratorAgentSource(ctx)
-	_, body := frontmatter.SplitYamlFrontmatter(source)
-	tools := ReadOrchestratorTools(ctx)
-
-	lines := []string{
-		"---",
-		"name: orchestrator",
-		"description: Orchestration MCP runtime guidance",
-		"---",
-		"",
-		"# Orchestrator Skill",
-		"",
-		strings.TrimSpace(body),
-		"",
-		formatAllowedToolsSection(tools),
-		"",
-	}
-	return []byte(strings.Join(lines, "\n"))
-}
-
-// GetOrchestratorPromptContent returns the orchestrator as a prompt file.
-func GetOrchestratorPromptContent(ctx *AdapterContext) []byte {
-	source := readOrchestratorAgentSource(ctx)
-	_, body := frontmatter.SplitYamlFrontmatter(source)
-	tools := ReadOrchestratorTools(ctx)
-
-	lines := []string{
-		"---",
-		"mode: agent",
-		"---",
-		"",
-		"# Orchestrator Prompt",
-		"",
-		strings.TrimSpace(body),
-		"",
-		formatAllowedToolsSection(tools),
-		"",
-	}
-	return []byte(strings.Join(lines, "\n"))
-}
-
-func formatAllowedToolsSection(tools []string) string {
-	if len(tools) == 0 {
-		return ""
-	}
-	lines := []string{"## Allowed MCP Tools", ""}
-	for _, tool := range tools {
-		lines = append(lines, "- "+tool)
-	}
-	return strings.Join(lines, "\n")
 }
 
 // parseToolsFromFrontmatterBody extracts tool names from a YAML frontmatter body.

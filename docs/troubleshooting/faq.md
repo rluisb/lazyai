@@ -71,29 +71,21 @@ You must re-run `lazyai-cli init` with the desired scope. The previous `.ai-setu
 
 No. Referenced repos are scanned for stack detection but are **never** modified. All generated files live in the planning repo.
 
-## Orchestration
+## Retired orchestration runtime
 
-### Does enabling orchestration change my existing setup?
+### Where did the old orchestration runtime go?
 
-No. Orchestration is opt-in. If you never enable `orchestrator`, nothing changes.
+The dedicated workflow/task runtime was removed from the active product surface. Current setup uses OpenCode, Claude Code, and Copilot adapters with `primary-agent` as the neutral default.
 
-### What runs the orchestrator?
-
-The orchestrator is a Go runtime (`lazyai-orchestrator`) invoked via `connect` as an MCP server. Your host CLI tool (Claude Code, OpenCode, Copilot) remains the execution surface.
-
-Install it with:
-
-```bash
-go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
-```
+See [Migration: Fortnite / orchestrator removal](../migration/fortnite-orchestrator-removal.md) for replacements and rollback guidance.
 
 ### Is A2A remote execution enabled by default?
 
-No. A2A is a config/seam only. The default execution model uses the native host CLI directly.
+No. A2A is not part of the active default setup.
 
-### Where does orchestration state live?
+### Where does runtime state live now?
 
-Runtime state, persistence, and handoff artifacts are managed by the `lazyai-orchestrator` MCP server, not by `lazyai-cli` itself.
+`lazyai-cli` owns the active local setup and managed-file state. Session database migration is covered by the runtime refactor plan before V2 schema changes land.
 
 ## MCP
 

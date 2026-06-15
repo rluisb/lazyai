@@ -3,5 +3,4 @@ go 1.26.1
 use (
 	./packages/cli
 	./packages/diffviewer
-	./packages/orchestrator
 )

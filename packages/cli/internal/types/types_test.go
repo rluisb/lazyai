@@ -132,11 +132,11 @@ func TestTypeConstants(t *testing.T) {
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	t.Parallel()
 
-	if len(ALL_AGENTS) < 8 {
-		t.Errorf("ALL_AGENTS has %d elements, want at least 8 (Spec 022 added implementor)", len(ALL_AGENTS))
+	if len(ALL_AGENTS) != 5 {
+		t.Errorf("ALL_AGENTS has %d elements, want 5 active canonical agents", len(ALL_AGENTS))
 	}
-	if len(ALL_SKILLS) < 20 {
-		t.Errorf("ALL_SKILLS has %d elements, want at least 20 (Spec 022 added 18 new skills)", len(ALL_SKILLS))
+	if len(ALL_SKILLS) != 4 {
+		t.Errorf("ALL_SKILLS has %d elements, want 4 active canonical skills", len(ALL_SKILLS))
 	}
 	if len(ALL_PROMPTS) != 5 {
 		t.Errorf("ALL_PROMPTS has %d elements, want 5", len(ALL_PROMPTS))
@@ -152,6 +152,12 @@ func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	}
 	if len(ALL_SPECS_DIRS) != 10 {
 		t.Errorf("ALL_SPECS_DIRS has %d elements, want 10", len(ALL_SPECS_DIRS))
+	}
+	if !containsAgentID(ALL_AGENTS, AgentIdPrimaryAgent) {
+		t.Errorf("ALL_AGENTS missing %q", AgentIdPrimaryAgent)
+	}
+	if containsAgentID(ALL_AGENTS, AgentId("orchestrator")) {
+		t.Errorf("ALL_AGENTS should not contain legacy orchestrator entry: %v", ALL_AGENTS)
 	}
 }
 
@@ -254,4 +260,13 @@ func TestParseFileStatus(t *testing.T) {
 	if err == nil {
 		t.Error("ParseFileStatus(\"invalid\") should return error")
 	}
+}
+
+func containsAgentID(items []AgentId, want AgentId) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }

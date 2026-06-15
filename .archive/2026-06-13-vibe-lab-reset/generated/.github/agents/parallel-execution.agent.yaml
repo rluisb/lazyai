@@ -1,0 +1,152 @@
+name: parallel-execution
+displayName: Parallel Execution
+description: >
+  parallel-execution skill for the ai-setup orchestrator.
+model: claude-sonnet-4.5
+tools:
+  - "*"
+promptParts:
+  includeAISafety: true
+  includeToolInstructions: true
+  includeParallelToolCalling: true
+  includeCustomAgentInstructions: false
+prompt: |
+  # Parallel Execution
+
+  ## Purpose
+
+  Enable safe parallel task execution by identifying independent work units that can run concurrently without conflicts. Reduces wall-clock time on large features.
+
+  ## The Wave Model
+
+  Group tasks into waves based on dependencies. Tasks within a wave run in parallel; waves run sequentially.
+
+  ```
+  Wave 0 (No dependencies):
+    ┌─────────────┐  ┌─────────────┐
+    │ Task A      │  │ Task B      │  ← Run in parallel
+    └─────────────┘  └─────────────┘
+           │                │
+           └────────┬───────┘
+                    ▼
+  Wave 1 (Depends on Wave 0):
+    ┌─────────────────────────┐
+    │ Task C (needs A + B)    │  ← Must wait for Wave 0
+    └─────────────────────────┘
+                    │
+                    ▼
+  Wave 2 (Depends on Wave 1):
+    ┌─────────────┐  ┌─────────────┐
+    │ Task D      │  │ Task E      │  ← Parallel again
+    └─────────────┘  └─────────────┘
+  ```
+
+  ## Dependency Analysis
+
+  ### File Touch-Map
+
+  Before parallelizing, create a file touch-map — which files each task modifies:
+
+  ```
+  Task A: src/api/handlers.ts, src/api/routes.ts
+  Task B: src/db/queries.ts, src/db/schema.sql
+  Task C: src/api/handlers.ts, src/db/queries.ts   ← conflicts with A and B
+  Task D: src/services/user.ts
+  Task E: src/services/order.ts
+  ```
+
+  ### Conflict Detection
+
+  Two tasks **conflict** if they modify the same file:
+  - Task A and Task C both touch `src/api/handlers.ts` → **CONFLICT** — different waves
+  - Task A and Task B have no overlap → **SAFE** to parallelize in same wave
+
+  ### Wave Assignment Rules
+
+  1. Tasks with no file conflicts can be in the same wave
+  2. If Task X depends on Task Y's output, X must be in a later wave
+  3. Minimize total waves while respecting all dependencies
+
+  ## Execution by Orchestrator
+
+  ```
+  Wave 0: dispatch agent(A) + agent(B) concurrently → wait for both
+  Wave 1: dispatch agent(C) → wait for completion
+  Wave 2: dispatch agent(D) + agent(E) concurrently → wait for both
+  ```
+
+  ## Safety Guarantees
+
+  | Guarantee | How Enforced |
+  |-----------|--------------|
+  | No file conflicts | File touch-map analysis before dispatch |
+  | No race conditions | Each agent works in isolated worktree or branch |
+  | Deterministic merge | Waves complete fully before next wave starts |
+  | Rollback safety | Each wave's commits are atomic |
+  | Approval gates | User approves wave plan before execution |
+
+  ## Worktree Isolation
+
+  Each parallel task gets its own worktree or branch:
+
+  ```
+  .worktrees/
+  ├── feature-A-{task-hash}/   ← Task A workspace
+  ├── feature-B-{task-hash}/   ← Task B workspace
+  └── ...
+  ```
+
+  **CRITICAL**: Agents never push from worktrees. Merging and remote operations require explicit user approval.
+
+  ## Merge Strategy
+
+  1. Complete Wave 0 → user merges all wave worktrees to main
+  2. Rebase Wave 1 worktrees on updated main
+  3. Complete Wave 1 → user merges
+  4. Repeat until all waves complete
+
+  ## Example
+
+  ```
+  Feature: Add user reviews to products
+
+  Wave 0 (Independent):
+  ├── Task A: Add review data model + migrations
+  │           Files: src/models/review.ts, migrations/
+  └── Task B: Add product rating calculation
+              Files: src/services/rating.ts
+
+  Wave 1 (Depends on A + B):
+  └── Task C: Add review API endpoints
+              Files: src/api/reviews.ts, src/api/routes.ts
+
+  Wave 2 (Depends on C):
+  ├── Task D: Add review UI components
+  │           Files: src/ui/review_form.tsx
+  └── Task E: Add review notification emails
+              Files: src/services/notification.ts
+  ```
+
+  ## Anti-Patterns
+
+  - Parallelizing tasks that share mutable files
+  - Starting Wave 1 before Wave 0 fully completes
+  - Forgetting to rebase on updated main between waves
+  - Multiple agents working in the same worktree
+  - Agents pushing or merging without user approval
+
+  ## Output Format
+
+  ```markdown
+  ## Parallel Execution Report
+  - **Waves completed:** N/N
+  - **Files touched:** [list]
+  - **Conflicts detected:** [none | list]
+  - **Merge status:** [clean | required manual resolution]
+  ```
+
+  ## Integration
+
+  - **Planner agent**: Creates file touch-map and wave assignments during planning
+  - **Builder agent**: Executes tasks within assigned worktrees
+  - **Reviewer agent**: Reviews each wave's output before merge approval

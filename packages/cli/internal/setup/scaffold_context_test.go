@@ -15,7 +15,7 @@ func TestBuildAddScaffoldContextMergesSelectionsWithoutDuplicates(t *testing.T) 
 	storeData.Config.ProjectName = "lazy-app"
 	storeData.Config.PlanningDir = "specs"
 	storeData.Selections.Agents = []types.AgentId{types.AgentIdBuilder}
-	storeData.Selections.Skills = []types.SkillId{types.SkillIdPlan}
+	storeData.Selections.Skills = []types.SkillId{types.SkillIdDiagnose}
 
 	ctx, presetLevel, err := BuildAddScaffoldContext("/work/app", Library{
 		Dir: "library",
@@ -23,7 +23,7 @@ func TestBuildAddScaffoldContextMergesSelectionsWithoutDuplicates(t *testing.T) 
 	}, &storeData, AddSelections{
 		Tools:  []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 		Agents: []string{string(types.AgentIdBuilder), string(types.AgentIdReviewer)},
-		Skills: []string{string(types.SkillIdPlan), string(types.SkillIdResearch)},
+		Skills: []string{string(types.SkillIdDiagnose), string(types.SkillIdPrReview)},
 	})
 	if err != nil {
 		t.Fatalf("BuildAddScaffoldContext: %v", err)
@@ -35,7 +35,7 @@ func TestBuildAddScaffoldContextMergesSelectionsWithoutDuplicates(t *testing.T) 
 	assertToolIDs(t, ctx.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
 	assertStrings(t, ctx.CLITools, string(types.ToolIdOpenCode), string(types.ToolIdClaudeCode))
 	assertAgentIDs(t, ctx.Agents, types.AgentIdBuilder, types.AgentIdReviewer)
-	assertSkillIDs(t, ctx.Skills, types.SkillIdPlan, types.SkillIdResearch)
+	assertSkillIDs(t, ctx.Skills, types.SkillIdDiagnose, types.SkillIdPrReview)
 	if ctx.Strategy != types.ConflictStrategyAlign {
 		t.Fatalf("Strategy = %q, want %q", ctx.Strategy, types.ConflictStrategyAlign)
 	}

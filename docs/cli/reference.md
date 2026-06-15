@@ -2,7 +2,7 @@
 
 Command reference for shipped `lazyai-cli` commands. Repository scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal` are maintainer harness tools, not CLI commands; archived Fortnite/orchestrator/eval material is historical or migration context only.
 
-For the source-backed command category inventory and rationales, see [Product Boundaries](../concepts/product-boundaries.md).
+For the source-backed command category inventory and rationales, see [Product Boundaries](../concepts/product-boundaries.md); the same category names are guarded by `packages/cli/cmd/command_category.go`.
 
 ## Top-level command surface
 

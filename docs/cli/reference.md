@@ -1,11 +1,27 @@
 # CLI Reference
 
-Complete reference for all `lazyai-cli` commands.
+Command reference for shipped `lazyai-cli` commands. Repository scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal` are maintainer harness tools, not CLI commands; archived Fortnite/orchestrator/eval material is historical or migration context only.
+
+For the source-backed command category inventory and rationales, see [Product Boundaries](../concepts/product-boundaries.md).
+
+## Top-level command surface
+
+These are the top-level commands registered by source under `packages/cli/cmd/`:
+
+| Category | Commands |
+|---|---|
+| `setup-core` | `add`, `build-plugin`, `compile`, `completion`, `config`, `create`, `doctor`, `eject`, `import`, `info`, `init`, `list`, `migrate`, `server`, `setup`, `sidecar`, `status`, `update`, `update-self`, `validate`, `workspace` |
+| `ops-runtime-extra` | `auth`, `backup`, `cost`, `git`, `ledger`, `memory`, `message`, `metrics`, `notify`, `restore-runtime-db`, `secret`, `session` |
+| `dev-harness` | `models` |
+| `retired/archived` | `completions` (hidden deprecated alias for `completion`) |
+
+Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup`, and obsolete `eval` are not active CLI commands.
 
 ---
 
 ## Table of Contents
 
+- [Top-level command surface](#top-level-command-surface)
 - [Init](#init)
 - [Session Management](#session-management)
 - [Health Checks](#health-checks)
@@ -266,14 +282,18 @@ lazyai-cli validate skills
 
 ## Migration Note
 
-The `task`, `workflow`, `orchestration`, and `mcp-setup` command surfaces were removed during the runtime refactor.
+The `task`, `workflow`, `orchestration`, `mcp-setup`, and obsolete `eval` command surfaces were removed during the runtime refactor.
 
 Use:
 
 - `docs/migration/fortnite-orchestrator-removal.md` for user-facing migration and rollback guidance
 - `lazyai-cli create`, `lazyai-cli list`, and adapter-managed files for current scaffolding flows
 
+
+Do not use repository harness scripts or archived assets as replacements for removed CLI commands unless you are maintaining this repository itself.
+
 ---
+
 
 ## Agent Message Bus
 

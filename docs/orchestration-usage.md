@@ -8,6 +8,7 @@ That runtime is no longer part of the active LazyAI product surface.
 
 - Use [Migration: Fortnite / orchestrator removal](migration/fortnite-orchestrator-removal.md) for replacements and rollback guidance.
 - Use [CLI reference](cli/reference.md) for the current command surface.
+- Use [Product boundaries](concepts/product-boundaries.md) for the shipped CLI versus repository harness and archived material split.
 - Use [MCP integration](integration/mcp.md) for the current MCP catalog and compile flow.
 
 ## Historical documents

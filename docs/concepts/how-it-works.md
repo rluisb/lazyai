@@ -1,6 +1,8 @@
 # How It Works
 
-`lazyai-cli` uses a canonical-source-to-compile model. You edit one tool-agnostic layer; `lazyai-cli` generates the tool-native files.
+`lazyai-cli` uses a canonical-source-to-compile model. You edit one tool-agnostic layer; `lazyai-cli` generates the tool-native files. LazyAI owns the runtime/product surface that performs this setup, compilation, and local runtime-adjacent state management.
+
+vibe-lab is an input to the product boundary: it supplies principles, assets, and adapter expectations that LazyAI may embed or adapt. It is not a runtime dependency, and LazyAI keeps execution ownership inside the LazyAI product.
 
 ## Canonical source
 
@@ -27,6 +29,9 @@ From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 - `.claude/` — Claude Code rules, agents, skills, and `.mcp.json`
 - `.github/` — Copilot instructions and prompt files
 - `.vscode/` — VS Code MCP config
+
+
+The active default adapter contract uses `primary-agent` and current canonical library content. Retired Fortnite defaults, old orchestrator runtime files, obsolete eval surfaces, and archived research/rollback material are not part of generated default runtime output.
 
 ## Workflow
 
@@ -78,4 +83,6 @@ Precedence: `CLI flags > project TOML > global TOML > built-in defaults`
 ## Execution model
 
 - Local native agents are the intended execution path: Claude Code, OpenCode, and Copilot.
-- A2A is a config seam only and is not remote/network execution by default.
+- A2A remains a config seam only and is not remote/network execution by default.
+- Runtime-adjacent state in LazyAI is local: sessions, ledger, memory, messages, metrics, costs, and backups are optional CLI-managed state around the setup.
+- Product scope is defined in [Product Boundaries](product-boundaries.md), including the shipped CLI command inventory, active embedded library, repository harness scripts, and retired/archived material.

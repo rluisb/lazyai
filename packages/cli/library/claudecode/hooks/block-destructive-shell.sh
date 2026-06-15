@@ -26,7 +26,7 @@ if not isinstance(command, str):
 command = command.strip()
 denied_prefixes = ['rm -rf /', 'rm -rf /*', 'mkfs', 'dd if=/dev/zero of=', 'dd if=/dev/zero of=/dev/', '> /dev/sd', 'shutdown', 'poweroff', 'reboot', 'halt']
 if any(command == p or command.startswith(p + " ") for p in denied_prefixes):
-    print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Destructive shell command blocked by vibe-lab policy"}}))
+    print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Destructive shell command blocked by lazyai policy"}}))
     sys.exit(2)
 sys.exit(0)
 PY

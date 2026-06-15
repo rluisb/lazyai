@@ -77,9 +77,15 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			"$schema":       "https://opencode.ai/config.json",
 			"default_agent": primaryAgentID,
 			"instructions":  instructions,
+			"skills": map[string]any{
+				"paths": []any{"skills"},
+			},
 			"permission": map[string]any{
-				"edit": "ask",
 				"bash": "ask",
+				"edit": "ask",
+				"skill": map[string]any{
+					"*": "allow",
+				},
 			},
 		}
 		if _, err := configmerge.MergeJSONFile(jsoncPath, defaultConfig); err != nil {
@@ -182,9 +188,16 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
+	if err := normalizeOpenCodePackageJSON(ocDir); err != nil {
+		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
+	}
+
 	// Install selected plugins via the opencode CLI if the binary is present.
 	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
 		adapterLog.Warn("plugin install failed", "adapter", "opencode", "error", err)
+	}
+	if err := normalizeOpenCodePackageJSON(ocDir); err != nil {
+		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
 	}
 
 	return ctx.FileRecords, nil
@@ -265,6 +278,34 @@ func installOpenCodePlugins(ctx *AdapterContext, run CmdRunner) error {
 		if out, err := run("opencode", args...); err != nil {
 			adapterLog.Warn("opencode plugin failed", "adapter", "opencode", "plugin", module, "error", err, "output", out)
 		}
+	}
+	return nil
+}
+
+func normalizeOpenCodePackageJSON(ocDir string) error {
+	packagePath := filepath.Join(ocDir, "package.json")
+	data, err := os.ReadFile(packagePath)
+	pkg := map[string]any{}
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read opencode package.json: %w", err)
+		}
+	} else {
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return fmt.Errorf("parse opencode package.json: %w", err)
+		}
+	}
+	if current, ok := pkg["type"].(string); ok && current == "module" {
+		return nil
+	}
+	pkg["type"] = "module"
+	out, err := MarshalJSON(pkg)
+	if err != nil {
+		return fmt.Errorf("marshal opencode package.json: %w", err)
+	}
+	out = append(out, '\n')
+	if err := os.WriteFile(packagePath, out, 0o644); err != nil {
+		return fmt.Errorf("write opencode package.json: %w", err)
 	}
 	return nil
 }

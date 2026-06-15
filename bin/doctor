@@ -798,6 +798,9 @@ check_hook_adapters() {
     [ -d "$hook_dir" ] || continue
     local name policy hook expected embedded
     name="$(basename "$hook_dir")"
+    if [ "$name" = "startup-self-heal" ] || [ "$name" = "caveman-memory-promotion" ]; then
+      continue
+    fi
     policy="$hook_dir/POLICY.md"
     hook="$REPO_ROOT/.claude/hooks/$name.sh"
     if [ ! -f "$policy" ]; then
@@ -830,9 +833,7 @@ check_hook_adapters() {
         local expected_event
         case "$name" in
           block-destructive-shell) expected_event="preToolUse" ;;
-          startup-self-heal) expected_event="sessionStart" ;;
           objective-workflow-gate) expected_event="agentStop" ;;
-          caveman-memory-promotion) expected_event="sessionEnd" ;;
           *) expected_event="" ;;
         esac
         if [ -n "$expected_event" ]; then
@@ -847,7 +848,7 @@ check_hook_adapters() {
       fi
     fi
     if $check_antigravity; then
-      local antigravity_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/$name.sh"
+      local antigravity_hook="$REPO_ROOT/.gemini/hooks/lazyai/$name.sh"
       if [ -x "$antigravity_hook" ]; then
         ok "Antigravity hook executable: $name"
         embedded="$(grep -o 'Policy hash: [a-f0-9]\{64\}' "$antigravity_hook" 2>/dev/null | head -1 | sed 's/Policy hash: //' || true)"
@@ -864,7 +865,7 @@ check_hook_adapters() {
     else
       fail "OpenCode package metadata missing or not type=module — run bin/inject"
     fi
-    local plugin="$REPO_ROOT/.opencode/plugins/vibe-lab-hooks.js"
+    local plugin="$REPO_ROOT/.opencode/plugins/lazyai-hooks.js"
     if [ -f "$plugin" ]; then
       ok "OpenCode hook plugin exists"
       local block_policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
@@ -874,13 +875,7 @@ check_hook_adapters() {
         embedded_block_hash="$(grep -o 'Block policy hash: [a-f0-9]\{64\}' "$plugin" 2>/dev/null | head -1 | sed 's/Block policy hash: //')"
         [ "$embedded_block_hash" = "$expected_block_hash" ] && ok "OpenCode block policy hash current" || warn "OpenCode block policy hash stale"
       fi
-      local startup_policy="$AGENTS_HOOKS_DIR/startup-self-heal/POLICY.md"
-      if [ -f "$startup_policy" ]; then
-        local expected_startup_hash embedded_startup_hash
-        expected_startup_hash="$(policy_hash "$startup_policy")"
-        embedded_startup_hash="$(grep -o 'Startup policy hash: [a-f0-9]\{64\}' "$plugin" 2>/dev/null | head -1 | sed 's/Startup policy hash: //')"
-        [ "$embedded_startup_hash" = "$expected_startup_hash" ] && ok "OpenCode startup policy hash current" || warn "OpenCode startup policy hash stale"
-      fi
+
       local objective_policy="$AGENTS_HOOKS_DIR/objective-workflow-gate/POLICY.md"
       if [ -f "$objective_policy" ]; then
         local expected_objective_hash embedded_objective_hash
@@ -902,11 +897,7 @@ check_hook_adapters() {
       else
         warn "Claude settings missing block-destructive-shell"
       fi
-      if grep -q "startup-self-heal" "$settings"; then
-        ok "Claude settings include startup-self-heal"
-      else
-        warn "Claude settings missing startup-self-heal"
-      fi
+
       if grep -q "objective-workflow-gate" "$settings"; then
         ok "Claude settings include objective-workflow-gate"
       else
@@ -926,11 +917,7 @@ check_hook_adapters() {
       else
         warn "Antigravity settings missing block-destructive-shell"
       fi
-      if grep -q "startup-self-heal" "$settings"; then
-        ok "Antigravity settings include startup-self-heal"
-      else
-        warn "Antigravity settings missing startup-self-heal"
-      fi
+
       if grep -q "objective-workflow-gate" "$settings"; then
         ok "Antigravity settings include objective-workflow-gate"
       else
@@ -1187,7 +1174,7 @@ run_antigravity_hook_case() {
   local input="$2"
   local expected_exit="$3"
   local expected_decision="$4"
-  local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/block-destructive-shell.sh"
+  local hook="$REPO_ROOT/.gemini/hooks/lazyai/block-destructive-shell.sh"
   local tmp actual
   tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-antigravity-hook.XXXXXX")"
   actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
@@ -1217,7 +1204,7 @@ run_antigravity_objective_gate_case() {
   local input="$2"
   local expected_exit="$3"
   local expected_decision="$4"
-  local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/objective-workflow-gate.sh"
+  local hook="$REPO_ROOT/.gemini/hooks/lazyai/objective-workflow-gate.sh"
   local tmp actual
   tmp="$(mktemp "${TMPDIR:-/tmp}/vibe-lab-antigravity-gate.XXXXXX")"
   actual="$(printf '%s' "$input" | "$hook" >"$tmp"; printf '%s' "$?")"
@@ -1245,7 +1232,7 @@ PY
 }
 
 run_opencode_hook_tests() {
-  local plugin="$REPO_ROOT/.opencode/plugins/vibe-lab-hooks.js"
+  local plugin="$REPO_ROOT/.opencode/plugins/lazyai-hooks.js"
   if [ ! -f "$plugin" ]; then
     fail_assert "OpenCode plugin missing"
     return
@@ -1254,7 +1241,7 @@ run_opencode_hook_tests() {
 const pluginPath = process.argv[2];
 const repoRoot = process.argv[3];
 const mod = await import(pluginPath);
-const hooks = await mod.VibeLabHooks({ directory: repoRoot });
+const hooks = await mod.LazyAIHooks({ directory: repoRoot });
 if (typeof hooks.event !== "function") throw new Error("startup event hook missing");
 await hooks.event({ event: { type: "session.created" } });
 const before = hooks["tool.execute.before"];
@@ -1305,8 +1292,6 @@ check_hook_functionality() {
     return
   fi
   if uses_claude; then
-    local startup_hook="$REPO_ROOT/.claude/hooks/startup-self-heal.sh"
-    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Claude hook runs" || fail_assert "startup-self-heal Claude hook failed"
     local hook="$REPO_ROOT/.claude/hooks/block-destructive-shell.sh"
     [ -x "$hook" ] || { fail_assert "block-destructive-shell hook missing or not executable"; return; }
     local objective_hook="$REPO_ROOT/.claude/hooks/objective-workflow-gate.sh"
@@ -1332,8 +1317,6 @@ check_hook_functionality() {
     run_claude_hook_case "passes non-Bash" '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' 0
   fi
   if uses_copilot; then
-    local startup_hook="$REPO_ROOT/.github/hooks/startup-self-heal.sh"
-    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Copilot hook runs" || fail_assert "startup-self-heal Copilot hook failed"
     local hook="$REPO_ROOT/.github/hooks/block-destructive-shell.sh"
     [ -x "$hook" ] || { fail_assert "block-destructive-shell Copilot hook missing or not executable"; return; }
     local objective_hook="$REPO_ROOT/.github/hooks/objective-workflow-gate.sh"
@@ -1358,11 +1341,9 @@ check_hook_functionality() {
     run_copilot_hook_case "passes non-Bash" '{"toolName":"read","toolInput":{"file_path":"README.md"}}' 0
   fi
   if uses_antigravity; then
-    local startup_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/startup-self-heal.sh"
-    [ -x "$startup_hook" ] && "$startup_hook" && pass_assert "startup-self-heal Antigravity hook runs" || fail_assert "startup-self-heal Antigravity hook failed"
-    local hook="$REPO_ROOT/.gemini/hooks/vibe-lab/block-destructive-shell.sh"
+    local hook="$REPO_ROOT/.gemini/hooks/lazyai/block-destructive-shell.sh"
     [ -x "$hook" ] || { fail_assert "block-destructive-shell Antigravity hook missing or not executable"; return; }
-    local objective_hook="$REPO_ROOT/.gemini/hooks/vibe-lab/objective-workflow-gate.sh"
+    local objective_hook="$REPO_ROOT/.gemini/hooks/lazyai/objective-workflow-gate.sh"
     [ -x "$objective_hook" ] || { fail_assert "objective-workflow-gate Antigravity hook missing or not executable"; return; }
     local policy="$AGENTS_HOOKS_DIR/block-destructive-shell/POLICY.md"
     local denied_prefixes=()

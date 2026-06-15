@@ -23,10 +23,9 @@ Generated runtime assets live alongside the supported tool surfaces:
 
 - `packages/cli/library/claudecode/hooks/*.sh`
 - `packages/cli/library/copilot/hooks/*.{json,sh}`
-- `packages/cli/library/opencode/plugins/vibe-lab-hooks.js`
+- `packages/cli/library/opencode/plugins/lazyai-hooks.js`
 - `packages/cli/library/antigravity/settings.json`
-- `packages/cli/library/antigravity/hooks/vibe-lab/*.sh`
-
+- `packages/cli/library/antigravity/hooks/lazyai/*.sh`
 These are embedded runtime artifacts, not external dependencies.
 
 ## Workflow catalog policy

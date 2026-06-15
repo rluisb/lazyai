@@ -44,7 +44,7 @@ Next Action: <diagnose | close | wait for info | route>
 
 Use `canonical/learning-template.md` when triage reveals a reusable classification rule, ownership rule, severity trap, or routing pattern.
 
-Raw triage learnings go to `.vibe-lab/sessions/learning-YYYY-MM-DD-<slug>.md`. Durable promotion requires `memory-promotion` approval.
+Raw triage learnings go to `specs/memory/sessions/learning-YYYY-MM-DD-<slug>.md`. Durable promotion requires `memory-promotion` approval.
 
 ## Constraints
 

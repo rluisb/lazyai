@@ -1,11 +1,12 @@
-# Core code — maintainer only
-* @rluisb
+# Default CODEOWNERS template
+# Update ownership paths and handles for your repository.
+
+* @your-org/tech-leads
 
 # Docs and standards
-/specs/ @rluisb
+/specs/ @your-org/engineering
 
-# Sensitive governance files
-/AGENTS.md @rluisb
-/.github/ @rluisb
-/go.work @rluisb
-/go.work.sum @rluisb
+# Infrastructure and governance
+/AGENTS.md @your-org/tech-leads
+/CLAUDE.md @your-org/tech-leads
+/.github/copilot-instructions.md @your-org/tech-leads

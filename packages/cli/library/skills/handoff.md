@@ -74,7 +74,7 @@ A handoff is a single markdown document stored in the durable memory system. It 
 
 4. **Store the handoff**
    - If `ai-memory` or similar durable store is available: store there with tag `handoff-[date]`
-   - If no durable store: save to `.vibe-lab/handoffs/[YYYY-MM-DD]-[title].md`
+   - If no durable store: save to `specs/memory/handoffs/[YYYY-MM-DD]-[title].md`
    - If the repo has a specific handoff location per project conventions, use that
 
 5. **Notify**

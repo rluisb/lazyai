@@ -21,7 +21,7 @@ Use `canonical/tdd-planning.md` to select the mode before editing:
 
 - `lightweight` — low-risk narrow change; record test intent in the task plan.
 - `medium` — normal implementation; add `## TDD Plan` to the plan.
-- `heavy-aggressive` — critical or high-regression work; create standalone `.vibe-lab/tdd/<slug>.md` or equivalent spec section.
+- `heavy-aggressive` — critical or high-regression work; create standalone `specs/tdd/<slug>.md` or equivalent spec section.
 - `required` — implementation is blocked until red test exists or exemption is approved.
 
 ## Workflow

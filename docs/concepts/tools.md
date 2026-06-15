@@ -4,13 +4,13 @@
 
 ## OpenCode
 
-- **Description:** root instructions plus agents, skills, commands, modes, and a managed hook plugin
+- **Description:** root instructions plus agents, skills, commands, chat modes, and a managed hook plugin
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.opencode/`
 - **Project/workspace config:** `.opencode/opencode.jsonc`
 - **Global scope support:** Yes — `~/.config/opencode/`
 - **MCP config:** merged into `.opencode/opencode.jsonc`
-- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/vibe-lab-hooks.js`
+- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/lazyai-hooks.js`
 
 ## Claude Code
 
@@ -46,7 +46,7 @@
 - **Config directory:** `.gemini/`
 - **Project/workspace scope support:** Yes
 - **Global scope support:** No
-- **Special behavior:** emits `.gemini/settings.json` and `.gemini/hooks/vibe-lab/*.sh`; no Antigravity agent or skills directory is generated
+- **Special behavior:** emits `.gemini/settings.json` and `.gemini/hooks/lazyai/*.sh`; no Antigravity agent or skills directory is generated
 
 ## Comparison
 
@@ -57,7 +57,7 @@
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
 | Primary agent entry | `.opencode/agents/primary-agent.md` | `.claude/agents/primary-agent.md` | `.github/agents/primary-agent.agent.yaml` | — | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | — |
-| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/vibe-lab/*.sh` + settings hooks |
+| Hook runtime | `.opencode/plugins/lazyai-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
 | MCP output | `.opencode/opencode.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 
 ## Tool selection during init

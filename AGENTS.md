@@ -148,25 +148,25 @@ Respect the project's existing architecture, paradigm, and naming before applyin
 
 ## Canonical Source
 
-- Canonical artifacts live under `.agents/` or `canonical/`; CLI-specific outputs are generated.
-- Do not duplicate canonical content under `.claude/`, `.opencode/`, or `.pi/`.
-- Run `bin/inject` after canonical artifact changes.
-- Run `bin/doctor` and `tests/test-provenance-drift.sh` before treating adapters as current.
+- Canonical artifacts live under `packages/cli/library/` for emitted library content.
+- Generated CLI-specific outputs (`.claude/`, `.opencode/`, `.github/`, `.pi/`, `.gemini/`) must not be hand-edited; regenerate with `lazyai-cli compile`.
+- Run `lazyai-cli compile` after canonical artifact changes to propagate to tool-native surfaces.
+- Run `lazyai-cli doctor` before treating adapter output as current.
 
 ## Artifact Shapes
 
 - Rule or policy: one markdown file unless runtime enforcement is needed.
-- Agent: one `.agents/agents/<name>.md` file.
-- Skill: `.agents/skills/<name>/SKILL.md`; optional `scripts/`, `references/`, and `assets/` are allowed when justified.
-- Hook: `.agents/hooks/<name>/POLICY.md`; optional scripts support Claude Code, and generated OpenCode plugins provide parity where possible.
-- Workflow: `.agents/workflows/<name>.md` or `.agents/workflows/<name>.yml` once workflow support is enabled.
+- Agent: one canonical agent file under `packages/cli/library/canonical/agents/<name>.md`.
+- Skill: `packages/cli/library/skills/<name>.md` with skill frontmatter; emitted per-tool as `<tool-dir>/skills/<name>/SKILL.md`.
+- Hook: `packages/cli/library/hooks/<name>.md` with hook frontmatter; emitted per-tool as native hook config plus scripts.
+- Workflow: documentation-only under `packages/cli/library/workflows/<name>.md`; runtime workflow dispatch remains retired.
 
 ## Compatibility
 
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
-- OpenCode supports skills, agents, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
+- OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
 - OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
-- If a capability cannot be represented for one CLI, document the limitation in the artifact and make `bin/doctor` warn.
+- If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.
 
 <!-- clarification-levels.md -->
 # Clarification Levels
@@ -233,7 +233,7 @@ Use for normal feature, bugfix, parser, validation, or API work.
 
 Use for security, money, data loss, migrations, concurrency, or high-regression-risk work.
 
-- Artifact: standalone `.vibe-lab/tdd/<slug>.md` or feature spec section.
+- Artifact: standalone `specs/tdd/<slug>.md` or feature spec section.
 - Include: unit, integration/contract, failure, boundary, and regression tests.
 - Validate: focused tests plus the smallest suite proving the integration boundary.
 
@@ -320,10 +320,10 @@ Read these only when the trigger matches the current task:
 - **architecture-review**: Use before structural changes to make a lightweight ADR-style decision with constraints, trade-offs, and consequences.
 - **caveman**: Use when a specification, plan, or assistant message is too verbose and needs a compact working summary without losing links to source context or replacing durable ai-memory.
 - **codebase-exploration**: Use when entering an unfamiliar repository or subsystem and you need a disciplined search-and-read strategy before changing code.
-- **create-agent**: Use when asked to create, scaffold, or write a new vibe-lab agent definition. Generates one canonical .agents/agents/<name>.md file and lets bin/inject produce CLI adapters.
-- **create-hook**: Use when asked to create, scaffold, or write a new vibe-lab hook or hook policy. Defines one canonical POLICY.md and optional runtime scripts, with Claude Code hook and OpenCode plugin compatibility.
-- **create-skill**: Use when asked to create, scaffold, or write a new vibe-lab Agent Skill. Generates an Agent Skills compatible SKILL.md with optional scripts, references, assets, adapter symlinks, and verification.
-- **create-workflow**: Use when asked to create or design a vibe-lab workflow artifact that coordinates skills, agents, hooks, plugins, and verification gates across Claude Code, OpenCode, and OMP/Pi.
+- **create-agent**: Use when asked to create or revise a LazyAI agent source definition. Writes `packages/cli/library/canonical/agents/<name>.md` and lets `lazyai-cli compile` produce CLI adapters.
+- **create-hook**: Use when asked to create or revise a LazyAI hook definition. Writes `packages/cli/library/hooks/<name>.md`; `lazyai-cli compile` generates per-tool hook surfaces.
+- **create-skill**: Use when asked to create or revise a LazyAI skill. Writes `packages/cli/library/skills/<name>.md`; `lazyai-cli compile` generates per-tool skill output.
+- **create-workflow**: Use when asked to design a documentation-only LazyAI workflow artifact. Writes `packages/cli/library/workflows/<name>.md`; runtime dispatch remains retired.
 - **diagnose**: Use when debugging a failing test, broken build, runtime error, or unexpected system behavior. Drives hypothesis-based investigation, root-cause fixes, verification, and reusable learning capture.
 - **doc-backed-clarify**: Use at task intake when requirements or repository context are unclear. Supports lightweight, grill-me, and grill-me-with-docs clarification levels while always preserving the four-point pattern.
 - **fast-feedback**: Use during implementation to run the smallest meaningful verification command after each focused change.
@@ -333,21 +333,21 @@ Read these only when the trigger matches the current task:
 - **memory-promotion**: Use at task closeout to propose durable ai-memory or documentation updates without writing silently, especially when caveman summaries, diagnoses, triage, or issue extraction reveal reusable knowledge.
 - **no-workarounds**: Use during review or debugging to reject temporary patches and require root-cause fixes for workaround-shaped changes.
 - **project-guardrails-init**: Use when onboarding into a project to discover existing stack, architecture, commands, and conventions before proposing rules or memory.
-- **skill-authoring**: Use when creating or modifying vibe-lab skills or adjacent artifact templates so Agent Skills compatibility, canonical source layout, adapter generation, and verification stay consistent.
+- **skill-authoring**: Use when creating or modifying LazyAI skills under `packages/cli/library/skills/` so skill frontmatter, output mapping, and verification stay consistent.
 - **task-to-issues**: Use when extracting actionable tasks from meeting notes, Slack threads, PR descriptions, specs, or other unstructured text. Converts ephemeral notes into tracked issues with context, acceptance criteria, deduplication, and learning capture.
 - **tdd-planning**: Use during research or planning before implementation to choose a TDD mode, define red tests, preserve existing tests, and produce the test-first artifact for a feature, bugfix, or refactor.
 - **test-first-change**: Use when changing behavior so the agent drives the edit through a failing test, preserves existing tests, follows the selected TDD mode, and verifies red-green-refactor evidence.
 - **zoom-out**: Use when stuck in implementation details and losing sight of the bigger picture, or when a bug suggests an architectural problem rather than a local fix. Forces a structured step back to re-evaluate assumptions and design.
 ## Shared Agents
 
-- **deployer**: Infrastructure, deployment, and CI/CD operations agent.
+- **builder**: Implement approved code changes and verify the affected behavior.
 - **evidence-verifier**: Verify claims against source evidence. Given a claim and source material, determine whether the claim is supported, contradicted, or inconclusive.
-- **implementer**: Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode.
 - **planner**: Specification and planning agent. Produces executable plans with four-point clarity, evidence, acceptance criteria, rollback criteria, and TDD mode selection.
-- **researcher**: Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation.
-- **responder**: Site Reliability Engineer agent. Incident response, SLO tracking, error budget analysis.
 - **reviewer**: Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only.
+- **scout**: Explore the codebase, find the relevant files, and report grounded facts before planning or implementation.
+- **primary-agent**: Default LazyAI runtime entry point and agent dispatcher.
 ## Shared Workflows
+
 
 - **adversarial-review**: Use when a claim, plan, spec, doc, or design must be attacked against source evidence before implementation or approval.
 - **bugfix**: Use when fixing broken behavior and the priority is reproduce, root cause, regression proof, and the smallest safe repair.

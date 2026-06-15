@@ -14,7 +14,6 @@ type LazyAIConfig struct {
 	Agent         AgentConfig        `yaml:"agent"`
 	Database      DatabaseConfig     `yaml:"database"`
 	Ledger        LedgerConfig       `yaml:"ledger"`
-	Workflows     WorkflowsConfig    `yaml:"workflows"`
 	Notifications NotificationConfig `yaml:"notifications"`
 }
 
@@ -32,11 +31,6 @@ type DatabaseConfig struct {
 // LedgerConfig represents ledger configuration
 type LedgerConfig struct {
 	Path string `yaml:"path"`
-}
-
-// WorkflowsConfig represents workflow configuration
-type WorkflowsConfig struct {
-	Directory string `yaml:"directory"`
 }
 
 // NotificationConfig represents notification configuration
@@ -98,9 +92,6 @@ var configSetCmd = &cobra.Command{
 				Ledger: LedgerConfig{
 					Path: ".specify/ledger.jsonl",
 				},
-				Workflows: WorkflowsConfig{
-					Directory: ".opencode/workflows",
-				},
 				Notifications: NotificationConfig{
 					Enabled: false,
 				},
@@ -108,7 +99,7 @@ var configSetCmd = &cobra.Command{
 		}
 
 		// Warn for critical configuration keys
-		criticalKeys := []string{"agent.default_agent", "agent.default_model", "database.path", "ledger.path", "workflows.directory", "notifications.webhook"}
+		criticalKeys := []string{"agent.default_agent", "agent.default_model", "database.path", "ledger.path", "notifications.webhook"}
 		for _, ck := range criticalKeys {
 			if key == ck {
 				fmt.Fprintf(os.Stderr, "⚠️  Warning: '%s' is a critical configuration key. Changing it may affect LazyAI behavior.\n", key)
@@ -145,7 +136,6 @@ var configListCmd = &cobra.Command{
 		fmt.Printf("agent.default_model: %s\n", config.Agent.DefaultModel)
 		fmt.Printf("database.path: %s\n", config.Database.Path)
 		fmt.Printf("ledger.path: %s\n", config.Ledger.Path)
-		fmt.Printf("workflows.directory: %s\n", config.Workflows.Directory)
 		fmt.Printf("notifications.enabled: %v\n", config.Notifications.Enabled)
 		if config.Notifications.Webhook != "" {
 			fmt.Printf("notifications.webhook: %s\n", config.Notifications.Webhook)
@@ -176,9 +166,6 @@ var configInitCmd = &cobra.Command{
 			},
 			Ledger: LedgerConfig{
 				Path: ".specify/ledger.jsonl",
-			},
-			Workflows: WorkflowsConfig{
-				Directory: ".opencode/workflows",
 			},
 			Notifications: NotificationConfig{
 				Enabled: false,
@@ -255,8 +242,6 @@ func getConfigValue(config *LazyAIConfig, key string) (string, error) {
 		return config.Database.Path, nil
 	case "ledger.path":
 		return config.Ledger.Path, nil
-	case "workflows.directory":
-		return config.Workflows.Directory, nil
 	case "notifications.enabled":
 		return fmt.Sprintf("%v", config.Notifications.Enabled), nil
 	case "notifications.webhook":
@@ -277,8 +262,6 @@ func setConfigValue(config *LazyAIConfig, key, value string) error {
 		config.Database.Path = value
 	case "ledger.path":
 		config.Ledger.Path = value
-	case "workflows.directory":
-		config.Workflows.Directory = value
 	case "notifications.enabled":
 		config.Notifications.Enabled = value == "true"
 	case "notifications.webhook":

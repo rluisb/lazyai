@@ -40,8 +40,8 @@ Minimum shape:
 3. Write `SKILL.md` from `canonical/skill-template.md` with `name` and `description` frontmatter.
 4. If the skill needs reusable executable logic, add a non-interactive script under `scripts/` and document usage plus dependencies.
 5. If the skill needs long detail, move it to `references/` and say exactly when to read it.
-6. Run `bin/inject` to regenerate adapters and generated docs.
-7. Run `bin/doctor` and `tests/test-provenance-drift.sh`.
+6. Run `lazyai-cli compile` to regenerate adapters and generated docs.
+7. Run `lazyai-cli doctor` to verify output consistency.
 
 ## Script Rules
 

@@ -28,13 +28,13 @@ Use `canonical/workflow-template.md`.
 1. Confirm the four points: WHAT, HOW, DON'T WANT, VALIDATE.
 2. Name the workflow Purpose and the concrete Exit Gate before writing steps.
 3. Choose whether the workflow is markdown-only or needs YAML structure.
-4. Write `.agents/workflows/<name>.md` for human/agent workflow or `.agents/workflows/<name>.yml` for machine-readable workflow.
+4. Write `packages/cli/library/workflows/<name>.md` for documentation-only workflow surface; runtime workflow dispatch remains retired.
 5. Include a Behavior Scenario unless the workflow is deliberately read-only/documentation-only; mark `n/a` explicitly when skipped.
 6. Record a TDD mode or `n/a` depending on whether the workflow changes behavior.
 7. Map each step to a skill, agent, hook/plugin, command, or verification gate.
 8. Document adapter behavior for Claude Code, OpenCode, and OMP/Pi.
 9. Mark unsupported adapter behavior explicitly.
-10. Run `bin/inject`, `bin/doctor`, and `tests/test-provenance-drift.sh` after workflow support is wired.
+10. Run `lazyai-cli compile` and `lazyai-cli doctor` after workflow support is wired.
 
 ## Constraints
 

@@ -6,19 +6,20 @@ vibe-lab is an input to the product boundary: it supplies principles, assets, an
 
 ## Canonical source
 
-The canonical layer lives under `.ai/`:
+The managed source of truth starts with `.ai/` for MCP/catalog state and `.specify/` for project constitution/templates:
 
 ```text
 .ai/
-├── constitution/
-│   ├── constitution.md
-│   ├── constraints.md
-│   ├── quality-gates.md
-│   └── uncertainty.md
-└── mcp.json
+├── mcp.json
+├── populate-needed
+└── housekeeping/sync-state.json
+
+.specify/
+├── memory/constitution.md
+└── templates/
 ```
 
-This layer is human-editable and version-controllable.
+These files are human-editable and version-controllable.
 
 ## Compiled output
 
@@ -28,6 +29,8 @@ From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 - `.opencode/` — OpenCode agents, skills, commands, and MCP config
 - `.claude/` — Claude Code rules, agents, skills, and `.mcp.json`
 - `.github/` — Copilot instructions and prompt files
+- `.pi/` — Pi-compatible skills-only surface
+- `.gemini/` — Antigravity settings and `hooks/lazyai/*`
 - `.vscode/` — VS Code MCP config
 
 
@@ -36,7 +39,7 @@ The active default adapter contract uses `primary-agent` and current canonical l
 ## Workflow
 
 1. **Initialize once**: `lazyai-cli init`
-2. **Edit canonical files**: change rules, agents, or templates in `.ai/`
+2. **Edit canonical files**: change `.ai/mcp.json`, `.specify/memory/constitution.md`, templates, or the relevant source docs/config for the setup
 3. **Recompile**: `lazyai-cli compile` or `lazyai-cli update`
 4. **Verify**: `lazyai-cli doctor` checks drift and missing files
 

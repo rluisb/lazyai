@@ -176,14 +176,10 @@ var migratedStrayAgentsPaths = []string{
 // are tracked as library-owned and unmodified (hash matches) are deleted;
 // user-edited agents are preserved.
 var legacyAgentPaths = []string{
-	".opencode/agents/builder.md",
 	".opencode/agents/documenter.md",
 	".opencode/agents/implementor.md",
 	".opencode/agents/orchestrator.md",
-	".opencode/agents/planner.md",
 	".opencode/agents/red-team.md",
-	".opencode/agents/reviewer.md",
-	".opencode/agents/scout.md",
 }
 
 func removeMigratedStrayAgentsArtifacts(targetDir string, trackedFiles []types.TrackedFile) error {

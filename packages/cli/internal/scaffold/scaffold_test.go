@@ -119,9 +119,6 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"standards/starter/error-handling.md": &fstest.MapFile{
 			Data: []byte("---\ntitle: Error Handling\n---\n\n# Error Handling\n"),
 		},
-		"standards/starter/orchestration-patterns.md": &fstest.MapFile{
-			Data: []byte("---\ntitle: Orchestration Patterns\n---\n\n# Orchestration Patterns\n"),
-		},
 		"standards/starter/test-patterns.md": &fstest.MapFile{
 			Data: []byte("---\ntitle: Test Patterns\n---\n\n# Test Patterns\n"),
 		},

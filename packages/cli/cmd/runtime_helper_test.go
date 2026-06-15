@@ -305,37 +305,63 @@ func TestRuntimeV2SessionDispatchHandoffRoundTrip(t *testing.T) {
 	}
 }
 
-func TestEnsureSession(t *testing.T) {
-	withTempDir(t)
+const legacyRuntimeSchemaV1ForMigrationTest = `
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    agent TEXT NOT NULL DEFAULT 'primary-agent',
+    model TEXT,
+    goal TEXT,
+    repo TEXT,
+    worktree TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    token_total INTEGER DEFAULT 0,
+    summary TEXT,
+    tags TEXT
+);
 
-	db, err := openRuntimeDB()
-	if err != nil {
-		t.Fatalf("openRuntimeDB failed: %v", err)
-	}
-	defer db.Close()
+CREATE TABLE IF NOT EXISTS dispatches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    parent_id INTEGER,
+    agent TEXT NOT NULL,
+    model TEXT,
+    task TEXT,
+    phase TEXT,
+    workflow TEXT,
+    mode TEXT,
+    started_at TEXT,
+    ended_at TEXT,
+    result TEXT,
+    token_used INTEGER DEFAULT 0,
+    error_message TEXT,
+    summary TEXT,
+    files_touched TEXT
+);
 
-	sessionID := "test-session"
-	if err := ensureSession(db, sessionID); err != nil {
-		t.Fatalf("ensureSession first call failed: %v", err)
-	}
-	assertCountArgs(t, db, "SELECT COUNT(*) FROM sessions WHERE id = ?", 1, sessionID)
+CREATE TABLE IF NOT EXISTS ledger_refs (
+    seq INTEGER PRIMARY KEY,
+    session_id TEXT,
+    workflow_run_id TEXT,
+    event_type TEXT NOT NULL,
+    event_hash TEXT NOT NULL,
+    prev_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
 
-	var status, agent string
-	if err := db.QueryRow("SELECT status, agent FROM sessions WHERE id = ?", sessionID).Scan(&status, &agent); err != nil {
-		t.Fatalf("query ensured session: %v", err)
-	}
-	if status != "active" {
-		t.Fatalf("status = %q, want active", status)
-	}
-	if agent != "cli" {
-		t.Fatalf("agent = %q, want cli", agent)
-	}
-
-	if err := ensureSession(db, sessionID); err != nil {
-		t.Fatalf("ensureSession second call failed: %v", err)
-	}
-	assertCountArgs(t, db, "SELECT COUNT(*) FROM sessions WHERE id = ?", 1, sessionID)
-}
+CREATE TABLE IF NOT EXISTS task_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    task TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    max_agents INTEGER NOT NULL DEFAULT 1,
+    dedupe_key TEXT,
+    created_at TEXT NOT NULL
+);
+`
 
 func seedLegacyRuntimeDB(t *testing.T) string {
 	t.Helper()
@@ -345,9 +371,9 @@ func seedLegacyRuntimeDB(t *testing.T) string {
 		t.Fatalf("runtime.Open legacy DB: %v", err)
 	}
 
-	if _, err := db.Exec(runtime.SchemaV1); err != nil {
+	if _, err := db.Exec(legacyRuntimeSchemaV1ForMigrationTest); err != nil {
 		_ = db.Close()
-		t.Fatalf("apply SchemaV1: %v", err)
+		t.Fatalf("apply legacy runtime schema fixture: %v", err)
 	}
 
 	seedLegacyRuntimeData(t, db)
@@ -368,35 +394,13 @@ func seedLegacyRuntimeData(t *testing.T, db *runtime.DB) {
 		"ses_legacy", startedAt, endedAt, "loop-driver", "gpt-5", "migrate runtime schema", "lazyai", "worktrees/phase3", "ended", 128, "legacy summary", "phase3,legacy",
 	)
 
-	dispatchID := mustExecLastInsertID(t, db,
+	mustExec(t, db,
 		"INSERT INTO dispatches (session_id, seq, agent, model, task, phase, workflow, mode, started_at, ended_at, result, token_used, error_message, summary, files_touched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		"ses_legacy", 1, "orchestrator", "gpt-5", "legacy task", "implement", "legacy-workflow", "serial", startedAt, endedAt, "ok", 64, "", "dispatch summary", "runtime_helper.go,session.go",
 	)
 
-	mustExec(t, db, "INSERT INTO decisions (session_id, dispatch_id, title, context, decision, rationale, alternatives, created_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", "ses_legacy", dispatchID, "keep boring migration", "phase3", "temp-db swap", "safer rollback", "in-place rewrite", startedAt, "migration")
-	mustExec(t, db, "INSERT INTO artifacts (session_id, dispatch_id, path, action, created_at) VALUES (?, ?, ?, ?, ?)", "ses_legacy", dispatchID, "packages/cli/cmd/runtime_helper.go", "modified", startedAt)
-	mustExec(t, db, "INSERT INTO memories (session_id, title, content, tags, importance, verified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "phase3", "remember migration", "runtime", "high", 1, startedAt)
-	mustExec(t, db, "INSERT INTO token_log (session_id, dispatch_id, token_count, context_pct, recorded_at) VALUES (?, ?, ?, ?, ?)", "ses_legacy", dispatchID, 64, 0.5, startedAt)
-	mustExec(t, db, "INSERT INTO parallel_tasks (session_id, parent_dispatch_id, wave_id, agent, task, status, started_at, completed_at, result, output_path, error_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "ses_legacy", dispatchID, "wave_1", "reviewer", "review schema", "completed", startedAt, endedAt, "clean", "report.txt", "", startedAt)
-	mustExec(t, db, "INSERT INTO messages (session_id, from_agent, to_agent, subject, body, priority, status, created_at, read_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "planner", "builder", "phase3", "ship it", "normal", "read", startedAt, endedAt)
-	mustExec(t, db, "INSERT INTO barriers (session_id, barrier_id, expected_count, arrived_count, status, created_at, resolved_at) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "barrier_1", 2, 2, "resolved", startedAt, endedAt)
-	mustExec(t, db, "INSERT INTO locks (session_id, lock_name, held_by, acquired_at, released_at, status) VALUES (?, ?, ?, ?, ?, ?)", "ses_legacy", "schema", "builder", startedAt, endedAt, "released")
-	mustExec(t, db, "INSERT INTO teams (name, description, agents, created_at, updated_at) VALUES (?, ?, ?, ?, ?)", "phase3-team", "legacy team", "builder,reviewer", startedAt, endedAt)
-	mustExec(t, db, "INSERT INTO workflows (id, name, description, trigger_cmd, config_json, version, created_at, updated_at, team, steps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "wf_legacy", "legacy workflow", "phase3 workflow", "lazyai workflow", "{}", 1, startedAt, endedAt, "phase3-team", "[]")
-	workflowInstanceID := mustExecLastInsertID(t, db, "INSERT INTO workflow_instances (workflow_name, session_id, status, current_step, total_steps, result, on_failure, started_at, completed_at, error_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "legacy workflow", "ses_legacy", "completed", 1, 1, "ok", "stop", startedAt, endedAt, "")
-	mustExec(t, db, "INSERT INTO workflow_steps (instance_id, step_order, agent, task, mode, status, started_at, completed_at, result, output_path, error_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", workflowInstanceID, 1, "builder", "legacy task", "serial", "completed", startedAt, endedAt, "ok", "report.txt", "")
-	mustExec(t, db, "INSERT INTO model_calls (session_id, dispatch_id, provider, model, tokens_input, tokens_output, cost, latency_ms, called_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", "ses_legacy", dispatchID, "openai", "gpt-5", 32, 32, 0.12, 250, startedAt)
-	mustExec(t, db, "INSERT INTO tool_calls (session_id, dispatch_id, tool_name, command, exit_code, output, called_at) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", dispatchID, "bash", "go test ./packages/cli/...", 0, "ok", startedAt)
-	mustExec(t, db, "INSERT INTO gate_results (session_id, workflow_instance_id, phase_name, gate_type, status, human_required, human_decision, evaluated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", "ses_legacy", workflowInstanceID, "phase2", "approval", "approved", 1, "go ahead", endedAt)
 	mustExec(t, db, "INSERT INTO ledger_refs (seq, session_id, workflow_run_id, event_type, event_hash, prev_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", 1, "ses_legacy", "run_1", "session_end", "hash_1", "prev_0", endedAt)
-	mustExec(t, db, "INSERT INTO cost_snapshots (session_id, workflow_instance_id, total_cost, token_count, recorded_at) VALUES (?, ?, ?, ?, ?)", "ses_legacy", workflowInstanceID, 0.12, 64, endedAt)
-	mustExec(t, db, "INSERT INTO checkpoints (session_id, checkpoint_name, state_json, created_at) VALUES (?, ?, ?, ?)", "ses_legacy", "before-handoff", "{}", endedAt)
-	evalRunID := mustExecLastInsertID(t, db, "INSERT INTO eval_runs (session_id, suite_name, dataset_path, started_at, completed_at, status, score) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "phase3", "dataset.json", startedAt, endedAt, "passed", 1.0)
-	mustExec(t, db, "INSERT INTO eval_results (eval_run_id, assertion_name, passed, expected, actual, latency_ms, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?)", evalRunID, "schema", 1, "v2", "v2", 5, endedAt)
-	taskID := mustExecLastInsertID(t, db, "INSERT INTO task_queue (session_id, topic, task, status, max_agents, dedupe_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "phase3", "migrate", "claimed", 1, "dedupe-1", startedAt)
-	mustExec(t, db, "INSERT INTO task_claims (task_id, agent, claimed_at) VALUES (?, ?, ?)", taskID, "builder", startedAt)
-	mustExec(t, db, "INSERT INTO task_dlq (task_id, failed_agent, error_message, context_dump, failed_at) VALUES (?, ?, ?, ?, ?)", taskID, "builder", "none", "{}", endedAt)
-	mustExec(t, db, "INSERT INTO task_messages (task_id, from_agent, to_agent, body, created_at) VALUES (?, ?, ?, ?, ?)", taskID, "planner", "builder", "finish migration", startedAt)
+	mustExec(t, db, "INSERT INTO task_queue (session_id, topic, task, status, max_agents, dedupe_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", "ses_legacy", "phase3", "migrate", "claimed", 1, "dedupe-1", startedAt)
 }
 
 func mustExec(t *testing.T, db *runtime.DB, query string, args ...any) {

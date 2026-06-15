@@ -118,9 +118,8 @@ Location files must be repo-relative and use POSIX separators. Use 1-based `line
 ## Guardrails
 
 - Read-only: do not write, patch, rename, delete, commit, push, or update status files.
-- No chain integration in this task: do not edit `packages/cli/library/orchestration/chains/feature.json`.
-- Do not integrate this skill into any chain, command, preset, or runtime flow; T018 owns any later approved chain insertion.
-- Do not change runtime engine files, chain-machine behavior, persistence, state tracking, telemetry, provider routing, RAG, recovery loops, or approval semantics.
+- No runtime integration in this task: do not add commands, presets, generated config, or background execution.
+- Do not change runtime engine files, persistence, state tracking, telemetry, provider routing, RAG, recovery loops, or approval semantics.
 - Do not add conditional framework features, parallel blocks, template-rendered chain JSON, model routing, or autonomous recovery.
 - Do not treat missing optional artifacts or malformed/ambiguous parsing as a crash condition.
 - Keep findings concrete and bounded to the loaded artifacts; do not speculate beyond the approved task scope.

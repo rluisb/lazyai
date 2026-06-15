@@ -26,11 +26,9 @@ const (
 // curation manifest. Command/chatmode/prompt inventories are intentionally not
 // mixed into this Wave 0 check.
 var CurationCoverageRoots = []string{
-	"agents",
 	"canonical/agents",
 	"canonical/hooks",
 	"canonical/skills",
-	"copilot/agents",
 	"hooks",
 	"root",
 	"rules",

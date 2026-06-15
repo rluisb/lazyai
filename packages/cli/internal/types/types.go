@@ -55,11 +55,8 @@ type AgentId string
 
 const (
 	AgentIdBuilder      AgentId = "builder"
-	AgentIdDocumenter   AgentId = "documenter"
-	AgentIdImplementor  AgentId = "implementor"
 	AgentIdPrimaryAgent AgentId = "primary-agent"
 	AgentIdPlanner      AgentId = "planner"
-	AgentIdRedTeam      AgentId = "red-team"
 	AgentIdReviewer     AgentId = "reviewer"
 	AgentIdScout        AgentId = "scout"
 )
@@ -78,7 +75,6 @@ const (
 	SkillIdImplement           SkillId = "implement"
 	SkillIdIterate             SkillId = "iterate"
 	SkillIdMemoryWrite         SkillId = "memory-write"
-	SkillIdOrchestrate         SkillId = "orchestrate"
 	SkillIdParallelExecution   SkillId = "parallel-execution"
 	SkillIdPlan                SkillId = "plan"
 	SkillIdPrReview            SkillId = "pr-review"

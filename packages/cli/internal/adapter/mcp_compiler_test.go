@@ -170,7 +170,7 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 	}
 }
 
-func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
+func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *testing.T) {
 	targetDir := t.TempDir()
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
@@ -196,17 +196,17 @@ func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"orchestrator"`) {
-		t.Fatalf("compiled config missing orchestrator entry:\n%s", contents)
+		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator entry:\n%s", contents)
 	}
 	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
-		t.Fatalf("compiled config missing orchestrator command/args:\n%s", contents)
+		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command/args:\n%s", contents)
 	}
 	if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
-		t.Fatalf("compiled config should keep orchestrator execution mode implicit/native by default:\n%s", contents)
+		t.Fatalf("compiled config should not add retired orchestrator execution-mode defaults:\n%s", contents)
 	}
 }
 
-func TestCompileOpenCodeMCP_PreservesLazyAIOrchestratorCommand(t *testing.T) {
+func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *testing.T) {
 	targetDir := t.TempDir()
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
@@ -236,14 +236,14 @@ func TestCompileOpenCodeMCP_PreservesLazyAIOrchestratorCommand(t *testing.T) {
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"lazyai-orchestrator"`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
-		t.Fatalf("compiled config did not preserve LazyAI orchestrator command:\n%s", contents)
+		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command:\n%s", contents)
 	}
 	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) {
-		t.Fatalf("compiled config did not preserve absolute LazyAI orchestrator command:\n%s", contents)
+		t.Fatalf("compiled config did not preserve user-provided absolute legacy orchestrator command:\n%s", contents)
 	}
 }
 
-func TestMCPCompilerPreservesGoOrchestratorCommandArgsForToolPayloads(t *testing.T) {
+func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPayloads(t *testing.T) {
 	servers := map[string]McpServer{
 		"orchestrator": {
 			Command: "/tmp/lazyai-orchestrator",
@@ -265,10 +265,10 @@ func TestMCPCompilerPreservesGoOrchestratorCommandArgsForToolPayloads(t *testing
 		}
 		contents := string(encoded)
 		if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/tmp/project`) {
-			t.Fatalf("%s payload did not preserve Go orchestrator command/args: %s", name, contents)
+			t.Fatalf("%s payload did not preserve user-provided legacy orchestrator command/args: %s", name, contents)
 		}
 		if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
-			t.Fatalf("%s payload should not opt into A2A execution mode by default: %s", name, contents)
+			t.Fatalf("%s payload should not add retired orchestrator execution-mode defaults: %s", name, contents)
 		}
 	}
 }
@@ -377,5 +377,25 @@ func TestAtlassianCatalogEntryUsesAuthV2Remote(t *testing.T) {
 	}
 	if entry["url"] != "https://mcp.atlassian.com/v1/mcp/authv2" {
 		t.Errorf("emitted url = %v, want authv2 endpoint", entry["url"])
+	}
+}
+
+func TestMcpCatalogExcludesRetiredOrchestratorDefault(t *testing.T) {
+	libFS := library.GetLibraryFS()
+	if libFS == nil {
+		t.Fatal("library.GetLibraryFS returned nil")
+	}
+	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
+	if err != nil {
+		t.Fatalf("read catalog.json: %v", err)
+	}
+	var catalog struct {
+		Servers map[string]McpServer `json:"servers"`
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatalf("unmarshal catalog: %v", err)
+	}
+	if _, ok := catalog.Servers["orchestrator"]; ok {
+		t.Fatal("catalog must not ship retired orchestrator as a default MCP server")
 	}
 }

@@ -366,7 +366,6 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 		"housekeeping":                  true,
 		"implement":                     true,
 		"iterate":                       true,
-		"orchestrate":                   true,
 		"parallel-execution":            true,
 		"plan":                          true,
 		"research":                      true,

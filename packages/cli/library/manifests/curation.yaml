@@ -86,147 +86,6 @@ entries:
       canonical library.
     reason_compressed_or_changed: Curated to LazyAI session context without a vibe-lab runtime dependency.
     token_rent_relevant: true
-  - path: packages/cli/library/agents/builder.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/documenter.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/implementor.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/orchestrator.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content for existing
-      references only.
-    reason_compressed_or_changed: Not reintroduced into adapter output; current
-      runtime uses canonical LazyAI agents instead.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/planner.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/red-team.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/reviewer.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/agents/scout.md
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as non-adapter legacy library content while canonical
-      agents are the emitted path.
-    reason_compressed_or_changed: Not part of current adapter output mapping; kept
-      reviewable until a future cleanup removes legacy assets.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/builder.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot schema fixture while current Copilot output
-      is generated from canonical markdown.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/orchestrator.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot schema fixture while current Copilot output
-      is generated from canonical markdown.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping and not
-      reintroduced as runtime orchestration.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/planner.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot schema fixture while current Copilot output
-      is generated from canonical markdown.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/reviewer.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot schema fixture while current Copilot output
-      is generated from canonical markdown.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/scout.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot schema fixture while current Copilot output
-      is generated from canonical markdown.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/rpi/rpi-implementor.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/rpi/rpi-planner.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
-  - path: packages/cli/library/copilot/agents/rpi/rpi-researcher.agent.yaml
-    kind: agent
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a Copilot RPI schema fixture, not as LazyAI runtime machinery.
-    reason_compressed_or_changed: Not emitted by the current adapter mapping; kept
-      to validate schema compatibility.
-    token_rent_relevant: false
   - path: packages/cli/library/skills/anti-speculation.md
     kind: skill
     category: setup-core
@@ -316,14 +175,6 @@ entries:
     reason_kept: Setup library skill retained for memory-writing guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
-    token_rent_relevant: false
-  - path: packages/cli/library/skills/orchestrate.md
-    kind: skill
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained for existing setup-library references, not as active
-      LazyAI orchestration runtime.
-    reason_compressed_or_changed: Not adapter-emitted; canonical LazyAI assets remain the runtime path.
     token_rent_relevant: false
   - path: packages/cli/library/skills/parallel-execution.md
     kind: skill
@@ -792,15 +643,6 @@ entries:
     reason_compressed_or_changed: Curated as a compact starter standard instead of a
       full external knowledge-base dependency.
     token_rent_relevant: false
-  - path: packages/cli/library/standards/starter/orchestration-patterns.md
-    kind: standard
-    category: legacy-exclusion
-    adapter_targets: [none]
-    reason_kept: Retained as a starter standard for existing setup content, not as
-      active orchestration runtime.
-    reason_compressed_or_changed: Curated as documentation only; no retired runtime
-      surface is emitted by adapters.
-    token_rent_relevant: false
   - path: packages/cli/library/standards/starter/test-patterns.md
     kind: standard
     category: setup-core
@@ -847,3 +689,112 @@ exclusions:
     kind: prompt
     category: legacy-exclusion
     reason_dropped: Prompt inventory is outside the requested curation surface for Wave 0.
+  - path: packages/cli/library/agents/builder.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/builder.md;
+      canonical/agents/builder.md is the active adapter source.
+  - path: packages/cli/library/agents/documenter.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/documenter.md;
+      documenter is not part of the active neutral adapter contract.
+  - path: packages/cli/library/agents/implementor.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/implementor.md;
+      implementation now uses canonical/agents/builder.md.
+  - path: packages/cli/library/agents/orchestrator.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/orchestrator.md;
+      retired orchestrator runtime guidance is not emitted by active adapters.
+  - path: packages/cli/library/agents/planner.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/planner.md;
+      canonical/agents/planner.md is the active adapter source.
+  - path: packages/cli/library/agents/red-team.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/red-team.md;
+      red-team is not part of the active neutral adapter contract.
+  - path: packages/cli/library/agents/reviewer.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/reviewer.md;
+      canonical/agents/reviewer.md is the active adapter source.
+  - path: packages/cli/library/agents/scout.md
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/agents/scout.md;
+      canonical/agents/scout.md is the active adapter source.
+  - path: packages/cli/library/copilot/agents/builder.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/builder.agent.yaml;
+      Copilot agents are now generated from canonical markdown.
+  - path: packages/cli/library/copilot/agents/orchestrator.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/orchestrator.agent.yaml;
+      retired orchestrator runtime guidance is not emitted by active Copilot
+      output.
+  - path: packages/cli/library/copilot/agents/planner.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/planner.agent.yaml;
+      Copilot agents are now generated from canonical markdown.
+  - path: packages/cli/library/copilot/agents/reviewer.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/reviewer.agent.yaml;
+      Copilot agents are now generated from canonical markdown.
+  - path: packages/cli/library/copilot/agents/scout.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/scout.agent.yaml;
+      Copilot agents are now generated from canonical markdown.
+  - path: packages/cli/library/copilot/agents/rpi/rpi-implementor.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/rpi/rpi-implementor.agent.yaml;
+      RPI Copilot fixture is not part of the active neutral adapter contract.
+  - path: packages/cli/library/copilot/agents/rpi/rpi-planner.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/rpi/rpi-planner.agent.yaml;
+      RPI Copilot fixture is not part of the active neutral adapter contract.
+  - path: packages/cli/library/copilot/agents/rpi/rpi-researcher.agent.yaml
+    kind: agent
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/copilot/agents/rpi/rpi-researcher.agent.yaml;
+      RPI Copilot fixture is not part of the active neutral adapter contract.
+  - path: packages/cli/library/skills/orchestrate.md
+    kind: skill
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/skills/orchestrate.md;
+      retired @ai-setup/orchestrator MCP guidance is not active setup-core.
+  - path: packages/cli/library/standards/starter/orchestration-patterns.md
+    kind: standard
+    category: archived-historical
+    reason_dropped: Archived to
+      archive/issue-244-historical-library/packages/cli/library/standards/starter/orchestration-patterns.md;
+      starter standards no longer seed retired orchestration runtime guidance.

@@ -35,8 +35,8 @@ func createTestFS() fstest.MapFS {
 		"canonical/agents/scout.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("scout", "Test scout agent."),
 		},
-		"agents/orchestrator.md": &fstest.MapFile{
-			Data: []byte("---\nname: Orchestrator\ndescription: Test orchestrator agent.\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
+		"agents/extra.md": &fstest.MapFile{
+			Data: []byte("---\nname: Extra\ndescription: Test unselected agent.\nmodel: opus\n---\n\n# Extra\n\nYou are not selected by default."),
 		},
 		"skills/implement.md": &fstest.MapFile{
 			Data: []byte("---\nname: implement\ndescription: Implementation skill\n---\n\n# Implement\n\nImplement features."),
@@ -237,10 +237,10 @@ func TestCopyLibraryDirectory_FromFS(t *testing.T) {
 		t.Error("builder.md was not copied")
 	}
 
-	// orchestrator.md should NOT exist (not in our selection).
-	orchDest := filepath.Join(agentsDir, "orchestrator.md")
-	if _, err := os.Stat(orchDest); !os.IsNotExist(err) {
-		t.Error("orchestrator.md should not have been copied (not selected)")
+	// extra.md should NOT exist (not in our selection).
+	extraDest := filepath.Join(agentsDir, "extra.md")
+	if _, err := os.Stat(extraDest); !os.IsNotExist(err) {
+		t.Error("extra.md should not have been copied (not selected)")
 	}
 }
 
@@ -266,8 +266,8 @@ func TestCopyLibraryDirectory_InstallAll(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory failed: %v", err)
 	}
 
-	// Both builder.md and orchestrator.md should exist.
-	for _, name := range []string{"builder.md", "orchestrator.md"} {
+	// Both builder.md and extra.md should exist.
+	for _, name := range []string{"builder.md", "extra.md"} {
 		path := filepath.Join(agentsDir, name)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("%s was not copied (should install all)", name)

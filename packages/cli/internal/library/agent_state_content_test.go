@@ -28,19 +28,12 @@ func TestAgentStateTaxonomyDefinesLifecycleVocabulary(t *testing.T) {
 	assertContainsAll(t, "rules/agent-state.md", content, required)
 }
 
-func TestLifecycleGuidanceAppearsInStatusHandoffRecoverySurfaces(t *testing.T) {
+func TestTaskHarnessCarriesLifecycleVocabulary(t *testing.T) {
 	t.Parallel()
 
-	paths := []string{
-		"skills/orchestrate.md",
-		"agents/orchestrator.md",
-		"templates/task-harness-template.md",
-	}
+	content := readLibraryFile(t, "templates/task-harness-template.md")
 	required := []string{
 		"Lifecycle label",
-		"status reports",
-		"handoff",
-		"recovery summaries",
 		"loading_context",
 		"planning",
 		"awaiting_approval",
@@ -51,34 +44,20 @@ func TestLifecycleGuidanceAppearsInStatusHandoffRecoverySurfaces(t *testing.T) {
 		"done",
 		"error",
 	}
-
-	for _, path := range paths {
-		content := readLibraryFile(t, path)
-		assertContainsAll(t, path, content, required)
-	}
+	assertContainsAll(t, "templates/task-harness-template.md", content, required)
 }
 
 func TestAgentStateGuidanceIsReportVocabularyOnly(t *testing.T) {
 	t.Parallel()
 
-	paths := []string{
-		"rules/agent-state.md",
-		"skills/orchestrate.md",
-		"agents/orchestrator.md",
-	}
+	content := readLibraryFile(t, "rules/agent-state.md")
 	required := []string{
 		"report vocabulary only",
 		"does not add runtime per-agent state tracking",
-		"does not imply runtime state-machine support",
-		"ChainState",
-		"StepState",
-		"get_status",
+		"state-machine support",
+		"host-tool status APIs",
 	}
-
-	for _, path := range paths {
-		content := readLibraryFile(t, path)
-		assertContainsAll(t, path, content, required)
-	}
+	assertContainsAll(t, "rules/agent-state.md", content, required)
 }
 
 func TestAgentStateGuidanceDoesNotClaimRuntimeStateMachineSupport(t *testing.T) {
@@ -86,8 +65,6 @@ func TestAgentStateGuidanceDoesNotClaimRuntimeStateMachineSupport(t *testing.T) 
 
 	paths := []string{
 		"rules/agent-state.md",
-		"skills/orchestrate.md",
-		"agents/orchestrator.md",
 		"templates/task-harness-template.md",
 	}
 	for _, path := range paths {

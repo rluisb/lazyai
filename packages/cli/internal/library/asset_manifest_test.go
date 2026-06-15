@@ -14,6 +14,36 @@ func TestValidateProjectAssetManifestsCurrentLibrary(t *testing.T) {
 	}
 }
 
+func TestHistoricalLibraryMaterialArchivedOutOfActiveRoots(t *testing.T) {
+	projectRoot := projectRootForAssetManifestTest(t)
+
+	activePaths := []string{
+		"packages/cli/library/agents/orchestrator.md",
+		"packages/cli/library/skills/orchestrate.md",
+		"packages/cli/library/copilot/agents/orchestrator.agent.yaml",
+		"packages/cli/library/standards/starter/orchestration-patterns.md",
+	}
+	for _, relPath := range activePaths {
+		if _, err := os.Stat(filepath.Join(projectRoot, filepath.FromSlash(relPath))); err == nil {
+			t.Fatalf("historical asset %s remains in an active library root", relPath)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat active historical asset %s: %v", relPath, err)
+		}
+	}
+
+	archivedPaths := []string{
+		"archive/issue-244-historical-library/packages/cli/library/agents/orchestrator.md",
+		"archive/issue-244-historical-library/packages/cli/library/skills/orchestrate.md",
+		"archive/issue-244-historical-library/packages/cli/library/copilot/agents/orchestrator.agent.yaml",
+		"archive/issue-244-historical-library/packages/cli/library/standards/starter/orchestration-patterns.md",
+	}
+	for _, relPath := range archivedPaths {
+		if _, err := os.Stat(filepath.Join(projectRoot, filepath.FromSlash(relPath))); err != nil {
+			t.Fatalf("archived historical asset %s missing: %v", relPath, err)
+		}
+	}
+}
+
 func TestValidateProvenanceManifestFailsMissingCoverage(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeAssetManifestTestFile(t, projectRoot, "packages/cli/library/canonical/agents/new.md", "# New Agent\n")

@@ -54,6 +54,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 				huh.NewOption("Prompt", "prompt"),
 				huh.NewOption("Command", "command"),
 				huh.NewOption("Template", "template"),
+				huh.NewOption("Hook", "hook"),
 			).
 			Value(&typeValue)
 
@@ -96,9 +97,10 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		"prompt":   true,
 		"command":  true,
 		"template": true,
+		"hook":     true,
 	}
 	if !validTypes[artifactType] {
-		return fmt.Errorf("invalid artifact type: %s (valid: agent, skill, prompt, command, template)", artifactType)
+		return fmt.Errorf("invalid artifact type: %s (valid: agent, skill, prompt, command, template, hook)", artifactType)
 	}
 
 	// Get the target directory.

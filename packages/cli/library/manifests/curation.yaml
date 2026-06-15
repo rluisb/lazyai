@@ -120,6 +120,14 @@ entries:
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
+  - path: packages/cli/library/skills/evidence-verifier.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for evidence verification guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/skills/extract-standards.md
     kind: skill
     category: setup-core
@@ -157,6 +165,14 @@ entries:
     category: setup-core
     adapter_targets: [none]
     reason_kept: Setup library skill retained for architecture improvement guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/issue-triage.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for issue triage guidance.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
@@ -328,6 +344,14 @@ entries:
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
+  - path: packages/cli/library/skills/task-to-issues.md
+    kind: skill
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library skill retained for extracting tasks into tracked issues.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/skills/tdd-loop.md
     kind: skill
     category: setup-core
@@ -438,6 +462,22 @@ entries:
       scaffolds.
     reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
     token_rent_relevant: false
+  - path: packages/cli/library/templates/constitution-template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library template retained for project constitution guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/hook-template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library template retained for hook authoring guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/templates/housekeeping-template.md
     kind: template
     category: adapter-support
@@ -467,6 +507,14 @@ entries:
     reason_kept: Proof-of-concept template emitted to adapter template surfaces and
       setup scaffolds.
     reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/policy-template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library template retained for policy authoring guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
   - path: packages/cli/library/templates/postmortem-template.md
     kind: template
@@ -520,6 +568,14 @@ entries:
     reason_kept: Tech-debt template emitted to adapter template surfaces and setup
       scaffolds.
     reason_compressed_or_changed: Curated as a compact markdown template for LazyAI-managed projects.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/verified-research-artifact-set-template.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup library template retained for verified research artifact guidance.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
   - path: packages/cli/library/rules/access.md
     kind: rule
@@ -650,6 +706,14 @@ entries:
     reason_kept: Starter standard seeded into LazyAI-managed specs/standards trees.
     reason_compressed_or_changed: Curated as a compact starter standard instead of a
       full external knowledge-base dependency.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/block-destructive-shell.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Hook policy document retained for destructive shell command prevention.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
   - path: packages/cli/library/hooks/pre-commit
     kind: hook

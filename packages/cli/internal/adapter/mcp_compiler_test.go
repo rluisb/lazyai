@@ -380,6 +380,94 @@ func TestAtlassianCatalogEntryUsesAuthV2Remote(t *testing.T) {
 	}
 }
 
+func TestPlanCRemoteCatalogEntriesAreOptInAndExact(t *testing.T) {
+	libFS := library.GetLibraryFS()
+	if libFS == nil {
+		t.Fatal("library.GetLibraryFS returned nil")
+	}
+	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
+	if err != nil {
+		t.Fatalf("read catalog.json: %v", err)
+	}
+	var catalog struct {
+		Servers map[string]McpServer `json:"servers"`
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatalf("unmarshal catalog: %v", err)
+	}
+	for _, excluded := range []string{"figma", "slack"} {
+		if _, ok := catalog.Servers[excluded]; ok {
+			t.Fatalf("catalog must not ship speculative %q MCP server", excluded)
+		}
+	}
+
+	checkRemote := func(name, wantURL, headerName, wantHeader, wantOpenCodeHeader string) McpServer {
+		t.Helper()
+		server, ok := catalog.Servers[name]
+		if !ok {
+			t.Fatalf("catalog.servers missing %q entry", name)
+		}
+		if server.Enabled == nil {
+			t.Fatalf("%s.enabled is nil; Plan C entries must be explicitly opt-in", name)
+		}
+		if *server.Enabled {
+			t.Fatalf("%s.enabled = true, want false", name)
+		}
+		if server.URL != wantURL {
+			t.Fatalf("%s.url = %q, want %q", name, server.URL, wantURL)
+		}
+		if server.Command != "" || len(server.Args) > 0 {
+			t.Fatalf("%s entry must use remote URL only: command=%q args=%v", name, server.Command, server.Args)
+		}
+		if got := server.Headers[headerName]; got != wantHeader {
+			t.Fatalf("%s.headers[%q] = %q, want %q", name, headerName, got, wantHeader)
+		}
+
+		enabledServers := GetEnabledServers(&McpCatalog{Servers: map[string]McpServer{name: server}})
+		if _, ok := enabledServers[name]; ok {
+			t.Fatalf("%s must not be returned by GetEnabledServers while disabled", name)
+		}
+
+		emitted := toOpenCodeMcp(map[string]McpServer{name: server})
+		entry, ok := emitted[name].(map[string]any)
+		if !ok {
+			t.Fatalf("emitted %s entry is not a map: %T", name, emitted[name])
+		}
+		if entry["type"] != "remote" {
+			t.Fatalf("emitted %s type = %v, want remote", name, entry["type"])
+		}
+		if entry["enabled"] != false {
+			t.Fatalf("emitted %s enabled = %v, want false", name, entry["enabled"])
+		}
+		if entry["url"] != wantURL {
+			t.Fatalf("emitted %s url = %v, want %q", name, entry["url"], wantURL)
+		}
+		headers, ok := entry["headers"].(map[string]string)
+		if !ok {
+			t.Fatalf("emitted %s headers = %T, want map[string]string", name, entry["headers"])
+		}
+		if got := headers[headerName]; got != wantOpenCodeHeader {
+			t.Fatalf("emitted %s headers[%q] = %q, want %q", name, headerName, got, wantOpenCodeHeader)
+		}
+		return server
+	}
+
+	checkRemote("context7", "https://mcp.context7.com/mcp", "CONTEXT7_API_KEY", "${CONTEXT7_API_KEY}", "{env:CONTEXT7_API_KEY}")
+	github := checkRemote("github", "https://api.githubcopilot.com/mcp/", "Authorization", "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}", "Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}")
+	claude := toClaudeCodeMcpInner(map[string]McpServer{"github": github})
+	claudeGithub, ok := claude["github"].(map[string]any)
+	if !ok {
+		t.Fatalf("claude github entry is not a map: %T", claude["github"])
+	}
+	headers, ok := claudeGithub["headers"].(map[string]string)
+	if !ok {
+		t.Fatalf("claude github headers = %T, want map[string]string", claudeGithub["headers"])
+	}
+	if got := headers["Authorization"]; got != "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}" {
+		t.Fatalf("claude github Authorization = %q, want env placeholder header", got)
+	}
+}
+
 func TestMcpCatalogExcludesRetiredOrchestratorDefault(t *testing.T) {
 	libFS := library.GetLibraryFS()
 	if libFS == nil {

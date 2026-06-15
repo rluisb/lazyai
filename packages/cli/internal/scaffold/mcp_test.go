@@ -67,6 +67,64 @@ func TestScaffoldMcp_EnablesSelectedServersAndWritesSchemas(t *testing.T) {
 	}
 }
 
+func TestScaffoldMcp_PreservesRemoteServerShape(t *testing.T) {
+	repoRoot := t.TempDir()
+	libraryDir := filepath.Join(repoRoot, "library")
+	targetDir := t.TempDir()
+
+	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
+  "servers": {
+    "context7": {
+      "description": "context7",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      },
+      "enabled": false
+    }
+  }
+}`)
+
+	var records []types.TrackedFile
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"context7"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+		t.Fatalf("ScaffoldMcp: %v", err)
+	}
+
+	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
+	context7 := catalog.Servers["context7"]
+	if got := enabledValue(t, context7.Enabled); !got {
+		t.Fatal("context7 server should be enabled when selected")
+	}
+	if context7.URL != "https://mcp.context7.com/mcp" {
+		t.Fatalf("context7.url = %q, want remote endpoint", context7.URL)
+	}
+	if got := context7.Headers["CONTEXT7_API_KEY"]; got != "${CONTEXT7_API_KEY}" {
+		t.Fatalf("context7 header = %q, want env placeholder", got)
+	}
+	if context7.Command != "" || len(context7.Args) > 0 {
+		t.Fatalf("context7 must remain URL-backed, got command=%q args=%v", context7.Command, context7.Args)
+	}
+
+	rootPath := filepath.Join(targetDir, ".mcp.json")
+	data, err := os.ReadFile(rootPath)
+	if err != nil {
+		t.Fatalf("read .mcp.json: %v", err)
+	}
+	var root struct {
+		MCPServers map[string]mcpServer `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("parse .mcp.json: %v", err)
+	}
+	rootContext7 := root.MCPServers["context7"]
+	if rootContext7.URL != "https://mcp.context7.com/mcp" {
+		t.Fatalf("root context7.url = %q, want remote endpoint", rootContext7.URL)
+	}
+	if got := rootContext7.Headers["CONTEXT7_API_KEY"]; got != "${CONTEXT7_API_KEY}" {
+		t.Fatalf("root context7 header = %q, want env placeholder", got)
+	}
+}
+
 func TestScaffoldMcp_IgnoresUnknownServers(t *testing.T) {
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")

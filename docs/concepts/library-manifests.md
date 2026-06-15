@@ -14,3 +14,17 @@ Two repository manifests document that boundary:
 3. **Coverage guard:** run the targeted manifest tests before review; they fail when a guarded asset is missing curation/provenance coverage or a canonical hash is stale.
 
 The token-rent budget remains a separate canonical-library size guard; these manifests do not change token-rent behavior.
+
+## Canonical command assets
+
+The provenance manifest hash-covers `packages/cli/library/canonical/commands/graphify.md` and `packages/cli/library/canonical/commands/handoff.md`. These files are library inventory assets — they document compressed command prompts available for reference — but they are not active command emission sources. The adapter does not emit them as slash commands to generated tool setups by default.
+
+Command emission changes require a separate focused implementation branch with its own verification.
+
+## MCP catalog policy
+
+`packages/cli/library/mcp/catalog.json` may include opt-in MCP servers that are not active setup defaults. These entries must keep `enabled: false` unless a separate product decision promotes them.
+
+Plan C adds disabled remote entries for Context7 and GitHub MCP. The GitHub MCP entry supplements the existing `gh` CLI catalog entry; it does not replace CLI-first GitHub workflows.
+
+Figma and Slack remain documented exclusions for now. Do not add catalog placeholders for them until an authoritative server URL/command, authentication shape, and supported client behavior are verified and separately approved.

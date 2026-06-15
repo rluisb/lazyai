@@ -21,7 +21,7 @@ func TestCreateRejectsRetiredOrchestrationArtifactTypes(t *testing.T) {
 			withTempDir(t)
 			cmd := newCreateTestCommand()
 			err := runCreate(cmd, []string{artifactType, "demo"})
-			want := fmt.Sprintf("invalid artifact type: %s (valid: agent, skill, prompt, command, template)", artifactType)
+			want := fmt.Sprintf("invalid artifact type: %s (valid: agent, skill, prompt, command, template, hook)", artifactType)
 			if err == nil || err.Error() != want {
 				t.Fatalf("runCreate error = %v, want %q", err, want)
 			}

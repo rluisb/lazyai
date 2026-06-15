@@ -21,9 +21,19 @@ var ErrScopeUnsupported = errors.New("scope not supported for this tool")
 // IsScopeSupported reports whether the given tool has a defined on-disk layout
 // for the given scope. Wizard + non-interactive callers use this to validate
 // tool selections before invoking adapters. Copilot supports global scope; the
-// adapter itself probes for CLI/home presence and skips if not available.
+// adapter itself probes for CLI/home presence and skips if not available. Pi
+// and Antigravity are project/workspace-only surfaces.
 func IsScopeSupported(tool types.ToolId, scope types.SetupScope) bool {
-	return types.IsValidSetupScope(scope) && types.IsValidToolId(tool)
+	if !types.IsValidSetupScope(scope) || !types.IsValidToolId(tool) {
+		return false
+	}
+	if scope == types.SetupScopeGlobal {
+		switch tool {
+		case types.ToolIdPi, types.ToolIdAntigravity:
+			return false
+		}
+	}
+	return true
 }
 
 // ResolveToolRoot returns the primary directory the adapter should write into
@@ -75,6 +85,10 @@ func projectSubdir(tool types.ToolId) string {
 		return ".opencode"
 	case types.ToolIdCopilot:
 		return ".github"
+	case types.ToolIdPi:
+		return ".pi"
+	case types.ToolIdAntigravity:
+		return ".gemini"
 	}
 	return ""
 }

@@ -1,52 +1,69 @@
 # Supported Tools
 
-`lazyai-cli` compiles canonical content into native formats for three AI coding assistants.
+`lazyai-cli` compiles embedded library content into native formats for five setup surfaces.
 
 ## OpenCode
 
-- **Description:** project instructions for OpenCode plus agent, skill, and command directories
+- **Description:** root instructions plus agents, skills, commands, modes, and a managed hook plugin
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.opencode/`
-- **Project config:** `.opencode/opencode.json`
+- **Project/workspace config:** `.opencode/opencode.jsonc`
 - **Global scope support:** Yes — `~/.config/opencode/`
-- **MCP config:** `.opencode/opencode.jsonc`
-- **Special behavior:** agent YAML frontmatter is stripped and a `<!-- Recommended model: ... -->` comment is injected when a `model:` frontmatter key exists
-
-> **Default behavior:** When OpenCode is selected during `init`, LazyAI installs the neutral canonical adapter path. The OpenCode config uses `default_agent: primary-agent`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
+- **MCP config:** merged into `.opencode/opencode.jsonc`
+- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/vibe-lab-hooks.js`
 
 ## Claude Code
 
-- **Description:** Claude Code agents, skills, rules scaffold, with root instructions in `AGENTS.md`
+- **Description:** root instructions plus agents, skills, rules scaffold, commands, output styles, and managed hook scripts
 - **Root file:** `AGENTS.md` (existing root `CLAUDE.md` is preserved and receives an `AGENTS.md` reference)
 - **Config directory:** `.claude/`
 - **Global scope support:** Yes — `~/.claude/`
-- **MCP config:** `.mcp.json`
-- **Special behavior:** generates `.claude/settings.json` and a sample `.claude/rules/typescript.md` rule with `paths:` frontmatter
+- **MCP config:** `.mcp.json` at project/workspace scope; global MCP lives in Claude settings
+- **Special behavior:** generates `.claude/settings.json`, `.claude/hooks/*.sh`, and a sample `.claude/rules/typescript.md`
 
 ## GitHub Copilot
 
-- **Description:** repo instructions and prompt files for GitHub Copilot workflows
+- **Description:** repo or user instructions, agent YAML files, prompts, chatmodes, MCP config, and project/workspace hook assets
 - **Root files:** `.github/copilot-instructions.md` and `AGENTS.md`
 - **Config directory:** `.github/`
+- **Global scope support:** Yes — probe-gated on `copilot` CLI or `~/.copilot/`
+- **MCP config:** `.vscode/mcp.json` at project/workspace scope; `~/.copilot/mcp-config.json` at global scope when probe passes
+- **Special behavior:** skills are converted into `.github/agents/<name>.agent.yaml`; prompts remain `.prompt.md`; project/workspace hook assets land under `.github/hooks/`
+
+## OMP/Pi
+
+- **Description:** shared root instructions plus skills-only surface
+- **Root file:** `AGENTS.md`
+- **Config directory:** `.pi/`
+- **Project/workspace scope support:** Yes
 - **Global scope support:** No
-- **MCP config:** `.vscode/mcp.json`
-- **Special behavior:** skills are transformed into `.prompt.md` files with `mode: agent` frontmatter; prompt templates also compile to `.prompt.md`
+- **Special behavior:** emits `.pi/skills/<name>/SKILL.md` only; no Pi agents, prompt surface, or runtime hooks are generated
+
+## Antigravity
+
+- **Description:** shared root instructions plus minimal `.gemini` settings and hook surface
+- **Root file:** `AGENTS.md`
+- **Config directory:** `.gemini/`
+- **Project/workspace scope support:** Yes
+- **Global scope support:** No
+- **Special behavior:** emits `.gemini/settings.json` and `.gemini/hooks/vibe-lab/*.sh`; no Antigravity agent or skills directory is generated
 
 ## Comparison
 
-| Capability | OpenCode | Claude Code | Copilot |
-|---|---|---|---|
-| Project scope | Yes | Yes | Yes |
-| Global scope | Yes | Yes | No |
-| MCP config | `.opencode.jsonc` | `.mcp.json` | `.vscode/mcp.json` |
-| Agent directories | Yes | Yes | Prompts only |
-| Skill directories | Yes | Yes | Prompts only |
-| Primary agent entry | `.opencode/agents/primary-agent.md` | `.claude/agents/primary-agent.md` | `.github/agents/primary-agent.agent.yaml` |
+| Capability | OpenCode | Claude Code | Copilot | OMP/Pi | Antigravity |
+|---|---|---|---|---|---|
+| Project scope | Yes | Yes | Yes | Yes | Yes |
+| Workspace scope | Yes | Yes | Yes | Yes | Yes |
+| Global scope | Yes | Yes | Yes (probe-gated) | No | No |
+| Primary agent entry | `.opencode/agents/primary-agent.md` | `.claude/agents/primary-agent.md` | `.github/agents/primary-agent.agent.yaml` | — | — |
+| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | — |
+| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/vibe-lab/*.sh` + settings hooks |
+| MCP output | `.opencode/opencode.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 
 ## Tool selection during init
 
 ```bash
-lazyai-cli init --tools opencode,claude-code,copilot
+lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity
 ```
 
 You can add a tool later:
@@ -55,7 +72,7 @@ You can add a tool later:
 lazyai-cli add copilot
 ```
 
-Then recompile:
+Then recompile managed MCP output:
 
 ```bash
 lazyai-cli compile

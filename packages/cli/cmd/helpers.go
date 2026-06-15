@@ -28,7 +28,7 @@ func validateToolFlag(tool string) error {
 	if tool == "" || types.IsValidToolId(types.ToolId(tool)) {
 		return nil
 	}
-	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", tool)
+	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", tool)
 }
 
 // openStore opens the SQLite database for the given target directory.

@@ -244,13 +244,13 @@ func TestToolOptionsForScope_ReturnsSupportedTools(t *testing.T) {
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	if len(projectOpts) != 3 {
-		t.Errorf("project options count = %d, want 3", len(projectOpts))
+	if len(projectOpts) != 5 {
+		t.Errorf("project options count = %d, want 5", len(projectOpts))
 	}
 
 	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	if len(workspaceOpts) != 3 {
-		t.Errorf("workspace options count = %d, want 3", len(workspaceOpts))
+	if len(workspaceOpts) != 5 {
+		t.Errorf("workspace options count = %d, want 5", len(workspaceOpts))
 	}
 }
 

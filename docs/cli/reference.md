@@ -47,7 +47,7 @@ Initialize the AI development environment.
 | Flag | Description |
 |---|---|
 | `--scope` | Setup scope (`project`, `global`, `workspace`) |
-| `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`) |
+| `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`, `pi`, `antigravity`) |
 | `--preset` | Preset configuration (`minimal`, `standard`, `full`, `custom`) |
 | `--enable-servers` | MCP servers to enable (for example: `filesystem`, `memory`, `ripgrep`) |
 | `--name` | Project name |

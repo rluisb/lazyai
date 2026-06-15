@@ -54,6 +54,10 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	_ = files.EnsureDir(instructionsDir)
 	promptsDir := filepath.Join(githubDir, "prompts")
 	_ = files.EnsureDir(promptsDir)
+	hooksDir := filepath.Join(githubDir, "hooks")
+	if ctx.SetupScope != types.SetupScopeGlobal {
+		_ = files.EnsureDir(hooksDir)
+	}
 
 	adapterLog.Info("installing tools", "adapter", "copilot")
 
@@ -76,6 +80,33 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	}
 
 	// Copy skills as Copilot agent files.
+
+	// Copy Copilot project/workspace hooks. Global Copilot support remains
+	// agent/instructions/MCP oriented; no verified user-scope hook surface is
+	// emitted there.
+	if ctx.SetupScope != types.SetupScopeGlobal {
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "copilot/hooks",
+			IncludeFile:  func(file string) bool { return strings.HasSuffix(file, ".json") },
+			ToDestPath: func(file string) string {
+				return filepath.Join(hooksDir, file)
+			},
+		}); err != nil {
+			return nil, err
+		}
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "copilot/hooks",
+			IncludeFile:  func(file string) bool { return strings.HasSuffix(file, ".sh") },
+			ToDestPath: func(file string) string {
+				return filepath.Join(hooksDir, file)
+			},
+			Mode: 0o755,
+		}); err != nil {
+			return nil, err
+		}
+	}
 	if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
 		return nil, err
 	}
@@ -248,14 +279,14 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 	})
 }
 
-// copySkillsAsAgents converts canonical skill files to .agent.yaml format in the agents directory.
+// copySkillsAsAgents converts skill files to .agent.yaml format in the agents directory.
 func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
 	libFS := ctx.LibraryFS
 	if libFS != nil {
 		return a.copySkillsAsAgentsFromFS(ctx, libFS, agentsDir, selected)
 	}
 	// Fallback: disk mode
-	srcDir := filepath.Join(ctx.LibraryDir, "canonical", "skills")
+	srcDir := filepath.Join(ctx.LibraryDir, "skills")
 	if !files.DirExists(srcDir) {
 		return nil
 	}
@@ -270,7 +301,7 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 		}
 		destFile := fileIDVal + ".agent.yaml"
 		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("canonical/skills", file))
+		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
 		if err := a.copySkillAsAgentWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
 			return err
 		}
@@ -278,9 +309,9 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 	return nil
 }
 
-// copySkillsAsAgentsFromFS copies canonical skills from the library FS as agent YAML files.
+// copySkillsAsAgentsFromFS copies skills from the library FS as agent YAML files.
 func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.FS, agentsDir string, selected map[types.SkillId]bool) error {
-	entries, err := fs.ReadDir(libFS, "canonical/skills")
+	entries, err := fs.ReadDir(libFS, "skills")
 	if err != nil {
 		return nil
 	}
@@ -295,7 +326,7 @@ func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.
 		}
 		destFile := fileIDVal + ".agent.yaml"
 		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("canonical/skills", file))
+		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
 		if err := a.copySkillAsAgentFromFS(ctx, libFS, libRelPath, dest); err != nil {
 			return err
 		}

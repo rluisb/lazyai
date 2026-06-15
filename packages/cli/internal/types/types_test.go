@@ -127,16 +127,25 @@ func TestTypeConstants(t *testing.T) {
 	if ToolIdClaudeCode != "claude-code" {
 		t.Errorf("ToolIdClaudeCode = %q, want claude-code", ToolIdClaudeCode)
 	}
+	if ToolIdCopilot != "copilot" {
+		t.Errorf("ToolIdCopilot = %q, want copilot", ToolIdCopilot)
+	}
+	if ToolIdPi != "pi" {
+		t.Errorf("ToolIdPi = %q, want pi", ToolIdPi)
+	}
+	if ToolIdAntigravity != "antigravity" {
+		t.Errorf("ToolIdAntigravity = %q, want antigravity", ToolIdAntigravity)
+	}
 }
 
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	t.Parallel()
 
-	if len(ALL_AGENTS) != 5 {
-		t.Errorf("ALL_AGENTS has %d elements, want 5 active canonical agents", len(ALL_AGENTS))
+	if len(ALL_AGENTS) != 6 {
+		t.Errorf("ALL_AGENTS has %d elements, want 6 active parity agents", len(ALL_AGENTS))
 	}
-	if len(ALL_SKILLS) != 4 {
-		t.Errorf("ALL_SKILLS has %d elements, want 4 active canonical skills", len(ALL_SKILLS))
+	if len(ALL_SKILLS) != 22 {
+		t.Errorf("ALL_SKILLS has %d elements, want 22 active parity skills", len(ALL_SKILLS))
 	}
 	if len(ALL_PROMPTS) != 5 {
 		t.Errorf("ALL_PROMPTS has %d elements, want 5", len(ALL_PROMPTS))
@@ -190,12 +199,12 @@ func TestIsValidExistingSetupPolicy(t *testing.T) {
 func TestIsValidToolId(t *testing.T) {
 	t.Parallel()
 
-	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot} {
+	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdAntigravity} {
 		if !IsValidToolId(id) {
 			t.Errorf("IsValidToolId(%q) = false, want true", id)
 		}
 	}
-	for _, id := range []ToolId{"gemini", "codex", "pi"} {
+	for _, id := range []ToolId{"gemini", "codex"} {
 		if IsValidToolId(id) {
 			t.Errorf("IsValidToolId(%q) = true, want false", id)
 		}

@@ -109,7 +109,7 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdClaudeCode, Kind: AssetKindSkills,
-				SourceSubdir: "canonical/skills", DestSubdir: "skills",
+				SourceSubdir: "skills", DestSubdir: "skills",
 				Shape: ShapeDirPerItem,
 				Notes: "Claude Code reads skills as .claude/skills/<name>/SKILL.md",
 			},
@@ -151,7 +151,7 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindSkills,
-				SourceSubdir: "canonical/skills", DestSubdir: "skills",
+				SourceSubdir: "skills", DestSubdir: "skills",
 				Shape: ShapeDirPerItem,
 			},
 			AssetKindTemplates: {
@@ -191,7 +191,7 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindSkills,
-				SourceSubdir: "canonical/skills", DestSubdir: "agents",
+				SourceSubdir: "skills", DestSubdir: "agents",
 				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.yaml",
 				Notes: "Copilot has no native skills; library skills are converted to .agent.yaml",
 			},
@@ -221,6 +221,79 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				SourceSubdir: "prompts", DestSubdir: "prompts",
 				Shape: ShapeRewriteExt, RewriteSuffix: ".prompt.md",
 				Notes: "Copilot prompts at .github/prompts/<name>.prompt.md",
+			},
+		},
+		types.ToolIdPi: {
+			AssetKindAgents: {
+				Tool: types.ToolIdPi, Kind: AssetKindAgents,
+				Shape: ShapeNone,
+				Notes: "Pi is skills-only; no agent surface is emitted",
+			},
+			AssetKindSkills: {
+				Tool: types.ToolIdPi, Kind: AssetKindSkills,
+				SourceSubdir: "skills", DestSubdir: "skills",
+				Shape: ShapeDirPerItem,
+				Notes: "Pi reads skills as .pi/skills/<name>/SKILL.md",
+			},
+			AssetKindTemplates: {
+				Tool: types.ToolIdPi, Kind: AssetKindTemplates,
+				Shape: ShapeNone,
+				Notes: "Pi has no template surface",
+			},
+			AssetKindCommands: {
+				Tool: types.ToolIdPi, Kind: AssetKindCommands,
+				Shape: ShapeNone,
+				Notes: "Pi has no slash command surface",
+			},
+			AssetKindChatModes: {
+				Tool: types.ToolIdPi, Kind: AssetKindChatModes,
+				Shape: ShapeNone,
+				Notes: "Pi has no chat mode surface",
+			},
+			AssetKindOutputStyles: {
+				Tool: types.ToolIdPi, Kind: AssetKindOutputStyles,
+				Shape: ShapeNone,
+			},
+			AssetKindPrompts: {
+				Tool: types.ToolIdPi, Kind: AssetKindPrompts,
+				Shape: ShapeNone,
+				Notes: "Pi has no prompt surface",
+			},
+		},
+		types.ToolIdAntigravity: {
+			AssetKindAgents: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindAgents,
+				Shape: ShapeNone,
+				Notes: "Antigravity does not emit agent files",
+			},
+			AssetKindSkills: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindSkills,
+				Shape: ShapeNone,
+				Notes: "Antigravity uses root context plus settings/hooks, not skills directories",
+			},
+			AssetKindTemplates: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindTemplates,
+				Shape: ShapeNone,
+				Notes: "Antigravity has no template surface",
+			},
+			AssetKindCommands: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindCommands,
+				Shape: ShapeNone,
+				Notes: "Antigravity has no slash command surface",
+			},
+			AssetKindChatModes: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindChatModes,
+				Shape: ShapeNone,
+				Notes: "Antigravity has no chat mode surface",
+			},
+			AssetKindOutputStyles: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindOutputStyles,
+				Shape: ShapeNone,
+			},
+			AssetKindPrompts: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindPrompts,
+				Shape: ShapeNone,
+				Notes: "Antigravity has no prompt surface",
 			},
 		},
 	}
@@ -261,7 +334,7 @@ func OutputTargetsForTool(tool types.ToolId) (map[AssetKind]OutputTarget, error)
 func ValidateOutputCoverage() error {
 	per := buildOutputMappings()
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdAntigravity,
 	} {
 		entries, ok := per[tool]
 		if !ok {

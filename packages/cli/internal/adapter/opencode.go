@@ -40,6 +40,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	_ = files.EnsureDir(filepath.Join(ocDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "commands"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "modes"))
+	_ = files.EnsureDir(filepath.Join(ocDir, "plugins"))
 
 	adapterLog.Info("installing tools", "adapter", "opencode")
 
@@ -130,7 +131,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	// Copy skills (directory-per-skill layout).
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
-		SourceSubdir: "canonical/skills",
+		SourceSubdir: "skills",
 		SelectionKey: "skills",
 		ToDestPath: func(file string) string {
 			name := fileID(file)
@@ -158,6 +159,17 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	}
 
 	// Copy opencode chat modes from library/opencode/modes/.
+
+	// Copy the managed OpenCode hook runtime plugin.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "opencode/plugins",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ocDir, "plugins", file)
+		},
+	}); err != nil {
+		return nil, err
+	}
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "opencode/modes",

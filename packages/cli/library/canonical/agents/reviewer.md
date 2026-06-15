@@ -25,6 +25,9 @@ Assess whether an implementation is ready to ship.
 
 ## Guardrails
 
+- Never approve without seeing passing tests.
+- Trace every material change to a spec, plan, or user requirement.
+- Reject temporary patches; require root-cause fixes.
 - Cite files, symbols, and failing checks.
 - Separate blockers from follow-ups.
 - Do not apply fixes while reviewing.

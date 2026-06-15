@@ -45,19 +45,22 @@ func createMinimalLibraryFS() fstest.MapFS {
 		"canonical/agents/scout.md": &fstest.MapFile{
 			Data: []byte("---\nname: scout\ndescription: Test scout agent.\ntier: balanced\ntemperature: 0.0\nthinking: none\nrisk: 1\n---\n\n# Scout\n\nYou are a scout.\n"),
 		},
+		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
+			Data: []byte("---\nname: evidence-verifier\ndescription: Test evidence verifier agent.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 2\n---\n\n# Evidence Verifier\n\nVerify evidence.\n"),
+		},
 
-		// Canonical skills
-		"canonical/skills/codebase-exploration.md": &fstest.MapFile{
+		// Active skills
+		"skills/codebase-exploration.md": &fstest.MapFile{
 			Data: []byte("---\nname: codebase-exploration\ndescription: Explore code.\ntier: balanced\nthinking: low\nrisk: 2\n---\n\n# Codebase Exploration\n\nExplore code paths.\n"),
 		},
-		"canonical/skills/test-first-change.md": &fstest.MapFile{
+		"skills/test-first-change.md": &fstest.MapFile{
 			Data: []byte("---\nname: test-first-change\ndescription: Test first changes.\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# Test First Change\n\nDrive changes through tests.\n"),
 		},
-		"canonical/skills/diagnose.md": &fstest.MapFile{
+		"skills/diagnose.md": &fstest.MapFile{
 			Data: []byte("---\nname: diagnose\ndescription: Diagnose failures.\ntier: frontier\nthinking: high\nrisk: 4\n---\n\n# Diagnose\n\nDiagnose bugs.\n"),
 		},
-		"canonical/skills/pr-review.md": &fstest.MapFile{
-			Data: []byte("---\nname: pr-review\ndescription: Review changes.\ntier: frontier\nthinking: high\nrisk: 4\n---\n\n# PR Review\n\nReview changes.\n"),
+		"skills/issue-triage.md": &fstest.MapFile{
+			Data: []byte("---\nname: issue-triage\ndescription: Triage issues.\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# Issue Triage\n\nTriage issues.\n"),
 		},
 
 		// Tool agents (context files)

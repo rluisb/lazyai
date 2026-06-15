@@ -45,57 +45,79 @@ func IsValidSetupPolicy(policy SetupPolicy) bool {
 type ToolId string
 
 const (
-	ToolIdOpenCode   ToolId = "opencode"
-	ToolIdClaudeCode ToolId = "claude-code"
-	ToolIdCopilot    ToolId = "copilot"
+	ToolIdOpenCode    ToolId = "opencode"
+	ToolIdClaudeCode  ToolId = "claude-code"
+	ToolIdCopilot     ToolId = "copilot"
+	ToolIdPi          ToolId = "pi"
+	ToolIdAntigravity ToolId = "antigravity"
 )
 
 // AgentId identifies a specialized agent role.
 type AgentId string
 
 const (
-	AgentIdBuilder      AgentId = "builder"
-	AgentIdPrimaryAgent AgentId = "primary-agent"
-	AgentIdPlanner      AgentId = "planner"
-	AgentIdReviewer     AgentId = "reviewer"
-	AgentIdScout        AgentId = "scout"
+	AgentIdBuilder          AgentId = "builder"
+	AgentIdPrimaryAgent     AgentId = "primary-agent"
+	AgentIdPlanner          AgentId = "planner"
+	AgentIdReviewer         AgentId = "reviewer"
+	AgentIdScout            AgentId = "scout"
+	AgentIdEvidenceVerifier AgentId = "evidence-verifier"
 )
 
 // SkillId identifies a workflow skill.
 type SkillId string
 
 const (
-	SkillIdAntiSpeculation     SkillId = "anti-speculation"
-	SkillIdBugfix              SkillId = "bugfix"
-	SkillIdCodebaseExploration SkillId = "codebase-exploration"
-	SkillIdDiagnose            SkillId = "diagnose"
-	SkillIdExtractStandards    SkillId = "extract-standards"
-	SkillIdHousekeeping        SkillId = "housekeeping"
-	SkillIdImpactCheck         SkillId = "impact-check"
-	SkillIdImplement           SkillId = "implement"
-	SkillIdIterate             SkillId = "iterate"
-	SkillIdMemoryWrite         SkillId = "memory-write"
-	SkillIdParallelExecution   SkillId = "parallel-execution"
-	SkillIdPlan                SkillId = "plan"
-	SkillIdPrReview            SkillId = "pr-review"
-	SkillIdProcessAudit        SkillId = "process-audit"
-	SkillIdProofOfConcept      SkillId = "proof-of-concept"
-	SkillIdResearch            SkillId = "research"
-	SkillIdReview              SkillId = "review"
-	SkillIdRpi                 SkillId = "rpi"
-	SkillIdSelfImprove         SkillId = "self-improve"
-	SkillIdSpeckitAnalyze      SkillId = "speckit-analyze"
-	SkillIdSpeckitChecklist    SkillId = "speckit-checklist"
-	SkillIdSpeckitClarify      SkillId = "speckit-clarify"
-	SkillIdSpeckitConstitute   SkillId = "speckit-constitution"
-	SkillIdSpeckitImplement    SkillId = "speckit-implement"
-	SkillIdSpeckitPlan         SkillId = "speckit-plan"
-	SkillIdSpeckitSpecify      SkillId = "speckit-specify"
-	SkillIdSpeckitTasks        SkillId = "speckit-tasks"
-	SkillIdSpike               SkillId = "spike"
-	SkillIdTddLoop             SkillId = "tdd-loop"
-	SkillIdTestFirstChange     SkillId = "test-first-change"
-	SkillIdUpdateMemory        SkillId = "update-memory"
+	SkillIdAdhdEngineer          SkillId = "adhd-engineer"
+	SkillIdAntiSpeculation       SkillId = "anti-speculation"
+	SkillIdArchitectureReview    SkillId = "architecture-review"
+	SkillIdBugfix                SkillId = "bugfix"
+	SkillIdCaveman               SkillId = "caveman"
+	SkillIdCodebaseExploration   SkillId = "codebase-exploration"
+	SkillIdCreateAgent           SkillId = "create-agent"
+	SkillIdCreateHook            SkillId = "create-hook"
+	SkillIdCreateSkill           SkillId = "create-skill"
+	SkillIdCreateWorkflow        SkillId = "create-workflow"
+	SkillIdDiagnose              SkillId = "diagnose"
+	SkillIdDocBackedClarify      SkillId = "doc-backed-clarify"
+	SkillIdExtractStandards      SkillId = "extract-standards"
+	SkillIdFastFeedback          SkillId = "fast-feedback"
+	SkillIdFourPointVibeCoding   SkillId = "four-point-vibe-coding"
+	SkillIdHandoff               SkillId = "handoff"
+	SkillIdHousekeeping          SkillId = "housekeeping"
+	SkillIdImpactCheck           SkillId = "impact-check"
+	SkillIdImplement             SkillId = "implement"
+	SkillIdIssueTriage           SkillId = "issue-triage"
+	SkillIdIterate               SkillId = "iterate"
+	SkillIdMemoryPromotion       SkillId = "memory-promotion"
+	SkillIdMemoryWrite           SkillId = "memory-write"
+	SkillIdNoWorkarounds         SkillId = "no-workarounds"
+	SkillIdParallelExecution     SkillId = "parallel-execution"
+	SkillIdPlan                  SkillId = "plan"
+	SkillIdPrReview              SkillId = "pr-review"
+	SkillIdProcessAudit          SkillId = "process-audit"
+	SkillIdProjectGuardrailsInit SkillId = "project-guardrails-init"
+	SkillIdProofOfConcept        SkillId = "proof-of-concept"
+	SkillIdResearch              SkillId = "research"
+	SkillIdReview                SkillId = "review"
+	SkillIdRpi                   SkillId = "rpi"
+	SkillIdSelfImprove           SkillId = "self-improve"
+	SkillIdSkillAuthoring        SkillId = "skill-authoring"
+	SkillIdSpeckitAnalyze        SkillId = "speckit-analyze"
+	SkillIdSpeckitChecklist      SkillId = "speckit-checklist"
+	SkillIdSpeckitClarify        SkillId = "speckit-clarify"
+	SkillIdSpeckitConstitute     SkillId = "speckit-constitution"
+	SkillIdSpeckitImplement      SkillId = "speckit-implement"
+	SkillIdSpeckitPlan           SkillId = "speckit-plan"
+	SkillIdSpeckitSpecify        SkillId = "speckit-specify"
+	SkillIdSpeckitTasks          SkillId = "speckit-tasks"
+	SkillIdSpike                 SkillId = "spike"
+	SkillIdTaskToIssues          SkillId = "task-to-issues"
+	SkillIdTddLoop               SkillId = "tdd-loop"
+	SkillIdTddPlanning           SkillId = "tdd-planning"
+	SkillIdTestFirstChange       SkillId = "test-first-change"
+	SkillIdUpdateMemory          SkillId = "update-memory"
+	SkillIdZoomOut               SkillId = "zoom-out"
 )
 
 // PromptId identifies a reusable prompt.
@@ -378,13 +400,32 @@ var (
 		AgentIdPlanner,
 		AgentIdReviewer,
 		AgentIdScout,
+		AgentIdEvidenceVerifier,
 	}
 
 	ALL_SKILLS = []SkillId{
+		SkillIdAdhdEngineer,
+		SkillIdArchitectureReview,
+		SkillIdCaveman,
 		SkillIdCodebaseExploration,
-		SkillIdTestFirstChange,
+		SkillIdCreateAgent,
+		SkillIdCreateHook,
+		SkillIdCreateSkill,
+		SkillIdCreateWorkflow,
 		SkillIdDiagnose,
-		SkillIdPrReview,
+		SkillIdDocBackedClarify,
+		SkillIdFastFeedback,
+		SkillIdFourPointVibeCoding,
+		SkillIdHandoff,
+		SkillIdIssueTriage,
+		SkillIdMemoryPromotion,
+		SkillIdNoWorkarounds,
+		SkillIdProjectGuardrailsInit,
+		SkillIdSkillAuthoring,
+		SkillIdTaskToIssues,
+		SkillIdTddPlanning,
+		SkillIdTestFirstChange,
+		SkillIdZoomOut,
 	}
 
 	ALL_PROMPTS = []PromptId{
@@ -755,7 +796,7 @@ func IsValidSetupScope(s SetupScope) bool {
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
 	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot:
+	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdAntigravity:
 		return true
 	default:
 		return false

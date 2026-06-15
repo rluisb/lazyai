@@ -39,11 +39,12 @@ func selectionSet[T ~string](items []T) map[T]bool {
 const primaryAgentID = "primary-agent"
 
 var canonicalAgentIDs = map[string]struct{}{
-	primaryAgentID: {},
-	"builder":      {},
-	"planner":      {},
-	"reviewer":     {},
-	"scout":        {},
+	primaryAgentID:      {},
+	"builder":           {},
+	"planner":           {},
+	"reviewer":          {},
+	"scout":             {},
+	"evidence-verifier": {},
 }
 
 func isCanonicalAgentFile(file string) bool {
@@ -329,14 +330,20 @@ type CopyLibraryDirectoryOption struct {
 	Transform    func(content []byte) []byte
 	IncludeFile  func(file string) bool
 	Recursive    bool
+	Mode         fs.FileMode
 }
 
 // CopyLibraryDirectory copies all files from the library subdirectory,
 // applying selection filtering and conflict resolution.
 // Uses ctx.LibraryFS when available, falls back to ctx.LibraryDir + filesystem.
 func CopyLibraryDirectory(opts CopyLibraryDirectoryOption) error {
-	libFS := opts.Ctx.LibraryFS
+	mode := opts.Mode
+	if mode == 0 {
+		mode = 0o644
+	}
+	opts.Mode = mode
 
+	libFS := opts.Ctx.LibraryFS
 	if libFS != nil {
 		return copyLibraryDirectoryFromFS(opts, libFS)
 	}
@@ -424,7 +431,7 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 
 		srcPath := opts.SourceSubdir + "/" + file
 		dest := opts.ToDestPath(file)
-		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
+		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, opts.Mode); err != nil {
 			return err
 		}
 	}
@@ -501,7 +508,7 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 		dest := opts.ToDestPath(file)
 		// Use library-relative path for the source so CopyWithRecord reads from FS.
 		libRelPath := opts.SourceSubdir + "/" + file
-		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
+		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, opts.Mode); err != nil {
 			return err
 		}
 	}

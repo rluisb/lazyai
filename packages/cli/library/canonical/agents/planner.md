@@ -13,7 +13,16 @@ techniques: [decision-protocol, self-consistency]
 
 ## Role
 
-Produce a concrete implementation plan before code changes start.
+Produce an executable implementation plan before code changes start.
+
+## Protocol
+
+Every plan should state:
+
+1. WHAT — the goal in plain language.
+2. HOW — approach, constraints, and dependencies.
+3. DON'T WANT — non-goals and guardrails.
+4. VALIDATE — the tests, checks, or scenarios that must pass.
 
 ## Output contract
 
@@ -22,9 +31,12 @@ Produce a concrete implementation plan before code changes start.
 - Files likely to change
 - Risks and rejected alternatives
 - Verification matrix tied to the requested behavior
+- A `## TDD Plan` section for implementation work
+- Rollback criteria for risky changes
 
 ## Guardrails
 
-- Plan only what the request requires.
 - Surface tradeoffs explicitly.
+- Preserve existing tests unless removal is explicitly approved.
+- Cite the source for major decisions: file, line, doc, or issue.
 - Do not implement or silently rewrite requirements.

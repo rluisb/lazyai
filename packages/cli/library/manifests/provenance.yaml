@@ -6,20 +6,21 @@ entries:
     source_repo: github.com/rluisb/vibe-lab
     source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
       recorded 2026-06-15
-    source_path: .agents/agents/builder.md
-    local_sha256: 638785b4ad654098d4bff3131651ab1c8640ba2221c9c0fae8f98ed2ac71707c
+    source_path: .agents/agents/implementer.md
+    local_sha256: 70e2f121a1cd91831a907b711673c84f543eeed185958722ebd5d6cc9663bd3a
     mode: compressed
-    notes: Compressed into a neutral LazyAI implementation agent while preserving
-      the build-and-verify role.
+    notes: Compressed from the baseline implementer agent into a neutral LazyAI
+      builder role while preserving fail-first and test-preservation guardrails.
   - path: packages/cli/library/canonical/agents/planner.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
     source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
       recorded 2026-06-15
     source_path: .agents/agents/planner.md
-    local_sha256: 4ddb37797713b527e0e19294e8fe32675f6ae9ffda9a3636eb60bfdf91d137d0
+    local_sha256: 877b7883845663ce14bc4e743b57962512db29917e423db4827d0deaec97132f
     mode: compressed
-    notes: Compressed into a neutral LazyAI planning agent for scoped design work.
+    notes: Compressed from the baseline planner agent into a neutral LazyAI planning
+      role while preserving TDD-plan and rollback criteria.
   - path: packages/cli/library/canonical/agents/primary-agent.md
     kind: agent
     source_repo: github.com/rluisb/lazyai
@@ -34,19 +35,29 @@ entries:
     source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
       recorded 2026-06-15
     source_path: .agents/agents/reviewer.md
-    local_sha256: aca35a79d8e8518e16743904f8f8059c0cb9ce63baf74765cd5b9604a13c4cb8
+    local_sha256: bef8d890a957f9a85b31719d0cb9964e87ab0de3842e28523ec75a81c84ddb61
     mode: compressed
-    notes: Compressed into a neutral LazyAI review agent focused on changed behavior.
+    notes: Compressed from the baseline reviewer agent while preserving the explicit
+      passing-tests approval gate.
   - path: packages/cli/library/canonical/agents/scout.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
     source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
       recorded 2026-06-15
-    source_path: .agents/agents/scout.md
-    local_sha256: 12c3eb02c4b615037aa102dc25342c0ae84426d9003dc9847d24992f84085508
+    source_path: .agents/agents/researcher.md
+    local_sha256: 41a66467bc1daa6a219e0527c0537917acaca05b0c2f5e0f3a31d71424e51648
     mode: compressed
-    notes: Compressed into a neutral LazyAI research agent for codebase
-      reconnaissance.
+    notes: Compressed from the baseline researcher agent into a neutral LazyAI scout
+      role while preserving evidence and TDD-research output guidance.
+  - path: packages/cli/library/canonical/agents/evidence-verifier.md
+    kind: agent
+    source_repo: github.com/rluisb/vibe-lab
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-15
+    source_path: .agents/agents/evidence-verifier.md
+    local_sha256: 8a49d050725ee304c71671c84395a88669a6fccf2ef16dbb8fa76cdd55cab591
+    mode: curated
+    notes: Ported from the baseline evidence-verifier agent into the LazyAI
+      canonical schema.
   - path: packages/cli/library/canonical/commands/graphify.md
     kind: command
     source_repo: github.com/rluisb/vibe-lab

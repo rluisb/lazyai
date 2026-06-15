@@ -96,7 +96,7 @@ func TestCompileWithUnsupportedToolFailsFastBeforeConfigValidation(t *testing.T)
 
 	stdout, stderr := captureOutput(t, func() {
 		err := runCompile(cmd, nil)
-		if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: opencode, claude-code, copilot)" {
+		if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: opencode, claude-code, copilot, pi, antigravity)" {
 			t.Fatalf("runCompile error = %v, want unsupported-tool error", err)
 		}
 	})

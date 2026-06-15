@@ -111,6 +111,44 @@
       "cli_equivalent": "qmd",
       "token_policy": "hybrid"
     },
+    "context7": {
+      "description": "Up-to-date library documentation and code examples",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      },
+      "tools": [
+        "resolve-library-id",
+        "query-docs"
+      ],
+      "enabled": false,
+      "requiresInstall": false,
+      "setupHint": "Create a Context7 API key at https://context7.com/dashboard and expose it as CONTEXT7_API_KEY.",
+      "preferred_interface": "mcp",
+      "cli_equivalent": "ctx7",
+      "token_policy": "hybrid"
+    },
+    "github": {
+      "description": "GitHub repository, issue, pull request, Actions, and Copilot context via the official remote MCP server",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "tools": [
+        "context",
+        "repos",
+        "issues",
+        "pull_requests",
+        "users",
+        "copilot"
+      ],
+      "enabled": false,
+      "requiresInstall": false,
+      "setupHint": "Set GITHUB_PERSONAL_ACCESS_TOKEN to a GitHub PAT for PAT-based hosts, or use your host's OAuth flow when supported.",
+      "preferred_interface": "hybrid",
+      "cli_equivalent": "gh",
+      "token_policy": "hybrid"
+    },
     "graphify": {
       "description": "Knowledge graph builder and query engine for codebases",
       "command": "graphify",

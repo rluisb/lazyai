@@ -195,6 +195,7 @@ const (
 	ArtifactTypeCommand             ArtifactType = "command"
 	ArtifactTypePrompt              ArtifactType = "prompt"
 	ArtifactTypeTemplate            ArtifactType = "template"
+	ArtifactTypeHook                ArtifactType = "hook"
 	ArtifactTypeWorkflow            ArtifactType = "workflow"
 	ArtifactTypeChain               ArtifactType = "chain"
 	ArtifactTypeTeam                ArtifactType = "team"

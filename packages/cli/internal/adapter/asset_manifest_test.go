@@ -22,6 +22,10 @@ func TestCurationManifestNamesAdapterTargetsForMappedAssets(t *testing.T) {
 		if !ok {
 			continue
 		}
+		// Skip entries explicitly declared as non-adapter setup assets.
+		if len(entry.AdapterTargets) == 1 && entry.AdapterTargets[0] == "none" {
+			continue
+		}
 		for source, tools := range mappedTargets {
 			if libraryRel != source && !strings.HasPrefix(libraryRel, source+"/") {
 				continue

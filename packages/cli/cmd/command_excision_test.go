@@ -8,7 +8,7 @@ import (
 )
 
 func TestRootCommandRemovesRetiredRuntimeSurfaces(t *testing.T) {
-	for _, name := range []string{"task", "workflow", "orchestration", "mcp-setup"} {
+	for _, name := range []string{"task", "workflow", "orchestration", "mcp-setup", "eval"} {
 		if hasRootSubcommand(name) {
 			t.Fatalf("root command should not expose %q", name)
 		}

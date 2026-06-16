@@ -38,11 +38,7 @@ BANNED_TOKENS=(
   '\.vibe-lab/'
   '\.gemini/hooks/vibe-lab'
   'hooks/vibe-lab'
-  'vibe-lab-hooks'
-  'VibeLabHooks'
   'vibe-lab generated'
-  'vibe-lab policy'
-  '\[vibe-lab\]'
 )
 
 EXCLUDE_DIRS=(

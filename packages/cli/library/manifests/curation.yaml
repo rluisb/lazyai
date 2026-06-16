@@ -967,9 +967,8 @@ entries:
     category: setup-core
     adapter_targets: [opencode]
     reason_kept: Managed OpenCode hook plugin emitted to .opencode/plugins on install.
-    reason_compressed_or_changed: Generated from current hook policies;
-      baseline-facing default name and export are vibe-lab-hooks.js /
-      VibeLabHooks.
+    reason_compressed_or_changed: Generated from current hook policies; baseline
+      default name and export are vibe-lab-hooks.js / VibeLabHooks.
     token_rent_relevant: false
   - path: packages/cli/library/antigravity/settings.json
     kind: hook

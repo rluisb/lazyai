@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Keep the caveman-to-memory review workflow documented without claiming an emitted runtime hook where none is wired today.
+Detect when a caveman summary may contain reusable knowledge and route it to `memory-promotion` review without writing memory automatically.
 
 ## Events
 
-- Generated adapters: none
+- OpenCode plugin: `experimental.session.compacting`, `session.idle`
 - Manual workflow: after caveman summaries, diagnosis, triage, or handoff work
+- Claude Code/Copilot/Antigravity: policy retained; no runtime hook is emitted by LazyAI today
 - OMP/Pi: markdown-only advisory unless runtime hook support is explicitly implemented later
 
 ## Decision
@@ -30,11 +31,8 @@ Draft:
 
 ## Runtime
 
-- Claude Code: no caveman-memory-promotion runtime hook is emitted.
-- OpenCode: no caveman-memory-promotion plugin event is emitted.
-- Copilot: no caveman-memory-promotion hook descriptor is emitted.
-- Antigravity: no caveman-memory-promotion hook is emitted.
-- OMP/Pi: no runtime hook is emitted.
+- OpenCode: generated plugin prints a non-blocking advisory for caveman summaries that mention reusable decisions, traps, conventions, root causes, templates, patterns, rules, or lessons.
+- Other generated adapters: no caveman-memory-promotion runtime hook is emitted today.
 
 ## Safety Guardrails
 

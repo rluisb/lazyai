@@ -47,6 +47,15 @@
       "command": "ob",
       "type": "stdio"
     },
+    "playwright": {
+      "args": [
+        "-y",
+        "@playwright/mcp",
+        "--headless"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
     "qmd": {
       "args": [
         "mcp"

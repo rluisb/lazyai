@@ -111,14 +111,12 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	adapterLog.Info("installing tools", "adapter", "claude-code")
 
-	// Copy agents. Source frontmatter declares an abstract tier (frontier/
-	// balanced/speed); RewriteAgentForClaudeCode resolves it to the
-	// appropriate Anthropic alias (opus/sonnet/haiku) and emits a Claude
-	// Code-shaped frontmatter (drops tier/thinking/risk — Claude Code
-	// ignores them).
-	if err := copyCanonicalPrimaryAgent(ctx,
-		filepath.Join(claudeDir, "agents", "primary-agent.md"),
-		claudePrimaryAgentContent,
+	// Copy agents from the canonical seven-agent baseline. Source frontmatter
+	// carries LazyAI metadata for other uses; generated Claude Code agents emit
+	// only name and description to match the baseline surface.
+	if err := copyCanonicalDefaultAgent(ctx,
+		filepath.Join(claudeDir, "agents", defaultAgentID+".md"),
+		claudeDefaultAgentContent,
 	); err != nil {
 		return nil, err
 	}
@@ -131,8 +129,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 			return filepath.Join(claudeDir, "agents", file)
 		},
 		IncludeFile: func(file string) bool {
-			name := fileID(file)
-			return name != primaryAgentID && isCanonicalAgentFile(file)
+			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
 		},
 		Transform: func(content []byte) []byte {
 			out, err := RewriteAgentForClaudeCode(content, ctx)

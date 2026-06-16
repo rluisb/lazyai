@@ -15,7 +15,7 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 		Scope:         types.SetupScopeProject,
 		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 		Skills:        []types.SkillId{types.SkillIdDiagnose},
-		Agents:        []types.AgentId{types.AgentIdBuilder},
+		Agents:        []types.AgentId{types.AgentIdImplementer},
 		McpPreset:     McpPresetRecommended,
 		ProjectName:   "demo-app",
 		CliTools:      []string{"gh"},
@@ -54,7 +54,7 @@ func TestBuildPhase1Result(t *testing.T) {
 
 			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCopilot}
 			skills := []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview}
-			agents := []types.AgentId{types.AgentIdBuilder, types.AgentIdReviewer}
+			agents := []types.AgentId{types.AgentIdImplementer, types.AgentIdReviewer}
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
 
@@ -87,7 +87,7 @@ func TestBuildPhase1Result(t *testing.T) {
 
 			tools[0] = types.ToolIdClaudeCode
 			skills[0] = types.SkillIdCodebaseExploration
-			agents[0] = types.AgentIdScout
+			agents[0] = types.AgentIdResearcher
 			cliTools[0] = "rtk"
 			servers[0] = "memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
@@ -96,7 +96,7 @@ func TestBuildPhase1Result(t *testing.T) {
 			if result.Skills[0] != types.SkillIdDiagnose {
 				t.Fatalf("result.Skills was not copied")
 			}
-			if result.Agents[0] != types.AgentIdBuilder {
+			if result.Agents[0] != types.AgentIdImplementer {
 				t.Fatalf("result.Agents was not copied")
 			}
 			if result.CliTools[0] != "gh" {
@@ -171,7 +171,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 		Scope:       types.SetupScopeProject,
 		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 		Skills:      []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview},
-		Agents:      []types.AgentId{types.AgentIdBuilder},
+		Agents:      []types.AgentId{types.AgentIdImplementer},
 		McpPreset:   McpPresetRecommended,
 		ProjectName: "demo-app",
 	}
@@ -187,7 +187,7 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	}
 
 	agentInfo := phase1StepInfoFor(4, types.SetupScopeProject, defaults)
-	if got, want := agentInfo.Title(), "Setup Context — 4/9: Agents (previous: builder)"; got != want {
+	if got, want := agentInfo.Title(), "Setup Context — 4/9: Agents (previous: implementer)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 

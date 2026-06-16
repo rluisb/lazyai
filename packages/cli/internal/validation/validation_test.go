@@ -46,7 +46,7 @@ func TestValidateArtifactName_AcceptsValidNames(t *testing.T) {
 
 	validNames := []string{
 		"my-agent",
-		"builder",
+		"implementer",
 		"code-review",
 		"test123",
 		"abc",

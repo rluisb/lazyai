@@ -34,7 +34,7 @@ From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 - `.vscode/` — VS Code MCP config
 
 
-The active default adapter contract uses `primary-agent` and current canonical library content. Retired Fortnite defaults, old orchestrator runtime files, obsolete eval surfaces, and archived research/rollback material are not part of generated default runtime output.
+The active default adapter contract uses the baseline-facing `implementer` agent and current canonical library content. Retired Fortnite defaults, old orchestrator runtime files, obsolete eval surfaces, and archived research/rollback material are not part of generated default runtime output.
 
 ## Workflow
 

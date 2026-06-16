@@ -61,7 +61,7 @@ func (m *Manager) Start(goal string, opts StartOptions) (*Session, error) {
 
 	agent := opts.Agent
 	if agent == "" {
-		agent = "primary-agent"
+		agent = "implementer"
 	}
 
 	tags := ""

@@ -48,13 +48,13 @@ func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWa
 	if out, err := run("opencode", "debug", "config"); err != nil {
 		warnings = append(warnings, ValidationWarning{
 			Scope:  "config",
-			Item:   "opencode.jsonc",
+			Item:   "opencode.json",
 			Reason: fmt.Sprintf("opencode debug config failed: %v", err),
 		})
 	} else if !strings.Contains(string(out), "mcp") && files.FileExists(filepath.Join(ocDir, OpenCodeConfigFilename)) {
 		warnings = append(warnings, ValidationWarning{
 			Scope:  "config",
-			Item:   "opencode.jsonc",
+			Item:   "opencode.json",
 			Reason: "opencode debug config output does not mention mcp — MCP entries may not have been picked up",
 		})
 	}

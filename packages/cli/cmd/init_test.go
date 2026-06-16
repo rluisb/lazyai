@@ -49,7 +49,7 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	if !fileExists(filepath.Join(dir, ".ai", "mcp.json")) {
 		t.Fatal("expected .ai/mcp.json to exist")
 	}
-	opencodeConfigPath := filepath.Join(dir, ".opencode", "opencode.jsonc")
+	opencodeConfigPath := filepath.Join(dir, "opencode.json")
 	opencodeConfig, err := os.ReadFile(opencodeConfigPath)
 	if err != nil {
 		t.Fatalf("read opencode config: %v", err)
@@ -58,8 +58,11 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	if err := json.Unmarshal(opencodeConfig, &parsed); err != nil {
 		t.Fatalf("parse opencode config: %v", err)
 	}
-	if _, ok := parsed["mcp"].(map[string]any); !ok {
-		t.Fatalf("expected init to compile MCP servers into %s; got %s", opencodeConfigPath, string(opencodeConfig))
+	if _, ok := parsed["default_agent"]; ok {
+		t.Fatalf("did not expect default_agent in baseline OpenCode config")
+	}
+	if _, ok := parsed["mcp"].(map[string]any); ok {
+		t.Fatalf("expected init to avoid baseline MCP in %s; got %s", opencodeConfigPath, string(opencodeConfig))
 	}
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist")

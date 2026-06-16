@@ -31,7 +31,7 @@ func TestSaveConfigOmitsRetiredWorkflowsSection(t *testing.T) {
 		t.Fatalf("mkdir .opencode: %v", err)
 	}
 	cfg := &LazyAIConfig{
-		Agent:         AgentConfig{DefaultAgent: "primary-agent", DefaultModel: "gpt-4"},
+		Agent:         AgentConfig{DefaultAgent: "implementer", DefaultModel: "gpt-4"},
 		Database:      DatabaseConfig{Path: ".specify/lazyai.db"},
 		Ledger:        LedgerConfig{Path: ".specify/ledger.jsonl"},
 		Notifications: NotificationConfig{Enabled: false},
@@ -58,7 +58,7 @@ func TestConfigListOmitsRetiredWorkflowDirectory(t *testing.T) {
 		t.Fatalf("mkdir .opencode: %v", err)
 	}
 	cfg := &LazyAIConfig{
-		Agent:         AgentConfig{DefaultAgent: "primary-agent", DefaultModel: "gpt-4"},
+		Agent:         AgentConfig{DefaultAgent: "implementer", DefaultModel: "gpt-4"},
 		Database:      DatabaseConfig{Path: ".specify/lazyai.db"},
 		Ledger:        LedgerConfig{Path: ".specify/ledger.jsonl"},
 		Notifications: NotificationConfig{Enabled: false},

@@ -5,17 +5,17 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"io/fs"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
-
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 	"github.com/rluisb/lazyai/packages/cli/internal/models"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
+	"io/fs"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // CopilotAdapter implements ToolAdapter for GitHub Copilot.
@@ -107,10 +107,11 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 			return nil, err
 		}
 	}
-	if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
-		return nil, err
+	if len(selectedSkills) > 0 {
+		if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
+			return nil, err
+		}
 	}
-
 	// Copy chat modes to .github/chatmodes/<name>.chatmode.md.
 	chatmodesDir := filepath.Join(githubDir, "chatmodes")
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
@@ -219,11 +220,15 @@ func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContex
 	return nil
 }
 
-// copyCopilotAgents renders canonical agent markdown into Copilot agent YAML.
+// copyCopilotAgents renders canonical agent markdown into Copilot .agent.md files.
 func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string) error {
-	if err := copyCanonicalPrimaryAgent(ctx,
-		filepath.Join(agentsDir, "primary-agent.agent.yaml"),
-		copilotPrimaryAgentContent,
+	if err := CopyWithRecord(
+		filepath.ToSlash(filepath.Join("canonical", "agents", defaultAgentID+".md")),
+		filepath.Join(agentsDir, defaultAgentID+".agent.md"),
+		ctx,
+		true,
+		copilotAgentMarkdownContent,
+		0o644,
 	); err != nil {
 		return err
 	}
@@ -238,12 +243,12 @@ func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string
 				continue
 			}
 			file := entry.Name()
-			if !isCanonicalAgentFile(file) || fileID(file) == primaryAgentID {
+			if !isCanonicalAgentFile(file) || isDefaultAgentFile(file) {
 				continue
 			}
-			src := filepath.ToSlash(filepath.Join("canonical/agents", file))
-			dest := filepath.Join(agentsDir, fileID(file)+".agent.yaml")
-			if err := a.copyAgentMarkdownAsYAMLFromFS(ctx, ctx.LibraryFS, src, dest); err != nil {
+			src := filepath.ToSlash(filepath.Join("canonical", "agents", file))
+			dest := filepath.Join(agentsDir, fileID(file)+".agent.md")
+			if err := CopyWithRecord(src, dest, ctx, true, copilotAgentMarkdownContent, 0o644); err != nil {
 				return err
 			}
 		}
@@ -256,16 +261,49 @@ func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string
 	}
 	for _, file := range files.ListDir(sourceDir) {
 		srcPath := filepath.Join(sourceDir, file)
-		if files.IsDirectory(srcPath) || !isCanonicalAgentFile(file) || fileID(file) == primaryAgentID {
+		if files.IsDirectory(srcPath) || !isCanonicalAgentFile(file) || isDefaultAgentFile(file) {
 			continue
 		}
-		sourcePath := filepath.ToSlash(filepath.Join("canonical/agents", file))
-		dest := filepath.Join(agentsDir, fileID(file)+".agent.yaml")
-		if err := a.copyAgentMarkdownAsYAMLWithRecord(ctx, srcPath, dest, sourcePath); err != nil {
+		sourcePath := filepath.ToSlash(filepath.Join("canonical", "agents", file))
+		dest := filepath.Join(agentsDir, fileID(file)+".agent.md")
+		if err := CopyWithRecord(sourcePath, dest, ctx, true, copilotAgentMarkdownContent, 0o644); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func copilotAgentMarkdownContent(source []byte) []byte {
+	fm, body, err := frontmatter.ExtractFrontmatter(source)
+	description := ""
+	agentName := "agent"
+	if err == nil {
+		agentName = strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
+		if agentName == "" {
+			agentName = "agent"
+		}
+		description = strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
+	}
+	if description == "" {
+		description = "Agent for the LazyAI runtime."
+	}
+
+	bodyStr := strings.TrimLeft(string(body), "\n")
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("name: ")
+	b.WriteString(agentName)
+	b.WriteString("\ndescription: ")
+	b.WriteString(strconv.Quote(description))
+	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
+	b.WriteString(managedAgentMarker("copilot", agentName))
+	b.WriteString("\n\n")
+	b.WriteString(bodyStr)
+	if !strings.HasSuffix(bodyStr, "\n") {
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	return []byte(b.String())
 }
 
 // copyCopilotInstructions copies instruction files from library/copilot/instructions/ to the target instructions directory.
@@ -279,8 +317,13 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 	})
 }
 
-// copySkillsAsAgents converts skill files to .agent.yaml format in the agents directory.
+// copySkillsAsAgents converts explicitly selected skill files to .agent.yaml
+// format in the agents directory. No .agent.yaml files are emitted unless the
+// user selected the corresponding skill.
 func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
+	if selected == nil || len(selected) == 0 {
+		return nil
+	}
 	libFS := ctx.LibraryFS
 	if libFS != nil {
 		return a.copySkillsAsAgentsFromFS(ctx, libFS, agentsDir, selected)
@@ -296,7 +339,7 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 			continue
 		}
 		fileIDVal := fileID(file)
-		if selected != nil && !selected[types.SkillId(fileIDVal)] {
+		if !selected[types.SkillId(fileIDVal)] {
 			continue
 		}
 		destFile := fileIDVal + ".agent.yaml"
@@ -434,94 +477,6 @@ func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS
 	return nil
 }
 
-// copyAgentMarkdownAsYAMLWithRecord reads a canonical agent markdown file from disk and converts it to Copilot agent YAML.
-func (a *CopilotAdapter) copyAgentMarkdownAsYAMLWithRecord(ctx *AdapterContext, src, dest, sourcePath string) error {
-	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
-
-	effectiveStrategy := ctx.Strategy
-	if override, ok := ctx.PerFileOverrides[dest]; ok {
-		effectiveStrategy = override
-	}
-
-	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
-		Force:    ctx.Force,
-		Strategy: effectiveStrategy,
-	})
-	if err != nil {
-		return err
-	}
-	if action == conflict.ActionSkip {
-		return nil
-	}
-	if action == conflict.ActionReplace && files.FileExists(dest) {
-		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
-			return err
-		}
-	}
-
-	data, err := files.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	transformed, err := agentMarkdownToCopilotYAML(ctx, sourcePath, string(data))
-	if err != nil {
-		return err
-	}
-	if err := files.WriteFile(dest, []byte(transformed), 0o644); err != nil {
-		return err
-	}
-
-	hash, _ := files.FileHash(dest)
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: sourcePath, Owner: types.FileOwnerLibrary,
-	})
-	return nil
-}
-
-// copyAgentMarkdownAsYAMLFromFS reads a canonical agent markdown file from the library FS and converts it to Copilot agent YAML.
-func (a *CopilotAdapter) copyAgentMarkdownAsYAMLFromFS(ctx *AdapterContext, libFS fs.FS, src, dest string) error {
-	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
-
-	effectiveStrategy := ctx.Strategy
-	if override, ok := ctx.PerFileOverrides[dest]; ok {
-		effectiveStrategy = override
-	}
-
-	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
-		Force:    ctx.Force,
-		Strategy: effectiveStrategy,
-	})
-	if err != nil {
-		return err
-	}
-	if action == conflict.ActionSkip {
-		return nil
-	}
-	if action == conflict.ActionReplace && files.FileExists(dest) {
-		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
-			return err
-		}
-	}
-
-	data, err := fs.ReadFile(libFS, src)
-	if err != nil {
-		return fmt.Errorf("read FS %s: %w", src, err)
-	}
-	transformed, err := agentMarkdownToCopilotYAML(ctx, src, string(data))
-	if err != nil {
-		return err
-	}
-	if err := files.WriteFile(dest, []byte(transformed), 0o644); err != nil {
-		return err
-	}
-
-	hash, _ := files.FileHash(dest)
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: src, Owner: types.FileOwnerLibrary,
-	})
-	return nil
-}
-
 // skillToAgentYAML transforms a skill markdown file into Copilot agent YAML
 // format. The model field is resolved against `CopilotCatalog` based on the
 // skill's optional tier annotation (defaults to Balanced if absent),
@@ -568,53 +523,6 @@ promptParts:
 prompt: |
 %s
 `, skillID, toDisplayName(skillID), skillID, res.Field, indentLines(body, "  "))
-
-	return yaml, nil
-}
-
-// agentMarkdownToCopilotYAML transforms canonical agent markdown into Copilot
-// agent YAML. Unlike the old hand-authored yaml path, the markdown source is
-// now authoritative for every non-primary agent.
-func agentMarkdownToCopilotYAML(ctx *AdapterContext, agentName string, agentContent string) (string, error) {
-	raw, body := frontmatter.SplitYamlFrontmatter(agentContent)
-	body = strings.TrimSpace(body)
-	if strings.TrimSpace(raw) == "" || body == "" {
-		return "", fmt.Errorf("agent %s has incomplete markdown source", agentName)
-	}
-
-	basename := filepath.Base(agentName)
-	agentID := strings.TrimSuffix(basename, filepath.Ext(basename))
-
-	spec, err := frontmatter.ParseAgentSpec([]byte(agentContent))
-	if err != nil {
-		return "", fmt.Errorf("copilot agent %s parse: %w", agentID, err)
-	}
-	rc := resolveCtxFor(types.ToolIdCopilot, ctx)
-	res, err := models.Resolve(agentSpecToModelsSpec(spec), rc)
-	if err != nil {
-		return "", fmt.Errorf("copilot agent %s resolve: %w", agentID, err)
-	}
-
-	description := strings.TrimSpace(spec.Description)
-	if description == "" {
-		description = toDisplayName(agentID) + " agent for the LazyAI runtime."
-	}
-
-	yaml := fmt.Sprintf(`name: %s
-displayName: %s
-description: >
-  %s
-model: %s
-tools:
-  - "*"
-promptParts:
-  includeAISafety: true
-  includeToolInstructions: true
-  includeParallelToolCalling: true
-  includeCustomAgentInstructions: false
-prompt: |
-%s
-`, agentID, toDisplayName(agentID), description, res.Field, indentLines(body, "  "))
 
 	return yaml, nil
 }

@@ -45,7 +45,7 @@ Status: active
 Started: 2026-05-24T00:44:40Z
 
 Dispatches:
-  [completed] builder: Implement auth middleware
+  [completed] implementer: Implement auth middleware
   [completed] reviewer: Review auth implementation
 ```
 
@@ -104,7 +104,7 @@ Creates `.specify/ledger.jsonl` with a genesis entry.
 ### Append Events
 
 ```bash
-lazyai-cli ledger append dispatch "agent=builder task=auth"
+lazyai-cli ledger append dispatch "agent=implementer task=auth"
 lazyai-cli ledger append session_start "goal=Implement auth"
 lazyai-cli ledger append validation "status=pass agents=8"
 ```
@@ -194,13 +194,13 @@ SQLite-based messaging between agents.
 ### Send a Message
 
 ```bash
-lazyai-cli message send builder "Need help" "Can you review the auth code?" --priority high
+lazyai-cli message send implementer "Need help" "Can you review the auth code?" --priority high
 ```
 
 ### Receive Messages
 
 ```bash
-lazyai-cli message recv builder
+lazyai-cli message recv implementer
 ```
 
 **Note:** This marks all unread messages for the agent as read and shows the 10 most recent messages.

@@ -1,45 +1,63 @@
 version: 1
 library_root: packages/cli/library
 entries:
-  - path: packages/cli/library/canonical/agents/builder.md
+  - path: packages/cli/library/canonical/agents/implementer.md
     kind: agent
     category: adapter-support
     adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Canonical implementation agent emitted to supported tool adapters.
-    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
-      the LazyAI-neutral canonical schema.
+    reason_kept: Baseline-facing implementation agent emitted to supported tool
+      adapters and used as the OpenCode default agent.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/researcher.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Baseline-facing research agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/deployer.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Baseline-facing deployment agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
+    token_rent_relevant: true
+  - path: packages/cli/library/canonical/agents/responder.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Baseline-facing incident response agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
     token_rent_relevant: true
   - path: packages/cli/library/canonical/agents/planner.md
     kind: agent
     category: adapter-support
     adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Canonical planning agent emitted to supported tool adapters.
-    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
-      the LazyAI-neutral canonical schema.
-    token_rent_relevant: true
-  - path: packages/cli/library/canonical/agents/primary-agent.md
-    kind: agent
-    category: setup-core
-    adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Default LazyAI runtime entry point for adapter-generated setups.
-    reason_compressed_or_changed: LazyAI-authored entry point now promotes
-      four-point intake while staying independent of retired runtime surfaces.
+    reason_kept: Baseline-facing planning agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
     token_rent_relevant: true
   - path: packages/cli/library/canonical/agents/reviewer.md
     kind: agent
     category: adapter-support
     adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Canonical review agent emitted to supported tool adapters.
-    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
-      the LazyAI-neutral canonical schema.
+    reason_kept: Baseline-facing review agent emitted to supported tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
     token_rent_relevant: true
-  - path: packages/cli/library/canonical/agents/scout.md
+  - path: packages/cli/library/canonical/agents/evidence-verifier.md
     kind: agent
     category: adapter-support
     adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Canonical research agent emitted to supported tool adapters.
-    reason_compressed_or_changed: Compressed from vibe-lab-style agent guidance into
-      the LazyAI-neutral canonical schema.
+    reason_kept: Baseline-facing evidence verification agent emitted to supported
+      tool adapters.
+    reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
+      baseline for exact default agent parity.
     token_rent_relevant: true
   - path: packages/cli/library/canonical/skills/codebase-exploration.md
     kind: skill
@@ -722,14 +740,6 @@ entries:
     reason_compressed_or_changed: Embedded as repository-local policy configuration
       without requiring a vibe-lab checkout.
     token_rent_relevant: false
-  - path: packages/cli/library/canonical/agents/evidence-verifier.md
-    kind: agent
-    category: adapter-support
-    adapter_targets: [claude-code, opencode, copilot]
-    reason_kept: Canonical evidence verification agent emitted to supported tool adapters.
-    reason_compressed_or_changed: Curated from the current vibe-lab baseline into
-      the LazyAI-neutral canonical agent schema.
-    token_rent_relevant: true
   - path: packages/cli/library/skills/adhd-engineer.md
     kind: skill
     category: adapter-support
@@ -887,8 +897,9 @@ entries:
   - path: packages/cli/library/hooks/caveman-memory-promotion.md
     kind: hook
     category: setup-core
-    adapter_targets: [none]
-    reason_kept: Advisory hook policy retained for caveman summary routing guidance.
+    adapter_targets: [opencode]
+    reason_kept: Advisory hook policy retained for caveman summary routing guidance
+      and emitted as non-writing OpenCode guidance.
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's standalone hook-policy library.
     token_rent_relevant: false
@@ -903,8 +914,9 @@ entries:
   - path: packages/cli/library/hooks/startup-self-heal.md
     kind: hook
     category: setup-core
-    adapter_targets: [none]
-    reason_kept: Startup self-heal policy retained for scoped repair guidance.
+    adapter_targets: [opencode]
+    reason_kept: Startup self-heal policy retained for scoped repair guidance and
+      emitted through the OpenCode plugin.
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's standalone hook-policy library.
     token_rent_relevant: false
@@ -950,12 +962,13 @@ entries:
     reason_kept: Copilot hook script emitted for objective completion gating.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
-  - path: packages/cli/library/opencode/plugins/lazyai-hooks.js
+  - path: packages/cli/library/opencode/plugins/vibe-lab-hooks.js
     kind: hook
-    category: adapter-support
+    category: setup-core
     adapter_targets: [opencode]
-    reason_kept: OpenCode runtime plugin emitted for shell blocking and objective gating.
-    reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
+    reason_kept: Managed OpenCode hook plugin emitted to .opencode/plugins on install.
+    reason_compressed_or_changed: Generated from current hook policies; baseline
+      default name and export are vibe-lab-hooks.js / VibeLabHooks.
     token_rent_relevant: false
   - path: packages/cli/library/antigravity/settings.json
     kind: hook
@@ -1093,7 +1106,7 @@ exclusions:
     category: archived-historical
     reason_dropped: Archived to
       archive/issue-244-historical-library/packages/cli/library/agents/builder.md;
-      canonical/agents/builder.md is the active adapter source.
+      active implementation output now uses canonical/agents/implementer.md.
   - path: packages/cli/library/agents/documenter.md
     kind: agent
     category: archived-historical
@@ -1105,7 +1118,7 @@ exclusions:
     category: archived-historical
     reason_dropped: Archived to
       archive/issue-244-historical-library/packages/cli/library/agents/implementor.md;
-      implementation now uses canonical/agents/builder.md.
+      active implementation output now uses canonical/agents/implementer.md.
   - path: packages/cli/library/agents/orchestrator.md
     kind: agent
     category: archived-historical
@@ -1135,7 +1148,7 @@ exclusions:
     category: archived-historical
     reason_dropped: Archived to
       archive/issue-244-historical-library/packages/cli/library/agents/scout.md;
-      canonical/agents/scout.md is the active adapter source.
+      active research output now uses canonical/agents/researcher.md.
   - path: packages/cli/library/copilot/agents/builder.agent.yaml
     kind: agent
     category: archived-historical
@@ -1162,12 +1175,6 @@ exclusions:
       archive/issue-244-historical-library/packages/cli/library/copilot/agents/reviewer.agent.yaml;
       Copilot agents are now generated from canonical markdown.
   - path: packages/cli/library/copilot/agents/scout.agent.yaml
-    kind: agent
-    category: archived-historical
-    reason_dropped: Archived to
-      archive/issue-244-historical-library/packages/cli/library/copilot/agents/scout.agent.yaml;
-      Copilot agents are now generated from canonical markdown.
-  - path: packages/cli/library/copilot/agents/rpi/rpi-implementor.agent.yaml
     kind: agent
     category: archived-historical
     reason_dropped: Archived to

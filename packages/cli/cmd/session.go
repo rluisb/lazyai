@@ -109,7 +109,7 @@ func runSessionStart(cmd *cobra.Command, args []string) error {
 	goal := args[0]
 	agentName := os.Getenv("LAZYAI_AGENT")
 	if agentName == "" {
-		agentName = "primary-agent"
+		agentName = "implementer"
 	}
 
 	mgr := session.NewManager(db)

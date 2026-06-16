@@ -50,7 +50,7 @@ type OutputShape string
 
 const (
 	// ShapeFlat copies the file under the destination directory using its
-	// original basename (e.g. "scout.md" → "<dest>/scout.md").
+	// original basename (e.g. "researcher.md" → "<dest>/researcher.md").
 	ShapeFlat OutputShape = "flat"
 	// ShapeDirPerItem creates a per-item subdirectory and writes the file as
 	// SKILL.md inside it (e.g. "review.md" → "<dest>/review/SKILL.md").
@@ -186,8 +186,8 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			AssetKindAgents: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindAgents,
 				SourceSubdir: "canonical/agents", DestSubdir: "agents",
-				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.yaml", IncludeFile: canonicalAgents,
-				Notes: "Copilot agents are generated from canonical markdown into .github/agents/<name>.agent.yaml",
+				Shape: ShapeFlat, IncludeFile: canonicalAgents,
+				Notes: "Copilot agents are generated from canonical markdown into .github/agents/<name>.agent.md",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindSkills,

@@ -17,8 +17,8 @@ import (
 // library/ layout at the subset of paths the plugin generator touches.
 func newTestLibraryFS() fs.FS {
 	return fstest.MapFS{
-		"canonical/agents/builder.md": &fstest.MapFile{
-			Data: []byte("---\nname: Builder\nmodel: sonnet\n---\nBuilder prompt body\n"),
+		"canonical/agents/implementer.md": &fstest.MapFile{
+			Data: []byte("---\nname: Implementer\nmodel: sonnet\n---\nImplementer prompt body\n"),
 		},
 		"canonical/agents/planner.md": &fstest.MapFile{
 			Data: []byte("---\nname: Planner\nmodel: opus\n---\nPlanner prompt body\n"),
@@ -106,13 +106,13 @@ func TestBuild_CopiesAgentsVerbatimWhenNoForbiddenFields(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	src, _ := fs.ReadFile(libFS, "canonical/agents/builder.md")
-	dst, err := os.ReadFile(filepath.Join(outDir, "agents", "builder.md"))
+	src, _ := fs.ReadFile(libFS, "canonical/agents/implementer.md")
+	dst, err := os.ReadFile(filepath.Join(outDir, "agents", "implementer.md"))
 	if err != nil {
 		t.Fatalf("read dst: %v", err)
 	}
 	if string(src) != string(dst) {
-		t.Errorf("builder.md bytes differ:\nsrc: %q\ndst: %q", src, dst)
+		t.Errorf("implementer.md bytes differ:\nsrc: %q\ndst: %q", src, dst)
 	}
 }
 

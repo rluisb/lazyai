@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -17,23 +18,29 @@ import (
 // createTestFS creates a memo FS with the minimum files needed for adapter tests.
 func createTestFS() fstest.MapFS {
 	return fstest.MapFS{
-		"agents/builder.md": &fstest.MapFile{
-			Data: []byte("---\nname: Builder\ndescription: Test builder agent.\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
+		"agents/implementer.md": &fstest.MapFile{
+			Data: []byte("---\nname: Implementer\ndescription: Test implementer agent.\nmodel: sonnet\n---\n\n# Implementer\n\nYou are an implementer."),
 		},
-		"canonical/agents/primary-agent.md": &fstest.MapFile{
-			Data: []byte("# Primary Agent\n\nDefault LazyAI runtime entry point."),
+		"agents/researcher.md": &fstest.MapFile{
+			Data: []byte("---\nname: Researcher\ndescription: Test researcher agent.\nmodel: haiku\n---\n\n# Researcher\n\nYou are a researcher."),
 		},
-		"canonical/agents/builder.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("builder", "Test builder agent."),
+		"canonical/agents/implementer.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("implementer", "Test implementer agent."),
+		},
+		"canonical/agents/researcher.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("researcher", "Test researcher agent."),
+		},
+		"canonical/agents/deployer.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("deployer", "Test deployer agent."),
+		},
+		"canonical/agents/responder.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("responder", "Test responder agent."),
 		},
 		"canonical/agents/planner.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("planner", "Test planner agent."),
 		},
 		"canonical/agents/reviewer.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("reviewer", "Test reviewer agent."),
-		},
-		"canonical/agents/scout.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("scout", "Test scout agent."),
 		},
 		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("evidence-verifier", "Test evidence verifier agent."),
@@ -137,8 +144,8 @@ func createTestFS() fstest.MapFS {
 		"copilot/hooks/objective-workflow-gate.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
-		"opencode/plugins/lazyai-hooks.js": &fstest.MapFile{
-			Data: []byte("export const LazyAIHooks = () => ({})\n"),
+		"opencode/plugins/vibe-lab-hooks.js": &fstest.MapFile{
+			Data: []byte("export const VibeLabHooks = () => ({})\n"),
 		},
 		"antigravity/settings.json": &fstest.MapFile{
 			Data: []byte("{\"hooks\":{}}\n"),
@@ -165,7 +172,7 @@ func createTestAdapterContext(t *testing.T) (*AdapterContext, string) {
 		LibraryFS:  libFS,
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"builder"},
+			Agents: []types.AgentId{"researcher"},
 			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}, targetDir
@@ -175,9 +182,9 @@ func createTestAdapterContext(t *testing.T) (*AdapterContext, string) {
 
 func TestCopyWithRecord_FromFS(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
-	dest := filepath.Join(targetDir, ".opencode", "agents", "builder.md")
+	dest := filepath.Join(targetDir, ".opencode", "agents", "implementer.md")
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -192,7 +199,7 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 	}
 
 	// Check that the content matches what's in the FS.
-	expected, _ := ctx.LibraryFS.Open("agents/builder.md")
+	expected, _ := ctx.LibraryFS.Open("agents/implementer.md")
 	expectedData := make([]byte, len(data))
 	n, _ := expected.Read(expectedData)
 	expectedData = expectedData[:n]
@@ -205,8 +212,8 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 	if len(ctx.FileRecords) != 1 {
 		t.Fatalf("expected 1 file record, got %d", len(ctx.FileRecords))
 	}
-	if ctx.FileRecords[0].Source != "agents/builder.md" {
-		t.Errorf("expected source 'agents/builder.md', got %q", ctx.FileRecords[0].Source)
+	if ctx.FileRecords[0].Source != "agents/implementer.md" {
+		t.Errorf("expected source 'agents/implementer.md', got %q", ctx.FileRecords[0].Source)
 	}
 }
 
@@ -214,7 +221,7 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 
 func TestCopyWithRecord_WithTransform(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
-	dest := filepath.Join(targetDir, ".opencode", "agents", "builder.md")
+	dest := filepath.Join(targetDir, ".opencode", "agents", "implementer.md")
 
 	transformCalled := false
 	transform := func(content []byte) []byte {
@@ -222,7 +229,7 @@ func TestCopyWithRecord_WithTransform(t *testing.T) {
 		return append([]byte("<!-- transformed -->\n"), content...)
 	}
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, transform, 0o644)
+	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, transform, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord with transform failed: %v", err)
 	}
@@ -261,10 +268,10 @@ func TestCopyLibraryDirectory_FromFS(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory failed: %v", err)
 	}
 
-	// builder.md should exist (it's in our selection).
-	builderDest := filepath.Join(agentsDir, "builder.md")
-	if _, err := os.Stat(builderDest); os.IsNotExist(err) {
-		t.Error("builder.md was not copied")
+	// researcher.md should exist (it's in our selection).
+	researcherDest := filepath.Join(agentsDir, "researcher.md")
+	if _, err := os.Stat(researcherDest); os.IsNotExist(err) {
+		t.Error("researcher.md was not copied")
 	}
 
 	// extra.md should NOT exist (not in our selection).
@@ -296,8 +303,8 @@ func TestCopyLibraryDirectory_InstallAll(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory failed: %v", err)
 	}
 
-	// Both builder.md and extra.md should exist.
-	for _, name := range []string{"builder.md", "extra.md"} {
+	// Both implementer.md and extra.md should exist.
+	for _, name := range []string{"implementer.md", "extra.md"} {
 		path := filepath.Join(agentsDir, name)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("%s was not copied (should install all)", name)
@@ -360,7 +367,7 @@ func TestInstallRootTemplateIfMissing_FromFS(t *testing.T) {
 func TestCopyWithRecord_SkipExisting(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Strategy = types.ConflictStrategySkip
-	dest := filepath.Join(targetDir, "builder.md")
+	dest := filepath.Join(targetDir, "implementer.md")
 
 	// Write an existing file.
 	existingContent := []byte("existing content")
@@ -368,7 +375,7 @@ func TestCopyWithRecord_SkipExisting(t *testing.T) {
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
 	// CopyWithRecord with skip strategy should skip.
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -386,14 +393,14 @@ func TestCopyWithRecord_ForceOverwrite(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Force = true
 	ctx.Strategy = types.ConflictStrategyBackupAndReplace
-	dest := filepath.Join(targetDir, "builder.md")
+	dest := filepath.Join(targetDir, "implementer.md")
 
 	// Write an existing file.
 	existingContent := []byte("existing content")
 	_ = files.EnsureDir(filepath.Dir(dest))
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
-	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord force failed: %v", err)
 	}
@@ -444,6 +451,16 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	// --- Skill transformed to agent YAML format ---
 	agentsDir := filepath.Join(targetDir, ".github", "agents")
 	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
+	// --- Default agents are compiled as Markdown files ---
+	defaultAgentFile := filepath.Join(agentsDir, "implementer.agent.md")
+	if _, err := os.Stat(defaultAgentFile); os.IsNotExist(err) {
+		t.Error("default agent .agent.md was not created in .github/agents/")
+	}
+	legacyDefaultAgentFile := filepath.Join(agentsDir, "implementer.agent.yaml")
+	if _, err := os.Stat(legacyDefaultAgentFile); err == nil {
+		t.Error("implementer.agent.yaml should not be emitted for default copilot agents")
+	}
+
 	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
 		t.Error("skill agent .agent.yaml was not created")
 	}
@@ -482,7 +499,7 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
-		Agents: []types.AgentId{types.AgentIdBuilder},
+		Agents: []types.AgentId{types.AgentIdResearcher},
 		Skills: []types.SkillId{types.SkillIdDiagnose},
 	}
 
@@ -520,7 +537,7 @@ func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
 func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
-		Agents: []types.AgentId{types.AgentIdBuilder},
+		Agents: []types.AgentId{types.AgentIdResearcher},
 		Skills: []types.SkillId{types.SkillIdDiagnose},
 	}
 
@@ -529,12 +546,12 @@ func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
 		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "lazyai-hooks.js")
+	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "vibe-lab-hooks.js")
 	data, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read hook plugin: %v", err)
 	}
-	if !strings.Contains(string(data), "LazyAIHooks") {
+	if !strings.Contains(string(data), "VibeLabHooks") {
 		t.Fatalf("hook plugin missing export: %s", string(data))
 	}
 }
@@ -592,7 +609,7 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 	libDir := t.TempDir()
 	agentsDir := filepath.Join(libDir, "agents")
 	_ = os.MkdirAll(agentsDir, 0o755)
-	_ = os.WriteFile(filepath.Join(agentsDir, "builder.md"), []byte("---\nname: Builder\n---\n\nBuilder content."), 0o644)
+	_ = os.WriteFile(filepath.Join(agentsDir, "researcher.md"), []byte("---\nname: Researcher\n---\n\nResearcher content."), 0o644)
 
 	targetDir := t.TempDir()
 	destAgentsDir := filepath.Join(targetDir, ".opencode", "agents")
@@ -604,7 +621,7 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 		LibraryFS:  nil, // nil = disk mode
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"builder"},
+			Agents: []types.AgentId{"researcher"},
 		},
 	}
 
@@ -621,9 +638,9 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory disk fallback failed: %v", err)
 	}
 
-	destFile := filepath.Join(destAgentsDir, "builder.md")
+	destFile := filepath.Join(destAgentsDir, "researcher.md")
 	if _, err := os.Stat(destFile); os.IsNotExist(err) {
-		t.Error("builder.md was not copied from disk")
+		t.Error("researcher.md was not copied from disk")
 	}
 }
 
@@ -841,4 +858,133 @@ func sliceContains(haystack []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// baselineAgentSource matches the exact vibe-lab baseline canonical agent shape:
+// name and description only, no tier/risk/model/temperature/mode/steps/skills.
+func baselineAgentSource(name, description string) []byte {
+	return []byte("---\nname: " + name + "\ndescription: " + description + "\n---\n\n# System Prompt\n\nYou are " + name + ".")
+}
+
+// TestRewriteAgentForClaudeCode_BaselineNoTier verifies that a baseline-style
+// agent source without LazyAI tier metadata produces the exact Claude adapter
+// shape: name, quoted description, managed marker, body.
+func TestRewriteAgentForClaudeCode_BaselineNoTier(t *testing.T) {
+	source := baselineAgentSource("implementer", "Universal implementer.")
+	out, err := RewriteAgentForClaudeCode(source, &AdapterContext{})
+	if err != nil {
+		t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+	}
+	wantMarker := managedAgentMarker("claude", "implementer")
+	if !strings.Contains(string(out), wantMarker) {
+		t.Errorf("missing managed marker:\n%s", out)
+	}
+	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
+		if strings.Contains(string(out), forbidden) {
+			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
+		}
+	}
+}
+
+// TestRewriteAgentForOpenCode_BaselineNoTier verifies that a baseline-style
+// agent source produces the exact OpenCode adapter shape: quoted description
+// and managed marker, with no tier/model/etc.
+func TestRewriteAgentForOpenCode_BaselineNoTier(t *testing.T) {
+	source := baselineAgentSource("implementer", "Universal implementer.")
+	out, err := RewriteAgentForOpenCode(source, &AdapterContext{}, "")
+	if err != nil {
+		t.Fatalf("RewriteAgentForOpenCode: %v", err)
+	}
+	wantMarker := managedAgentMarker("opencode", "implementer")
+	if !strings.Contains(string(out), wantMarker) {
+		t.Errorf("missing managed marker:\n%s", out)
+	}
+	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
+		if strings.Contains(string(out), forbidden) {
+			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
+		}
+	}
+}
+
+// TestCopilotAgentMarkdownContent_BaselineNoTier verifies the Copilot .agent.md
+// shape for a baseline-style source: name, quoted description, tools array,
+// managed marker, body.
+func TestCopilotAgentMarkdownContent_BaselineNoTier(t *testing.T) {
+	source := baselineAgentSource("implementer", "Universal implementer.")
+	out := copilotAgentMarkdownContent(source)
+	wantMarker := managedAgentMarker("copilot", "implementer")
+	if !strings.Contains(string(out), wantMarker) {
+		t.Errorf("missing managed marker:\n%s", out)
+	}
+	if !strings.Contains(string(out), `tools: ["read", "search", "edit", "shell"]`) {
+		t.Errorf("missing expected tools array:\n%s", out)
+	}
+	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
+		if strings.Contains(string(out), forbidden) {
+			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
+		}
+	}
+}
+
+// TestCopilotAdapter_DefaultSevenBaselineAgentsOnly installs with an empty
+// selection and asserts .github/agents contains exactly the seven baseline
+// .agent.md files and zero .agent.yaml files.
+func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.LibraryFS = createTestFS()
+	ctx.LibraryDir = ""
+	ctx.Selections = AdapterSelections{}
+	adapter := &CopilotAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Copilot Install failed: %v", err)
+	}
+	agentsDir := filepath.Join(targetDir, ".github", "agents")
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		t.Fatalf("read agents dir: %v", err)
+	}
+	var mdFiles, yamlFiles []string
+	for _, ent := range entries {
+		if ent.IsDir() {
+			continue
+		}
+		if strings.HasSuffix(ent.Name(), ".agent.md") {
+			mdFiles = append(mdFiles, ent.Name())
+		} else if strings.HasSuffix(ent.Name(), ".agent.yaml") {
+			yamlFiles = append(yamlFiles, ent.Name())
+		}
+	}
+	want := []string{
+		"deployer.agent.md",
+		"evidence-verifier.agent.md",
+		"implementer.agent.md",
+		"planner.agent.md",
+		"researcher.agent.md",
+		"responder.agent.md",
+		"reviewer.agent.md",
+	}
+	got := sortedStrings(mdFiles)
+	if !slicesEqual(got, want) {
+		t.Errorf(".agent.md files = %v, want %v", got, want)
+	}
+	if len(yamlFiles) != 0 {
+		t.Errorf("unexpected .agent.yaml files: %v", yamlFiles)
+	}
+}
+
+func sortedStrings(s []string) []string {
+	sort.Strings(s)
+	return s
+}
+
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

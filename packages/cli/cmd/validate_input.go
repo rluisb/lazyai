@@ -54,7 +54,7 @@ func ValidateAgentName(name string) error {
 	if err := ValidateNotEmpty(name, "agent"); err != nil {
 		return err
 	}
-	validAgents := []string{"primary-agent", "builder", "planner", "reviewer", "scout"}
+	validAgents := []string{"implementer", "researcher", "deployer", "responder", "planner", "reviewer", "evidence-verifier"}
 	for _, agent := range validAgents {
 		if agent == name {
 			return nil

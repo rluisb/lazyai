@@ -14,7 +14,8 @@ var ToolOverrideMap = map[string]ToolOverrides{
 	"opencode": {
 		Description: "This project uses OpenCode with LazyAI integration.",
 		Notes: "## OpenCode-Specific Notes\n\n" +
-			"- Project config: `.opencode/opencode.jsonc`\n" +
+			"- Project config: `opencode.json`\n" +
+			"- LazyAI-only MCP extras: `.opencode/lazyai.mcp.jsonc`\n" +
 			"- Agents: `.opencode/agents/<name>.md`\n" +
 			"- Skills: `.opencode/skills/<name>/SKILL.md`\n" +
 			"- Commands: `.opencode/commands/<name>.md`\n" +

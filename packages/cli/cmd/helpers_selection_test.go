@@ -17,7 +17,7 @@ func TestBuildScaffoldContextHonorsExplicitPhase1Selections(t *testing.T) {
 			Scope:         types.SetupScopeProject,
 			Tools:         []types.ToolId{types.ToolIdOpenCode},
 			Skills:        []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview},
-			Agents:        []types.AgentId{types.AgentIdBuilder},
+			Agents:        []types.AgentId{types.AgentIdImplementer},
 			EnableServers: []string{"filesystem", "memory"},
 			ProjectName:   "demo-app",
 		},
@@ -32,7 +32,7 @@ func TestBuildScaffoldContextHonorsExplicitPhase1Selections(t *testing.T) {
 		t.Fatalf("buildScaffoldContext: %v", err)
 	}
 
-	if want := []types.AgentId{types.AgentIdBuilder}; !reflect.DeepEqual(ctx.Agents, want) {
+	if want := []types.AgentId{types.AgentIdImplementer}; !reflect.DeepEqual(ctx.Agents, want) {
 		t.Fatalf("Agents = %#v, want %#v", ctx.Agents, want)
 	}
 	if want := []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview}; !reflect.DeepEqual(ctx.Skills, want) {

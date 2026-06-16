@@ -11,14 +11,14 @@ import (
 func TestCheckPassesUnderBudget(t *testing.T) {
 	root := t.TempDir()
 	canonicalDir := filepath.Join(root, CanonicalSubdir)
-	mustWrite(t, filepath.Join(canonicalDir, "agents", "builder.md"), []byte("builder"))
+	mustWrite(t, filepath.Join(canonicalDir, "agents", "implementer.md"), []byte("implementer"))
 	mustWrite(t, filepath.Join(canonicalDir, "skills", "diagnose.md"), []byte("diagnose"))
 
 	result, err := Check(canonicalDir, filepath.Join(root, OverrideRelPath), DefaultBudgetBytes)
 	if err != nil {
 		t.Fatalf("Check returned error: %v", err)
 	}
-	if result.TotalBytes != len("builder")+len("diagnose") {
+	if result.TotalBytes != len("implementer")+len("diagnose") {
 		t.Fatalf("TotalBytes = %d", result.TotalBytes)
 	}
 	if result.OverrideUsed {
@@ -29,7 +29,7 @@ func TestCheckPassesUnderBudget(t *testing.T) {
 func TestCheckFailsOverBudgetWithoutOverride(t *testing.T) {
 	root := t.TempDir()
 	canonicalDir := filepath.Join(root, CanonicalSubdir)
-	mustWrite(t, filepath.Join(canonicalDir, "agents", "builder.md"), make([]byte, DefaultBudgetBytes+1))
+	mustWrite(t, filepath.Join(canonicalDir, "agents", "implementer.md"), make([]byte, DefaultBudgetBytes+1))
 
 	_, err := Check(canonicalDir, filepath.Join(root, OverrideRelPath), DefaultBudgetBytes)
 	var budgetErr *BudgetError
@@ -46,7 +46,7 @@ func TestCheckPassesWithValidOverride(t *testing.T) {
 	root := t.TempDir()
 	canonicalDir := filepath.Join(root, CanonicalSubdir)
 	overridePath := filepath.Join(root, OverrideRelPath)
-	mustWrite(t, filepath.Join(canonicalDir, "agents", "builder.md"), make([]byte, DefaultBudgetBytes+200))
+	mustWrite(t, filepath.Join(canonicalDir, "agents", "implementer.md"), make([]byte, DefaultBudgetBytes+200))
 	mustWrite(t, overridePath, []byte("budget: 60000\nreason: approved expansion\napproved_by: test\n"))
 
 	result, err := Check(canonicalDir, overridePath, DefaultBudgetBytes)
@@ -65,7 +65,7 @@ func TestCheckFailsWithInvalidOverrideReason(t *testing.T) {
 	root := t.TempDir()
 	canonicalDir := filepath.Join(root, CanonicalSubdir)
 	overridePath := filepath.Join(root, OverrideRelPath)
-	mustWrite(t, filepath.Join(canonicalDir, "agents", "builder.md"), make([]byte, DefaultBudgetBytes+100))
+	mustWrite(t, filepath.Join(canonicalDir, "agents", "implementer.md"), make([]byte, DefaultBudgetBytes+100))
 	mustWrite(t, overridePath, []byte("budget: 60000\nreason: \n"))
 
 	_, err := Check(canonicalDir, overridePath, DefaultBudgetBytes)
@@ -82,16 +82,16 @@ func TestCheckExcludesGitkeepFromBudget(t *testing.T) {
 	root := t.TempDir()
 	canonicalDir := filepath.Join(root, CanonicalSubdir)
 	mustWrite(t, filepath.Join(canonicalDir, "agents", ".gitkeep"), make([]byte, 64000))
-	mustWrite(t, filepath.Join(canonicalDir, "agents", "builder.md"), []byte("builder"))
+	mustWrite(t, filepath.Join(canonicalDir, "agents", "implementer.md"), []byte("implementer"))
 
 	result, err := Check(canonicalDir, filepath.Join(root, OverrideRelPath), DefaultBudgetBytes)
 	if err != nil {
 		t.Fatalf("Check returned error: %v", err)
 	}
-	if result.TotalBytes != len("builder") {
-		t.Fatalf("TotalBytes = %d, want %d", result.TotalBytes, len("builder"))
+	if result.TotalBytes != len("implementer") {
+		t.Fatalf("TotalBytes = %d, want %d", result.TotalBytes, len("implementer"))
 	}
-	if len(result.Files) != 1 || result.Files[0].Path != "agents/builder.md" {
+	if len(result.Files) != 1 || result.Files[0].Path != "agents/implementer.md" {
 		t.Fatalf("Files = %#v", result.Files)
 	}
 }

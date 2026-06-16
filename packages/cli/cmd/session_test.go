@@ -213,7 +213,7 @@ func TestSessionEndWritesHandoffAndMetadata(t *testing.T) {
 
 	mgr := runtimesession.NewManager(db)
 	s, err := mgr.Start("ship phase four handoff", runtimesession.StartOptions{
-		Agent:    "builder",
+		Agent:    "implementer",
 		Model:    "sonnet",
 		Repo:     "lazyai",
 		Worktree: "feature/phase4",

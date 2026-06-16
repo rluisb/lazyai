@@ -143,7 +143,7 @@ func jsonFingerprint(value any) (string, error) {
 func isMCPConfigCandidate(relativePath string) bool {
 	base := filepath.Base(relativePath)
 	switch base {
-	case "settings.json", "settings.local.json", "mcp-config.json", "mcp.json", "opencode.json", "opencode.jsonc":
+	case "settings.json", "settings.local.json", "mcp-config.json", "mcp.json", "opencode.json", "lazyai.mcp.jsonc":
 		return true
 	default:
 		return false

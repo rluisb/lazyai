@@ -40,9 +40,9 @@ AI-generated approvals are detected and rejected.
 
 ### RPI Agents (Copilot)
 
-- **scout**: Research only — read, search, and report facts before planning
+- **researcher**: Research only — read, search, and report facts before planning
 - **planner**: Planning only — turn approved requirements into executable plans
-- **builder**: Implementation — gated by plan approval and focused verification
+- **implementer**: Implementation — gated by plan approval and focused verification
 
 ### Precedence
 

@@ -19,9 +19,9 @@ You are affected if you relied on any of these behaviors:
 | Old behavior | New behavior |
 |---|---|
 | OpenCode default install used Fortnite runtime assets | OpenCode default install uses the neutral canonical library |
-| `loop-driver` was the OpenCode default agent | `primary-agent` is the default agent |
-| `orchestrator` was the neutral/generated primary entry path | `primary-agent` replaces it |
-| `.opencode/STARTUP.md` was generated | No startup bootstrap file is generated |
+| `loop-driver` was the OpenCode default agent | `implementer` is the default agent |
+| `orchestrator` was the neutral/generated primary entry path | `implementer` replaces it |
+| `.opencode/STARTUP.md` was generated | Startup self-heal is handled by the generated OpenCode plugin without a STARTUP.md bootstrap file |
 | `--plain-opencode` toggled between Fortnite and non-Fortnite installs | Removed; canonical install is now the only path |
 
 ## New default file layout
@@ -29,8 +29,8 @@ You are affected if you relied on any of these behaviors:
 OpenCode projects now get:
 
 - root `AGENTS.md`
-- `.opencode/opencode.jsonc` with `default_agent: primary-agent`
-- `.opencode/agents/primary-agent.md`
+- `.opencode/opencode.jsonc` with `default_agent: implementer`
+- `.opencode/agents/implementer.md`
 - canonical agent/skill content selected by the neutral adapter contract
 
 OpenCode projects no longer get Fortnite-only runtime content by default:
@@ -48,7 +48,7 @@ OpenCode projects no longer get Fortnite-only runtime content by default:
    lazyai-cli update
    ```
 
-2. Verify the generated OpenCode config now points at `primary-agent`:
+2. Verify the generated OpenCode config now points at `implementer`:
 
    ```bash
    grep -n 'default_agent' .opencode/opencode.jsonc

@@ -66,24 +66,22 @@ entries:
       agent parity.
   - path: packages/cli/library/canonical/commands/graphify.md
     kind: command
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: commands/graphify.md
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #251 provenance cleanup; recorded 2026-06-16
+    source_path: packages/cli/library/canonical/commands/graphify.md
     local_sha256: 8e0515e14abfc4213ab81003b75dc81f553122f2f52a19e48cc93fc11c2f05a0
-    mode: compressed
-    notes: Retains the graphify workflow prompt as a compact command asset; command
-      curation is outside Wave 0.
+    mode: LazyAI-authored
+    notes: LazyAI-authored command inventory asset retained for reference only; it
+      is not an active emitted command source.
   - path: packages/cli/library/canonical/commands/handoff.md
     kind: command
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: commands/handoff.md
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/skills/handoff/SKILL.md
     local_sha256: 535c622c6a76973ff18000088d03b4e2c447e59ddf622b6896998c315c943820
     mode: compressed
-    notes: Retains the handoff workflow prompt as a compact command asset; command
-      curation is outside Wave 0.
+    notes: Compressed command inventory asset derived from the current vibe-lab
+      handoff skill; it is not an active emitted command source.
   - path: packages/cli/library/canonical/hooks/pre-commit.md
     kind: hook
     source_repo: github.com/rluisb/lazyai
@@ -95,47 +93,43 @@ entries:
       changing token-rent behavior.
   - path: packages/cli/library/canonical/hooks/session-start.md
     kind: hook
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: hooks/session-start.md
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #251 provenance cleanup; recorded 2026-06-16
+    source_path: packages/cli/library/canonical/hooks/session-start.md
     local_sha256: b83d2a76e7c048c5395d5141bab2ea244ed0ad95c1e0314182eb3640e6fbce91
-    mode: curated
-    notes: Keeps session-start guardrails while avoiding a local vibe-lab runtime
-      dependency.
+    mode: LazyAI-authored
+    notes: LazyAI-authored session-start guardrail retained as a setup-core
+      extension without a current vibe-lab baseline source.
   - path: packages/cli/library/canonical/skills/codebase-exploration.md
     kind: skill
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: skills/codebase-exploration/SKILL.md
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/skills/codebase-exploration/SKILL.md
     local_sha256: f520fa480d4f7c1c0fcc4e2c051c3e3dd7ada4be5669e78f0182362da7e8609b
     mode: compressed
     notes: Compressed into a small canonical skill for grounded codebase searches.
   - path: packages/cli/library/canonical/skills/diagnose.md
     kind: skill
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: skills/diagnose/SKILL.md
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/skills/diagnose/SKILL.md
     local_sha256: a52f2cd5ba1e19c9658a3ef3cefbbf394690007c916023310cd5552986462ba2
     mode: compressed
     notes: Compressed into a canonical debugging skill with LazyAI-neutral wording.
   - path: packages/cli/library/canonical/skills/pr-review.md
     kind: skill
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: skills/pr-review/SKILL.md
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #251 provenance cleanup; recorded 2026-06-16
+    source_path: packages/cli/library/canonical/skills/pr-review.md
     local_sha256: b22c3b321d6dcb5a46fa3c630c38dad1e3ec29ab7b5a405db58c12c76eb64e37
-    mode: compressed
-    notes: Compressed into a canonical review skill for adapter-emitted workflows.
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical review skill retained as a setup-core extension
+      with no same-name current vibe-lab baseline source.
   - path: packages/cli/library/canonical/skills/test-first-change.md
     kind: skill
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: skills/test-first-change/SKILL.md
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/skills/test-first-change/SKILL.md
     local_sha256: 6207c70d5244abe1b20acd49bd3b201e6d3731863fe5e0e6f582246142d3d5f7
     mode: compressed
     notes: Compressed into a canonical TDD skill for behavior-changing LazyAI work.

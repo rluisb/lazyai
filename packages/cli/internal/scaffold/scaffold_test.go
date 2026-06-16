@@ -30,6 +30,9 @@ func createMinimalLibraryFS() fstest.MapFS {
 		},
 
 		// Canonical agents
+		"canonical/agents/guide.md": &fstest.MapFile{
+			Data: []byte("---\nname: guide\ndescription: Test guide agent.\ntier: balanced\ntemperature: 0.2\nthinking: low\nrisk: 2\n---\n\n# Guide\n\nYou are a guide.\n"),
+		},
 		"canonical/agents/implementer.md": &fstest.MapFile{
 			Data: []byte("---\nname: implementer\ndescription: Test implementer agent.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\n---\n\n# Implementer\n\nYou are an implementer.\n"),
 		},
@@ -238,8 +241,8 @@ func TestScaffoldAll_WorkspaceRoutesPlanningArtifactsToPlanningRepoAndToolsToWor
 	for _, rel := range []string{
 		".ai/mcp.json",
 		".mcp.json",
-		".opencode/agents/implementer.md",
-		".claude/agents/implementer.md",
+		".opencode/agents/guide.md",
+		".claude/agents/guide.md",
 		"AGENTS.md",
 		".github/copilot-instructions.md",
 	} {
@@ -268,8 +271,8 @@ func TestScaffoldAll_GlobalSkipsProjectPlanningArtifactsButInstallsGlobalTools(t
 			t.Fatalf("global scope must not create project planning artifact %s", rel)
 		}
 	}
-	if !fileExistsInDir(homeDir, ".claude/agents/implementer.md") {
-		t.Fatal("expected global Claude Code artifacts under HomeDir")
+	if !fileExistsInDir(homeDir, ".claude/agents/guide.md") {
+		t.Fatal("expected global Claude Code guide under HomeDir")
 	}
 }
 
@@ -310,8 +313,8 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 	}
 
 	// Check .opencode directory was created.
-	if !fileExistsInDir(targetDir, ".opencode/agents/implementer.md") {
-		t.Error(".opencode/agents/implementer.md was not created")
+	if !fileExistsInDir(targetDir, ".opencode/agents/guide.md") {
+		t.Error(".opencode/agents/guide.md was not created")
 	}
 
 	// Check .ai/mcp.json was created.
@@ -334,8 +337,8 @@ func TestScaffoldAll_ClaudeCode(t *testing.T) {
 	}
 
 	// Check .claude directory was created.
-	if !fileExistsInDir(targetDir, ".claude/agents/implementer.md") {
-		t.Error(".claude/agents/implementer.md was not created")
+	if !fileExistsInDir(targetDir, ".claude/agents/guide.md") {
+		t.Error(".claude/agents/guide.md was not created")
 	}
 
 	t.Logf("Scaffold created %d files", len(result.Files))
@@ -353,11 +356,11 @@ func TestScaffoldAll_MultipleTools(t *testing.T) {
 	}
 
 	// Both tool directories should exist.
-	if !fileExistsInDir(targetDir, ".opencode/agents/implementer.md") {
-		t.Error(".opencode/agents/implementer.md was not created")
+	if !fileExistsInDir(targetDir, ".opencode/agents/guide.md") {
+		t.Error(".opencode/agents/guide.md was not created")
 	}
-	if !fileExistsInDir(targetDir, ".claude/agents/implementer.md") {
-		t.Error(".claude/agents/implementer.md was not created")
+	if !fileExistsInDir(targetDir, ".claude/agents/guide.md") {
+		t.Error(".claude/agents/guide.md was not created")
 	}
 
 	t.Logf("Scaffold created %d files for 2 tools", len(result.Files))

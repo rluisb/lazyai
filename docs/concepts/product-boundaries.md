@@ -44,7 +44,7 @@ The CLI reference documents shipped `lazyai-cli` commands only. Repository scrip
 
 ### Default surface contract vs LazyAI extras
 
-- Default, shipped setup outputs match baseline parity: exactly these seven agents are emitted by default across supported tool surfaces: `implementer`, `researcher`, `planner`, `reviewer`, `deployer`, `responder`, `evidence-verifier`.
+- Default, shipped setup outputs emit eight canonical agents across supported tool surfaces: `guide` as the front-door default plus `implementer`, `researcher`, `planner`, `reviewer`, `deployer`, `responder`, and `evidence-verifier` as specialists.
 - OpenCode default setup writes a root `opencode.json` config with baseline shape only (schema, permissions, skill paths, instructions). It does not carry LazyAI runtime-only MCP content.
 - LazyAI runtime-adjacent MCP/runtime extras are isolated to `.opencode/lazyai.mcp.jsonc` so the default `opencode.json` stays baseline-compatible and replaceable.
 - Retired artifacts such as orchestrator/loop-driver/Startup surfaces are not part of default setup outputs and belong to explicit runtime/archival paths only.
@@ -134,7 +134,7 @@ No active `packages/cli/internal/` package is categorized as `retired/archived` 
 
 ## Active embedded library versus archived material
 
-Active embedded library assets are the files the CLI embeds and selects through the canonical setup and adapter contracts. The supported default path is the neutral baseline-facing `implementer` contract and canonical library content. LazyAI may include historical or compatibility assets in the repository, but active adapters must not treat Fortnite, the old orchestrator runtime, or eval surfaces as the default runtime foundation.
+Active embedded library assets are the files the CLI embeds and selects through the canonical setup and adapter contracts. The supported default path is the front-door `guide` contract plus current canonical library content, with `implementer` and the other specialist agents kept behind it. LazyAI may include historical or compatibility assets in the repository, but active adapters must not treat Fortnite, the old orchestrator runtime, or eval surfaces as the default runtime foundation.
 
 Archived and retired material is still useful for migration, rollback, and historical review. It must be described as historical context and must not be copied into current setup guidance as if it were supported runtime behavior.
 

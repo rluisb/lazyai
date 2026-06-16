@@ -19,8 +19,8 @@ You are affected if you relied on any of these behaviors:
 | Old behavior | New behavior |
 |---|---|
 | OpenCode default install used Fortnite runtime assets | OpenCode default install uses the neutral canonical library |
-| `loop-driver` was the OpenCode default agent | `implementer` is the default agent |
-| `orchestrator` was the neutral/generated primary entry path | `implementer` replaces it |
+| `loop-driver` was the OpenCode default agent | `guide` is the front-door default agent |
+| `orchestrator` was the neutral/generated primary entry path | `guide` replaces it as the default entry point; `implementer` remains a specialist |
 | `.opencode/STARTUP.md` was generated | Startup self-heal is handled by the generated OpenCode plugin without a STARTUP.md bootstrap file |
 | `--plain-opencode` toggled between Fortnite and non-Fortnite installs | Removed; canonical install is now the only path |
 
@@ -29,9 +29,9 @@ You are affected if you relied on any of these behaviors:
 OpenCode projects now get:
 
 - root `AGENTS.md`
-- `.opencode/opencode.jsonc` with `default_agent: implementer`
-- `.opencode/agents/implementer.md`
-- canonical agent/skill content selected by the neutral adapter contract
+- root `opencode.json`
+- `.opencode/agents/guide.md`
+- canonical specialist agents and skills selected by the neutral adapter contract
 
 OpenCode projects no longer get Fortnite-only runtime content by default:
 

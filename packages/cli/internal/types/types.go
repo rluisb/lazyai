@@ -52,10 +52,11 @@ const (
 	ToolIdAntigravity ToolId = "antigravity"
 )
 
-// AgentId identifies a specialized agent role.
+// AgentId identifies a canonical agent role.
 type AgentId string
 
 const (
+	AgentIdGuide            AgentId = "guide"
 	AgentIdImplementer      AgentId = "implementer"
 	AgentIdResearcher       AgentId = "researcher"
 	AgentIdDeployer         AgentId = "deployer"
@@ -396,6 +397,7 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
+		AgentIdGuide,
 		AgentIdImplementer,
 		AgentIdResearcher,
 		AgentIdDeployer,

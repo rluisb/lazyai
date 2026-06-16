@@ -1,12 +1,21 @@
 version: 1
 library_root: packages/cli/library
 entries:
+  - path: packages/cli/library/canonical/agents/guide.md
+    kind: agent
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot]
+    reason_kept: Product-facing front-door default agent emitted to supported tool
+      adapters and used as the default entry point.
+    reason_compressed_or_changed: LazyAI-authored default-surface divergence from
+      exact vibe-lab baseline parity per issue #253.
+    token_rent_relevant: true
   - path: packages/cli/library/canonical/agents/implementer.md
     kind: agent
     category: adapter-support
     adapter_targets: [claude-code, opencode, copilot]
     reason_kept: Baseline-facing implementation agent emitted to supported tool
-      adapters and used as the OpenCode default agent.
+      adapters as a specialist executor.
     reason_compressed_or_changed: Copied byte-for-byte from the current vibe-lab
       baseline for exact default agent parity.
     token_rent_relevant: true

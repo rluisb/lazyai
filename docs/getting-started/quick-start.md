@@ -72,8 +72,9 @@ lazyai-cli init \
 
 When OpenCode is selected during `init`, LazyAI installs the neutral canonical adapter path. The default install includes:
 
-- Canonical agents, including `implementer`
-- `.opencode/opencode.jsonc` with `default_agent: implementer`
+- Canonical agents, with `guide` as the front-door default and `implementer` preserved as a specialist
+- root `opencode.json` with the baseline config shape
+- `.opencode/agents/guide.md`
 
 Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
 

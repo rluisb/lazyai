@@ -37,6 +37,7 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	keyFiles := []string{
 		"opencode.json",
 		".opencode/package.json",
+		".opencode/agents/guide.md",
 		".opencode/agents/implementer.md",
 		".opencode/agents/researcher.md",
 		".opencode/skills/diagnose/SKILL.md",
@@ -465,8 +466,8 @@ func TestOpenCodeAdapter_Install_DefaultAgentMode(t *testing.T) {
 	if _, ok := cfg["mcp"]; ok {
 		t.Errorf("mcp should not be emitted in baseline OpenCode config")
 	}
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "implementer.md")); os.IsNotExist(err) {
-		t.Error("implementer.md was not installed")
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "guide.md")); os.IsNotExist(err) {
+		t.Error("guide.md was not installed")
 	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "orchestrator.md")); err == nil {
 		t.Error("orchestrator.md should not be installed")

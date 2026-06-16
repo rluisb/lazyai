@@ -57,7 +57,7 @@ Initialize the AI development environment.
 
 **OpenCode default behavior:**
 
-When OpenCode is selected, `init` installs the neutral canonical adapter path. `.opencode/opencode.jsonc` uses `default_agent: implementer`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
+When OpenCode is selected, `init` installs the neutral canonical adapter path. Root `opencode.json` keeps the baseline config shape, `.opencode/agents/guide.md` is emitted as the front-door default agent, and Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
 
 **Examples:**
 

@@ -85,9 +85,9 @@ VALUES (2, CURRENT_TIMESTAMP, 'runtime_schema_v2');
 
 INSERT INTO agent_defaults (tool_id, default_agent, instructions)
 VALUES
-    ('opencode', 'implementer', '.opencode/AGENTS.md'),
-    ('claude-code', 'implementer', 'CLAUDE.md'),
-    ('copilot', 'implementer', '.github/copilot-instructions.md')
+    ('opencode', 'guide', '.opencode/AGENTS.md'),
+    ('claude-code', 'guide', 'CLAUDE.md'),
+    ('copilot', 'guide', '.github/copilot-instructions.md')
 ON CONFLICT(tool_id) DO UPDATE SET
     default_agent = excluded.default_agent,
     instructions = excluded.instructions;

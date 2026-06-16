@@ -175,7 +175,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [OMP/Pi](docs/concepts/tools.md#omppi)
 - [Antigravity](docs/concepts/tools.md#antigravity)
 
-> **Note:** OpenCode now installs the neutral canonical adapter path with `implementer` as the default agent. Fortnite-era OpenCode defaults are retired from the active default path and are not installed by default.
+> **Note:** Supported adapters now install `guide` as the front-door default agent. `implementer` remains a specialist agent, and Fortnite-era defaults are not installed by default.
 
 ---
 

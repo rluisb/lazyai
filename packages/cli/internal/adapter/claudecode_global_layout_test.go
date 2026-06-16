@@ -21,13 +21,13 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 	}
 
 	claudeDir := filepath.Join(home, ".claude")
-	wantAgent := filepath.Join(claudeDir, "agents", "implementer.md")
+	wantAgent := filepath.Join(claudeDir, "agents", "guide.md")
 	if !files.FileExists(wantAgent) {
 		t.Errorf("expected agent at canonical path %q, missing", wantAgent)
 	}
 
 	// Flat-layout file at the legacy path must not be created.
-	flatLegacy := filepath.Join(claudeDir, "implementer.md")
+	flatLegacy := filepath.Join(claudeDir, "guide.md")
 	if files.FileExists(flatLegacy) {
 		t.Errorf("agent written at legacy flat path %q (regression of spec 012 Task 001)", flatLegacy)
 	}
@@ -205,9 +205,9 @@ func TestClaudeCode_DefaultAgentScopeParity(t *testing.T) {
 			}
 
 			root := c.root(target, home)
-			defaultAgent := filepath.Join(root, "agents", "implementer.md")
+			defaultAgent := filepath.Join(root, "agents", "guide.md")
 			if !files.FileExists(defaultAgent) {
-				t.Errorf("expected implementer at %q, missing", defaultAgent)
+				t.Errorf("expected guide at %q, missing", defaultAgent)
 			}
 			orch := filepath.Join(root, "agents", "orchestrator.md")
 			if files.FileExists(orch) {

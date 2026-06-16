@@ -1,6 +1,15 @@
 version: 1
 canonical_root: packages/cli/library/canonical
 entries:
+  - path: packages/cli/library/canonical/agents/guide.md
+    kind: agent
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #253 front-door default agent; recorded 2026-06-16
+    source_path: packages/cli/library/canonical/agents/guide.md
+    local_sha256: e0c584d950d2a8ae518bef7b963d8239929e03eb18072d30624e27849006ed2c
+    mode: LazyAI-authored
+    notes: LazyAI-authored front-door default agent that intentionally diverges from
+      current vibe-lab default-agent parity.
   - path: packages/cli/library/canonical/agents/implementer.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab

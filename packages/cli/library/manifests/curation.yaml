@@ -1083,16 +1083,23 @@ exclusions:
   - path: packages/cli/library/canonical/commands
     kind: command
     category: legacy-exclusion
-    reason_dropped: Command category curation is intentionally outside Wave 0;
-      provenance still hash-covers canonical command files.
+    reason_dropped: Canonical command markdown remains provenance-covered inventory
+      only (including packages/cli/library/canonical/commands/graphify.md and
+      packages/cli/library/canonical/commands/handoff.md) and is not an active
+      source. Emitted command defaults remain unchanged and still come from
+      tool-specific command directories.
   - path: packages/cli/library/claudecode/commands
     kind: command
     category: legacy-exclusion
-    reason_dropped: Tool command category inventory belongs to separate command-boundary work.
+    reason_dropped: Tool-specific Claude Code command directory is the active
+      emitted source for commands; canonical command assets are retained for
+      provenance tracking only.
   - path: packages/cli/library/opencode/commands
     kind: command
     category: legacy-exclusion
-    reason_dropped: Tool command category inventory belongs to separate command-boundary work.
+    reason_dropped: Tool-specific OpenCode command directory is the active emitted
+      source for commands; canonical command assets are retained for provenance
+      tracking only.
   - path: packages/cli/library/chatmodes
     kind: chatmode
     category: legacy-exclusion

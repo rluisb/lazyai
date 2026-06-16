@@ -289,19 +289,19 @@ LazyAI-only non-default setup-library skills, rules, standards, templates, and s
 
 ## Stale provenance and current-baseline path mismatches
 
-Source: `packages/cli/library/manifests/provenance.yaml` compared to current `/Users/ricardo/code/vibe-lab` checkout. These rows are documentation findings, not manifest edits.
+Source: `packages/cli/library/manifests/provenance.yaml` compared to current `/Users/ricardo/code/vibe-lab` checkout at audit time. These were documentation findings in the original audit and were later addressed in issue `#251` by either correcting current baseline paths or reclassifying entries as `LazyAI-authored` where no current vibe-lab source exists.
 
-| LazyAI path | Provenance source path | Current baseline result | Recommendation |
+| LazyAI path | Audit-time provenance source path | Audit-time baseline result | Resolution in `#251` |
 |---|---|---|---|
-| `packages/cli/library/canonical/agents/builder.md` | `.agents/agents/builder.md` | Missing; analogous current vibe-lab path is `/Users/ricardo/code/vibe-lab/.agents/agents/implementer.md` | document only; decide manifest correction separately |
-| `packages/cli/library/canonical/agents/scout.md` | `.agents/agents/scout.md` | Missing; analogous current vibe-lab path is `/Users/ricardo/code/vibe-lab/.agents/agents/researcher.md` | document only; decide manifest correction separately |
-| `packages/cli/library/canonical/commands/graphify.md` | `commands/graphify.md` | Missing in observed current baseline | document only |
-| `packages/cli/library/canonical/commands/handoff.md` | `commands/handoff.md` | Missing; current handoff exists at `/Users/ricardo/code/vibe-lab/.agents/skills/handoff/SKILL.md` | document only; decide whether command provenance should point at skill source |
-| `packages/cli/library/canonical/hooks/session-start.md` | `hooks/session-start.md` | Missing in observed current baseline | document only |
-| `packages/cli/library/canonical/skills/codebase-exploration.md` | `skills/codebase-exploration/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/codebase-exploration/SKILL.md` | document only; likely prefix mismatch |
-| `packages/cli/library/canonical/skills/diagnose.md` | `skills/diagnose/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/diagnose/SKILL.md` | document only; likely prefix mismatch |
-| `packages/cli/library/canonical/skills/pr-review.md` | `skills/pr-review/SKILL.md` | Missing in observed current baseline | document only |
-| `packages/cli/library/canonical/skills/test-first-change.md` | `skills/test-first-change/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/test-first-change/SKILL.md` | document only; likely prefix mismatch |
+| `packages/cli/library/canonical/agents/builder.md` | `.agents/agents/builder.md` | Missing; analogous current vibe-lab path is `/Users/ricardo/code/vibe-lab/.agents/agents/implementer.md` | Not applicable to the current manifest; canonical exact-baseline agent set uses `implementer.md` directly. |
+| `packages/cli/library/canonical/agents/scout.md` | `.agents/agents/scout.md` | Missing; analogous current vibe-lab path is `/Users/ricardo/code/vibe-lab/.agents/agents/researcher.md` | Not applicable to the current manifest; canonical exact-baseline agent set uses `researcher.md` directly. |
+| `packages/cli/library/canonical/commands/graphify.md` | `commands/graphify.md` | Missing in observed current baseline | Reclassified as `LazyAI-authored` command inventory asset. |
+| `packages/cli/library/canonical/commands/handoff.md` | `commands/handoff.md` | Missing; current handoff exists at `/Users/ricardo/code/vibe-lab/.agents/skills/handoff/SKILL.md` | Repointed to `.agents/skills/handoff/SKILL.md`. |
+| `packages/cli/library/canonical/hooks/session-start.md` | `hooks/session-start.md` | Missing in observed current baseline | Reclassified as `LazyAI-authored` setup-core extension. |
+| `packages/cli/library/canonical/skills/codebase-exploration.md` | `skills/codebase-exploration/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/codebase-exploration/SKILL.md` | Corrected to `.agents/skills/codebase-exploration/SKILL.md`. |
+| `packages/cli/library/canonical/skills/diagnose.md` | `skills/diagnose/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/diagnose/SKILL.md` | Corrected to `.agents/skills/diagnose/SKILL.md`. |
+| `packages/cli/library/canonical/skills/pr-review.md` | `skills/pr-review/SKILL.md` | Missing in observed current baseline | Reclassified as `LazyAI-authored` setup-core extension. |
+| `packages/cli/library/canonical/skills/test-first-change.md` | `skills/test-first-change/SKILL.md` | Missing; current path is `/Users/ricardo/code/vibe-lab/.agents/skills/test-first-change/SKILL.md` | Corrected to `.agents/skills/test-first-change/SKILL.md`. |
 
 ## Recommendations and follow-up candidates
 
@@ -328,7 +328,7 @@ Completed in `specs/issues/245-parity-audit/follow-up-plan-c.md`:
 
 Remaining candidate:
 
-- Provenance source-path corrections remain document-only; `packages/cli/library/manifests/provenance.yaml` was not changed because manifest history semantics need separate approval.
+- None for the audit-time provenance mismatch list; issue `#251` resolves the documented source-path and ownership corrections without changing runtime behavior.
 
 ### Explicit exclusions from active defaults
 

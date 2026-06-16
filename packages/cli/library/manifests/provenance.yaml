@@ -1,63 +1,69 @@
 version: 1
 canonical_root: packages/cli/library/canonical
 entries:
-  - path: packages/cli/library/canonical/agents/builder.md
+  - path: packages/cli/library/canonical/agents/implementer.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
     source_path: .agents/agents/implementer.md
-    local_sha256: 70e2f121a1cd91831a907b711673c84f543eeed185958722ebd5d6cc9663bd3a
-    mode: compressed
-    notes: Compressed from the baseline implementer agent into a neutral LazyAI
-      builder role while preserving fail-first and test-preservation guardrails.
+    local_sha256: 45c872c0ccac682e0441a70271b1a7cec256871d45de263422d950604645f708
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
+  - path: packages/cli/library/canonical/agents/researcher.md
+    kind: agent
+    source_repo: github.com/rluisb/vibe-lab
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/agents/researcher.md
+    local_sha256: 509188e86a40a9c7df01c4da329627c8a963291e59f8c354a959af4fe3bd243a
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
+  - path: packages/cli/library/canonical/agents/deployer.md
+    kind: agent
+    source_repo: github.com/rluisb/vibe-lab
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/agents/deployer.md
+    local_sha256: 75af99ed74ffdbb0265a156028138e9bd5e73ff7c7ef01e3b346d41735e5c9ad
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
+  - path: packages/cli/library/canonical/agents/responder.md
+    kind: agent
+    source_repo: github.com/rluisb/vibe-lab
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
+    source_path: .agents/agents/responder.md
+    local_sha256: c50f8d048a777c0fe075b7081593ac9100ca36d414c7fd9976dcaf099cd6ba2a
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
   - path: packages/cli/library/canonical/agents/planner.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
     source_path: .agents/agents/planner.md
-    local_sha256: 877b7883845663ce14bc4e743b57962512db29917e423db4827d0deaec97132f
-    mode: compressed
-    notes: Compressed from the baseline planner agent into a neutral LazyAI planning
-      role while preserving TDD-plan and rollback criteria.
-  - path: packages/cli/library/canonical/agents/primary-agent.md
-    kind: agent
-    source_repo: github.com/rluisb/lazyai
-    source_ref: feature/230-236-library-manifests baseline; recorded 2026-06-15
-    source_path: packages/cli/library/canonical/agents/primary-agent.md
-    local_sha256: 4090a8ca0962084d08ac797015993169374949c15c66cd788f455044e8778abe
-    mode: LazyAI-authored
-    notes: LazyAI runtime entry point; explicitly excludes retired runtime concepts.
+    local_sha256: 50d5755a37ece50d3764017d2e49eb8addf16adf8b4bbdd9970080adbe36d1ca
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
   - path: packages/cli/library/canonical/agents/reviewer.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
     source_path: .agents/agents/reviewer.md
-    local_sha256: bef8d890a957f9a85b31719d0cb9964e87ab0de3842e28523ec75a81c84ddb61
-    mode: compressed
-    notes: Compressed from the baseline reviewer agent while preserving the explicit
-      passing-tests approval gate.
-  - path: packages/cli/library/canonical/agents/scout.md
-    kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: pre-provenance LazyAI import; exact upstream commit unknown;
-      recorded 2026-06-15
-    source_path: .agents/agents/researcher.md
-    local_sha256: 41a66467bc1daa6a219e0527c0537917acaca05b0c2f5e0f3a31d71424e51648
-    mode: compressed
-    notes: Compressed from the baseline researcher agent into a neutral LazyAI scout
-      role while preserving evidence and TDD-research output guidance.
+    local_sha256: 30ca8c5f4e12a4e05b4da8b618aff2cd99be32b0031f3d6de797de20518f105d
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
   - path: packages/cli/library/canonical/agents/evidence-verifier.md
     kind: agent
     source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-15
+    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
     source_path: .agents/agents/evidence-verifier.md
-    local_sha256: 8a49d050725ee304c71671c84395a88669a6fccf2ef16dbb8fa76cdd55cab591
-    mode: curated
-    notes: Ported from the baseline evidence-verifier agent into the LazyAI
-      canonical schema.
+    local_sha256: f045ab319bb680953c8c3cef559abb890a9f7fcbe99014d33d09b39c62016405
+    mode: exact-baseline
+    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
+      agent parity.
   - path: packages/cli/library/canonical/commands/graphify.md
     kind: command
     source_repo: github.com/rluisb/vibe-lab

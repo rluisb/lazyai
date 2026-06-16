@@ -33,7 +33,7 @@ func TestRunSetupScanOutputsInventoryJSON(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(homeDir, ".config", "opencode"), 0o755); err != nil {
 		t.Fatalf("mkdir home config: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc"), []byte(`{"version":"2.0.0"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".config", "opencode", "opencode.json"), []byte(`{"version":"2.0.0"}`), 0o644); err != nil {
 		t.Fatalf("seed opencode config: %v", err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, ".claude"), 0o755); err != nil {

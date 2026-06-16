@@ -29,7 +29,7 @@
 | 023 | Repository cleanup — local hazard cleanup, legacy package audit, and spec hygiene proposal | ✅ Complete | `feature/repo-cleanup` |
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
 | 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, rollback, manifest, product-boundary, four-point, command-category, large-file seam, and minimality contracts | ✅ Issues #229–#236 merged — runtime refactor complete | `specs/025-lazyai-runtime-refactor/` |
-| 026 | vibe-lab alignment — embedded skills shipping, full parity skills/agents, runtime hooks, Pi/Antigravity adapters, workflow catalog, and manifest/doc drift closure | ✅ Local implementation complete — pending human review | `specs/refactors/026-vibe-lab-alignment/` |
+| 026 | vibe-lab alignment — exact baseline parity applied for default agent/tool surfaces across Claude Code, OpenCode, GitHub Copilot, and compatible `bin/` commands; runtime-adjacent CLI commands and LazyAI-only MCP extras remain secondary/transitional | ✅ Exact baseline parity applied | `specs/refactors/026-vibe-lab-alignment/` |
 
 ## Standards
 
@@ -44,13 +44,13 @@
 | Scope resolver as single source of truth for tool paths | — | Eliminates per-adapter `isGlobal` branching; easy to extend for new tools |
 | Deep-merge with backup-on-first-touch for config files | — | Preserves user-authored keys across re-runs; one `.bak` sidecar only |
 | Copilot global scope is probe-gated, not forbidden | — | `copilot` CLI or `~/.copilot/` must exist before user-scope files are emitted |
-| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts such as Copilot `.agent.yaml` and OpenCode `.opencode/opencode.jsonc` |
+| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts such as Copilot `.agent.yaml` and exact OpenCode baseline surface shape (`opencode.json`, with LazyAI-only MCP extras isolated in `.opencode/lazyai.mcp.jsonc`). |
 | Pi is skills-only; Antigravity is minimal `.gemini` settings + hooks | `specs/adrs/004-vibe-lab-alignment-contract.md` | Matches verified baseline breadth without reviving unsupported agents or workflow runtime behavior |
 | LazyAI defaults to setup-core; runtime-adjacent commands are optional modules | `specs/adrs/005-core-vs-optional-modules.md` | Maximizes vibe-lab philosophy alignment while preserving retained runtime-adjacent capabilities behind a documented future opt-in boundary |
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |
 | `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all supported adapters; clean internal migration |
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
-| OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
+| OpenCode config unified on `opencode.json`; MCP compile writes LazyAI extras to `.opencode/lazyai.mcp.jsonc` and preserves user keys on managed server collisions | — | Prevents clobbering user-authored config while keeping baseline `opencode.json` shape intact |
 | OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
 
 ## Packages Reference

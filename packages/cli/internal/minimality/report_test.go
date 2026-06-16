@@ -17,7 +17,7 @@ func TestAnalyzeProjectProducesDeterministicReport(t *testing.T) {
 	writeLargeGoFile(t, root, "pkg/alpha.go", 700)
 	writeLargeGoFile(t, root, "pkg/middle.go", 501)
 	writeLargeGoFile(t, root, "pkg/ignored.go", 500)
-	writeCanonicalAsset(t, root, "agents/builder.md", "builder")
+	writeCanonicalAsset(t, root, "agents/implementer.md", "implementer")
 	writeCanonicalAsset(t, root, "skills/diagnose.md", "diagnose")
 	writeCanonicalAsset(t, root, "hooks/pre-commit.md", "hook")
 	writeCanonicalAsset(t, root, "templates/bug.md", "template")
@@ -44,7 +44,7 @@ func TestAnalyzeProjectProducesDeterministicReport(t *testing.T) {
 	if first.CLICommands.Visible != 1 || first.CLICommands.Hidden != 1 || first.CLICommands.Registered != 2 {
 		t.Fatalf("CLICommands = %#v", first.CLICommands)
 	}
-	if first.CanonicalLibrary.Bytes != len("builder")+len("diagnose")+len("hook")+len("template")+len("rule") {
+	if first.CanonicalLibrary.Bytes != len("implementer")+len("diagnose")+len("hook")+len("template")+len("rule") {
 		t.Fatalf("CanonicalLibrary.Bytes = %d", first.CanonicalLibrary.Bytes)
 	}
 	if first.CanonicalLibrary.BudgetBytes != tokenrent.DefaultBudgetBytes {

@@ -21,13 +21,13 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 	}
 
 	claudeDir := filepath.Join(home, ".claude")
-	wantAgent := filepath.Join(claudeDir, "agents", "builder.md")
+	wantAgent := filepath.Join(claudeDir, "agents", "implementer.md")
 	if !files.FileExists(wantAgent) {
 		t.Errorf("expected agent at canonical path %q, missing", wantAgent)
 	}
 
 	// Flat-layout file at the legacy path must not be created.
-	flatLegacy := filepath.Join(claudeDir, "builder.md")
+	flatLegacy := filepath.Join(claudeDir, "implementer.md")
 	if files.FileExists(flatLegacy) {
 		t.Errorf("agent written at legacy flat path %q (regression of spec 012 Task 001)", flatLegacy)
 	}
@@ -51,14 +51,14 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 func TestClaudeCode_GlobalLegacyAgentsMigrated(t *testing.T) {
 	ctx, _, home := newScopeTestContext(t, types.SetupScopeGlobal)
 
-	// Pre-seed the legacy flat layout: ~/.claude/builder.md exists with
+	// Pre-seed the legacy flat layout: ~/.claude/implementer.md exists with
 	// arbitrary user content (simulating the buggy pre-spec-012 install).
 	claudeDir := filepath.Join(home, ".claude")
 	if err := files.EnsureDir(claudeDir); err != nil {
 		t.Fatal(err)
 	}
-	legacyContent := []byte("---\nname: Builder (legacy)\n---\nHand-edited by user\n")
-	legacyPath := filepath.Join(claudeDir, "builder.md")
+	legacyContent := []byte("---\nname: Implementer (legacy)\n---\nHand-edited by user\n")
+	legacyPath := filepath.Join(claudeDir, "implementer.md")
 	if err := files.WriteFile(legacyPath, legacyContent, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestClaudeCode_GlobalLegacyAgentsMigrated(t *testing.T) {
 	if files.FileExists(legacyPath) {
 		t.Errorf("legacy flat agent %q still present after Install", legacyPath)
 	}
-	canonical := filepath.Join(claudeDir, "agents", "builder.md")
+	canonical := filepath.Join(claudeDir, "agents", "implementer.md")
 	if !files.FileExists(canonical) {
 		t.Errorf("canonical agent %q missing after Install (migration failed)", canonical)
 	}
@@ -185,7 +185,7 @@ func TestClaudeCode_CommandsAndOutputStylesScopeParity(t *testing.T) {
 	}
 }
 
-func TestClaudeCode_PrimaryAgentScopeParity(t *testing.T) {
+func TestClaudeCode_DefaultAgentScopeParity(t *testing.T) {
 	cases := []struct {
 		name  string
 		scope types.SetupScope
@@ -205,9 +205,9 @@ func TestClaudeCode_PrimaryAgentScopeParity(t *testing.T) {
 			}
 
 			root := c.root(target, home)
-			primary := filepath.Join(root, "agents", "primary-agent.md")
-			if !files.FileExists(primary) {
-				t.Errorf("expected primary-agent at %q, missing", primary)
+			defaultAgent := filepath.Join(root, "agents", "implementer.md")
+			if !files.FileExists(defaultAgent) {
+				t.Errorf("expected implementer at %q, missing", defaultAgent)
 			}
 			orch := filepath.Join(root, "agents", "orchestrator.md")
 			if files.FileExists(orch) {

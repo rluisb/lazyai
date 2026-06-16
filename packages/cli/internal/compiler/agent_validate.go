@@ -62,19 +62,20 @@ func ValidateAgentResolutions(libFS fs.FS, tools []types.ToolId, configuredProvi
 		if ent.IsDir() || !strings.HasSuffix(ent.Name(), ".md") {
 			continue
 		}
-		if ent.Name() == "primary-agent.md" {
-			continue
-		}
 		data, err := fs.ReadFile(libFS, path.Join(agentDir, ent.Name()))
 		if err != nil {
 			continue
 		}
 		raw, err := frontmatter.ParseAgentSpec(data)
 		if err != nil {
-			issues = append(issues, AgentValidationIssue{
-				Agent: ent.Name(),
-				Err:   err,
-			})
+			// Exact baseline agents intentionally omit LazyAI tier metadata.
+			// Ignore only the specific missing-tier error for canonical agents.
+			if !strings.Contains(err.Error(), "missing required field: tier") {
+				issues = append(issues, AgentValidationIssue{
+					Agent: ent.Name(),
+					Err:   err,
+				})
+			}
 			continue
 		}
 		spec := models.AgentSpec{

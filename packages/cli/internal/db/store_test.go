@@ -103,7 +103,7 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 		Selections: types.WizardSelections{
 			Templates:        []types.TemplateId{types.TemplateIdAdr},
 			Rules:            []types.RuleId{types.RuleIdCodeStyle},
-			Agents:           []types.AgentId{types.AgentIdBuilder},
+			Agents:           []types.AgentId{types.AgentIdImplementer},
 			Skills:           []types.SkillId{types.SkillIdDiagnose},
 			Prompts:          []types.PromptId{types.PromptIdCompact},
 			ChatModes:        []types.ChatModeId{types.ChatModeIdArchitect},

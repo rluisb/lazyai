@@ -52,7 +52,7 @@ generator  →  artifact  →  verifier  →  pass / fail
 Multiple review lenses (Test Quality, Contract, Patterns, Performance/Security, Simplicity Audit) run in parallel against the same diff. A judge agent synthesizes their findings, deduplicates conflicts, prioritizes by severity, and produces one structured report citing the constitution articles each finding violates.
 
 **How agents apply it.**
-- Generator agents (planner, builder, implementor) MUST emit artifacts that name their contract (the spec and articles they implement).
+- Generator agents (planner, implementer) MUST emit artifacts that name their contract (the spec and articles they implement).
 - Verifier agents (reviewer, red-team) MUST evaluate against the named contract — never against private opinion.
 - Verifiers escalate to a human gate when generator and verifier disagree after one feedback cycle.
 

@@ -138,10 +138,10 @@ func TestReadFS_RootTemplate(t *testing.T) {
 	}
 }
 
-func TestReadFS_PrimaryAgentAndRootTemplateExposeFourPointContract(t *testing.T) {
+func TestReadFS_ImplementerAndRootTemplateExposeFourPointContract(t *testing.T) {
 	fsys := testLibFS()
 	for _, path := range []string{
-		"canonical/agents/primary-agent.md",
+		"canonical/agents/implementer.md",
 		"root/AGENTS.template.md",
 	} {
 		data, err := files.ReadFS(fsys, path)

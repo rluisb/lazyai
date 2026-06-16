@@ -51,12 +51,12 @@ source <(lazyai-cli completion bash)
 
 ### Transitional runtime extras (selected examples)
 
-These commands still ship today, but they are secondary surfaces outside setup-core. The examples below are intentionally brief; see the [CLI Reference](docs/cli/reference.md) for the full categorized inventory.
+These commands still ship today, but they are secondary surfaces outside setup-core and are not required by generated adapter output. The examples below are intentionally brief; see the [CLI Reference](docs/cli/reference.md) for the full categorized inventory.
 
 ```bash
 lazyai-cli session start "Implement auth feature"
 lazyai-cli ledger verify
-lazyai-cli message send builder "Need help" "Can you review the auth code?"
+lazyai-cli message send implementer "Need help" "Can you review the auth code?"
 lazyai-cli git sync
 lazyai-cli backup create
 lazyai-cli secret set api-key "sk-..."
@@ -161,7 +161,7 @@ No sidecar configured = no errors, no warnings, no behavior change.
 - [OMP/Pi](docs/concepts/tools.md#omppi)
 - [Antigravity](docs/concepts/tools.md#antigravity)
 
-> **Note:** OpenCode now installs the neutral canonical adapter path with `primary-agent` as the default agent. Fortnite-era OpenCode defaults are retired from the active default path and are not installed by default.
+> **Note:** OpenCode now installs the neutral canonical adapter path with `implementer` as the default agent. Fortnite-era OpenCode defaults are retired from the active default path and are not installed by default.
 
 ---
 

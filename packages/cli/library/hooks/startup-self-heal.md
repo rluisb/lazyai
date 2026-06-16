@@ -2,33 +2,32 @@
 
 ## Purpose
 
-Preserve scoped startup-repair guidance as maintainer/reference policy without advertising it as an emitted runtime hook for supported adapters.
+At session start, run a scoped health check for the current CLI and regenerate only that CLI's project-local artifacts when drift or missing files are detected.
 
 ## Events
 
-- Generated adapters: none
-- Repository harness only: `bin/startup-self-heal`
+- OpenCode plugin: `session.created`
+- Claude Code: policy retained; no Claude runtime hook is emitted by LazyAI today
+- Copilot: no hook descriptor is emitted
+- Antigravity: no startup hook is emitted
 - OMP/Pi: unsupported
 
 ## Decision
 
-- Allow when: maintainers explicitly run the repository harness for a local repair workflow.
-- Warn when: documentation or generated assets imply that startup self-heal is a shipped adapter behavior.
-- Deny when: never. This is documentation/harness guidance, not an active runtime gate.
+- Allow when: the scoped startup check for the current CLI passes.
+- Warn when: scoped doctor fails, scoped regeneration runs, the harness script is unavailable, or regeneration still leaves issues.
+- Deny when: never. This is advisory automation, not a safety gate.
 
 ## Runtime
 
-- Claude Code: no project-local startup hook is emitted.
-- OpenCode: no startup self-heal plugin event is emitted.
-- Copilot: no startup self-heal hook descriptor is emitted.
-- Antigravity: no startup self-heal hook is emitted.
-- OMP/Pi: no project-local startup hook is generated.
+- OpenCode: generated plugin calls `bin/startup-self-heal --cli opencode --event session.created --quiet` when the repository harness script exists.
+- Other generated adapters: no startup self-heal runtime hook is emitted today.
 
 ## Fail-Closed Semantics
 
-- No generated runtime behavior. If maintainers need scoped repair, they run the repository harness explicitly.
+- Advisory hook. If runtime support is unavailable or repair fails, print a warning and continue without blocking the session.
 
 ## Scope
 
-- The repository harness may still use scoped doctor/inject internally for local maintenance of this repository.
-- Generated setups must not depend on `bin/startup-self-heal`.
+- Scoped doctor/inject touch only the current CLI surface plus the matching generated context file.
+- Full docs and cross-CLI regeneration still use plain `bin/inject`.

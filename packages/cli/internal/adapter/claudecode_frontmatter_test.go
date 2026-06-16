@@ -24,8 +24,18 @@ func TestRewriteAgentForClaudeCode_EmitsDescription(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RewriteAgentForClaudeCode: %v", err)
 	}
-	if !strings.Contains(string(out), "description: Coordinates feature builds.") {
-		t.Errorf("rewritten agent missing description line; got:\n%s", out)
+	fm, _, err := frontmatter.ExtractFrontmatter(out)
+	if err != nil {
+		t.Fatalf("extract frontmatter: %v", err)
+	}
+	if fm["description"] != "Coordinates feature builds." {
+		t.Errorf("description mismatch: got %v", fm["description"])
+	}
+	if _, ok := fm["model"]; ok {
+		t.Errorf("Claude frontmatter should not include model; got %v", fm["model"])
+	}
+	if _, ok := fm["temperature"]; ok {
+		t.Errorf("Claude frontmatter should not include temperature; got %v", fm["temperature"])
 	}
 }
 

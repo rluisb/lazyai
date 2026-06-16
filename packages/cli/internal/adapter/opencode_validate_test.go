@@ -85,7 +85,7 @@ func TestValidateOpenCodeInstall_AgentFails(t *testing.T) {
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(agentsDir, "builder.md"), []byte("# Builder"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(agentsDir, "implementer.md"), []byte("# Implementer"), 0o644); err != nil {
 		t.Fatalf("write agent: %v", err)
 	}
 
@@ -111,12 +111,12 @@ func TestValidateOpenCodeInstall_AgentFails(t *testing.T) {
 
 	found := false
 	for _, w := range warnings {
-		if w.Scope == "agent" && w.Item == "builder" {
+		if w.Scope == "agent" && w.Item == "implementer" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("expected agent warning for builder; got %v", warnings)
+		t.Errorf("expected agent warning for implementer; got %v", warnings)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestValidateOpenCodeInstall_AllPass(t *testing.T) {
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(agentsDir, "builder.md"), []byte("# Builder"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(agentsDir, "implementer.md"), []byte("# Implementer"), 0o644); err != nil {
 		t.Fatalf("write agent: %v", err)
 	}
 

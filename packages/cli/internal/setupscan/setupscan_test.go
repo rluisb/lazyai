@@ -12,7 +12,7 @@ func TestScanDetectsObservedTargetsAndSharedPaths(t *testing.T) {
 	homeDir := t.TempDir()
 	targetDir := t.TempDir()
 
-	mustWriteFile(t, filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc"), `{"version":"1.2.3"}`)
+	mustWriteFile(t, filepath.Join(homeDir, ".config", "opencode", "opencode.json"), `{"version":"1.2.3"}`)
 	mustWriteFile(t, filepath.Join(targetDir, ".claude", "settings.json"), `{"theme":"dark"}`)
 	mustMkdir(t, filepath.Join(homeDir, ".ai-setup"))
 	mustMkdir(t, filepath.Join(targetDir, ".ai"))
@@ -268,7 +268,7 @@ func TestScanMarksManagedConfigConflictWhenUserChangesIt(t *testing.T) {
 func TestRunAdoptMarksExistingOrchestratorEntryManaged(t *testing.T) {
 	homeDir := t.TempDir()
 	targetDir := t.TempDir()
-	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	configPath := filepath.Join(targetDir, ".opencode", "opencode.json")
 	mustWriteFile(t, configPath, `{"mcp":{"orchestrator":{"type":"local","command":["/tmp/node","/tmp/orchestrator/dist/index.js"]}}}`)
 
 	inventory, err := Run(Options{HomeDir: homeDir, TargetDir: targetDir, Adopt: true})
@@ -301,7 +301,7 @@ func TestRunAdoptMarksExistingOrchestratorEntryManaged(t *testing.T) {
 func TestScanMarksManagedOrchestratorEntryConflictWhenChanged(t *testing.T) {
 	homeDir := t.TempDir()
 	targetDir := t.TempDir()
-	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	configPath := filepath.Join(targetDir, ".opencode", "opencode.json")
 	mustWriteFile(t, configPath, `{"mcp":{"orchestrator":{"type":"local","command":["/tmp/node","/tmp/orchestrator/dist/index.js"]}}}`)
 	if _, err := Run(Options{HomeDir: homeDir, TargetDir: targetDir, Adopt: true}); err != nil {
 		t.Fatalf("initial adopt: %v", err)
@@ -399,8 +399,8 @@ func TestRunImportCopiesConfigsIntoAiSetupImportsAndBacksUpManagedDestination(t 
 func TestRunImportCopiesAgentDirectoryButSkipsNestedReservedContextDocs(t *testing.T) {
 	homeDir := t.TempDir()
 	targetDir := t.TempDir()
-	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "opencode.jsonc"), `{"version":"1.0.0"}`)
-	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "agents", "builder.md"), "# Builder\n\nBuild things.")
+	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "opencode.json"), `{"version":"1.0.0"}`)
+	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "agents", "implementer.md"), "# Implementer\n\nBuild things.")
 	mustWriteFile(t, filepath.Join(targetDir, ".opencode", "agents", "AGENTS.md"), "# Nested Context\n\nDo not import.")
 
 	inventory, err := Run(Options{HomeDir: homeDir, TargetDir: targetDir, Import: true})
@@ -411,8 +411,8 @@ func TestRunImportCopiesAgentDirectoryButSkipsNestedReservedContextDocs(t *testi
 	opencode := findTarget(t, inventory.CurrentState.Targets, "opencode")
 	detection := detectionForScope(t, opencode, "project")
 	importedAgentsDir := filepath.Join(inventory.Operation.ImportRoot, "opencode", importDirectoryName(detection.Scope, detection.Origin, detection.RootPath), "agents")
-	if !filesExist(t, filepath.Join(importedAgentsDir, "builder.md")) {
-		t.Fatalf("expected builder agent to be imported")
+	if !filesExist(t, filepath.Join(importedAgentsDir, "implementer.md")) {
+		t.Fatalf("expected implementer agent to be imported")
 	}
 	if filesExist(t, filepath.Join(importedAgentsDir, "AGENTS.md")) {
 		t.Fatalf("nested reserved context doc should not be imported")

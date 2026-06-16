@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "${COPILOT_PROJECT_DIR:-$PWD}/.github/hooks/caveman-memory-promotion.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

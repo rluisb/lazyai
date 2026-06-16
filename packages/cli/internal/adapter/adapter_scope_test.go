@@ -23,7 +23,7 @@ func newScopeTestContext(t *testing.T, scope types.SetupScope) (*AdapterContext,
 		LibraryFS:  createTestFS(),
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"builder"},
+			Agents: []types.AgentId{"researcher"},
 			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}

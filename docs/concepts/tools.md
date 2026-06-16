@@ -7,12 +7,10 @@
 - **Description:** root instructions plus agents, skills, commands, chat modes, and a managed hook plugin
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.opencode/`
-- **Project/workspace config:** `.opencode/opencode.jsonc`
+- **Project/workspace config:** `opencode.json`
 - **Global scope support:** Yes — `~/.config/opencode/`
-- **MCP config:** merged into `.opencode/opencode.jsonc`
-- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/lazyai-hooks.js`
-
-## Claude Code
+- **MCP config:** baseline root `opencode.json` carries no MCP servers; LazyAI-only MCP extras live in `.opencode/lazyai.mcp.jsonc`
+- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/vibe-lab-hooks.js`
 
 - **Description:** root instructions plus agents, skills, rules scaffold, commands, output styles, and managed hook scripts
 - **Root file:** `AGENTS.md` (existing root `CLAUDE.md` is preserved and receives an `AGENTS.md` reference)
@@ -55,12 +53,10 @@
 | Project scope | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
-| Primary agent entry | `.opencode/agents/primary-agent.md` | `.claude/agents/primary-agent.md` | `.github/agents/primary-agent.agent.yaml` | — | — |
+| Default agent entry | `.opencode/agents/implementer.md` | `.claude/agents/implementer.md` | `.github/agents/implementer.agent.md` | — | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | — |
-| Hook runtime | `.opencode/plugins/lazyai-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
-| MCP output | `.opencode/opencode.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
-
-## Tool selection during init
+| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
+| MCP output | `opencode.json` + `.opencode/lazyai.mcp.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 
 ```bash
 lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity

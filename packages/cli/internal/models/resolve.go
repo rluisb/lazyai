@@ -62,9 +62,8 @@ func Resolve(spec AgentSpec, ctx ResolveCtx) (ResolvedModel, error) {
 }
 
 // enforceRiskFloor implements the risk-tier rule: risk=5 forces Frontier
-// regardless of declared tier, and risk≥4 cannot be Speed. The primary-agent
-// is intentionally Tier=Balanced + Risk=5 (router roles benefit from
-// constrained pattern-matching), which the floor leaves promoted.
+// regardless of declared tier, and risk≥4 cannot be Speed. High-risk default
+// or operations roles should not silently resolve to the smallest model.
 //
 // Rationale: declared tier expresses *role*; risk expresses *blast radius*.
 // A role-driven Speed pick is wrong when the blast radius is high.

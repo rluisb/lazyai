@@ -112,12 +112,12 @@ func TestGetLibraryFS_CanReadAgents(t *testing.T) {
 		t.Errorf("expected at least 3 canonical agent files, got %d", len(entries))
 	}
 
-	data, err := fs.ReadFile(libFS, "canonical/agents/builder.md")
+	data, err := fs.ReadFile(libFS, "canonical/agents/implementer.md")
 	if err != nil {
-		t.Fatalf("failed to read canonical/agents/builder.md: %v", err)
+		t.Fatalf("failed to read canonical/agents/implementer.md: %v", err)
 	}
 	if len(data) == 0 {
-		t.Error("canonical/agents/builder.md is empty")
+		t.Error("canonical/agents/implementer.md is empty")
 	}
 }
 

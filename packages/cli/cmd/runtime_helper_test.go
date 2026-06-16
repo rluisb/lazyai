@@ -64,9 +64,9 @@ func TestOpenRuntimeDBCreatesV2SchemaOnEmptyDatabase(t *testing.T) {
 	}
 
 	assertRuntimeSchemaVersion(t, db, runtimeSchemaVersionV2)
-	assertAgentDefault(t, db, "opencode", "primary-agent", ".opencode/AGENTS.md")
-	assertAgentDefault(t, db, "claude-code", "primary-agent", "CLAUDE.md")
-	assertAgentDefault(t, db, "copilot", "primary-agent", ".github/copilot-instructions.md")
+	assertAgentDefault(t, db, "opencode", "implementer", ".opencode/AGENTS.md")
+	assertAgentDefault(t, db, "claude-code", "implementer", "CLAUDE.md")
+	assertAgentDefault(t, db, "copilot", "implementer", ".github/copilot-instructions.md")
 }
 
 func TestOpenRuntimeDBMigratesFKSaturatedV1Database(t *testing.T) {
@@ -97,8 +97,8 @@ func TestOpenRuntimeDBMigratesFKSaturatedV1Database(t *testing.T) {
 	if err := db.QueryRow("SELECT agent, goal, summary FROM sessions WHERE id = ?", "ses_legacy").Scan(&agent, &goal, &summary); err != nil {
 		t.Fatalf("query migrated session: %v", err)
 	}
-	if agent != "primary-agent" {
-		t.Fatalf("session agent = %q, want primary-agent", agent)
+	if agent != "implementer" {
+		t.Fatalf("session agent = %q, want implementer", agent)
 	}
 	if goal != "migrate runtime schema" {
 		t.Fatalf("session goal = %q", goal)
@@ -111,8 +111,8 @@ func TestOpenRuntimeDBMigratesFKSaturatedV1Database(t *testing.T) {
 	if err := db.QueryRow("SELECT agent, task FROM dispatches WHERE session_id = ?", "ses_legacy").Scan(&dispatchAgent, &dispatchTask); err != nil {
 		t.Fatalf("query migrated dispatch: %v", err)
 	}
-	if dispatchAgent != "primary-agent" {
-		t.Fatalf("dispatch agent = %q, want primary-agent", dispatchAgent)
+	if dispatchAgent != "implementer" {
+		t.Fatalf("dispatch agent = %q, want implementer", dispatchAgent)
 	}
 	if dispatchTask != "legacy task" {
 		t.Fatalf("dispatch task = %q", dispatchTask)
@@ -127,7 +127,7 @@ func TestOpenRuntimeDBMigratesFKSaturatedV1Database(t *testing.T) {
 	assertCount(t, db, "SELECT COUNT(*) FROM sessions", 1)
 	assertCount(t, db, "SELECT COUNT(*) FROM dispatches", 1)
 	assertCount(t, db, "SELECT COUNT(*) FROM ledger_refs", 1)
-	assertAgentDefault(t, db, "opencode", "primary-agent", ".opencode/AGENTS.md")
+	assertAgentDefault(t, db, "opencode", "implementer", ".opencode/AGENTS.md")
 }
 
 func TestOpenRuntimeDBMigrationFailureKeepsBackupAndLegacyDB(t *testing.T) {
@@ -232,7 +232,7 @@ func TestRuntimeV2SessionDispatchHandoffRoundTrip(t *testing.T) {
 	defer db.Close()
 
 	mgr := runtimesession.NewManager(db)
-	s, err := mgr.Start("ship phase three", runtimesession.StartOptions{Agent: "primary-agent", Tags: []string{"phase3", "migration"}})
+	s, err := mgr.Start("ship phase three", runtimesession.StartOptions{Agent: "implementer", Tags: []string{"phase3", "migration"}})
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestRuntimeV2SessionDispatchHandoffRoundTrip(t *testing.T) {
 	}
 
 	dispatch, err := mgr.Dispatch(s.ID, runtimesession.DispatchOptions{
-		Agent:        "builder",
+		Agent:        "implementer",
 		Task:         "verify runtime",
 		Phase:        "verification",
 		FilesTouched: []string{"packages/cli/cmd/runtime_helper.go"},

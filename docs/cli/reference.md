@@ -57,7 +57,7 @@ Initialize the AI development environment.
 
 **OpenCode default behavior:**
 
-When OpenCode is selected, `init` installs the neutral canonical adapter path. `.opencode/opencode.jsonc` uses `default_agent: primary-agent`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
+When OpenCode is selected, `init` installs the neutral canonical adapter path. `.opencode/opencode.jsonc` uses `default_agent: implementer`; Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
 
 **Examples:**
 
@@ -210,7 +210,7 @@ Append an event to the ledger.
 
 **Example:**
 ```bash
-lazyai-cli ledger append dispatch "agent=builder task=auth"
+lazyai-cli ledger append dispatch "agent=implementer task=auth"
 ```
 
 ---
@@ -311,7 +311,7 @@ Send a message to an agent.
 
 **Example:**
 ```bash
-lazyai-cli message send builder "Need help" "Can you review the auth code?" --priority high
+lazyai-cli message send implementer "Need help" "Can you review the auth code?" --priority high
 ```
 
 ---
@@ -329,7 +329,7 @@ Receive messages for an agent.
 
 **Example:**
 ```bash
-lazyai-cli message recv builder
+lazyai-cli message recv implementer
 ```
 
 ---
@@ -792,7 +792,7 @@ lazyai-cli sidecar doctor
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `LAZYAI_AGENT` | Current agent name | `primary-agent` |
+| `LAZYAI_AGENT` | Current agent name | `implementer` |
 | `LAZYAI_DB_PATH` | Database file path | `.specify/lazyai.db` |
 | `LAZYAI_LEDGER_PATH` | Ledger file path | `.specify/ledger.jsonl` |
 

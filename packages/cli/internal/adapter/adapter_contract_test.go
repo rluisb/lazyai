@@ -11,11 +11,11 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
+func TestAdapterNeutralContract_DefaultAgent(t *testing.T) {
 	cases := []struct {
 		name             string
 		adapter          ToolAdapter
-		primaryAgentPath string
+		defaultAgentPath string
 		orchestratorPath string
 		retiredSkillPath string
 		assertConfig     func(t *testing.T, targetDir string)
@@ -23,17 +23,17 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 		{
 			name:             "opencode",
 			adapter:          &OpenCodeAdapter{},
-			primaryAgentPath: filepath.Join(".opencode", "agents", "primary-agent.md"),
+			defaultAgentPath: filepath.Join(".opencode", "agents", "implementer.md"),
 			orchestratorPath: filepath.Join(".opencode", "agents", "orchestrator.md"),
 			retiredSkillPath: filepath.Join(".opencode", "skills", "orchestrate", "SKILL.md"),
 			assertConfig: func(t *testing.T, targetDir string) {
 				t.Helper()
-				cfg, err := jsonc.ReadJSONCFile(filepath.Join(targetDir, ".opencode", OpenCodeConfigFilename))
+				cfg, err := jsonc.ReadJSONCFile(filepath.Join(targetDir, OpenCodeConfigFilename))
 				if err != nil {
 					t.Fatalf("read opencode config: %v", err)
 				}
-				if got, _ := cfg["default_agent"].(string); got != "primary-agent" {
-					t.Fatalf("default_agent = %q, want primary-agent", got)
+				if _, ok := cfg["default_agent"]; ok {
+					t.Fatalf("neutral OpenCode config must not include default_agent")
 				}
 				if instructions, ok := cfg["instructions"].([]any); ok {
 					for _, raw := range instructions {
@@ -48,16 +48,16 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 		{
 			name:             "claude-code",
 			adapter:          &ClaudeCodeAdapter{},
-			primaryAgentPath: filepath.Join(".claude", "agents", "primary-agent.md"),
+			defaultAgentPath: filepath.Join(".claude", "agents", "implementer.md"),
 			orchestratorPath: filepath.Join(".claude", "agents", "orchestrator.md"),
 			retiredSkillPath: filepath.Join(".claude", "skills", "orchestrate", "SKILL.md"),
 		},
 		{
 			name:             "copilot",
 			adapter:          &CopilotAdapter{},
-			primaryAgentPath: filepath.Join(".github", "agents", "primary-agent.agent.yaml"),
-			orchestratorPath: filepath.Join(".github", "agents", "orchestrator.agent.yaml"),
-			retiredSkillPath: filepath.Join(".github", "agents", "orchestrate.agent.yaml"),
+			defaultAgentPath: filepath.Join(".github", "agents", "implementer.agent.md"),
+			orchestratorPath: filepath.Join(".github", "agents", "orchestrator.md"),
+			retiredSkillPath: filepath.Join(".github", "agents", "orchestrate.md"),
 		},
 	}
 
@@ -67,7 +67,7 @@ func TestAdapterNeutralContract_PrimaryAgent(t *testing.T) {
 			if _, err := tc.adapter.Install(ctx); err != nil {
 				t.Fatalf("install: %v", err)
 			}
-			assertExists(t, filepath.Join(targetDir, tc.primaryAgentPath))
+			assertExists(t, filepath.Join(targetDir, tc.defaultAgentPath))
 			assertMissing(t, filepath.Join(targetDir, tc.orchestratorPath))
 			if tc.assertConfig != nil {
 				tc.assertConfig(t, targetDir)
@@ -90,11 +90,12 @@ func newNeutralContractContext(t *testing.T) (*AdapterContext, string) {
 
 func neutralContractFS() fstest.MapFS {
 	return fstest.MapFS{
-		"canonical/agents/primary-agent.md":               &fstest.MapFile{Data: []byte("# Primary Agent\n\nDefault LazyAI runtime entry point.\n")},
-		"canonical/agents/builder.md":                     &fstest.MapFile{Data: canonicalAgentFixture("builder", "Builder agent.")},
+		"canonical/agents/implementer.md":                 &fstest.MapFile{Data: canonicalAgentFixture("implementer", "Implementer agent.")},
+		"canonical/agents/researcher.md":                  &fstest.MapFile{Data: canonicalAgentFixture("researcher", "Researcher agent.")},
+		"canonical/agents/deployer.md":                    &fstest.MapFile{Data: canonicalAgentFixture("deployer", "Deployer agent.")},
+		"canonical/agents/responder.md":                   &fstest.MapFile{Data: canonicalAgentFixture("responder", "Responder agent.")},
 		"canonical/agents/planner.md":                     &fstest.MapFile{Data: canonicalAgentFixture("planner", "Planner agent.")},
 		"canonical/agents/reviewer.md":                    &fstest.MapFile{Data: canonicalAgentFixture("reviewer", "Reviewer agent.")},
-		"canonical/agents/scout.md":                       &fstest.MapFile{Data: canonicalAgentFixture("scout", "Scout agent.")},
 		"canonical/agents/evidence-verifier.md":           &fstest.MapFile{Data: canonicalAgentFixture("evidence-verifier", "Evidence verifier agent.")},
 		"skills/codebase-exploration.md":                  &fstest.MapFile{Data: canonicalSkillFixture("codebase-exploration", "Codebase exploration skill.")},
 		"skills/test-first-change.md":                     &fstest.MapFile{Data: canonicalSkillFixture("test-first-change", "Test first change skill.")},

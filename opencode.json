@@ -1,0 +1,46 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      ".opencode/skills"
+    ]
+  },
+  "permission": {
+    "skill": {
+      "*": "allow"
+    }
+  },
+  "agent": {
+    "plan": {
+      "permission": {
+        "edit": "deny",
+        "bash": "ask",
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "build": {
+      "permission": {
+        "edit": "ask",
+        "bash": "ask",
+        "skill": {
+          "*": "allow"
+        }
+      }
+    },
+    "explore": {
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": {
+          "*": "allow"
+        }
+      }
+    }
+  },
+  "share": "disabled",
+  "instructions": [
+    "AGENTS.md"
+  ]
+}

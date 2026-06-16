@@ -91,52 +91,61 @@ func expandOpenCodeMetaProvider(configured []string) []string {
 	return configured
 }
 
-// RewriteAgentForClaudeCode transforms a library agent (.md with tier-based
-// frontmatter) into a Claude Code agent file. The output frontmatter
-// contains only the keys Claude Code honours: name, description, model,
-// temperature, plus the existing tools field passed through. Agent body is
-// preserved verbatim.
-//
-// The "model" field is the resolved alias (opus/sonnet/haiku); Claude Code
-// expands aliases to the latest version on its end so we don't need to pin
-// a dated ID here.
+// RewriteAgentForClaudeCode transforms a library agent into a Claude Code agent
+// file. Output frontmatter contains only name and description; the source body is
+// preserved verbatim after the vibe-lab managed marker. Baseline agents carry
+// no LazyAI tier metadata, so this path parses generic frontmatter instead of
+// frontmatter.ParseAgentSpec.
 func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, error) {
-	return rewriteAgentForTarget(source, types.ToolIdClaudeCode, ctx, claudeCodeFrontmatter)
-}
-
-// RewriteAgentForOpenCode transforms a library agent into the canonical
-// OpenCode frontmatter shape (#199 Bug 1). It resolves the model against
-// `OpenCodeCatalog` and `auth.DetectAll`-discovered providers, then emits
-// the rich frontmatter (`name`, `model`, `description`, `reasoningEffort`,
-// `textVerbosity`, `mode`, `temperature`, `steps`) observed in real-world
-// `~/.config/opencode/agents/` configs. The body's Claude-centric
-// `## Model` editorial paragraph is stripped (it would otherwise contradict
-// the resolved provider/model pair).
-func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([]byte, error) {
-	raw, err := frontmatter.ParseAgentSpec(source)
+	_ = ctx
+	fm, body, err := frontmatter.ExtractFrontmatter(source)
 	if err != nil {
 		return nil, err
 	}
-	rc := resolveCtxFor(types.ToolIdOpenCode, ctx)
-	res, err := models.Resolve(agentSpecToModelsSpec(raw), rc)
-	if err != nil {
-		return nil, fmt.Errorf("opencode resolve %s: %w", raw.Name, err)
+	name := strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("claude adapter: agent source missing name")
 	}
-	cleaned := stripModelSection(source)
-	out := BuildOpenCodeAgentFrontmatter(cleaned, OpenCodeAgentOpts{
-		Name:            raw.Name,
-		Model:           res.Field,
-		Mode:            mode, // empty → defaults to "subagent" inside Build...
-		Temperature:     raw.Temperature,
-		ReasoningEffort: opencodeReasoningEffort(raw.Thinking),
-		TextVerbosity:   opencodeTextVerbosity(raw.Risk),
-		Steps:           opencodeStepsFor(raw.Tier),
-		// Tools and Permission deliberately left nil: MCP servers belong in
-		// .mcp.json, not in the agent's `tools:` field. OpenCode's tool
-		// gates default to all-allowed when the key is absent — matches
-		// today's effective behavior.
-	})
-	return prependFallbackComment(out, res.FallbackChain), nil
+	description := strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
+	body = trimLeadingNewlines(body)
+
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("name: ")
+	b.WriteString(name)
+	b.WriteByte('\n')
+	b.WriteString("description: ")
+	b.WriteString(yamlDoubleQuote(description))
+	b.WriteString("\n---\n\n")
+	b.WriteString(managedAgentMarker("claude", name))
+	b.WriteString("\n\n")
+	b.Write(body)
+	return []byte(b.String()), nil
+}
+
+// RewriteAgentForOpenCode transforms a library agent into the baseline
+// OpenCode agent shape for emitted .opencode/agents files.
+//
+// OpenCode emits only the quoted description and the managed marker. Source
+// frontmatter is parsed generically so baseline agents without a LazyAI tier
+// are accepted.
+func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([]byte, error) {
+	_ = mode
+	_ = ctx
+	fm, body, err := frontmatter.ExtractFrontmatter(source)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
+	description := strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
+	if description == "" {
+		description = inheritedDescription(fm)
+	}
+	cleaned := append([]byte{'\n'}, body...)
+	return BuildOpenCodeAgentFrontmatter(cleaned, OpenCodeAgentOpts{
+		Description:   description,
+		ManagedMarker: managedAgentMarker("opencode", name),
+	}), nil
 }
 
 // modelSectionRe matches the Claude-centric `## Model\n<paragraph>\n\n`
@@ -181,8 +190,8 @@ func opencodeTextVerbosity(risk int) string {
 }
 
 // opencodeStepsFor returns a per-tier max-iteration cap. Values mirror the
-// canonical configs at `~/.config/opencode/agents/`: planner=16, scout=10,
-// implementor=25. Frontier roles get more steps; speed roles get fewer.
+// canonical configs at `~/.config/opencode/agents/`: planner=16, researcher=10.
+// Frontier roles get more steps; speed roles get fewer.
 func opencodeStepsFor(tier string) int {
 	switch strings.ToLower(tier) {
 	case "frontier":
@@ -222,10 +231,9 @@ func rewriteAgentForTarget(
 }
 
 // claudeCodeFrontmatter writes the minimal frontmatter Claude Code's agent
-// loader honours. Tier/thinking/risk are intentionally dropped — Claude
-// Code ignores them, and leaving them in source-of-truth shape would
-// confuse readers into thinking they're load-bearing on this target.
-func claudeCodeFrontmatter(spec frontmatter.AgentSpecRaw, modelField string, fallback []string, body []byte) []byte {
+// loader honours for generated agents: name and description. Other source fields
+// are dropped to keep generated frontmatter to baseline shape.
+func claudeCodeFrontmatter(spec frontmatter.AgentSpecRaw, _ string, _ []string, body []byte) []byte {
 	var b strings.Builder
 	b.WriteString("---\n")
 	if spec.Name != "" {
@@ -234,13 +242,7 @@ func claudeCodeFrontmatter(spec frontmatter.AgentSpecRaw, modelField string, fal
 	if spec.Description != "" {
 		fmt.Fprintf(&b, "description: %s\n", spec.Description)
 	}
-	fmt.Fprintf(&b, "model: %s\n", modelField)
-	fmt.Fprintf(&b, "temperature: %s\n", formatFloat(spec.Temperature))
-	b.WriteString("---\n")
-	if len(fallback) > 0 {
-		fmt.Fprintf(&b, "<!-- fallback-chain: %s -->\n", strings.Join(fallback, " -> "))
-	}
-	b.WriteString("\n")
+	b.WriteString("---\n\n")
 	b.Write(trimLeadingNewlines(body))
 	return []byte(b.String())
 }

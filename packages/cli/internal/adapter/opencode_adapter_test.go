@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 	"github.com/rluisb/lazyai/packages/cli/internal/jsonc"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -36,15 +35,21 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	// and skill definitions, but must not create reserved context docs inside the
 	// tool directory; root context docs are handled elsewhere.
 	keyFiles := []string{
-		".opencode/opencode.jsonc",
+		"opencode.json",
 		".opencode/package.json",
-		".opencode/agents/primary-agent.md",
-		".opencode/agents/builder.md",
+		".opencode/agents/implementer.md",
+		".opencode/agents/researcher.md",
 		".opencode/skills/diagnose/SKILL.md",
 	}
-	// The pre-unification .json variant must never be produced on a fresh install.
+	// The default config must be written to root opencode.json; .opencode is reserved for runtime assets.
+	if _, err := os.Stat(filepath.Join(targetDir, "opencode.json")); err != nil {
+		t.Fatal("root opencode.json was not created during install")
+	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
-		t.Error("opencode.json should not exist; install must target opencode.jsonc only")
+		t.Error(".opencode/opencode.json should not exist on default install")
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.jsonc")); err == nil {
+		t.Error(".opencode/opencode.jsonc should not exist on default install")
 	}
 	for _, f := range keyFiles {
 		path := filepath.Join(targetDir, f)
@@ -87,8 +92,11 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 		if fm["description"] == nil || fm["description"] == "" {
 			t.Errorf("%s: missing description key", e.Name())
 		}
-		if fm["mode"] == nil || fm["mode"] == "" {
-			t.Errorf("%s: missing mode key", e.Name())
+		if _, ok := fm["name"]; ok {
+			t.Errorf("%s: name key should not be emitted in baseline OpenCode output", e.Name())
+		}
+		if _, ok := fm["mode"]; ok {
+			t.Errorf("%s: mode key should not be emitted in baseline OpenCode output", e.Name())
 		}
 	}
 }
@@ -111,7 +119,7 @@ func TestOpenCodeAdapter_GlobalScope_UsesGlobalPath(t *testing.T) {
 		LibraryFS:  libFS,
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"builder"},
+			Agents: []types.AgentId{"researcher"},
 			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}
@@ -157,7 +165,7 @@ func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
 		LibraryFS:  libFS,
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"builder"},
+			Agents: []types.AgentId{"researcher"},
 			Skills: []types.SkillId{types.SkillIdDiagnose},
 		},
 	}
@@ -176,23 +184,16 @@ func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
 	}
 }
 
-// --- Test: OpenCode adapter migrates pre-existing opencode.json to .jsonc ---
+// --- Test: OpenCode adapter preserves pre-existing root opencode.json ---
 
-func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
+func TestOpenCodeAdapter_Install_PreservesRootJson(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
-		Agents: []types.AgentId{"builder"},
+		Agents: []types.AgentId{"researcher"},
 		Skills: []types.SkillId{types.SkillIdDiagnose},
 	}
 
-	// Seed a pre-existing opencode.json with a user-authored key that must
-	// survive the migration unchanged.
-	ocDir := filepath.Join(targetDir, ".opencode")
-	if err := files.EnsureDir(ocDir); err != nil {
-		t.Fatalf("EnsureDir: %v", err)
-	}
-	jsonPath := filepath.Join(ocDir, "opencode.json")
-	jsoncPath := filepath.Join(ocDir, "opencode.jsonc")
+	jsonPath := filepath.Join(targetDir, "opencode.json")
 	original := []byte(`{
   "$schema": "https://opencode.ai/config.json",
   "permission": { "edit": "allow" },
@@ -203,39 +204,22 @@ func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
 		t.Fatalf("seed opencode.json: %v", err)
 	}
 
-	adapter := &OpenCodeAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
+	if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
 		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	// .jsonc must exist; .json must be gone; .json.bak must preserve original.
-	if _, err := os.Stat(jsoncPath); os.IsNotExist(err) {
-		t.Fatal("opencode.jsonc was not created by migration")
-	}
-	if _, err := os.Stat(jsonPath); err == nil {
-		t.Error("opencode.json should have been removed after migration")
-	}
-	bakPath := jsonPath + ".bak"
-	bakContents, err := os.ReadFile(bakPath)
+	contents, err := os.ReadFile(jsonPath)
 	if err != nil {
-		t.Fatalf("opencode.json.bak was not created: %v", err)
+		t.Fatalf("read root opencode.json: %v", err)
 	}
-	if string(bakContents) != string(original) {
-		t.Errorf(".bak sidecar content mismatch.\nwant: %q\ngot:  %q", original, bakContents)
+	if string(contents) != string(original) {
+		t.Errorf("root opencode.json should be preserved unchanged.\nwant: %s\ngot:  %s", original, contents)
 	}
-
-	// The migrated .jsonc must carry the user-authored key forward verbatim
-	// (no default-config merge on top of the migrated file — that would
-	// silently clobber customizations like permission.edit == "allow").
-	jsoncContents, err := os.ReadFile(jsoncPath)
-	if err != nil {
-		t.Fatalf("read migrated .jsonc: %v", err)
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
+		t.Error(".opencode/opencode.json should not be created when root opencode.json exists")
 	}
-	if !strings.Contains(string(jsoncContents), `"user_key": "preserved"`) {
-		t.Errorf("migrated .jsonc dropped user_key:\n%s", jsoncContents)
-	}
-	if !strings.Contains(string(jsoncContents), `"edit": "allow"`) {
-		t.Errorf("migrated .jsonc did not preserve user-authored permission.edit:\n%s", jsoncContents)
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.jsonc")); err == nil {
+		t.Error(".opencode/opencode.jsonc should not be created when root opencode.json exists")
 	}
 }
 
@@ -264,7 +248,7 @@ func TestOpenCodeAdapter_InstallsCommandsAndModes(t *testing.T) {
 				LibraryFS:  createTestFS(),
 				Strategy:   types.ConflictStrategyAlign,
 				Selections: AdapterSelections{
-					Agents: []types.AgentId{"builder"},
+					Agents: []types.AgentId{"researcher"},
 					Skills: []types.SkillId{types.SkillIdDiagnose},
 					// Leaving OpenCodeCommands / OpenCodeModes unset means
 					// "install all" — the wizard will populate these later.
@@ -303,7 +287,7 @@ func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
 		LibraryFS:  createTestFS(),
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents:           []types.AgentId{"builder"},
+			Agents:           []types.AgentId{"researcher"},
 			Skills:           []types.SkillId{types.SkillIdDiagnose},
 			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
 			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
@@ -330,16 +314,16 @@ func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
 
 // --- Test: instructions key resolves to a real file at every scope ---
 //
-// opencode resolves entries in opencode.jsonc's `instructions` array
-// relative to the config file's directory. Project/workspace configs live in
-// `.opencode/`, so they must point up to the root AGENTS.md. Global configs
-// live alongside the global AGENTS.md and can use `AGENTS.md` directly.
+// opencode resolves entries in root opencode.json's `instructions` array
+// relative to the config file's directory. Project/workspace configs live at
+// the project/workspace root; global configs live alongside the global
+// AGENTS.md and can use `AGENTS.md` directly.
 
 func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 	type scopeCase struct {
 		name  string
 		scope types.SetupScope
-		// rootFn returns the expected .opencode/ root given a fresh (targetDir, homeDir) pair.
+		// rootFn returns the expected config root given a fresh (targetDir, homeDir) pair.
 		rootFn func(targetDir, homeDir string) string
 	}
 
@@ -348,14 +332,14 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 			name:  "project",
 			scope: types.SetupScopeProject,
 			rootFn: func(targetDir, _ string) string {
-				return filepath.Join(targetDir, ".opencode")
+				return targetDir
 			},
 		},
 		{
 			name:  "workspace",
 			scope: types.SetupScopeWorkspace,
 			rootFn: func(targetDir, _ string) string {
-				return filepath.Join(targetDir, ".opencode")
+				return targetDir
 			},
 		},
 		{
@@ -388,7 +372,7 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 				LibraryFS:  createTestFS(),
 				Strategy:   types.ConflictStrategyAlign,
 				Selections: AdapterSelections{
-					Agents: []types.AgentId{"builder"},
+					Agents: []types.AgentId{"researcher"},
 					Skills: []types.SkillId{types.SkillIdDiagnose},
 				},
 			}
@@ -399,7 +383,7 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 
 			root := tc.rootFn(targetDir, homeDir)
 
-			// Read back opencode.jsonc and assert instructions shape.
+			// Read back opencode.json and assert instructions shape.
 			cfgPath := filepath.Join(root, OpenCodeConfigFilename)
 			cfg, err := jsonc.ReadJSONCFile(cfgPath)
 			if err != nil {
@@ -407,7 +391,7 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 			}
 			rawInstr, ok := cfg["instructions"]
 			if !ok {
-				t.Fatalf("opencode.jsonc missing `instructions` key at %s", tc.name)
+				t.Fatalf("opencode.json missing `instructions` key at %s", tc.name)
 			}
 			instr, ok := rawInstr.([]any)
 			if !ok || len(instr) == 0 {
@@ -440,7 +424,7 @@ func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
 	}
 }
 
-// --- Test: OpenCode adapter primary-agent install ---
+// --- Test: OpenCode adapter default agent install ---
 
 func testRepoRoot(t *testing.T) string {
 	t.Helper()
@@ -451,7 +435,7 @@ func testRepoRoot(t *testing.T) string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
 }
 
-func TestOpenCodeAdapter_Install_PrimaryAgentMode(t *testing.T) {
+func TestOpenCodeAdapter_Install_DefaultAgentMode(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := testRepoRoot(t)
 	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
@@ -470,16 +454,19 @@ func TestOpenCodeAdapter_Install_PrimaryAgentMode(t *testing.T) {
 		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfgPath := filepath.Join(targetDir, OpenCodeConfigFilename)
 	cfg, err := jsonc.ReadJSONCFile(cfgPath)
 	if err != nil {
-		t.Fatalf("read opencode.jsonc: %v", err)
+		t.Fatalf("read opencode.json: %v", err)
 	}
-	if da, ok := cfg["default_agent"].(string); !ok || da != "primary-agent" {
-		t.Errorf("default_agent = %q, want primary-agent", da)
+	if _, ok := cfg["default_agent"]; ok {
+		t.Errorf("default_agent should not be emitted in baseline OpenCode config")
 	}
-	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "primary-agent.md")); os.IsNotExist(err) {
-		t.Error("primary-agent.md was not installed")
+	if _, ok := cfg["mcp"]; ok {
+		t.Errorf("mcp should not be emitted in baseline OpenCode config")
+	}
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "implementer.md")); os.IsNotExist(err) {
+		t.Error("implementer.md was not installed")
 	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "orchestrator.md")); err == nil {
 		t.Error("orchestrator.md should not be installed")
@@ -505,28 +492,38 @@ func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 		t.Fatalf("OpenCode Install failed: %v", err)
 	}
 
-	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfgPath := filepath.Join(targetDir, OpenCodeConfigFilename)
 	cfg, err := jsonc.ReadJSONCFile(cfgPath)
 	if err != nil {
-		t.Fatalf("read opencode.jsonc: %v", err)
+		t.Fatalf("read opencode.json: %v", err)
+	}
+	if got, _ := cfg["$schema"].(string); got != "https://opencode.ai/config.json" {
+		t.Fatalf("$schema = %q, want OpenCode schema", got)
+	}
+	if got, _ := cfg["share"].(string); got != "disabled" {
+		t.Fatalf("share = %q, want disabled", got)
+	}
+	instructions, ok := cfg["instructions"].([]any)
+	if !ok || len(instructions) != 1 || instructions[0] != "AGENTS.md" {
+		t.Fatalf("instructions = %v, want [AGENTS.md]", cfg["instructions"])
 	}
 	skills, ok := cfg["skills"].(map[string]any)
 	if !ok {
 		t.Fatalf("skills = %T, want object", cfg["skills"])
 	}
 	paths, ok := skills["paths"].([]any)
-	if !ok || len(paths) != 1 || paths[0] != "skills" {
-		t.Fatalf("skills.paths = %v, want [skills]", skills["paths"])
+	if !ok || len(paths) != 1 || paths[0] != ".opencode/skills" {
+		t.Fatalf("skills.paths = %v, want [.opencode/skills]", skills["paths"])
 	}
 	permission, ok := cfg["permission"].(map[string]any)
 	if !ok {
 		t.Fatalf("permission = %T, want object", cfg["permission"])
 	}
-	if got, _ := permission["bash"].(string); got != "ask" {
-		t.Fatalf("permission.bash = %q, want ask", got)
+	if _, ok := permission["bash"]; ok {
+		t.Fatalf("top-level permission.bash should not be emitted")
 	}
-	if got, _ := permission["edit"].(string); got != "ask" {
-		t.Fatalf("permission.edit = %q, want ask", got)
+	if _, ok := permission["edit"]; ok {
+		t.Fatalf("top-level permission.edit should not be emitted")
 	}
 	skillPerm, ok := permission["skill"].(map[string]any)
 	if !ok {
@@ -535,6 +532,43 @@ func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 	if got, _ := skillPerm["*"].(string); got != "allow" {
 		t.Fatalf("permission.skill[*] = %q, want allow", got)
 	}
+	if _, ok := cfg["default_agent"]; ok {
+		t.Fatalf("default_agent should not be emitted")
+	}
+	if _, ok := cfg["mcp"]; ok {
+		t.Fatalf("mcp should not be emitted in default opencode.json")
+	}
+	agents, ok := cfg["agent"].(map[string]any)
+	if !ok {
+		t.Fatalf("agent = %T, want object", cfg["agent"])
+	}
+	assertAgentPermission := func(name, wantEdit, wantBash string) {
+		t.Helper()
+		rawAgent, ok := agents[name].(map[string]any)
+		if !ok {
+			t.Fatalf("agent.%s = %T, want object", name, agents[name])
+		}
+		perm, ok := rawAgent["permission"].(map[string]any)
+		if !ok {
+			t.Fatalf("agent.%s.permission = %T, want object", name, rawAgent["permission"])
+		}
+		if got, _ := perm["edit"].(string); got != wantEdit {
+			t.Fatalf("agent.%s.permission.edit = %q, want %q", name, got, wantEdit)
+		}
+		if got, _ := perm["bash"].(string); got != wantBash {
+			t.Fatalf("agent.%s.permission.bash = %q, want %q", name, got, wantBash)
+		}
+		agentSkillPerm, ok := perm["skill"].(map[string]any)
+		if !ok {
+			t.Fatalf("agent.%s.permission.skill = %T, want object", name, perm["skill"])
+		}
+		if got, _ := agentSkillPerm["*"].(string); got != "allow" {
+			t.Fatalf("agent.%s.permission.skill[*] = %q, want allow", name, got)
+		}
+	}
+	assertAgentPermission("plan", "deny", "ask")
+	assertAgentPermission("build", "ask", "ask")
+	assertAgentPermission("explore", "deny", "deny")
 }
 func TestOpenCodeAdapter_PackageJSONUsesModuleType(t *testing.T) {
 	targetDir := t.TempDir()

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
@@ -23,6 +24,11 @@ const (
 	ManagedBlockEndMarker   = "<!-- lazyai:managed:end root-agents v1 -->"
 )
 
+// vibe-lab managed-marker contract. Must match bin/inject exactly.
+func managedAgentMarker(surface, name string) string {
+	return fmt.Sprintf("<!-- vibe-lab:managed kind=agent surface=%s name=%s source=.agents/agents/%s.md -->", surface, name, name)
+}
+
 // selectionSet returns a set (map[T]bool) for the given slice, or nil if the
 // slice is empty (meaning "install everything").
 func selectionSet[T ~string](items []T) map[T]bool {
@@ -36,14 +42,18 @@ func selectionSet[T ~string](items []T) map[T]bool {
 	return m
 }
 
-const primaryAgentID = "primary-agent"
+const (
+	defaultAgentID          = "implementer"
+	defaultAgentDescription = "Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode."
+)
 
 var canonicalAgentIDs = map[string]struct{}{
-	primaryAgentID:      {},
-	"builder":           {},
+	defaultAgentID:      {},
+	"researcher":        {},
+	"deployer":          {},
+	"responder":         {},
 	"planner":           {},
 	"reviewer":          {},
-	"scout":             {},
 	"evidence-verifier": {},
 }
 
@@ -51,43 +61,67 @@ func isCanonicalAgentFile(file string) bool {
 	_, ok := canonicalAgentIDs[fileID(file)]
 	return ok
 }
-
-func copyCanonicalPrimaryAgent(ctx *AdapterContext, dest string, transform func([]byte) []byte) error {
-	return CopyWithRecord("canonical/agents/primary-agent.md", dest, ctx, true, transform, 0o644)
+func isDefaultAgentFile(file string) bool {
+	return fileID(file) == defaultAgentID
 }
 
-func openCodePrimaryAgentContent(source []byte) []byte {
-	body := frontmatter.StripFrontmatter(source)
-	return BuildOpenCodeAgentFrontmatter(body, OpenCodeAgentOpts{
-		Name:        primaryAgentID,
-		Description: "Default LazyAI runtime entry point",
-		Mode:        "primary",
-	})
+func copyCanonicalDefaultAgent(ctx *AdapterContext, dest string, transform func([]byte) []byte) error {
+	return CopyWithRecord("canonical/agents/"+defaultAgentID+".md", dest, ctx, true, transform, 0o644)
 }
 
-func claudePrimaryAgentContent(source []byte) []byte {
-	body := trimLeadingNewlines(frontmatter.StripFrontmatter(source))
+func openCodeDefaultAgentContent(source []byte) []byte {
+	fm, body, _ := frontmatter.ExtractFrontmatter(source)
+	opts := OpenCodeAgentOpts{
+		Description:   inheritedDescription(fm),
+		ManagedMarker: managedAgentMarker("opencode", defaultAgentID),
+	}
+	// Preserve exact body trailing content while adding the marker.
+	return BuildOpenCodeAgentFrontmatter(append([]byte{'\n'}, body...), opts)
+}
+
+func claudeDefaultAgentContent(source []byte) []byte {
+	fm, body, _ := frontmatter.ExtractFrontmatter(source)
+	description := inheritedDescription(fm)
+	if description == "Agent" {
+		description = defaultAgentDescription
+	}
+	body = trimLeadingNewlines(body)
 	var b strings.Builder
 	b.WriteString("---\n")
-	b.WriteString("name: primary-agent\n")
-	b.WriteString("description: Default LazyAI runtime entry point\n")
-	b.WriteString("---\n\n")
+	b.WriteString("name: ")
+	b.WriteString(defaultAgentID)
+	b.WriteByte('\n')
+	b.WriteString("description: ")
+	b.WriteString(yamlDoubleQuote(description))
+	b.WriteString("\n---\n\n")
+	b.WriteString(managedAgentMarker("claude", defaultAgentID))
+	b.WriteString("\n\n")
 	b.Write(body)
 	return []byte(b.String())
 }
 
-func copilotPrimaryAgentContent(source []byte) []byte {
-	body := strings.TrimRight(string(frontmatter.StripFrontmatter(source)), "\n")
+func copilotDefaultAgentContent(source []byte) []byte {
+	fm, body, _ := frontmatter.ExtractFrontmatter(source)
+	description := inheritedDescription(fm)
+	if description == "Agent" {
+		description = defaultAgentDescription
+	}
+	body = trimLeadingNewlines([]byte(strings.TrimRight(string(body), "\n")))
 	var b strings.Builder
-	b.WriteString("name: primary-agent\n")
-	b.WriteString("description: Default LazyAI runtime entry point\n")
-	b.WriteString("model: gpt-4.1\n")
-	b.WriteString("prompt: |\n")
-	for _, line := range strings.Split(body, "\n") {
-		b.WriteString("  ")
-		b.WriteString(line)
+	b.WriteString("---\n")
+	b.WriteString("name: ")
+	b.WriteString(defaultAgentID)
+	b.WriteByte('\n')
+	b.WriteString("description: ")
+	b.WriteString(strconv.Quote(description))
+	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
+	b.WriteString(managedAgentMarker("copilot", defaultAgentID))
+	b.WriteString("\n\n")
+	b.Write(body)
+	if !strings.HasSuffix(string(body), "\n") {
 		b.WriteByte('\n')
 	}
+	b.WriteByte('\n')
 	return []byte(b.String())
 }
 
@@ -166,7 +200,7 @@ func bytesEqual(a, b []byte) bool {
 // ctx.FileRecords, and handles conflict resolution. If transform is non-nil,
 // it is applied to the file content before writing.
 //
-// src is a relative path within ctx.LibraryFS (e.g., "agents/builder.md").
+// src is a relative path within ctx.LibraryFS (e.g., "agents/implementer.md").
 // perm defaults to 0o644 if zero.
 func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte, perm os.FileMode) error {
 	relPath, err := filepath.Rel(ctx.TargetDir, dest)

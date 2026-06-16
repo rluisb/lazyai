@@ -56,11 +56,12 @@ const (
 type AgentId string
 
 const (
-	AgentIdBuilder          AgentId = "builder"
-	AgentIdPrimaryAgent     AgentId = "primary-agent"
+	AgentIdImplementer      AgentId = "implementer"
+	AgentIdResearcher       AgentId = "researcher"
+	AgentIdDeployer         AgentId = "deployer"
+	AgentIdResponder        AgentId = "responder"
 	AgentIdPlanner          AgentId = "planner"
 	AgentIdReviewer         AgentId = "reviewer"
-	AgentIdScout            AgentId = "scout"
 	AgentIdEvidenceVerifier AgentId = "evidence-verifier"
 )
 
@@ -395,11 +396,12 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
-		AgentIdPrimaryAgent,
-		AgentIdBuilder,
+		AgentIdImplementer,
+		AgentIdResearcher,
+		AgentIdDeployer,
+		AgentIdResponder,
 		AgentIdPlanner,
 		AgentIdReviewer,
-		AgentIdScout,
 		AgentIdEvidenceVerifier,
 	}
 

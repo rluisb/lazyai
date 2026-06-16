@@ -16,11 +16,11 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// OpenCodeConfigFilename is the canonical opencode config filename. Both the
-// install-time default-config writer and the compile-time MCP writer target
-// this single file so users never end up with both opencode.json and
-// opencode.jsonc side-by-side.
-const OpenCodeConfigFilename = "opencode.jsonc"
+// OpenCodeConfigFilename is the canonical root opencode config filename.
+const OpenCodeConfigFilename = "opencode.json"
+
+// OpenCodeRuntimeMCPFilename is the secondary LazyAI-only MCP-only config payload.
+const OpenCodeRuntimeMCPFilename = "lazyai.mcp.jsonc"
 
 // OpenCodeAdapter implements ToolAdapter for OpenCode (opencode CLI).
 type OpenCodeAdapter struct{}
@@ -44,72 +44,82 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	adapterLog.Info("installing tools", "adapter", "opencode")
 
-	jsonPath := filepath.Join(ocDir, "opencode.json")
-	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
-
-	// One-shot migration: collapse any pre-existing opencode.json onto
-	// opencode.jsonc. The original .json is preserved as a .bak sidecar so
-	// users can recover if the rename surprises them. If both files exist
-	// (rare), .jsonc is authoritative.
-	if files.FileExists(jsonPath) {
-		bakPath := jsonPath + ".bak"
-		if !files.FileExists(bakPath) {
-			if err := files.CopyFile(jsonPath, bakPath); err != nil {
-				return nil, fmt.Errorf("backup opencode.json: %w", err)
-			}
-		}
-		if !files.FileExists(jsoncPath) {
-			if err := files.CopyFile(jsonPath, jsoncPath); err != nil {
-				return nil, fmt.Errorf("migrate opencode.json to opencode.jsonc: %w", err)
-			}
-		}
-		if err := os.Remove(jsonPath); err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("remove opencode.json after migration: %w", err)
-		}
+	configRoot, err := openCodeConfigRoot(ctx)
+	if err != nil {
+		return nil, err
 	}
+	configPath := filepath.Join(configRoot, OpenCodeConfigFilename)
 
 	// Install the default config only when no config is present. Skipping the
 	// merge on pre-existing configs preserves user customizations (e.g., a
-	// hand-tuned `permission.edit` value) across re-runs.
-	if !files.FileExists(jsoncPath) {
-		instructions := []any{openCodeInstructionsPath(ctx)}
+	// hand-tuned permissions object) across re-runs.
+	if !files.FileExists(configPath) {
+		instructions := openCodeInstructionsPath(ctx)
 		defaultConfig := map[string]any{
-			"$schema":       "https://opencode.ai/config.json",
-			"default_agent": primaryAgentID,
-			"instructions":  instructions,
+			"$schema": "https://opencode.ai/config.json",
+			"share":   "disabled",
+			"instructions": []any{
+				instructions,
+			},
 			"skills": map[string]any{
-				"paths": []any{"skills"},
+				"paths": []any{".opencode/skills"},
 			},
 			"permission": map[string]any{
-				"bash": "ask",
-				"edit": "ask",
 				"skill": map[string]any{
 					"*": "allow",
 				},
 			},
+			"agent": map[string]any{
+				"plan": map[string]any{
+					"permission": map[string]any{
+						"edit": "deny",
+						"bash": "ask",
+						"skill": map[string]any{
+							"*": "allow",
+						},
+					},
+				},
+				"build": map[string]any{
+					"permission": map[string]any{
+						"edit": "ask",
+						"bash": "ask",
+						"skill": map[string]any{
+							"*": "allow",
+						},
+					},
+				},
+				"explore": map[string]any{
+					"permission": map[string]any{
+						"edit": "deny",
+						"bash": "deny",
+						"skill": map[string]any{
+							"*": "allow",
+						},
+					},
+				},
+			},
 		}
-		if _, err := configmerge.MergeJSONFile(jsoncPath, defaultConfig); err != nil {
+		if _, err := configmerge.MergeJSONFile(configPath, defaultConfig); err != nil {
 			return nil, err
 		}
-		hash, _ := files.FileHash(jsoncPath)
+		hash, _ := files.FileHash(configPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path:   jsoncPath,
+			Path:   configPath,
 			Hash:   hash,
 			Source: "generated",
 			Owner:  types.FileOwnerLibrary,
 		})
 	}
 
-	if err := copyCanonicalPrimaryAgent(ctx,
-		filepath.Join(ocDir, "agents", "primary-agent.md"),
-		openCodePrimaryAgentContent,
+	if err := copyCanonicalDefaultAgent(ctx,
+		filepath.Join(ocDir, "agents", defaultAgentID+".md"),
+		openCodeDefaultAgentContent,
 	); err != nil {
 		return nil, err
 	}
 
-	// Copy canonical generic agents. Primary-agent is sourced from the
-	// canonical library above; retired Fortnite/orchestrator agents are not
-	// part of the neutral adapter contract.
+	// Copy canonical baseline-facing agents. The default implementer is sourced
+	// above only to guarantee the default file exists even with narrow selections.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",
@@ -127,8 +137,7 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 			return out
 		},
 		IncludeFile: func(file string) bool {
-			name := fileID(file)
-			return name != primaryAgentID && isCanonicalAgentFile(file)
+			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
 		},
 	}); err != nil {
 		return nil, err
@@ -202,12 +211,24 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 
 	return ctx.FileRecords, nil
 }
-
-func openCodeInstructionsPath(ctx *AdapterContext) string {
-	if ctx.SetupScope == types.SetupScopeGlobal {
-		return "AGENTS.md"
+func openCodeConfigRoot(ctx *AdapterContext) (string, error) {
+	switch ctx.SetupScope {
+	case types.SetupScopeProject:
+		return ctx.TargetDir, nil
+	case types.SetupScopeWorkspace:
+		if ctx.WorkspaceRoot != "" {
+			return ctx.WorkspaceRoot, nil
+		}
+		return ctx.TargetDir, nil
+	case types.SetupScopeGlobal:
+		return ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx)
+	default:
+		return "", fmt.Errorf("unsupported opencode config scope %q", ctx.SetupScope)
 	}
-	return "../AGENTS.md"
+}
+
+func openCodeInstructionsPath(_ *AdapterContext) string {
+	return "AGENTS.md"
 }
 
 func (a *OpenCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

@@ -263,7 +263,7 @@ func copyRuntimeV1Data(db *runtime.DB, backupPath string) error {
 				started_at,
 				ended_at,
 				CASE
-					WHEN agent IS NULL OR TRIM(agent) = '' OR agent IN ('loop-driver', 'orchestrator') THEN 'primary-agent'
+					WHEN agent IS NULL OR TRIM(agent) = '' OR agent IN ('loop-driver', 'orchestrator', 'primary-agent', 'builder', 'scout') THEN 'implementer'
 					ELSE agent
 				END,
 				model,
@@ -287,7 +287,7 @@ func copyRuntimeV1Data(db *runtime.DB, backupPath string) error {
 				seq,
 				parent_id,
 				CASE
-					WHEN agent IS NULL OR TRIM(agent) = '' OR agent IN ('loop-driver', 'orchestrator') THEN 'primary-agent'
+					WHEN agent IS NULL OR TRIM(agent) = '' OR agent IN ('loop-driver', 'orchestrator', 'primary-agent', 'builder', 'scout') THEN 'implementer'
 					ELSE agent
 				END,
 				model,

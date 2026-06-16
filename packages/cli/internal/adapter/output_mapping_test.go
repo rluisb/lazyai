@@ -67,8 +67,30 @@ func TestOutputMappingClaudeCodeAgents(t *testing.T) {
 	if target.IncludeFile("orchestrator.md") {
 		t.Error("orchestrator must be excluded from neutral agent mappings")
 	}
-	if !target.IncludeFile("scout.md") {
-		t.Error("scout should be included in bulk agent copy")
+	if !target.IncludeFile("researcher.md") {
+		t.Error("researcher should be included in bulk agent copy")
+	}
+}
+
+func TestOutputMappingCopilotAgentsWritesMd(t *testing.T) {
+	target, ok := LookupOutputTarget(types.ToolIdCopilot, AssetKindAgents)
+	if !ok {
+		t.Fatal("copilot has no agents target")
+	}
+	if target.Shape != ShapeFlat {
+		t.Errorf("copilot agents Shape=%q, want %q", target.Shape, ShapeFlat)
+	}
+	if target.RewriteSuffix != "" {
+		t.Errorf("copilot agents RewriteSuffix=%q, want empty", target.RewriteSuffix)
+	}
+	if target.IncludeFile == nil {
+		t.Fatal("copilot agents must have an IncludeFile filter")
+	}
+	if target.IncludeFile("orchestrator.md") {
+		t.Error("orchestrator must be excluded from copilot agent mappings")
+	}
+	if !target.IncludeFile("researcher.md") {
+		t.Error("researcher should be included in copilot agent copy")
 	}
 }
 

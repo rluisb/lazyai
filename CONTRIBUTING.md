@@ -24,10 +24,15 @@ We follow the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md). Be respectful.
 ```bash
 git clone https://github.com/YOUR_USERNAME/lazyai.git
 cd lazyai
+git config core.hooksPath .githooks
 # Requires Go 1.26+
 go work sync
 make build
 ```
+
+The repo-local hooks then:
+- run the token-rent pre-commit check
+- append a `Signed-off-by:` trailer automatically when missing
 
 ### Project Structure
 ```
@@ -67,7 +72,17 @@ cd packages/cli && go test ./... -v
 
 ## Developer Certificate of Origin (DCO)
 
-All commits must be signed off. Use `git commit -s` or add:
+All commits must be signed off.
+
+Recommended one-time setup:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+With the repo hooks installed, the `commit-msg` hook appends the `Signed-off-by:` trailer automatically when it is missing. You can still use `git commit -s` explicitly if you prefer.
+
+Expected trailer:
 
 ```
 Signed-off-by: Your Name <your@email.com>

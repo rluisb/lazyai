@@ -14,6 +14,20 @@ A setup engine for AI toolchains. `lazyai-cli` defines your AI assistant setup o
 
 Learn more in [How It Works](docs/concepts/how-it-works.md).
 
+## Maintainer repo setup
+
+For this repository, install the repo-local Git hooks once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+That enables:
+- the token-rent pre-commit check
+- automatic DCO `Signed-off-by:` trailers via `.githooks/commit-msg`
+
+If you skip this, CI can still fail later on DCO even when the code is correct.
+
 
 ---
 

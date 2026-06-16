@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+msg_file=${1:?commit message path required}
+
+if grep -qi '^Signed-off-by:' "$msg_file"; then
+  exit 0
+fi
+
+author_ident=$(git var GIT_AUTHOR_IDENT 2>/dev/null || true)
+if [ -z "$author_ident" ]; then
+  echo "commit-msg: unable to resolve GIT_AUTHOR_IDENT for DCO sign-off" >&2
+  echo "commit-msg: configure git user.name and user.email, or commit with -s" >&2
+  exit 1
+fi
+
+author=$(printf '%s\n' "$author_ident" | sed -E 's/^([^<]+<[^>]+>).*/\1/')
+if [ -z "$author" ]; then
+  echo "commit-msg: unable to parse author identity from GIT_AUTHOR_IDENT" >&2
+  exit 1
+fi
+
+git interpret-trailers --in-place --if-exists doNothing --trailer "Signed-off-by: $author" "$msg_file"

@@ -33,10 +33,11 @@ These are embedded runtime artifacts, not external dependencies.
 
 ## Canonical command assets
 
-The provenance manifest hash-covers `packages/cli/library/canonical/commands/graphify.md` and `packages/cli/library/canonical/commands/handoff.md`. These files are library inventory assets — they document compressed command prompts available for reference — but they are not active command emission sources. The adapter does not emit them as slash commands to generated tool setups by default.
+The files `packages/cli/library/canonical/commands/graphify.md` and `packages/cli/library/canonical/commands/handoff.md` are provenance-covered canonical inventory assets only. They are documented command blueprints and are not emitted as runtime or default slash command definitions.
+Actual emitted slash commands continue to come from the tool-specific command directories:
+`packages/cli/library/claudecode/commands/` and `packages/cli/library/opencode/commands/`.
 
-Command emission changes require a separate focused implementation branch with its own verification.
-
+Any change to command emission behavior must stay in a separate implementation branch with explicit approval and dedicated verification.
 ## MCP catalog policy
 
 `packages/cli/library/mcp/catalog.json` may include opt-in MCP servers that are not active setup defaults. These entries must keep `enabled: false` unless a separate product decision promotes them.

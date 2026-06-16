@@ -43,12 +43,13 @@ func selectionSet[T ~string](items []T) map[T]bool {
 }
 
 const (
-	defaultAgentID          = "implementer"
-	defaultAgentDescription = "Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode."
+	defaultAgentID          = "guide"
+	defaultAgentDescription = "Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome."
 )
 
 var canonicalAgentIDs = map[string]struct{}{
 	defaultAgentID:      {},
+	"implementer":       {},
 	"researcher":        {},
 	"deployer":          {},
 	"responder":         {},

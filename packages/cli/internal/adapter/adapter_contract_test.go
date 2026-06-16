@@ -23,7 +23,7 @@ func TestAdapterNeutralContract_DefaultAgent(t *testing.T) {
 		{
 			name:             "opencode",
 			adapter:          &OpenCodeAdapter{},
-			defaultAgentPath: filepath.Join(".opencode", "agents", "implementer.md"),
+			defaultAgentPath: filepath.Join(".opencode", "agents", "guide.md"),
 			orchestratorPath: filepath.Join(".opencode", "agents", "orchestrator.md"),
 			retiredSkillPath: filepath.Join(".opencode", "skills", "orchestrate", "SKILL.md"),
 			assertConfig: func(t *testing.T, targetDir string) {
@@ -48,14 +48,14 @@ func TestAdapterNeutralContract_DefaultAgent(t *testing.T) {
 		{
 			name:             "claude-code",
 			adapter:          &ClaudeCodeAdapter{},
-			defaultAgentPath: filepath.Join(".claude", "agents", "implementer.md"),
+			defaultAgentPath: filepath.Join(".claude", "agents", "guide.md"),
 			orchestratorPath: filepath.Join(".claude", "agents", "orchestrator.md"),
 			retiredSkillPath: filepath.Join(".claude", "skills", "orchestrate", "SKILL.md"),
 		},
 		{
 			name:             "copilot",
 			adapter:          &CopilotAdapter{},
-			defaultAgentPath: filepath.Join(".github", "agents", "implementer.agent.md"),
+			defaultAgentPath: filepath.Join(".github", "agents", "guide.agent.md"),
 			orchestratorPath: filepath.Join(".github", "agents", "orchestrator.md"),
 			retiredSkillPath: filepath.Join(".github", "agents", "orchestrate.md"),
 		},
@@ -90,6 +90,7 @@ func newNeutralContractContext(t *testing.T) (*AdapterContext, string) {
 
 func neutralContractFS() fstest.MapFS {
 	return fstest.MapFS{
+		"canonical/agents/guide.md":                       &fstest.MapFile{Data: canonicalAgentFixture("guide", "Guide agent.")},
 		"canonical/agents/implementer.md":                 &fstest.MapFile{Data: canonicalAgentFixture("implementer", "Implementer agent.")},
 		"canonical/agents/researcher.md":                  &fstest.MapFile{Data: canonicalAgentFixture("researcher", "Researcher agent.")},
 		"canonical/agents/deployer.md":                    &fstest.MapFile{Data: canonicalAgentFixture("deployer", "Deployer agent.")},

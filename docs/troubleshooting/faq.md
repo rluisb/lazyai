@@ -75,7 +75,7 @@ No. Referenced repos are scanned for stack detection but are **never** modified.
 
 ### Where did the old orchestration runtime go?
 
-The dedicated workflow/task runtime was removed from the active product surface. Current setup uses OpenCode, Claude Code, and Copilot adapters with `implementer` as the neutral baseline-facing default.
+The dedicated workflow/task runtime was removed from the active product surface. Current setup uses OpenCode, Claude Code, and Copilot adapters with `guide` as the front-door default and `implementer` as a specialist.
 
 See [Migration: Fortnite / orchestrator removal](../migration/fortnite-orchestrator-removal.md) for replacements and rollback guidance.
 

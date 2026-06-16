@@ -118,8 +118,8 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
-	// Copy canonical baseline-facing agents. The default implementer is sourced
-	// above only to guarantee the default file exists even with narrow selections.
+	// Copy canonical baseline-facing agents. The default guide is sourced above
+	// only to guarantee the default file exists even with narrow selections.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",

@@ -72,7 +72,7 @@ var configGetCmd = &cobra.Command{
 var configSetCmd = &cobra.Command{
 	Use:   "set [key] [value]",
 	Short: "Set a configuration value",
-	Long:  `Set a configuration value by key (e.g., agent.default_agent implementer).`,
+	Long:  `Set a configuration value by key (e.g., agent.default_agent guide).`,
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key := args[0]
@@ -83,7 +83,7 @@ var configSetCmd = &cobra.Command{
 			// If config doesn't exist, create a new one
 			config = &LazyAIConfig{
 				Agent: AgentConfig{
-					DefaultAgent: "implementer",
+					DefaultAgent: "guide",
 					DefaultModel: "gpt-4",
 				},
 				Database: DatabaseConfig{
@@ -158,7 +158,7 @@ var configInitCmd = &cobra.Command{
 
 		config := &LazyAIConfig{
 			Agent: AgentConfig{
-				DefaultAgent: "implementer",
+				DefaultAgent: "guide",
 				DefaultModel: "gpt-4",
 			},
 			Database: DatabaseConfig{

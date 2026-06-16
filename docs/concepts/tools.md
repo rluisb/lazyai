@@ -53,7 +53,7 @@
 | Project scope | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
-| Default agent entry | `.opencode/agents/implementer.md` | `.claude/agents/implementer.md` | `.github/agents/implementer.agent.md` | — | — |
+| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | — |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
 | MCP output | `opencode.json` + `.opencode/lazyai.mcp.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |

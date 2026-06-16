@@ -172,7 +172,7 @@ var migratedStrayAgentsPaths = []string{
 }
 
 // legacyAgentPaths lists pre-baseline-parity agent files that should be removed
-// when a project is regenerated onto the implementer default contract. Only
+// when a project is regenerated onto the guide default contract. Only
 // files that are tracked as library-owned and unmodified (hash matches) are
 // deleted; user-edited agents are preserved.
 var legacyAgentPaths = []string{

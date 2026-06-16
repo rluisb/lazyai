@@ -24,6 +24,9 @@ func createTestFS() fstest.MapFS {
 		"agents/researcher.md": &fstest.MapFile{
 			Data: []byte("---\nname: Researcher\ndescription: Test researcher agent.\nmodel: haiku\n---\n\n# Researcher\n\nYou are a researcher."),
 		},
+		"canonical/agents/guide.md": &fstest.MapFile{
+			Data: canonicalAgentFixture("guide", "Test guide agent."),
+		},
 		"canonical/agents/implementer.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("implementer", "Test implementer agent."),
 		},
@@ -452,13 +455,13 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	agentsDir := filepath.Join(targetDir, ".github", "agents")
 	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
 	// --- Default agents are compiled as Markdown files ---
-	defaultAgentFile := filepath.Join(agentsDir, "implementer.agent.md")
+	defaultAgentFile := filepath.Join(agentsDir, "guide.agent.md")
 	if _, err := os.Stat(defaultAgentFile); os.IsNotExist(err) {
 		t.Error("default agent .agent.md was not created in .github/agents/")
 	}
-	legacyDefaultAgentFile := filepath.Join(agentsDir, "implementer.agent.yaml")
+	legacyDefaultAgentFile := filepath.Join(agentsDir, "guide.agent.yaml")
 	if _, err := os.Stat(legacyDefaultAgentFile); err == nil {
-		t.Error("implementer.agent.yaml should not be emitted for default copilot agents")
+		t.Error("guide.agent.yaml should not be emitted for default copilot agents")
 	}
 
 	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
@@ -957,6 +960,7 @@ func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
 	want := []string{
 		"deployer.agent.md",
 		"evidence-verifier.agent.md",
+		"guide.agent.md",
 		"implementer.agent.md",
 		"planner.agent.md",
 		"researcher.agent.md",

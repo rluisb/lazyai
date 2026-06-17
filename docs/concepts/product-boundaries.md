@@ -4,6 +4,30 @@ LazyAI is the runtime and product. It owns the `lazyai-cli` binary, the canonica
 
 This page is the source inventory for the active product boundary. It was built from the source registered under `packages/cli/cmd/` and the top-level packages under `packages/cli/internal/`.
 
+
+```mermaid
+flowchart TD
+    subgraph SC["setup-core"]
+        INIT["init · add · compile"]
+        VAL["validate · doctor · status"]
+        UPD["update · update-self · eject"]
+        SRV["server · sidecar · config"]
+        CRE["create · import · migrate · info · list · setup · build-plugin"]
+    end
+    subgraph OP["ops-runtime-extra"]
+        SES["session · ledger · message"]
+        MEM["memory · metrics · cost"]
+        SEC["secret · backup · auth · notify · git"]
+    end
+    subgraph DH["dev-harness"]
+        MOD["models sync"]
+    end
+    RET["retired/archived<br/>completions · eval · workflow · task"]
+    SC -.->|excludes| OP
+    SC -.->|excludes| DH
+    SC -.->|excludes| RET
+```
+
 ## Categories
 
 ### `setup-core`

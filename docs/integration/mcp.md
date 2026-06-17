@@ -34,6 +34,16 @@ Or edit `.ai/mcp.json` later, then recompile:
 lazyai-cli compile
 ```
 
+```mermaid
+flowchart LR
+    C[".ai/mcp.json<br/>(canonical source)"] --> M["lazyai-cli compile"]
+    M --> OC[".opencode/lazyai.mcp.jsonc"]
+    M --> CC[".mcp.json"]
+    M --> CP[".vscode/mcp.json"]
+```
+
+Remote (URL-based) MCP servers include `"type":"http"` in the compiled payload so that `claude mcp add-json` accepts them. stdio servers (command-based) do not carry a type field.
+
 
 ## Cataloged MCP servers
 

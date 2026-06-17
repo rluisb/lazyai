@@ -1,221 +1,238 @@
 # LazyAI
 
-A setup engine for AI toolchains. `lazyai-cli` defines your AI assistant setup once in a canonical format, then compiles and updates it across every supported AI tool — OpenCode, Claude Code, GitHub Copilot, Pi, Antigravity, and friends.
+LazyAI is a Go CLI for defining AI-tool setup once and compiling it to each supported AI
+surface.  
 
-`lazyai-cli` follows a **canonical source → compile** model:
+Engineers use it to keep tool configuration consistent across projects and scopes.
+Technical evaluators use it to review generated artifacts, check health diagnostics, and
+verify adapter correctness.
 
-1. `init` scaffolds a tool-agnostic canonical layer under `.ai/`
-2. You edit rules, agents, and templates in one place
-3. `compile` generates tool-native files (`.opencode/`, `.claude/`, `.github/`, `.vscode/`)
-4. `update` refreshes managed files from the bundled library
-5. `doctor` checks health and drift
+`lazyai-cli` owns the canonical source workflow:
 
-**Setup-core is the default product.** `init`, `compile`, `update`, `doctor`, `add`, `build-plugin`, `validate`, and the workspace/sidecar commands are the engine. Runtime-adjacent commands (sessions, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) still ship in the same binary today, but they are transitional extras outside setup-core on the path to explicit opt-in modules — see [ADR-005](specs/adrs/005-core-vs-optional-modules.md) and [Product Boundaries](docs/concepts/product-boundaries.md).
+- `.ai/` setup source (agents, skills, MCP catalog, specs)
+- scoped installation state (`.ai-setup.json`)
+- compiler/adapters for tool-native output
+- optional runtime-adjacent local state (sessions, metrics, ledger, memory, secrets)
 
-Learn more in [How It Works](docs/concepts/how-it-works.md).
+It is Go-only (`go install`), with no npm or npx dependency for normal usage.
 
-## Maintainer repo setup
+## Architecture overview
 
-For this repository, install the repo-local Git hooks once:
-
-```bash
-git config core.hooksPath .githooks
+```mermaid
+flowchart TD
+    A["`lazyai-cli init`"] --> B["Canonical source in `.ai/` (AGENTS.md, specs, artifacts)"]
+    B --> C["Embedded library + manifest resolver"]
+    C --> D["Scaffold pipeline"]
+    D --> E["Adapters (opencode, claude-code, copilot, pi, antigravity)"]
+    E --> F["Tool-native outputs"]
+    F --> G["`.opencode/`"]
+    F --> H["`.claude/`"]
+    F --> I["`.github/`"]
+    F --> J["`.pi/`"]
+    F --> K["`.gemini/`"]
+    B --> L["`.ai-setup.json` + managed manifests"]
+    B --> M["`.ai/mcp.json`"] --> N["`lazyai-cli compile`"]
+    N --> F
 ```
 
-That enables:
-- the token-rent pre-commit check
-- automatic DCO `Signed-off-by:` trailers via `.githooks/commit-msg`
+## Quick start (project + full preset)
 
-If you skip this, CI can still fail later on DCO even when the code is correct.
-
-
----
-
-## What is supported
-
-- **Default product (setup-core):** the shipped `lazyai-cli` binary, canonical `.ai/` setup model, adapter/compiler output for OpenCode, Claude Code, GitHub Copilot, Pi, and Antigravity, and the active embedded library assets. See [ADR-005](specs/adrs/005-core-vs-optional-modules.md) for the framing.
-- **Transitional runtime extras:** runtime-adjacent command families (sessions, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) still ship today, but they are outside the default setup-core product boundary and are being staged toward explicit opt-in module semantics in a follow-up phase.
-- **Not a runtime dependency:** vibe-lab supplies principles, assets, and adapter expectations that inform LazyAI, but LazyAI owns the Go runtime and product surface. See [ADR-004](specs/adrs/004-vibe-lab-alignment-contract.md) for the alignment contract.
-- **Repository harness only:** scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal` support maintainers of this repository; they are not shipped LazyAI CLI commands.
-- **Retired/archived:** Fortnite defaults, the old orchestrator runtime, obsolete eval/task/workflow surfaces, and files under `archive/` are historical or migration material, not supported active runtime.
-
-See [Product Boundaries](docs/concepts/product-boundaries.md) for the command and internal-package inventory.
-
----
-
-## Commands
-
-### Setup-core examples
-
-Core setup commands are the default product surface:
+Copy-paste flow for a first-time setup on a local project with OpenCode and Claude Code:
 
 ```bash
-lazyai-cli doctor
-# → Checks file integrity, metadata, migrations, env dependencies, and setup drift
+go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 
-lazyai-cli validate skills
-# → Checks skill structure and common mistakes
+cd my-app
+lazyai-cli init \
+  --scope project \
+  --tools opencode,claude-code \
+  --preset full \
+  --name my-app \
+  --no-interactive
 
-lazyai-cli workspace add /path/to/project --name my-project
-lazyai-cli workspace switch my-project
-lazyai-cli workspace status
-
-source <(lazyai-cli completion bash)
+lazyai-cli compile
+lazyai-cli status
 ```
 
-### Transitional runtime extras (selected examples)
-
-These commands still ship today, but they are secondary surfaces outside setup-core and are not required by generated adapter output. The examples below are intentionally brief; see the [CLI Reference](docs/cli/reference.md) for the full categorized inventory.
+Add MCP servers during init or later:
 
 ```bash
-lazyai-cli session start "Implement auth feature"
-lazyai-cli ledger verify
-lazyai-cli message send implementer "Need help" "Can you review the auth code?"
-lazyai-cli git sync
-lazyai-cli backup create
-lazyai-cli secret set api-key "sk-..."
-lazyai-cli notify test
-lazyai-cli metrics dashboard
-lazyai-cli memory list
+lazyai-cli init --scope project --tools opencode,claude-code --preset full --enable-servers filesystem,ai-memory,ripgrep --name my-app --no-interactive
+lazyai-cli server add filesystem
+lazyai-cli compile
 ```
 
-See [CLI Reference](docs/cli/reference.md) and [Product Boundaries](docs/concepts/product-boundaries.md) for the full categorized command inventory.
+## Supported tools
 
-### Runtime migration note
-
-Legacy workflow/orchestration/taskqueue surfaces were removed in the runtime refactor.
-See `docs/migration/fortnite-orchestrator-removal.md`.
-
----
-
-## Sidecar (Optional)
-
-LazyAI can keep your docs, specs, and plans in a dedicated **sidecar** directory instead of inside each project. This is useful when you want a single knowledge base shared across workspaces, or when you prefer to keep planning artifacts outside version control.
-
-### What sidecar means in LazyAI
-
-A sidecar is a separate directory on disk that stores:
-- `docs/` — documentation and guides
-- `specs/` — feature specifications and ADRs
-- `plans/` — execution plans and task breakdowns
-
-When a sidecar is configured, LazyAI resolves these directories from the sidecar path instead of the project/workspace root. If no sidecar is configured, LazyAI falls back to its default behavior (docs/specs/plans live in the current scope root).
-
-### Scope behavior
-
-Sidecar configuration can live at three levels, with **workspace** as the primary use case:
-
-| Scope | Config file | Priority |
-|---|---|---|
-| **Workspace** | `~/.lazyai/workspaces.yaml` (active workspace entry) | Highest |
-| **Project** | `<project-root>/.lazyai-sidecar.yaml` | Middle |
-| **Global** | `~/.lazyai/sidecar.yaml` | Lowest |
-
-Resolution follows the chain: **workspace → project → global → default**. A workspace sidecar always wins over a project sidecar; a project sidecar wins over global; if none are configured, LazyAI uses the scope default.
-
-**Workspace scope (recommended):**
-- Best for multi-repo teams with a planning repo
-- The active workspace entry in `workspaces.yaml` carries the sidecar block
-- All projects in that workspace share the same sidecar by default
-
-**Project scope:**
-- Best when one repo needs its own isolated docs/specs/plans
-- Create `.lazyai-sidecar.yaml` in the project root
-
-**Global scope:**
-- Best for personal defaults across all projects
-- Set once in `~/.lazyai/sidecar.yaml`
-
-### Commands
-
-```bash
-# Initialize a sidecar at a scope
-lazyai-cli sidecar init --scope workspace --path /Users/me/kb/my-workspace
-
-# Show resolved paths for the current scope
-lazyai-cli sidecar status
-# → Scope: workspace | Config Level: workspace
-# → Docs:  /Users/me/kb/my-workspace/docs
-# → Specs: /Users/me/kb/my-workspace/specs
-# → Plans: /Users/me/kb/my-workspace/plans
-
-# Attach a sidecar to the active workspace or project
-lazyai-cli sidecar attach --path /tmp/kb
-
-# Detach (remove) the sidecar configuration
-lazyai-cli sidecar detach
-
-# Validate sidecar paths exist and are writable
-lazyai-cli sidecar doctor
-```
-
-### Optional fallback behavior
-
-Sidecar is **always optional**. If you never run `sidecar init`, LazyAI behaves exactly as it does today:
-- `project` scope → docs/specs/plans live in the project root
-- `workspace` scope → docs/specs/plans live in the workspace (planning repo) root
-- `global` scope → docs/specs/plans live in `~/.lazyai/`
-
-No sidecar configured = no errors, no warnings, no behavior change.
-
-### Explicit exclusions
-
-- **No Skeeper integration.** The sidecar is purely local. There is no `skeeper` field, no provider abstraction, and no remote sync.
-- **No content migration.** `sidecar init` does not move existing docs/specs/plans.
-- **No multi-sidecar.** One sidecar per scope level.
-- **No auto-discovery.** Sidecars are explicitly configured, not detected from parent directories or environment variables.
-
----
-
-## Supported Tools
-
-- [OpenCode](docs/concepts/tools.md#opencode)
-- [Claude Code](docs/concepts/tools.md#claude-code)
-- [GitHub Copilot](docs/concepts/tools.md#github-copilot)
-- [OMP/Pi](docs/concepts/tools.md#omppi)
-- [Antigravity](docs/concepts/tools.md#antigravity)
-
-> **Note:** Supported adapters now install `guide` as the front-door default agent. `implementer` remains a specialist agent, and Fortnite-era defaults are not installed by default.
-
----
-
-## Documentation
-
-- **Official docs:** <https://rluisb.github.io/lazyai/>
-- **GitHub Wiki:** <https://github.com/rluisb/lazyai/wiki>
-
-| Topic | Link |
+| Tool | What it provides |
 |---|---|
-| Quick Start | [docs/getting-started/quick-start.md](docs/getting-started/quick-start.md) |
-| Installation | [docs/getting-started/installation.md](docs/getting-started/installation.md) |
-| How It Works | [docs/concepts/how-it-works.md](docs/concepts/how-it-works.md) |
-| Product Boundaries | [docs/concepts/product-boundaries.md](docs/concepts/product-boundaries.md) |
-| Scopes | [docs/concepts/scopes.md](docs/concepts/scopes.md) |
-| Presets | [docs/concepts/presets.md](docs/concepts/presets.md) |
-| Tools | [docs/concepts/tools.md](docs/concepts/tools.md) |
-| CLI Reference | [docs/cli/reference.md](docs/cli/reference.md) |
-| MCP Integration | [docs/integration/mcp.md](docs/integration/mcp.md) |
-| Runtime removal note | [docs/integration/orchestration.md](docs/integration/orchestration.md) |
-| Contributing | [docs/development/contributing.md](docs/development/contributing.md) |
-| Release Process | [docs/development/release.md](docs/development/release.md) |
-| FAQ | [docs/troubleshooting/faq.md](docs/troubleshooting/faq.md) |
+| `opencode` | Neutral OpenCode scaffold with tool-native config, hook plugin, agents, and skills. |
+| `claude-code` | CLAUDE/Claude Code root config, hooks, commands, and settings output. |
+| `copilot` | Copilot repo/user instruction surfaces and managed hook/assets. |
+| `pi` | OMP/Pi skill-first surface (`.pi/skills/*`). |
+| `antigravity` | `.gemini` configuration and hook surface (`.gemini/hooks/...`). |
 
----
+## Command reference (all shipped commands)
+
+The table below covers every active command category and command family in this build.
+`completions` is kept only as a hidden retired alias.
+
+Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are removed from active runtime and listed only in migration docs.
+
+### setup-core (21 commands)
+
+| Command | Description |
+|---|---|
+| `add` | Add artifacts to an existing setup (`--tools`, `--agents`, `--skills`). `--tools` accepts `opencode`, `claude-code`, `copilot`, `pi`, `antigravity`. |
+| `build-plugin` | Generate a Claude Code plugin directory from embedded library assets. |
+| `compile` | Compile `.ai/mcp.json` into per-tool MCP/config outputs (`--tool`, `--dry-run`, `--validate-contracts`). |
+| `completion` | Generate shell completion scripts. |
+| `config` | Configuration management (`get`, `set`, `list`, `init`). |
+| `create` | Create setup artifacts (agent, skill, command, template, prompt, hook). |
+| `doctor` | Setup health checks: manifest/file integrity plus the current 6 required checks (`sqlite3`, `git`, `jq`, `bash`, `ollama`, disk space). |
+| `eject` | Remove LazyAI library management while keeping files in place. |
+| `import` | Import from another AI-tool setup into LazyAI format. |
+| `info` | Show detailed artifact information. |
+| `init` | Initialize AI environment (scope, tools, preset, MCP servers, policies). |
+| `list` | List installed or available artifacts. |
+| `migrate` | Migrate from prior setup format/version. |
+| `server` | Manage MCP entries (`server list/add/remove/doctor`). |
+| `setup` | Inspect setup inventory and planning output. |
+| `sidecar` | Manage optional sidecar docs/specs/plans (`init`, `status`, `attach`, `detach`, `doctor`). |
+| `status` | Show current setup state. |
+| `update` | Update managed files from current embedded library versions. |
+| `update-self` | Update `lazyai-cli` to latest GitHub Release. |
+| `validate` | Validate setup artifacts (`validate agents`, `validate skills`). |
+| `workspace` | Manage multi-project workspaces (`add`, `list`, `switch`, `status`). |
+
+### ops-runtime-extra (12 commands)
+
+| Command | Description |
+|---|---|
+| `auth` | Inspect authentication providers (`list`). |
+| `backup` | Back up runtime state (`create`, `restore`). |
+| `cost` | Cost analytics (`show`, `agent`, `budget`). |
+| `git` | Git integration (`sync`, `log`, `status`). |
+| `ledger` | Immutable audit trail (`init`, `append`, `verify`, `show`). |
+| `memory` | Long-term memory vault (`save`, `list`, `search`). |
+| `message` | Agent message bus (`send`, `recv`, `broadcast`). |
+| `metrics` | Runtime metrics (`export`, `dashboard`, `list`). |
+| `notify` | Notification support (`send`, `config`, `test`). |
+| `restore-runtime-db` | Restore `.specify/session.db` from a backup file. |
+| `secret` | Secret management (`set`, `get`, `list`, `remove`). |
+| `session` | Session lifecycle (`start`, `list`, `show`, `end`). |
+
+### dev-harness (1 command)
+
+| Command | Description |
+|---|---|
+| `models` | Model catalog management (`models sync`), used to refresh generated catalog metadata. |
+
+### retired/archived (1 command)
+
+| Command | Description |
+|---|---|
+| `completions` | Hidden deprecated alias of `completion`. Not an active user-facing command. |
+
+## Key workflows
+
+### 1) Init → scaffold → compile
+
+```mermaid
+flowchart TD
+    A["`lazyai-cli init`"] --> B["Write canonical `.ai/` scaffold"]
+    B --> C["Resolve library + manifest"]
+    C --> D["Generate managed outputs"]
+    D --> E["Write `.ai-setup.json`"]
+    E --> F["`lazyai-cli compile`"]
+    F --> G["`.opencode/` / `.claude/` / `.github/` / `.pi/` / `.gemini/`"]
+```
+
+### 2) MCP registration flow
+
+```mermaid
+flowchart TD
+    A[".ai/mcp.json"] --> B["`lazyai-cli init --enable-servers ...`"]
+    A --> C["`lazyai-cli server add <name>`"]
+    B --> D["`lazyai-cli compile`"]
+    C --> D
+    D --> E["`.opencode/lazyai.mcp.jsonc`"]
+    D --> F["`.mcp.json` / `.claude/settings.local.json`"]
+    D --> G["`.vscode/mcp.json`"]
+    D --> H["`.env.example` for required MCP variables"]
+```
+
+### 3) Validate flow (`validate agents`)
+
+```mermaid
+flowchart TD
+    A["`lazyai-cli validate agents`"] --> B["Frontmatter exists"]
+    B -->|missing| F1["ERROR"]
+    B -->|present| C["`# System Prompt` heading exists"]
+    C -->|missing| F2["ERROR"]
+    C -->|present| D["`vibe-lab:managed kind=agent` marker"]
+    D -->|missing| W["WARNING"]
+    D -->|present| E["At least one `##` section heading after System Prompt"]
+    E -->|missing| W2["WARNING"]
+    E -->|present| O["PASS"]
+```
+
+`validate skills` is a compatibility stub in this release and returns `not yet implemented`.
+
+## MCP servers
+
+LazyAI uses `.ai/mcp.json` as the canonical MCP source and emits tool-native outputs on compile.
+
+Available catalog examples:
+
+- `filesystem`
+- `ai-memory`
+- `ripgrep`
+
+Enable servers:
+
+```bash
+# During init
+lazyai-cli init --tools opencode,claude-code --enable-servers filesystem,ai-memory,ripgrep
+
+# After init
+lazyai-cli server add filesystem
+lazyai-cli server add ai-memory
+lazyai-cli compile
+```
+
+## Presets
+
+| Preset | What it includes |
+|---|---|
+| `minimal` | `qualityGates` |
+| `standard` | `rpiWorkflow`, `chainOfThought`, `qualityGates`, `bugResolution` |
+| `full` | All built-in preset features |
+| `custom` | Manually control feature set with `--features` and `--disable-features` |
+
+```bash
+lazyai-cli init --preset full --disable-features all --features rpiWorkflow,qualityGates,bugResolution
+```
+
+## Documentation (mkdocs)
+
+- **Site:** <https://rluisb.github.io/lazyai/>
+- **Getting started:** [Quick Start](docs/getting-started/quick-start.md), [Installation](docs/getting-started/installation.md)
+- **Concepts:** [How it Works](docs/concepts/how-it-works.md), [Product Boundaries](docs/concepts/product-boundaries.md), [Scopes](docs/concepts/scopes.md), [Presets](docs/concepts/presets.md), [Tools](docs/concepts/tools.md)
+- **CLI reference:** [CLI commands](docs/cli/reference.md)
+- **Integrations:** [MCP Integration](docs/integration/mcp.md), [Migration note](docs/migration/fortnite-orchestrator-removal.md)
+- **Troubleshooting:** [FAQ](docs/troubleshooting/faq.md)
+- **Contributing:** [Contributing](docs/development/contributing.md), [Release process](docs/development/release.md)
 
 ## Development
 
-Requirements:
-
-- Go 1.26+
-
 ```bash
+cd packages/cli && go build ./cmd/lazyai-cli
 cd packages/cli && go test ./...
-cd ../diffviewer && go test ./...
+cd packages/diffviewer && go test ./...
 ```
 
-Read the full [Contributing guide](docs/development/contributing.md).
-
----
+For larger contribution guidance, see [Contributing](docs/development/contributing.md).
 
 ## License
 

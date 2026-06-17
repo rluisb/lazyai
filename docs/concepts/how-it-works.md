@@ -34,6 +34,17 @@ From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 - `.vscode/` — VS Code MCP config
 
 
+```mermaid
+flowchart TD
+    A[Canonical .ai/mcp.json] --> B[lazyai-cli compile]
+    B --> C[OpenCode .opencode/lazyai.mcp.jsonc]
+    B --> D[Claude Code .mcp.json or settings.local.json]
+    B --> E[Copilot .vscode/mcp.json]
+    B --> F[Pi skill-compatible output]
+    B --> G[Antigravity .gemini settings and hooks]
+```
+
+
 The active default adapter contract uses the front-door `guide` agent plus current canonical library content. `implementer` and the other specialists remain available, but simple sessions no longer start in implementation-first mode. Retired Fortnite defaults, old orchestrator runtime files, obsolete eval surfaces, and archived research/rollback material are not part of generated default runtime output.
 
 ## Workflow
@@ -42,6 +53,22 @@ The active default adapter contract uses the front-door `guide` agent plus curre
 2. **Edit canonical files**: change `.ai/mcp.json`, `.specify/memory/constitution.md`, templates, or the relevant source docs/config for the setup
 3. **Recompile**: `lazyai-cli compile` or `lazyai-cli update`
 4. **Verify**: `lazyai-cli doctor` checks drift and missing files
+
+```mermaid
+flowchart TD
+    A[lazyai-cli init] --> B{Scope selected}
+    B -->|project| C[Project .ai and .specify]
+    B -->|global| D[Home .ai and config]
+    B -->|workspace| E[Workspace planning repo]
+    C --> F[Scaffold managed files]
+    D --> F
+    E --> F
+    F --> G[Write .ai-setup store]
+    G --> H[lazyai-cli compile]
+    H --> I[Tool-native files]
+    I --> J[lazyai-cli doctor]
+```
+
 
 ## Manifest tracking
 

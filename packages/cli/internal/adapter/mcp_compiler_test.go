@@ -273,6 +273,35 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 	}
 }
 
+// TestToClaudeCodeMcpInner_RemoteHasType verifies remote MCP entries carry type: http.
+func TestToClaudeCodeMcpInner_RemoteHasType(t *testing.T) {
+	servers := map[string]McpServer{
+		"ai-memory": {
+			URL:     "http://127.0.0.1:49374/mcp",
+			Headers: map[string]string{"Authorization": "Bearer token"},
+		},
+	}
+
+	emitted := toClaudeCodeMcpInner(servers)
+	entry, ok := emitted["ai-memory"].(map[string]any)
+	if !ok {
+		t.Fatalf("emitted ai-memory entry is not a map: %T", emitted["ai-memory"])
+	}
+	if entry["type"] != "http" {
+		t.Fatalf("emitted type = %v, want http", entry["type"])
+	}
+	if entry["url"] != "http://127.0.0.1:49374/mcp" {
+		t.Fatalf("emitted url = %v, want http://127.0.0.1:49374/mcp", entry["url"])
+	}
+	headers, ok := entry["headers"].(map[string]string)
+	if !ok {
+		t.Fatalf("emitted headers is not a map: %T", entry["headers"])
+	}
+	if headers["Authorization"] != "Bearer token" {
+		t.Fatalf("emitted Authorization header = %v, want Bearer token", headers["Authorization"])
+	}
+}
+
 // TestCompileMCPForTool_CopilotGlobalSkips verifies that Copilot × global scope
 // is a clean no-op (no error, no records).
 func TestCompileMCPForTool_CopilotGlobalSkips(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
@@ -46,10 +47,29 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		tools = append(tools, types.ToolId(t))
 	}
 
+	if err := validateToolIDs(tools); err != nil {
+		return err
+	}
+
 	if nonInteractive {
 		return runAddNonInteractive(tools, agentsStr, skillsStr)
 	}
 	return runAddInteractive(tools, agentsStr, skillsStr)
+}
+
+func validateToolIDs(tools []types.ToolId) error {
+	if len(tools) == 0 {
+		return nil
+	}
+
+	registry := adapter.NewRegistry()
+	for _, tool := range tools {
+		if _, err := registry.Get(tool); err != nil {
+			return fmt.Errorf("invalid tool %q: valid tool IDs are opencode, claude-code, copilot, pi, antigravity", tool)
+		}
+	}
+
+	return nil
 }
 
 func runAddInteractive(tools []types.ToolId, agents, skills []string) error {

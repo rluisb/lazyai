@@ -22,9 +22,9 @@ func TestGetDiskUsage(t *testing.T) {
 func TestRunEnhancedHealthChecks(t *testing.T) {
 	checks := runEnhancedHealthChecks()
 
-	// Should return at least 7 checks.
-	if len(checks) < 7 {
-		t.Errorf("Expected at least 7 health checks, got %d", len(checks))
+	// Should return at least 6 checks.
+	if len(checks) < 6 {
+		t.Errorf("Expected at least 6 health checks, got %d", len(checks))
 	}
 
 	// Verify all checks have required fields

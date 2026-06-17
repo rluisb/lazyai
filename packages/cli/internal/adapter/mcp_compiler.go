@@ -352,7 +352,10 @@ func toClaudeCodeMcpInner(servers map[string]McpServer) map[string]any {
 	mcpServers := make(map[string]any)
 	for name, server := range servers {
 		if server.URL != "" {
-			entry := map[string]any{"url": server.URL}
+			entry := map[string]any{
+				"type": "http",
+				"url":  server.URL,
+			}
 			if server.Headers != nil {
 				entry["headers"] = server.Headers
 			}

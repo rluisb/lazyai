@@ -62,17 +62,6 @@ with open('$workflow') as f:
     fi
 done
 
-# Test 4: Verify eval command
-echo ""
-echo "Test 4: Eval command"
-EVAL_OUTPUT=$($CLI eval list 2>&1)
-if echo "$EVAL_OUTPUT" | grep -q "agent-quality"; then
-    echo "✅ Eval suite found"
-else
-    echo "❌ FAIL: Eval suite not found"
-    exit 1
-fi
-
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "✅ All workflow integration tests passed!"

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -84,18 +83,7 @@ func runEnhancedHealthChecks() []HealthCheck {
 	}
 	checks = append(checks, check)
 
-	// 6. Check OpenAI API key
-	check = HealthCheck{Name: "Provider: openai", Checked: checkedAt}
-	if os.Getenv("OPENAI_API_KEY") != "" {
-		check.Status = "pass"
-		check.Detail = "API key configured"
-	} else {
-		check.Status = "warn"
-		check.Detail = "OPENAI_API_KEY not set"
-	}
-	checks = append(checks, check)
-
-	// 7. Check disk space
+	// 6. Check disk space
 	check = HealthCheck{Name: "Disk space", Checked: checkedAt}
 	if usage := getDiskUsage("."); usage >= 0 {
 		check.Detail = fmt.Sprintf("%.0f%% used", usage)

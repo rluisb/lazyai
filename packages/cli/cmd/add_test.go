@@ -2,10 +2,21 @@ package cmd
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+func TestAddRejectsInvalidToolID(t *testing.T) {
+	err := validateToolIDs([]types.ToolId{"filesystem"})
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+	if !strings.Contains(err.Error(), "invalid tool") {
+		t.Fatalf("unexpected error %q", err)
+	}
+}
 
 func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	dir := t.TempDir()

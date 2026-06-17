@@ -282,11 +282,31 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 func mcpServerToJSON(srv McpServer) string {
 	// Build a JSON object matching claude's mcp add-json schema.
 	// For stdio servers: {"command": "...", "args": [...], "env": {...}}
-	// For http/sse servers: {"url": "...", "headers": {...}}
+	// For http/sse servers: {"type":"http", "url": "...", "headers": {...}}
 
 	var buf strings.Builder
 	buf.WriteString("{")
 	first := true
+	// URL (for HTTP/SSE servers)
+	if srv.URL != "" {
+		buf.WriteString(`"type":"http","url":"`)
+		fmt.Fprintf(&buf, `%s"`, srv.URL)
+		// Headers object (for HTTP/SSE servers)
+		if len(srv.Headers) > 0 {
+			buf.WriteString(`,"headers":{`)
+			headerFirst := true
+			for k, v := range srv.Headers {
+				if !headerFirst {
+					buf.WriteString(",")
+				}
+				fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
+				headerFirst = false
+			}
+			buf.WriteString("}")
+		}
+		buf.WriteString("}")
+		return buf.String()
+	}
 
 	// Command (for stdio/subprocess servers)
 	if srv.Command != "" {
@@ -323,33 +343,6 @@ func mcpServerToJSON(srv McpServer) string {
 			}
 			fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
 			envFirst = false
-		}
-		buf.WriteString("}")
-		first = false
-	}
-
-	// URL (for HTTP/SSE servers)
-	if srv.URL != "" {
-		if !first {
-			buf.WriteString(",")
-		}
-		fmt.Fprintf(&buf, `"url":"%s"`, srv.URL)
-		first = false
-	}
-
-	// Headers object (for HTTP/SSE servers)
-	if len(srv.Headers) > 0 {
-		if !first {
-			buf.WriteString(",")
-		}
-		buf.WriteString(`"headers":{`)
-		headerFirst := true
-		for k, v := range srv.Headers {
-			if !headerFirst {
-				buf.WriteString(",")
-			}
-			fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
-			headerFirst = false
 		}
 		buf.WriteString("}")
 		first = false

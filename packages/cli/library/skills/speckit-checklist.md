@@ -22,7 +22,7 @@ consumes:
 produces_for:
   - review.md
   - process-audit.md
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [spec.md, gate-1.md, gate-2.md, gate-3.md, gate-4.md]
   contract: [review.md, process-audit.md]

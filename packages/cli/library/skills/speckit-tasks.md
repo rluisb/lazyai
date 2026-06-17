@@ -19,7 +19,7 @@ consumes:
 produces_for:
   - speckit-implement
   - task-harness instances (one per task)
-mcp_tools: [filesystem, qmd]
+mcp_tools: [filesystem]
 harness:
   feed_forward: [plan.md]
   contract: [speckit-implement]

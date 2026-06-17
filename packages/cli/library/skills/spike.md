@@ -23,7 +23,7 @@ produces_for:
   - spec.md (informs design decision)
   - plan.md (influences approach)
   - memory / ADR (if discovery contradicts prior assumption)
-mcp_tools: [filesystem, ripgrep, qmd]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [question]
   contract: [recommendation block (actionable answer)]

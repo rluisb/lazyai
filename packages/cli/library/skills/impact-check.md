@@ -23,7 +23,7 @@ produces_for:
   - specs/standards/ (new standards)
   - .specify/memory/constitution.md (if amendments needed)
   - memory / ledger
-mcp_tools: [filesystem, ripgrep, qmd]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [recent commits, changed files]
   contract: [impact-check-after-work]

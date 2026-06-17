@@ -29,7 +29,7 @@ func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
 	initCmd.Flags().String("workspace-root", "", "Workspace root directory for AI tool configs (workspace scope)")
 	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot, pi, antigravity)")
-	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (for example: filesystem, memory, ripgrep)")
+	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (for example: filesystem, ai-memory, ripgrep)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
 	initCmd.Flags().StringSlice("disable-features", []string{}, "Features to disable")
@@ -399,12 +399,8 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 			MemoryPath:        config.CLIMemoryPath,
 			EnableObsidian:    true,
 			ObsidianVaultPath: "",
-			EnableQmd:         true,
-			QmdIndexPath:      "",
 			EnableCodegraph:   true,
 			CodegraphDataPath: ".codegraph/",
-			EnableGraphify:    true,
-			GraphifyDataPath:  "graphify-out",
 		},
 	}
 

@@ -64,12 +64,8 @@ type WizardConfig struct {
 	CLIMemoryPath          string
 	CLIEnableObsidian      bool
 	CLIObsidianVaultPath   string
-	CLIEnableQmd           bool
-	CLIQmdIndexPath        string
 	CLIEnableCodegraph     bool
 	CLICodegraphDataPath   string
-	CLIEnableGraphify      bool
-	CLIGraphifyDataPath    string
 	CLIExistingSetupPolicy types.SetupPolicy
 	CLIUseReversa          *bool
 

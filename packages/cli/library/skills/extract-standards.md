@@ -26,7 +26,7 @@ produces_for:
   - project standards library
   - constitution (if new article needed)
   - memory (if new discovery)
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [specs/standards/, constitution.md]
   contract: [no-duplication-across-scopes]

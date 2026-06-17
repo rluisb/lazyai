@@ -40,8 +40,6 @@ Actual emitted slash commands continue to come from the tool-specific command di
 Any change to command emission behavior must stay in a separate implementation branch with explicit approval and dedicated verification.
 ## MCP catalog policy
 
-`packages/cli/library/mcp/catalog.json` may include opt-in MCP servers that are not active setup defaults. These entries must keep `enabled: false` unless a separate product decision promotes them.
-
-Context7 and GitHub MCP remain disabled opt-in entries. The GitHub MCP entry supplements the existing `gh` CLI catalog entry; it does not replace CLI-first GitHub workflows.
+`packages/cli/library/mcp/catalog.json` now carries only the actively shipped MCP inventory. Do not keep dormant or speculative server placeholders in the catalog; add a server only when the product intends to ship and verify it.
 
 Figma and Slack remain documented exclusions. Do not add catalog placeholders for them until an authoritative server URL/command, authentication shape, and supported client behavior are verified and separately approved.

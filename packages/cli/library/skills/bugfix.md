@@ -20,7 +20,7 @@ consumes:
   - library/templates/bugfix-rca-template.md
 produces_for:
   - code review (PR with fix + test)
-mcp_tools: [filesystem, ripgrep, qmd]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [issue, git log]
   contract: [speckit-review]

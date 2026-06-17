@@ -24,7 +24,7 @@ produces_for:
   - speckit-clarify
   - speckit-plan
   - speckit-checklist
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [.specify/memory/constitution.md, library/templates/spec-template.md]
   contract: [speckit-analyze]

@@ -1,6 +1,6 @@
 # MCP vs CLI — Token Efficiency Guide
 
-LazyAI exposes the same capabilities through two interfaces: **MCP servers** (consumed by AI agents via the Model Context Protocol) and **CLI commands** (run directly in your terminal). Choosing the right interface for each task saves tokens, reduces latency, and keeps agent context windows focused.
+LazyAI mixes MCP servers and companion CLIs to cover the same workflow surface where that makes sense. Choosing the right interface for each task saves tokens, reduces latency, and keeps agent context windows focused.
 
 ## The Rule of Thumb
 
@@ -12,15 +12,11 @@ LazyAI exposes the same capabilities through two interfaces: **MCP servers** (co
 |---|---|---|---|
 | **Filesystem** | `filesystem` | `lazyai-cli` built-in file ops, `ls`, `cat`, `find` | **CLI-first** — MCP adds JSON wrapping + round-trip overhead for every file read/write. |
 | **Code search** | `ripgrep` | `rg` | **CLI-first** — Large result sets serialize through MCP as JSON arrays; CLI streams directly. |
-| **Web fetch** | `fetch` | `curl`, `wget` | **CLI-first** — For single URLs, MCP is fine; for bulk scraping or large payloads, CLI avoids double serialization. |
-| **Knowledge graph** | `graphify` | `graphify` CLI | **CLI-first** for batch ingestion; **MCP** for interactive exploration (`query_graph`, `shortest_path`). |
-| **Obsidian vault** | `obsidian` | `ob` CLI | **CLI-first** for bulk note exports/imports; **MCP** for live vault queries during a session. |
-| **Markdown search** | `qmd` | `qmd` CLI | **Hybrid** — CLI is faster for scripted indexing; MCP is convenient for inline agent queries. |
+| **Project memory + handoffs** | `ai-memory` | `ai-memory` | **Hybrid** — MCP is best for in-session retrieval, handoffs, and durable notes; the CLI is best for bootstrap, install, status, and admin flows. |
+| **Obsidian vault** | `obsidian` | `ob` CLI | **CLI-first** — For bulk note exports/imports; use MCP for live vault queries during a session. |
 | **Code graph** | `codegraph` | `codegraph` CLI | **Hybrid** — CLI for initial index/build; MCP for semantic `codegraph_context` calls. |
-| **Browser automation** | `playwright` | `npx playwright` | **MCP-only** — No stable CLI equivalent for agent-driven browser snapshots and clicks. |
-| **Atlassian (Jira/Confluence)** | `atlassian` | `acli` | **MCP-only** — The Atlassian MCP server handles OAuth and remote APIs; `acli` is a separate surface. |
-| **Memory / knowledge graph** | `memory` | None | **MCP-only** — Stateful graph operations require the persistent MCP server. |
-| **Memoria (git history)** | `memoria` | `npx @byronwade/memoria` | **MCP-only** — No dedicated CLI wrapper; use MCP for `ask_history` and `search_memories`. |
+| **GitHub workflows** | — | `gh` | **CLI-first** — Current repository, issue, and PR workflows stay on the GitHub CLI surface. |
+| **Agent sandboxing** | — | `ai-jail` | **CLI-only** — Wrap the agent process before it starts; there is no MCP session surface for sandbox policy. |
 
 ## Why CLI Saves Tokens
 
@@ -31,9 +27,9 @@ LazyAI exposes the same capabilities through two interfaces: **MCP servers** (co
 
 ## When MCP Is Worth the Overhead
 
-- **Stateful knowledge** — `memory` maintains context across multiple agent turns.
-- **Remote APIs** — `atlassian` and `brave-search` abstract OAuth and rate limits.
-- **Interactive exploration** — `playwright` snapshots and clicks are naturally request/response.
+- **Stateful project memory** — `ai-memory` keeps retrieval, handoffs, and durable annotations close to the active session.
+- **Inline code intelligence** — `codegraph` can answer semantic questions without leaving the current session.
+- **Vault-backed note access** — `obsidian` is useful when you need one-off note reads or writes mid-session.
 
 The retired LazyAI orchestration runtime is not part of the active MCP catalog. See [Migration: Fortnite / orchestrator removal](../migration/fortnite-orchestrator-removal.md) for compatibility guidance.
 
@@ -41,13 +37,13 @@ The retired LazyAI orchestration runtime is not part of the active MCP catalog. 
 
 If you are token-constrained (e.g., large monorepos, long-running agents):
 
-1. **Disable `filesystem` and `ripgrep` MCP servers** — rely on CLI file ops and `rg` instead.
-2. **Keep `memory`, `playwright`, and `atlassian` enabled when you need state, browser interaction, or SaaS APIs.**
-3. **Use `qmd` and `codegraph` via whichever interface is closer to the task** — CLI for batch, MCP for inline.
+1. **Omit `filesystem` and `ripgrep` from your MCP selection** — rely on CLI file ops and `rg` instead.
+2. **Keep `ai-memory` selected when durable session memory is useful.**
+3. **Use `codegraph` and `obsidian` via whichever interface is closer to the task** — CLI for batch, MCP for inline.
 
 ## Configuration
 
-No special configuration is required. The CLI tools are already listed in `.ai/mcp.json` under `cliTools`. Ensure they are installed locally (`brew install`, `npm install -g`, etc.) and the agent is instructed to prefer CLI for bulk operations.
+No special configuration is required for CLI-only companions. Install the local binaries you intend to use, keep `.ai/mcp.json` focused on MCP servers, and use wrappers like `ai-jail` at process start rather than through MCP.
 
 ## See Also
 

@@ -13,47 +13,29 @@ func TestDefaultMcpServersForPreset(t *testing.T) {
 		t.Fatalf("minimal = %#v, want %#v", minimal, want)
 	}
 
-	// Recommended now includes codegraph, qmd, graphify, and obsidian (Spec 022 / E3).
-	// The exact count may drift as the catalog evolves; the invariant is that memory
-	// and filesystem are included.
+	// Recommended now matches the shipped catalog exactly: five retained servers,
+	// all enabled by default and sorted by ID.
 	recommended := defaultMcpServersForPreset(McpPresetRecommended)
-	if len(recommended) < 4 {
-		t.Fatalf("recommended count = %d, want at least 4", len(recommended))
-	}
-	hasMemory := false
-	hasFilesystem := false
-	for _, s := range recommended {
-		if s == "memory" {
-			hasMemory = true
-		}
-		if s == "filesystem" {
-			hasFilesystem = true
-		}
-	}
-	if !hasMemory || !hasFilesystem {
-		t.Fatalf("recommended = %#v, must include 'memory' and 'filesystem'", recommended)
+	if want := []string{"ai-memory", "codegraph", "filesystem", "obsidian", "ripgrep"}; !reflect.DeepEqual(recommended, want) {
+		t.Fatalf("recommended = %#v, want %#v", recommended, want)
 	}
 
 	full := defaultMcpServersForPreset(McpPresetFull)
-	// Full includes every catalog server.
-	if len(full) < 11 {
-		t.Fatalf("full count = %d, want at least 11", len(full))
-	}
-	if full[0] != "atlassian" || full[len(full)-1] != "ripgrep" {
-		t.Fatalf("full ordering = %#v, want sorted catalog IDs", full)
+	if !reflect.DeepEqual(full, recommended) {
+		t.Fatalf("full = %#v, want %#v", full, recommended)
 	}
 }
 
 func TestDefaultMcpSelectionPreservesExplicitSelection(t *testing.T) {
 	t.Parallel()
 
-	selected := defaultMcpSelection([]string{"memory"}, McpPresetMinimal)
-	if want := []string{"memory"}; !reflect.DeepEqual(selected, want) {
+	selected := defaultMcpSelection([]string{"ai-memory"}, McpPresetMinimal)
+	if want := []string{"ai-memory"}; !reflect.DeepEqual(selected, want) {
 		t.Fatalf("selected = %#v, want %#v", selected, want)
 	}
 }
 
-func TestAcliCliToolCatalogVisibility(t *testing.T) {
+func TestCatalogToolEntries(t *testing.T) {
 	t.Parallel()
 
 	catalog, err := loadMcpCatalog()
@@ -61,26 +43,44 @@ func TestAcliCliToolCatalogVisibility(t *testing.T) {
 		t.Fatalf("loadMcpCatalog: %v", err)
 	}
 
-	tool, ok := catalog.CliTools["acli"]
-	if !ok {
-		t.Fatalf("catalog.CliTools missing acli")
+	if want := 5; len(catalog.Servers) != want {
+		t.Fatalf("catalog.Servers count = %d, want %d", len(catalog.Servers), want)
 	}
-	if want := "https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/"; tool.InstallHint != want {
-		t.Fatalf("acli install hint = %q, want %q", tool.InstallHint, want)
+	if want := 5; len(catalog.CliTools) != want {
+		t.Fatalf("catalog.CliTools count = %d, want %d", len(catalog.CliTools), want)
 	}
-	if _, ok := catalog.Servers["acli"]; ok {
-		t.Fatalf("catalog.Servers must not include acli")
+	if _, ok := catalog.CliTools["ai-memory"]; !ok {
+		t.Fatalf("catalog.CliTools missing ai-memory")
 	}
-
-	found := false
-	for _, opt := range cliToolOptionsFromCatalog(catalog) {
-		if opt.Value == "acli" {
-			found = true
-			break
+	if _, ok := catalog.CliTools["ai-jail"]; !ok {
+		t.Fatalf("catalog.CliTools missing ai-jail")
+	}
+	if _, ok := catalog.Servers["ai-memory"]; !ok {
+		t.Fatalf("catalog.Servers missing ai-memory")
+	}
+	if !catalog.Servers["ai-memory"].Enabled {
+		t.Fatalf("catalog.Servers ai-memory must be enabled by default")
+	}
+	for _, removed := range []string{"memory", "memoria", "qmd", "graphify", "context7", "github", "playwright", "atlassian", "fetch", "acli", "rtk"} {
+		if _, ok := catalog.Servers[removed]; ok {
+			t.Fatalf("catalog.Servers must not include removed entry %q", removed)
+		}
+		if _, ok := catalog.CliTools[removed]; ok {
+			t.Fatalf("catalog.CliTools must not include removed entry %q", removed)
 		}
 	}
-	if !found {
-		t.Fatalf("cliToolOptionsFromCatalog() missing acli")
+	if _, ok := catalog.Servers["ai-jail"]; ok {
+		t.Fatalf("catalog.Servers must not include ai-jail")
+	}
+
+	found := map[string]bool{}
+	for _, opt := range cliToolOptionsFromCatalog(catalog) {
+		found[opt.Value] = true
+	}
+	for _, name := range []string{"ai-jail", "ai-memory", "codegraph", "gh", "ob"} {
+		if !found[name] {
+			t.Fatalf("cliToolOptionsFromCatalog() missing %s", name)
+		}
 	}
 }
 

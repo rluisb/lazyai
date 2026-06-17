@@ -26,7 +26,7 @@ produces_for:
   - process improvement plan
   - constitution amendments (if needed)
   - memory / feedback
-mcp_tools: [filesystem, ripgrep, qmd]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [ledger.md, memory, specs artifacts]
   contract: [audit-verdict: PASS/HOLD/REWORK]

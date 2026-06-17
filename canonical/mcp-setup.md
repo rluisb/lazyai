@@ -24,12 +24,9 @@ Project-local `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "github": {
+    "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-github@<version>"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
     }
   }
 }
@@ -40,11 +37,8 @@ Remote server:
 ```json
 {
   "mcpServers": {
-    "context7": {
-      "url": "https://mcp.context7.com/mcp",
-      "env": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      }
+    "ai-memory": {
+      "url": "http://127.0.0.1:49374/mcp"
     }
   }
 }
@@ -63,16 +57,14 @@ Use whichever project-local OpenCode config already exists: `opencode.json` or `
 ```json
 {
   "mcp": {
-    "github": {
+    "codegraph": {
       "type": "local",
       "enabled": true,
       "command": [
-        "npx",
-        "@modelcontextprotocol/server-github@<version>"
-      ],
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
+        "codegraph",
+        "serve",
+        "--mcp"
+      ]
     }
   }
 }
@@ -83,13 +75,10 @@ Remote server:
 ```json
 {
   "mcp": {
-    "context7": {
+    "ai-memory": {
       "type": "remote",
       "enabled": true,
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
-      }
+      "url": "http://127.0.0.1:49374/mcp"
     }
   }
 }
@@ -133,8 +122,8 @@ After adding a server:
 
 | Category | Common Servers |
 |----------|----------------|
-| Context | Context7, memory, filesystem |
+| Context | ai-memory, filesystem, obsidian |
+| Code Intelligence | ripgrep, codegraph |
 | Code Quality | linter, test runner, coverage |
-| DevOps | Docker, Kubernetes, Terraform |
 | Data | PostgreSQL, SQLite, Redis |
-| External | GitHub, Figma, Playwright, Slack |
+| External | none shipped in the current MCP catalog |

@@ -19,20 +19,18 @@ func TestScaffoldMcp_EnablesSelectedServersAndWritesSchemas(t *testing.T) {
     "filesystem": {
       "description": "filesystem",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
-      "enabled": false
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"]
     },
-    "memory": {
-      "description": "memory",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "enabled": false
+    "codegraph": {
+      "description": "codegraph",
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
     }
   }
 }`)
 
 	var records []types.TrackedFile
-	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), []string{"filesystem"}, []string{"memory"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), []string{"filesystem"}, []string{"codegraph"}, &records, types.ConflictStrategyAlign, nil); err != nil {
 		t.Fatalf("ScaffoldMcp: %v", err)
 	}
 
@@ -40,8 +38,8 @@ func TestScaffoldMcp_EnablesSelectedServersAndWritesSchemas(t *testing.T) {
 	if got := enabledValue(t, catalog.Servers["filesystem"].Enabled); !got {
 		t.Fatal("filesystem server should be enabled")
 	}
-	if got := enabledValue(t, catalog.Servers["memory"].Enabled); !got {
-		t.Fatal("memory server should be enabled")
+	if got := enabledValue(t, catalog.Servers["codegraph"].Enabled); !got {
+		t.Fatal("codegraph server should be enabled")
 	}
 
 	rootPath := filepath.Join(targetDir, ".mcp.json")
@@ -74,35 +72,34 @@ func TestScaffoldMcp_PreservesRemoteServerShape(t *testing.T) {
 
 	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
   "servers": {
-    "context7": {
-      "description": "context7",
-      "url": "https://mcp.context7.com/mcp",
+    "remote-server": {
+      "description": "remote-server",
+      "url": "https://example.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      },
-      "enabled": false
+        "API_TOKEN": "${API_TOKEN}"
+      }
     }
   }
 }`)
 
 	var records []types.TrackedFile
-	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"context7"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"remote-server"}, &records, types.ConflictStrategyAlign, nil); err != nil {
 		t.Fatalf("ScaffoldMcp: %v", err)
 	}
 
 	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
-	context7 := catalog.Servers["context7"]
-	if got := enabledValue(t, context7.Enabled); !got {
-		t.Fatal("context7 server should be enabled when selected")
+	remote := catalog.Servers["remote-server"]
+	if got := enabledValue(t, remote.Enabled); !got {
+		t.Fatal("remote-server should be enabled when selected")
 	}
-	if context7.URL != "https://mcp.context7.com/mcp" {
-		t.Fatalf("context7.url = %q, want remote endpoint", context7.URL)
+	if remote.URL != "https://example.com/mcp" {
+		t.Fatalf("remote-server.url = %q, want remote endpoint", remote.URL)
 	}
-	if got := context7.Headers["CONTEXT7_API_KEY"]; got != "${CONTEXT7_API_KEY}" {
-		t.Fatalf("context7 header = %q, want env placeholder", got)
+	if got := remote.Headers["API_TOKEN"]; got != "${API_TOKEN}" {
+		t.Fatalf("remote-server header = %q, want env placeholder", got)
 	}
-	if context7.Command != "" || len(context7.Args) > 0 {
-		t.Fatalf("context7 must remain URL-backed, got command=%q args=%v", context7.Command, context7.Args)
+	if remote.Command != "" || len(remote.Args) > 0 {
+		t.Fatalf("remote-server must remain URL-backed, got command=%q args=%v", remote.Command, remote.Args)
 	}
 
 	rootPath := filepath.Join(targetDir, ".mcp.json")
@@ -116,12 +113,12 @@ func TestScaffoldMcp_PreservesRemoteServerShape(t *testing.T) {
 	if err := json.Unmarshal(data, &root); err != nil {
 		t.Fatalf("parse .mcp.json: %v", err)
 	}
-	rootContext7 := root.MCPServers["context7"]
-	if rootContext7.URL != "https://mcp.context7.com/mcp" {
-		t.Fatalf("root context7.url = %q, want remote endpoint", rootContext7.URL)
+	rootRemote := root.MCPServers["remote-server"]
+	if rootRemote.URL != "https://example.com/mcp" {
+		t.Fatalf("root remote-server.url = %q, want remote endpoint", rootRemote.URL)
 	}
-	if got := rootContext7.Headers["CONTEXT7_API_KEY"]; got != "${CONTEXT7_API_KEY}" {
-		t.Fatalf("root context7 header = %q, want env placeholder", got)
+	if got := rootRemote.Headers["API_TOKEN"]; got != "${API_TOKEN}" {
+		t.Fatalf("root remote-server header = %q, want env placeholder", got)
 	}
 }
 
@@ -135,8 +132,7 @@ func TestScaffoldMcp_IgnoresUnknownServers(t *testing.T) {
     "filesystem": {
       "description": "filesystem",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
-      "enabled": false
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"]
     }
   }
 }`)
@@ -147,8 +143,8 @@ func TestScaffoldMcp_IgnoresUnknownServers(t *testing.T) {
 	}
 
 	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
-	if got := enabledValue(t, catalog.Servers["filesystem"].Enabled); got {
-		t.Fatal("filesystem server should remain disabled")
+	if catalog.Servers["filesystem"].Enabled != nil {
+		t.Fatal("filesystem server should remain unselected")
 	}
 }
 

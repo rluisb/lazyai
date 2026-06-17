@@ -340,8 +340,8 @@ func TestMCPMultipleServersAddedInSequence(t *testing.T) {
 	}
 }
 
-// TestMCPDisabledServerSkipped verifies that disabled servers are not registered.
-func TestMCPDisabledServerSkipped(t *testing.T) {
+// TestMCPFalseFlagServerSkipped verifies that servers flagged false are not registered.
+func TestMCPFalseFlagServerSkipped(t *testing.T) {
 	runner := &recordingRunner{}
 	ctx := CompileContext{
 		SetupScope: types.SetupScopeProject,
@@ -354,7 +354,7 @@ func TestMCPDisabledServerSkipped(t *testing.T) {
 			Args:    []string{"-y", "@modelcontextprotocol/server-filesystem"},
 			Enabled: boolPtr(true),
 		},
-		"disabled-server": {
+		"flagged-off-server": {
 			Command: "npx",
 			Args:    []string{"-y", "some-server"},
 			Enabled: boolPtr(false),

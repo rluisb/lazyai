@@ -15,7 +15,7 @@ consumes:
 produces_for:
   - memory-write (if ADR created)
   - planner (grilling outcome)
-mcp_tools: [filesystem, ripgrep, qmd]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [codebase area or module]
   contract: [speckit-review]

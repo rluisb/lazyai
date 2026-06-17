@@ -88,8 +88,8 @@ func TestBuildPhase1Result(t *testing.T) {
 			tools[0] = types.ToolIdClaudeCode
 			skills[0] = types.SkillIdCodebaseExploration
 			agents[0] = types.AgentIdResearcher
-			cliTools[0] = "rtk"
-			servers[0] = "memory"
+			cliTools[0] = "ai-jail"
+			servers[0] = "ai-memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
 				t.Fatalf("result.Tools was not copied")
 			}
@@ -221,14 +221,14 @@ func TestDetectInstalledCliTools(t *testing.T) {
 		switch file {
 		case "gh":
 			return "/usr/bin/gh", nil
-		case "rtk":
+		case "ai-jail":
 			return "", errors.New("not found")
 		default:
 			return "", errors.New("unexpected")
 		}
 	}
 
-	catalog := &McpCatalog{CliTools: map[string]CliTool{"gh": {}, "rtk": {}}}
+	catalog := &McpCatalog{CliTools: map[string]CliTool{"gh": {}, "ai-jail": {}}}
 	got := detectInstalledCliTools(catalog)
 	if want := []string{"gh"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("detectInstalledCliTools() = %#v, want %#v", got, want)
@@ -280,9 +280,9 @@ func TestNewCliToolsSelectUsesPreSelectedWhenNoDefaults(t *testing.T) {
 		t.Fatalf("GetValue() = %#v, want %#v", got, want)
 	}
 
-	selectField = NewCliToolsSelect([]string{"rtk"}, []string{"gh"})
+	selectField = NewCliToolsSelect([]string{"ai-jail"}, []string{"gh"})
 	got = selectField.GetValue().([]string)
-	if want := []string{"rtk"}; !reflect.DeepEqual(got, want) {
+	if want := []string{"ai-jail"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("GetValue() with defaults = %#v, want %#v", got, want)
 	}
 }

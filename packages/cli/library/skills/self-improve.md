@@ -24,7 +24,7 @@ consumes:
 produces_for:
   - update-memory (record improvement in ledger)
   - impact-check (flag library changes for documentation updates)
-mcp_tools: [filesystem, ripgrep, qmd, graphify, obsidian]
+mcp_tools: [filesystem, ripgrep, ai-memory, obsidian]
 harness:
   feed_forward: [handoff files, ledgers, git log, current library state]
   contract: [self-improve-is-observational, propose-before-applying]

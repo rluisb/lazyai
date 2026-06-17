@@ -1,9 +1,9 @@
 # TECH-SPEC: LazyAI Internal Sidecar
 
-**Version:** 1.0.0
-**Status:** Draft
+**Version:** 1.1.0
+**Status:** Approved
 **Author:** turbo-crank (Fortnite multi-agent system)
-**Date:** 2026-05-24
+**Date:** 2026-06-17
 
 ---
 
@@ -46,7 +46,7 @@ This document describes the implementation design for the LazyAI internal sideca
 
 3. **Backward compatible by default.** The `SidecarConfig` struct uses `omitempty` on all fields. Existing `WorkspaceEntry` gets an optional `Sidecar *SidecarConfig` field. Old YAML without `sidecar` parses to `nil`.
 
-4. **Commands are thin wrappers.** Each command calls into the resolver or a config writer. No business logic in command handlers.
+4. **Commands perform boundary validation and delegate.** Each command validates its inputs (project root accessibility, scope flags, path presence) and delegates config load/save/resolution/validation to `internal/sidecar`.
 
 ---
 
@@ -59,17 +59,10 @@ package sidecar
 
 // SidecarConfig holds the sidecar configuration for a single scope level.
 type SidecarConfig struct {
-    Path           string              `yaml:"path"`
-    SpecsDir       string              `yaml:"specs_dir,omitempty"`
-    DocsDir        string              `yaml:"docs_dir,omitempty"`
-    PlansDir       string              `yaml:"plans_dir,omitempty"`
-    LinkedProjects []LinkedProject     `yaml:"linked_projects,omitempty"`
-}
-
-// LinkedProject is a cross-project reference within a sidecar.
-type LinkedProject struct {
-    Name string `yaml:"name"`
-    Path string `yaml:"path"`
+    Path     string `yaml:"path"`
+    SpecsDir string `yaml:"specs_dir,omitempty"`
+    DocsDir  string `yaml:"docs_dir,omitempty"`
+    PlansDir string `yaml:"plans_dir,omitempty"`
 }
 
 // ResolvedPaths holds the final resolved directory paths.
@@ -150,13 +143,13 @@ func Resolve(scope Scope, projectRoot string) ResolvedPaths
    - ScopeGlobal    → ~/.lazyai/
 
 2. Load global sidecar (~/.lazyai/sidecar.yaml).
-   If present and valid, apply as base. Set ConfigLevel = "global".
+   If present and valid, apply as base. Set ConfigLevel = "global". Resolve path against `~/.lazyai/`.
 
 3. Load project sidecar (<projectRoot>/.lazyai-sidecar.yaml).
-   If present and valid, merge over global. Set ConfigLevel = "project".
+   If present and valid, replace global. Set ConfigLevel = "project". Resolve path against `projectRoot`.
 
 4. Load workspace config (~/.lazyai/workspaces.yaml).
-   If active workspace has sidecar block, merge over project. Set ConfigLevel = "workspace".
+   If active workspace has sidecar block, replace project. Set ConfigLevel = "workspace". Resolve path against `~/.lazyai/`.
 
 5. For each level, resolve paths:
    a. If sidecar.path is relative, resolve against anchor:
@@ -171,11 +164,11 @@ func Resolve(scope Scope, projectRoot string) ResolvedPaths
 6. Return ResolvedPaths with final values and ConfigLevel.
 ```
 
-### Merge Semantics
+### Replacement Semantics
 
-- Each level provides a full or partial `SidecarConfig`.
-- A field at a higher-priority level completely replaces the lower-priority value (no deep merge of individual fields).
-- `linked_projects` are merged by name: higher priority wins for same-name entries, lower priority entries are appended for unique names.
+- A higher-priority sidecar level replaces the lower-priority config entirely (whole-config replacement, not field-level merge).
+- Missing `docs_dir`, `specs_dir`, and `plans_dir` in the winning level default under that level's `path`; they do not inherit from lower-priority sidecars.
+- `linked_projects` is reserved and ignored. No merge, no validation, no management.
 
 ---
 
@@ -192,7 +185,7 @@ Flags:
   --plans-dir   string   override plans directory name
 
 Flow:
-1. Validate --path is a directory or can be created.
+1. Validate --path is non-empty. The sidecar root does NOT need to exist on disk (it is created on first write); `sidecar doctor` will WARN if it is missing.
 2. Based on --scope:
    - workspace: load workspaces.yaml, add sidecar block to active entry, save.
    - project:   create .lazyai-sidecar.yaml in project root.
@@ -249,17 +242,21 @@ Flow:
 
 ```
 Flags:
-  --scope   string   workspace|project|global|all (default: all)
+  --scope   string   workspace|project|global (default: determined by `determineScope`)
 
 Flow:
-1. Load sidecar configs for requested scope(s).
-2. For each config:
-   a. Check path exists and is a directory.
-   b. Check path is writable.
-   c. Check each *_dir resolves to an existing directory (or can be created).
-   d. Check linked_projects paths exist.
+1. Load sidecar configs for the requested scope chain:
+   - global: validate `[global]` if configured;
+   - project: validate `[global, project]` where each configured cfg is non-nil;
+   - workspace: validate `[global, project, workspace]` where each configured cfg is non-nil.
+2. For each configured candidate:
+   a. Check sidecar `path` is non-empty (ERROR if empty).
+   b. Resolve `path` against the level-specific anchor.
+   c. Check path exists and is a directory (ERROR if file; WARN if missing).
+   d. Check path is writable.
+   e. Check each *_dir resolves to an existing directory (or can be created).
 3. Print issues with severity (ERROR/WARN).
-4. Exit 0 if no errors, 1 if warnings only, 2 if errors.
+4. Exit 0 if no issues or only WARN issues; non-zero (2) if any ERROR issues are found. WARN issues do not fail the command.
 ```
 
 ---
@@ -276,7 +273,8 @@ Flow:
 | Sidecar `path` is a file | `init`/`attach` reject. `doctor` reports ERROR. |
 | Sidecar `path` does not exist | `init`/`attach` accept (directories created on first write). `doctor` reports WARN. |
 | No active workspace for workspace-scoped command | Command fails with message "no active workspace set; use 'lazyai-cli workspace switch' first". |
-| `linked_projects` path does not exist | `doctor` reports WARN. Other commands warn but proceed. |
+| Sidecar `path` empty or missing in a present block | `Resolve` returns an error; `doctor` reports ERROR; `status` exits non-zero. |
+| `linked_projects` present in YAML | Field is reserved and ignored. No error, no warning, no validation. |
 
 ---
 
@@ -287,12 +285,14 @@ Flow:
 - `resolver_test.go`: Test all resolution priority combinations.
   - No sidecar at any level → defaults.
   - Global only → global paths.
-  - Project overrides global.
-  - Workspace overrides project.
-  - Relative path resolution.
+  - Project overrides global (whole-config replacement).
+  - Workspace overrides project (whole-config replacement).
+  - Relative path resolution with level-specific anchors.
   - Absolute path passthrough.
   - Default *_dir values.
-  - linked_projects merge semantics.
+  - Empty sidecar path rejection.
+  - Global relative path anchors to `~/.lazyai/` even at project scope.
+  - Project relative path anchors to `projectRoot` even at workspace scope.
 
 - `loader_test.go`: Test YAML parsing with test fixtures.
   - Valid workspace with sidecar.
@@ -300,20 +300,52 @@ Flow:
   - Malformed YAML.
   - Missing files.
 
-- `doctor_test.go`: Test validation logic.
-  - All paths valid.
-  - Missing sidecar path.
-  - Non-writable directory.
-  - File where directory expected.
-  - Broken linked_projects.
+- `doctor_test.go`: Test scope-chain validation.
+  - No sidecars at any level → no issues.
+  - Global + project validated for project scope.
+  - Global + project + workspace validated for workspace scope.
+  - Level-specific anchors used for relative paths.
+  - Empty path is ERROR.
+  - Missing sidecar root is WARN.
+  - Path is a file is ERROR.
+  - LinkedProjects ignored (no issues emitted).
+
+- `writer_test.go`: Test atomic write and durability.
+  - Project sidecar rejects missing/file project root.
+  - Project sidecar writes atomically and backs up existing file.
+  - Global sidecar writes atomically and backs up existing file.
+  - SaveWorkspaceConfig writes single-slot backup.
+  - UpdateWorkspaceConfig preserves concurrent mutations.
+
+- `remover_test.go`: Test sidecar removal.
+  - Remove active workspace sidecar preserves other entries.
+  - No active workspace is no-op.
+  - No sidecar is no-op.
+  - Active workspace missing returns error.
+  - Remove project sidecar removes file.
+  - Remove project sidecar missing file is no-op.
+  - Workspace removal writes backup through SaveWorkspaceConfig.
+
+### Files Helper Tests (`packages/cli/internal/files/`)
+
+- `files_test.go`: Test atomic write and lock primitives.
+  - AtomicWriteFile creates file without backup when target does not exist.
+  - AtomicWriteFile replaces target and writes single-slot backup.
+  - AtomicWriteFile overwrites single-slot backup on second write.
+  - WithFileLock serializes concurrent critical sections.
+  - WithFileLock times out when lock is held.
+  - WithFileLock removes stale locks.
 
 ### Integration Tests (CLI level)
 
 - `sidecar init` creates correct config files.
-- `sidecar status` output format.
+- `sidecar status` output format and root-error propagation.
 - `sidecar attach` / `sidecar detach` round-trip.
-- `sidecar doctor` exit codes.
-- Backward compat: existing workspace commands still work.
+- `sidecar doctor` exit codes and scope-chain validation.
+- `sidecar attach` rejects missing project path without creating it.
+- `determineScope` returns workspace config load errors instead of silent fallback.
+- Backward compat: existing workspace commands still work via sidecar store.
+- Workspace add/switch/status/list use the sidecar workspace config store.
 
 ---
 

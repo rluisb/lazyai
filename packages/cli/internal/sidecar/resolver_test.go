@@ -32,6 +32,11 @@ func setupTestEnv(t *testing.T) (homeDir, projectRoot, globalDir string, cleanup
 
 	return homeDir, projectRoot, globalDir, cleanup
 }
+func ensureDirs(t *testing.T, paths ...string) {
+	for _, p := range paths {
+		require.NoError(t, os.MkdirAll(p, 0o755))
+	}
+}
 
 // writeWorkspaceConfig writes a workspace config to the global config dir.
 func writeWorkspaceConfig(t *testing.T, cfg *WorkspaceConfig) {
@@ -301,6 +306,105 @@ func TestResolve_GlobalScopeDefault(t *testing.T) {
 	assert.Equal(t, filepath.Join(globalDir, "specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(globalDir, "plans"), result.PlansDir)
 }
+func TestResolve_GlobalScopeIgnoresProjectAndWorkspace(t *testing.T) {
+	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	globalSidecarPath := filepath.Join(globalDir, "global-sidecar")
+	projectSidecarPath := filepath.Join(projectRoot, "project-sidecar")
+	workspaceSidecarPath := filepath.Join(globalDir, "workspace-sidecar")
+	writeWorkspaceConfig(t, &WorkspaceConfig{
+		Workspaces: []WorkspaceEntry{
+			{
+				Name:    "my-project",
+				Path:    projectRoot,
+				Sidecar: &SidecarConfig{Path: workspaceSidecarPath},
+			},
+		},
+		Active: "my-project",
+	})
+	ensureDirs(t,
+		filepath.Join(globalSidecarPath, "docs"),
+		filepath.Join(globalSidecarPath, "specs"),
+		filepath.Join(globalSidecarPath, "plans"),
+		filepath.Join(projectSidecarPath, "docs"),
+		filepath.Join(projectSidecarPath, "specs"),
+		filepath.Join(projectSidecarPath, "plans"),
+		filepath.Join(workspaceSidecarPath, "docs"),
+		filepath.Join(workspaceSidecarPath, "specs"),
+		filepath.Join(workspaceSidecarPath, "plans"),
+	)
+
+	writeGlobalSidecar(t, &SidecarConfig{
+		Path:     globalSidecarPath,
+		DocsDir:  "docs",
+		SpecsDir: "specs",
+		PlansDir: "plans",
+	})
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path:     projectSidecarPath,
+		DocsDir:  "docs",
+		SpecsDir: "specs",
+		PlansDir: "plans",
+	})
+
+	result, err := Resolve(ScopeGlobal, projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, "global", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(globalSidecarPath, "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(globalSidecarPath, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(globalSidecarPath, "plans"), result.PlansDir)
+}
+
+func TestResolve_ProjectScopeIgnoresWorkspaceSidecar(t *testing.T) {
+	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	globalSidecarPath := filepath.Join(globalDir, "global-sidecar")
+	projectSidecarPath := filepath.Join(projectRoot, "project-sidecar")
+	workspaceSidecarPath := filepath.Join(globalDir, "workspace-sidecar")
+	writeWorkspaceConfig(t, &WorkspaceConfig{
+		Workspaces: []WorkspaceEntry{
+			{
+				Name:    "my-project",
+				Path:    projectRoot,
+				Sidecar: &SidecarConfig{Path: workspaceSidecarPath},
+			},
+		},
+		Active: "my-project",
+	})
+	ensureDirs(t,
+		filepath.Join(globalSidecarPath, "docs"),
+		filepath.Join(globalSidecarPath, "specs"),
+		filepath.Join(globalSidecarPath, "plans"),
+		filepath.Join(projectSidecarPath, "docs"),
+		filepath.Join(projectSidecarPath, "specs"),
+		filepath.Join(projectSidecarPath, "plans"),
+		filepath.Join(workspaceSidecarPath, "docs"),
+		filepath.Join(workspaceSidecarPath, "specs"),
+		filepath.Join(workspaceSidecarPath, "plans"),
+	)
+
+	writeGlobalSidecar(t, &SidecarConfig{
+		Path:     globalSidecarPath,
+		DocsDir:  "docs",
+		SpecsDir: "specs",
+		PlansDir: "plans",
+	})
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path:     projectSidecarPath,
+		DocsDir:  "docs",
+		SpecsDir: "specs",
+		PlansDir: "plans",
+	})
+
+	result, err := Resolve(ScopeProject, projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, "project", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(projectSidecarPath, "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(projectSidecarPath, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(projectSidecarPath, "plans"), result.PlansDir)
+}
 
 func TestResolve_NoActiveWorkspace(t *testing.T) {
 	_, projectRoot, _, cleanup := setupTestEnv(t)
@@ -314,4 +418,127 @@ func TestResolve_NoActiveWorkspace(t *testing.T) {
 	_, err := Resolve(ScopeWorkspace, projectRoot)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no active workspace")
+}
+func TestResolve_RejectsEmptySidecarPath(t *testing.T) {
+	_, projectRoot, _, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path: "",
+	})
+
+	_, err := Resolve(ScopeProject, projectRoot)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sidecar path is required but empty")
+}
+
+func TestResolve_GlobalRelativePathUsesGlobalConfigDirAtProjectScope(t *testing.T) {
+	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	writeGlobalSidecar(t, &SidecarConfig{
+		Path:     "kb",
+		SpecsDir: "specs",
+		DocsDir:  "docs",
+		PlansDir: "plans",
+	})
+
+	result, err := Resolve(ScopeProject, projectRoot)
+	require.NoError(t, err)
+
+	globalSidecarDir := filepath.Join(globalDir, "kb")
+	assert.Equal(t, "global", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(globalSidecarDir, "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(globalSidecarDir, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(globalSidecarDir, "plans"), result.PlansDir)
+	assert.NotEqual(t, filepath.Join(projectRoot, "kb", "docs"), result.DocsDir)
+}
+
+func TestResolve_ProjectRelativePathUsesProjectRootAtWorkspaceScope(t *testing.T) {
+	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	writeWorkspaceConfig(t, &WorkspaceConfig{
+		Workspaces: []WorkspaceEntry{
+			{
+				Name: "my-project",
+				Path: projectRoot,
+			},
+		},
+		Active: "my-project",
+	})
+
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path: "project-kb",
+	})
+
+	result, err := Resolve(ScopeWorkspace, projectRoot)
+	require.NoError(t, err)
+
+	projectSidecarDir := filepath.Join(projectRoot, "project-kb")
+	assert.Equal(t, "project", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "plans"), result.PlansDir)
+	assert.NotEqual(t, filepath.Join(globalDir, "project-kb", "docs"), result.DocsDir)
+}
+
+func TestResolve_WorkspaceRelativePathUsesGlobalConfigDirAtWorkspaceScope(t *testing.T) {
+	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	writeWorkspaceConfig(t, &WorkspaceConfig{
+		Workspaces: []WorkspaceEntry{
+			{
+				Name: "my-project",
+				Path: projectRoot,
+				Sidecar: &SidecarConfig{
+					Path:     "workspace-kb",
+					SpecsDir: "workspace-specs",
+					DocsDir:  "workspace-docs",
+					PlansDir: "workspace-plans",
+				},
+			},
+		},
+		Active: "my-project",
+	})
+
+	result, err := Resolve(ScopeWorkspace, projectRoot)
+	require.NoError(t, err)
+
+	workspaceSidecarDir := filepath.Join(globalDir, "workspace-kb")
+	assert.Equal(t, "workspace", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-plans"), result.PlansDir)
+	assert.NotEqual(t, filepath.Join(projectRoot, "workspace-kb", "workspace-docs"), result.DocsDir)
+}
+
+func TestResolve_HigherPrioritySidecarReplacesWholeTuple(t *testing.T) {
+	_, projectRoot, _, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	writeGlobalSidecar(t, &SidecarConfig{
+		Path:     filepath.Join(string(os.PathSeparator), "global-kb"),
+		SpecsDir: "global-specs",
+		DocsDir:  "global-docs",
+		PlansDir: "global-plans",
+	})
+
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path:     "project-kb",
+		DocsDir:  "custom-docs",
+		SpecsDir: "",
+		PlansDir: "",
+	})
+
+	result, err := Resolve(ScopeProject, projectRoot)
+	require.NoError(t, err)
+
+	projectSidecarDir := filepath.Join(projectRoot, "project-kb")
+	assert.Equal(t, "project", result.ConfigLevel)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "custom-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(projectSidecarDir, "plans"), result.PlansDir)
+	assert.NotEqual(t, filepath.Join(string(os.PathSeparator), "global-kb", "custom-docs"), result.DocsDir)
 }

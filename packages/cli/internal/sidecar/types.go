@@ -4,17 +4,10 @@ package sidecar
 
 // SidecarConfig holds the sidecar configuration for a single scope level.
 type SidecarConfig struct {
-	Path           string          `yaml:"path"`
-	SpecsDir       string          `yaml:"specs_dir,omitempty"`
-	DocsDir        string          `yaml:"docs_dir,omitempty"`
-	PlansDir       string          `yaml:"plans_dir,omitempty"`
-	LinkedProjects []LinkedProject `yaml:"linked_projects,omitempty"`
-}
-
-// LinkedProject is a cross-project reference within a sidecar.
-type LinkedProject struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
+	Path     string `yaml:"path"`
+	SpecsDir string `yaml:"specs_dir,omitempty"`
+	DocsDir  string `yaml:"docs_dir,omitempty"`
+	PlansDir string `yaml:"plans_dir,omitempty"`
 }
 
 // ResolvedPaths holds the final resolved directory paths.

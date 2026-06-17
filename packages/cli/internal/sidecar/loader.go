@@ -34,19 +34,7 @@ func LoadWorkspaceConfig() (*WorkspaceConfig, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &WorkspaceConfig{}, nil
-		}
-		return nil, fmt.Errorf("reading workspace config: %w", err)
-	}
-
-	var cfg WorkspaceConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing workspace config %s: %w", path, err)
-	}
-	return &cfg, nil
+	return loadWorkspaceConfigFromPath(path)
 }
 
 // LoadWorkspaceSidecar reads the active workspace's sidecar block.
@@ -56,14 +44,16 @@ func LoadWorkspaceSidecar() (*SidecarConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if cfg.Active == "" {
 		return nil, nil
 	}
 
-	for i := range cfg.Workspaces {
-		if cfg.Workspaces[i].Name == cfg.Active {
-			return cfg.Workspaces[i].Sidecar, nil
+	for _, w := range cfg.Workspaces {
+		if w.Name == cfg.Active {
+			if w.Sidecar == nil {
+				return nil, nil
+			}
+			return w.Sidecar, nil
 		}
 	}
 	return nil, nil
@@ -80,10 +70,9 @@ func LoadProjectSidecar(projectRoot string) (*SidecarConfig, error) {
 		}
 		return nil, fmt.Errorf("reading project sidecar: %w", err)
 	}
-
 	var cfg ProjectSidecarConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing project sidecar %s: %w", path, err)
+		return nil, fmt.Errorf("parsing project sidecar: %w", err)
 	}
 	return cfg.Sidecar, nil
 }
@@ -96,7 +85,6 @@ func LoadGlobalSidecar() (*SidecarConfig, error) {
 		return nil, err
 	}
 	path := filepath.Join(dir, "sidecar.yaml")
-
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -104,10 +92,9 @@ func LoadGlobalSidecar() (*SidecarConfig, error) {
 		}
 		return nil, fmt.Errorf("reading global sidecar: %w", err)
 	}
-
 	var cfg GlobalSidecarConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing global sidecar %s: %w", path, err)
+		return nil, fmt.Errorf("parsing global sidecar: %w", err)
 	}
 	return cfg.Sidecar, nil
 }

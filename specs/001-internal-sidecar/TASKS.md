@@ -1,220 +1,198 @@
 # TASKS: LazyAI Internal Sidecar
 
-**Version:** 1.0.0
-**Status:** Draft
+**Version:** 1.1.0
+**Status:** Approved
 **Author:** turbo-crank (Fortnite multi-agent system)
-**Date:** 2026-05-24
+**Date:** 2026-06-17
 
 ---
 
 ## Task Ordering
 
-Tasks are ordered by dependency. Each task must be completed before the next begins. Tasks marked `[PARALLEL]` can be executed concurrently with their sibling.
+This v1.1.0 remediation list replaces the original implementation tasks. The original feature is shipped; these tasks close residual defects and spec drift identified by the adversarial review. Tasks are ordered by dependency — each task must be completed and verified before the next begins.
 
 ---
 
-### Task 1: Define Sidecar Types and Data Structures
+### Task 1: Update Spec Package to v1.1.0 Approved
 
 **Priority:** High
-**Risk:** Low — pure data structures, no logic.
+**Risk:** Low — documentation only.
 **Depends on:** Nothing.
 
 **Done when:**
-- [ ] `packages/cli/internal/sidecar/types.go` exists with `SidecarConfig`, `LinkedProject`, `ResolvedPaths`, and `Scope` types.
-- [ ] All struct fields have correct YAML tags (`yaml:"...,omitempty"` where appropriate).
-- [ ] `WorkspaceEntry` in `packages/cli/cmd/workspace.go` has new `Sidecar *sidecar.SidecarConfig` field with `yaml:"sidecar,omitempty"`.
-- [ ] Code compiles (`go build ./...` in `packages/cli`).
-- [ ] Existing tests pass (backward compat check).
+- [x] `SPEC.md`, `TECH-SPEC.md`, `TASKS.md` have `Version: 1.1.0`, `Status: Approved`, `Date: 2026-06-17`.
+- [x] R1 strengthens empty-path to an error (Resolve returns error, status non-zero, doctor ERROR).
+- [x] R2 specifies whole-config replacement and level-specific relative-path anchors.
+- [x] R3/R4 specify doctor scope-chain validation (global / project / workspace) and detach no-op exit 0.
+- [x] R5 marks `linked_projects` as reserved/ignored; `.bak` is single-slot.
+- [x] Durability policy section present.
+- [x] TECH-SPEC architecture decision updated from "thin wrappers" to "boundary validation + delegate".
+- [x] TECH-SPEC resolution algorithm uses "apply/replace" not "merge"; doctor flags are `workspace|project|global`.
+- [x] Testing strategy removes linked-project tests and adds empty-path, anchor, scope-chain, atomic write, lock, root-error, and typo-prevention tests.
 
 **Files:**
-- `packages/cli/internal/sidecar/types.go` (new)
-- `packages/cli/cmd/workspace.go` (modify — add field)
+- `specs/001-internal-sidecar/SPEC.md` (modify)
+- `specs/001-internal-sidecar/TECH-SPEC.md` (modify)
+- `specs/001-internal-sidecar/TASKS.md` (modify)
 
 ---
 
-### Task 2: Implement Sidecar Loaders
+### Task 2: Fix Resolver Validation and Level-Specific Relative-Path Anchors
 
 **Priority:** High
-**Risk:** Low — file I/O with well-defined error handling.
+**Risk:** Medium — changes resolution behavior for relative paths.
 **Depends on:** Task 1.
 
 **Done when:**
-- [ ] `packages/cli/internal/sidecar/loader.go` exists with three functions:
-  - `LoadWorkspaceSidecar() (*SidecarConfig, error)` — reads active workspace's sidecar block from `workspaces.yaml`.
-  - `LoadProjectSidecar(projectRoot string) (*SidecarConfig, error)` — reads `.lazyai-sidecar.yaml`.
-  - `LoadGlobalSidecar() (*SidecarConfig, error)` — reads `~/.lazyai/sidecar.yaml`.
-- [ ] Missing files return `nil, nil` (not an error).
-- [ ] Malformed YAML returns a parse error with file path.
-- [ ] Unit tests cover: valid config, missing file, malformed YAML, workspace without sidecar block.
+- [x] `resolveSidecar` returns `fmt.Errorf("sidecar path is required but empty")` when `cfg.Path == ""`.
+- [x] `Resolve` computes anchors by config level: global → `globalDir`, project → `projectRoot`, workspace → `globalDir`.
+- [x] `scopeAnchor` deleted if no remaining caller; otherwise renamed/behavior-aligned.
+- [x] `ConfigLevel` values unchanged; whole-config replacement preserved.
+- [x] Tests added in `resolver_test.go`: empty path rejection, global relative path at project scope, project relative path at workspace scope, workspace relative path at workspace scope, higher-priority sidecar replaces whole tuple.
 
 **Files:**
-- `packages/cli/internal/sidecar/loader.go` (new)
-- `packages/cli/internal/sidecar/loader_test.go` (new)
+- `packages/cli/internal/sidecar/resolver.go` (modify)
+- `packages/cli/internal/sidecar/resolver_test.go` (modify)
 
 ---
 
-### Task 3: Implement Sidecar Resolver
+### Task 3: Rewrite Doctor as Scope-Chain Validator
 
 **Priority:** High
-**Risk:** Medium — resolution priority logic must be correct.
-**Depends on:** Task 2.
-
-**Done when:**
-- [ ] `packages/cli/internal/sidecar/resolver.go` exists with `Resolve(scope Scope, projectRoot string) ResolvedPaths`.
-- [ ] Resolution follows the priority chain: workspace > project > global > default.
-- [ ] Relative paths are resolved against correct anchors:
-  - Workspace: relative to `~/.lazyai/`.
-  - Project: relative to `projectRoot`.
-  - Global: relative to `~/.lazyai/`.
-- [ ] Absolute paths pass through unchanged.
-- [ ] Default `*_dir` values (`"specs"`, `"docs"`, `"plans"`) applied when fields are empty.
-- [ ] `linked_projects` merged with workspace > project > global priority.
-- [ ] `ConfigLevel` field correctly set to the winning level.
-- [ ] Unit tests cover all priority combinations (at least 8 test cases).
-
-**Files:**
-- `packages/cli/internal/sidecar/resolver.go` (new)
-- `packages/cli/internal/sidecar/resolver_test.go` (new)
-
----
-
-### Task 4: Implement Sidecar Config Writers
-
-**Priority:** High
-**Risk:** Medium — must not corrupt existing config files.
+**Risk:** Medium — changes validation behavior.
 **Depends on:** Task 1.
 
 **Done when:**
-- [ ] `packages/cli/internal/sidecar/writer.go` exists with three functions:
-  - `WriteWorkspaceSidecar(cfg *SidecarConfig) error` — adds/updates sidecar block on active workspace entry.
-  - `WriteProjectSidecar(projectRoot string, cfg *SidecarConfig) error` — writes `.lazyai-sidecar.yaml`.
-  - `WriteGlobalSidecar(cfg *SidecarConfig) error` — writes `~/.lazyai/sidecar.yaml`.
-- [ ] Workspace writer preserves other workspace entries and the `active` field.
-- [ ] Project writer creates parent directories if needed.
-- [ ] All writers create backup (`.bak`) before overwriting.
-- [ ] Unit tests verify: new creation, update existing, other entries preserved.
+- [x] `Doctor` validates all configured levels in the requested scope chain, not only the highest-priority active config.
+- [x] `sidecarCandidate` private type and `validateSidecarCandidate` helper added.
+- [x] Level-specific anchors: global/workspace → `globalDir`, project → `projectRoot`.
+- [x] Linked-project validation block removed (no TODO, no dead branch).
+- [x] `Doctor(scope, projectRoot) ([]Issue, error)` signature unchanged.
+- [x] `doctor_test.go` added: no sidecars returns no issues, validates global+project for project scope, validates global+project+workspace for workspace scope, level-specific anchors, empty path ERROR, missing root WARN, path-is-file ERROR, linked projects ignored.
 
 **Files:**
-- `packages/cli/internal/sidecar/writer.go` (new)
-- `packages/cli/internal/sidecar/writer_test.go` (new)
-
----
-
-### Task 5: Implement Sidecar Config Remover
-
-**Priority:** Medium
-**Risk:** Low — straightforward delete/update operations.
-**Depends on:** Task 1.
-
-**Done when:**
-- [ ] `packages/cli/internal/sidecar/remover.go` exists with two functions:
-  - `RemoveWorkspaceSidecar() error` — removes sidecar block from active workspace entry.
-  - `RemoveProjectSidecar(projectRoot string) error` — deletes `.lazyai-sidecar.yaml`.
-- [ ] Workspace remover preserves other entries and `active` field.
-- [ ] Project remover is a no-op if file doesn't exist (returns nil).
-- [ ] Unit tests cover: remove existing, remove non-existent, other entries preserved.
-
-**Files:**
-- `packages/cli/internal/sidecar/remover.go` (new)
-- `packages/cli/internal/sidecar/remover_test.go` (new)
-
----
-
-### Task 6: Implement Sidecar Doctor
-
-**Priority:** Medium
-**Risk:** Low — read-only validation.
-**Depends on:** Task 2, Task 3.
-
-**Done when:**
-- [ ] `packages/cli/internal/sidecar/doctor.go` exists with `Doctor(scope Scope, projectRoot string) []Issue`.
-- [ ] `Issue` struct has `Severity`, `Message`, and `Path` fields.
-- [ ] Checks performed:
-  - Sidecar `path` exists and is a directory.
-  - Sidecar `path` is writable.
-  - Each `*_dir` resolves to an existing or creatable path.
-  - `linked_projects` paths exist.
-- [ ] Returns empty slice when all checks pass.
-- [ ] Unit tests cover: all valid, missing path, file-not-directory, non-writable, broken linked_projects.
-
-**Files:**
-- `packages/cli/internal/sidecar/doctor.go` (new)
+- `packages/cli/internal/sidecar/doctor.go` (modify)
 - `packages/cli/internal/sidecar/doctor_test.go` (new)
 
 ---
 
-### Task 7: Wire Sidecar Commands to CLI
+### Task 4: Remove LinkedProject Code from the v1.1 Surface
 
-**Priority:** High
-**Risk:** Medium — must integrate cleanly with existing cobra command tree.
-**Depends on:** Tasks 3, 4, 5, 6.
+**Priority:** Medium
+**Risk:** Low — removing dead half-feature.
+**Depends on:** Task 3.
 
 **Done when:**
-- [ ] `packages/cli/cmd/sidecar.go` exists with `sidecarCmd` cobra command group.
-- [ ] Five subcommands registered: `init`, `status`, `attach`, `detach`, `doctor`.
-- [ ] Each subcommand calls the appropriate internal/sidecar functions.
-- [ ] `sidecar init` flags: `--scope`, `--path`, `--specs-dir`, `--docs-dir`, `--plans-dir`.
-- [ ] `sidecar attach` flags: `--scope`, `--path`, `--specs-dir`, `--docs-dir`, `--plans-dir`.
-- [ ] `sidecar detach` flags: `--scope`, `--force`.
-- [ ] `sidecar doctor` flags: `--scope`.
-- [ ] `sidecar status` has no required flags.
-- [ ] `sidecarCmd` registered on `rootCmd` in `init()`.
-- [ ] All commands have help text.
-- [ ] Code compiles and `lazyai-cli sidecar --help` works.
+- [x] `LinkedProjects []LinkedProject` removed from `SidecarConfig` in `types.go`.
+- [x] `LinkedProject` type deleted from `types.go`.
+- [x] `type LinkedProject = sidecarpkg.LinkedProject` alias deleted from `cmd/workspace.go`.
+- [x] No Go code references `LinkedProject` (only spec text saying reserved/ignored and tests asserting tolerance).
 
 **Files:**
-- `packages/cli/cmd/sidecar.go` (new)
+- `packages/cli/internal/sidecar/types.go` (modify)
+- `packages/cli/cmd/workspace.go` (modify)
 
 ---
 
-### Task 8: Integration Tests
+### Task 5: Add Atomic Write and File-Lock Helpers
 
-**Priority:** Medium
-**Risk:** Medium — tests must set up and tear down config state.
-**Depends on:** Task 7.
+**Priority:** High
+**Risk:** Low — new exported helpers, no existing callers changed.
+**Depends on:** Nothing.
 
 **Done when:**
-- [ ] Integration test file exists (e.g., `packages/cli/cmd/sidecar_test.go` or a separate test harness).
-- [ ] Test: `sidecar init --scope workspace` creates valid config.
-- [ ] Test: `sidecar init --scope project` creates `.lazyai-sidecar.yaml`.
-- [ ] Test: `sidecar init --scope global` creates `~/.lazyai/sidecar.yaml`.
-- [ ] Test: `sidecar status` output format is correct.
-- [ ] Test: `sidecar attach` + `sidecar detach` round-trip.
-- [ ] Test: `sidecar doctor` exit codes (0 for clean, non-zero for issues).
-- [ ] Test: backward compat — existing `workspace list/add/switch/status` still work.
-- [ ] All tests use temporary directories (no pollution of real `~/.lazyai/`).
+- [x] `files.AtomicWriteFile(path, data, perm) (backupPath, err)` implemented: EnsureDir, single-slot `.bak` backup, temp file in same dir, `Sync`, `os.Rename`, temp cleanup on error.
+- [x] `files.WithFileLock(lockPath, timeout, staleAfter, fn) error` implemented: `O_CREATE|O_EXCL|O_WRONLY` mode 0600, PID+timestamp payload, stale-lock removal, 25ms retry, timeout error.
+- [x] `files_test.go` extended: creates-without-backup, replaces-and-backs-up, overwrites-single-slot-bak, serializes-concurrent, times-out-when-held, removes-stale-lock.
 
 **Files:**
+- `packages/cli/internal/files/files.go` (modify)
+- `packages/cli/internal/files/files_test.go` (modify)
+
+---
+
+### Task 6: Unify Workspace Config Persistence Around Locked Read-Modify-Write
+
+**Priority:** High
+**Risk:** High — changes persistence behavior and command wiring.
+**Depends on:** Tasks 4, 5.
+
+**Done when:**
+- [x] `SaveWorkspaceConfig(cfg) error` and `UpdateWorkspaceConfig(update func(*WorkspaceConfig) error) error` added to `writer.go`.
+- [x] `UpdateWorkspaceConfig` acquires `workspaces.yaml.lock` with `WithFileLock`, loads inside lock, calls update, saves inside lock.
+- [x] `LoadWorkspaceConfig` kept as public read-only loader (no lock).
+- [x] `WriteWorkspaceSidecar` and `RemoveWorkspaceSidecar` use `UpdateWorkspaceConfig`.
+- [x] `WriteProjectSidecar` validates `projectRoot` exists and is a directory; deletes `MkdirAll(projectRoot)`.
+- [x] Project/global sidecar writes use `files.AtomicWriteFile`.
+- [x] `cmd/workspace.go` duplicate helpers (`getGlobalConfigDir`, `getWorkspacesConfigPath`, `loadWorkspaceConfig`, `saveWorkspaceConfig`) deleted; callsites use `sidecarpkg.LoadWorkspaceConfig` / `UpdateWorkspaceConfig`.
+- [x] `cmd/sidecar.go` `determineScope` returns workspace config load errors instead of swallowing them.
+- [x] `cmd/sidecar.go` workspace mutations use `UpdateWorkspaceConfig` closures.
+- [x] `writer_test.go` added: rejects missing/file project root, writes atomically with backup, SaveWorkspaceConfig backup, UpdateWorkspaceConfig concurrency.
+- [x] `remover_test.go` added: removes active sidecar preserving others, no-active no-op, no-sidecar no-op, active-missing error, project remove, project-missing no-op, backup through SaveWorkspaceConfig.
+- [x] `cmd/workspace_test.go` added: add creates+auto-activates, rejects duplicate, switch updates active, status reports missing path, list uses sidecar store.
+- [x] `cmd/sidecar_test.go` added: init/attach/detach use locked workspace update.
+
+**Files:**
+- `packages/cli/internal/sidecar/writer.go` (modify)
+- `packages/cli/internal/sidecar/remover.go` (modify)
+- `packages/cli/cmd/workspace.go` (modify)
+- `packages/cli/cmd/sidecar.go` (modify)
+- `packages/cli/internal/sidecar/writer_test.go` (new)
+- `packages/cli/internal/sidecar/remover_test.go` (new)
+- `packages/cli/cmd/workspace_test.go` (new)
 - `packages/cli/cmd/sidecar_test.go` (new)
 
 ---
 
-### Task 9: Documentation
+### Task 7: Fix Command Root Handling and Project Attach Typo Prevention
 
-**Priority:** Low
-**Risk:** Low — documentation only.
-**Depends on:** Task 7.
+**Priority:** Medium
+**Risk:** Low — error path fixes.
+**Depends on:** Task 6.
 
 **Done when:**
-- [ ] README or docs updated with sidecar usage examples.
-- [ ] Help text on all five commands is clear and complete.
-- [ ] Edge cases documented in command help or a troubleshooting section.
+- [x] `runSidecarStatus` propagates `getProjectRoot` errors.
+- [x] `runSidecarDoctor` propagates `getProjectRoot` errors.
+- [x] `runSidecarAttach` project scope validates project path exists and is a directory before writing.
+- [x] `runSidecarInit` project scope validates project root before writing.
+- [x] `cmd/sidecar_test.go` added: status propagates root error, doctor propagates root error, attach rejects missing project path without creating it, determineScope returns workspace config load error.
 
 **Files:**
-- `README.md` (modify)
-- `packages/cli/cmd/sidecar.go` (modify — ensure help text quality)
+- `packages/cli/cmd/sidecar.go` (modify)
+- `packages/cli/cmd/sidecar_test.go` (modify)
+
+---
+
+### Task 8: Final Verification
+
+**Priority:** High
+**Risk:** None — verification only.
+**Depends on:** Tasks 1–7.
+
+**Done when:**
+- [x] `go build ./packages/cli/...` passes.
+- [x] `go test ./packages/cli/... -count=1` passes (existing + new tests).
+- [x] Focused domain tests pass: `go test ./packages/cli/internal/sidecar -run 'Test(Resolve|Doctor|Write|Save|Update|Remove)' -count=1`.
+- [x] Files helper tests pass: `go test ./packages/cli/internal/files -run 'Test(AtomicWriteFile|WithFileLock)' -count=1`.
+- [x] Focused command tests pass: `go test ./packages/cli/cmd -run 'Test(Sidecar|Workspace|DetermineScope)' -count=1`.
+- [x] No test touches real `HOME`; all use `t.TempDir` + `t.Setenv("HOME")`.
+- [x] `docs/reports/sidecar-workspaces-adversarial-review-2026-06-17.md` addendum added.
+
+**Files:**
+- `docs/reports/sidecar-workspaces-adversarial-review-2026-06-17.md` (modify)
 
 ---
 
 ## Acceptance Criteria (Cross-Task)
 
-- [ ] AC1: Workspace YAML with no sidecar block parses without error (Task 1, Task 2).
-- [ ] AC2: `sidecar status` shows correct resolved paths (Task 3, Task 7).
-- [ ] AC3: Resolution priority is correct (Task 3).
-- [ ] AC4: All five commands exist and behave as specified (Task 7).
-- [ ] AC5: `sidecar doctor` catches all documented edge cases (Task 6).
-- [ ] AC6: No sidecar configured = behavior identical to current release (Task 8).
-- [ ] AC7: No Skeeper or provider fields anywhere (all tasks — verify in review).
+- [x] AC1: Spec package is v1.1.0 Approved with all decisions encoded.
+- [x] AC2: Empty sidecar path is rejected by Resolve, doctor, and status.
+- [x] AC3: Doctor validates all configured levels in the scope chain.
+- [x] AC4: Relative paths anchor by config level, not requested scope.
+- [x] AC5: Workspace mutations are locked and atomic; project/global writes are atomic.
+- [x] AC6: `linked_projects` is reserved — no Go code references it.
+- [x] AC7: Command root errors and project attach typo prevention verified by tests.
+- [x] AC8: No regressions — existing tests pass alongside new tests.
 
 ---
 
@@ -222,7 +200,7 @@ Tasks are ordered by dependency. Each task must be completed before the next beg
 
 | Task | Risk | Mitigation |
 |---|---|---|
-| Task 3 (Resolver) | Medium — priority logic bugs | Comprehensive unit tests for all combinations |
-| Task 4 (Writer) | Medium — config corruption | Backup before write; unit tests verify preservation |
-| Task 7 (CLI wiring) | Medium — integration surface | Integration tests cover all commands |
-| Task 8 (Integration) | Medium — test isolation | Use temp directories, never touch real config |
+| Task 2 (Resolver) | Medium — anchor behavior change | Explicit tests for each level/scope combination |
+| Task 3 (Doctor) | Medium — validation behavior change | Scope-chain tests for all three scope levels |
+| Task 6 (Persistence) | High — persistence + wiring change | Atomic write tests, lock tests, command tests; reuse sidecar store everywhere |
+| Task 7 (Commands) | Low — error path fixes | Root-error and typo-prevention tests |

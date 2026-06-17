@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestWriteFile_CreatesParentDirs(t *testing.T) {
@@ -221,5 +222,228 @@ func TestCreateTimestampedBackup_CopiesDirectory(t *testing.T) {
 	}
 	if !FileExists(filepath.Join(backupPath, "settings.json")) {
 		t.Fatalf("expected copied file inside %q", backupPath)
+	}
+}
+
+func TestAtomicWriteFile_CreatesFileWithoutBackup(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "no-backup", "config.yaml")
+	data := []byte("first")
+
+	backup, err := AtomicWriteFile(path, data, 0o644)
+	if err != nil {
+		t.Fatalf("AtomicWriteFile: %v", err)
+	}
+	if backup != "" {
+		t.Fatalf("backup = %q, want empty", backup)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read file: %v", err)
+	}
+	if string(got) != string(data) {
+		t.Errorf("written content = %q, want %q", got, data)
+	}
+}
+
+func TestAtomicWriteFile_ReplacesTargetAndWritesSingleSlotBackup(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.yaml")
+	seed := []byte("old")
+	if err := os.WriteFile(path, seed, 0o644); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+
+	backup, err := AtomicWriteFile(path, []byte("new"), 0o644)
+	if err != nil {
+		t.Fatalf("AtomicWriteFile: %v", err)
+	}
+	if backup == "" {
+		t.Fatalf("expected backup path, got empty")
+	}
+	if backup != path+".bak" {
+		t.Fatalf("backup path = %q, want %q", backup, path+".bak")
+	}
+
+	got, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if string(got) != string(seed) {
+		t.Fatalf("backup content = %q, want %q", got, seed)
+	}
+
+	got, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	if string(got) != "new" {
+		t.Fatalf("target content = %q, want new", got)
+	}
+}
+
+func TestAtomicWriteFile_OverwritesSingleSlotBackup(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	seed := []byte("old")
+	if err := os.WriteFile(path, seed, 0o644); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+
+	if _, err := AtomicWriteFile(path, []byte("first"), 0o644); err != nil {
+		t.Fatalf("first AtomicWriteFile: %v", err)
+	}
+	backup, err := AtomicWriteFile(path, []byte("second"), 0o644)
+	if err != nil {
+		t.Fatalf("second AtomicWriteFile: %v", err)
+	}
+	if backup == "" {
+		t.Fatalf("expected backup path, got empty")
+	}
+
+	backupBytes, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if string(backupBytes) != "first" {
+		t.Fatalf("backup content = %q, want %q", backupBytes, "first")
+	}
+
+	targetBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	if string(targetBytes) != "second" {
+		t.Fatalf("target content = %q, want %q", targetBytes, "second")
+	}
+}
+
+func TestWithFileLock_SerializesConcurrentSections(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	lockPath := filepath.Join(dir, "workspace.lock")
+	firstAcquired := make(chan time.Time, 1)
+	secondAcquired := make(chan time.Time, 1)
+	releaseFirst := make(chan struct{})
+	errors := make(chan error, 2)
+
+	go func() {
+		errors <- WithFileLock(lockPath, 2*time.Second, time.Minute, func() error {
+			firstAcquired <- time.Now()
+			<-releaseFirst
+			return nil
+		})
+	}()
+
+	_ = <-firstAcquired
+
+	go func() {
+		errors <- WithFileLock(lockPath, 2*time.Second, time.Minute, func() error {
+			secondAcquired <- time.Now()
+			return nil
+		})
+	}()
+
+	select {
+	case <-secondAcquired:
+		t.Fatal("second section started before first was released")
+	default:
+	}
+
+	releasedAt := time.Now()
+	close(releaseFirst)
+	second := <-secondAcquired
+	if second.Before(releasedAt) {
+		t.Fatalf("second section started too early: second=%s releasedAt=%s", second, releasedAt)
+	}
+
+	for i := 0; i < 2; i++ {
+		if err := <-errors; err != nil {
+			t.Fatalf("WithFileLock: %v", err)
+		}
+	}
+}
+
+func TestWithFileLock_TimesOutWhenHeld(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	lockPath := filepath.Join(dir, "held.lock")
+	if err := os.WriteFile(lockPath, []byte("held"), 0o600); err != nil {
+		t.Fatalf("seed lock file: %v", err)
+	}
+	if err := os.Chtimes(lockPath, time.Now(), time.Now()); err != nil {
+		t.Fatalf("touch lock: %v", err)
+	}
+
+	err := WithFileLock(lockPath, 100*time.Millisecond, time.Minute, func() error {
+		return nil
+	})
+	if err == nil {
+		t.Fatalf("expected timeout error, got nil")
+	}
+
+	if err.Error() != "acquiring lock "+lockPath+": timeout after 100ms" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWithFileLock_RemovesStaleLock(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	lockPath := filepath.Join(dir, "stale.lock")
+	if err := os.WriteFile(lockPath, []byte("stale"), 0o600); err != nil {
+		t.Fatalf("seed stale lock: %v", err)
+	}
+	staleSince := time.Now().Add(-10 * time.Minute)
+	if err := os.Chtimes(lockPath, staleSince, staleSince); err != nil {
+		t.Fatalf("set stale mtime: %v", err)
+	}
+
+	acquired := make(chan time.Time, 2)
+	errors := make(chan error, 2)
+	release := make(chan struct{}, 2)
+
+	for i := 0; i < 2; i++ {
+		go func() {
+			errors <- WithFileLock(lockPath, 2*time.Second, time.Minute, func() error {
+				acquired <- time.Now()
+				<-release
+				return nil
+			})
+		}()
+	}
+
+	first := <-acquired
+	select {
+	case second := <-acquired:
+		t.Fatalf("second lock acquired before first was released: first=%s second=%s", first, second)
+	default:
+	}
+
+	release <- struct{}{}
+	second := <-acquired
+	if !second.After(first) {
+		t.Fatalf("second lock acquired too early: first=%s second=%s", first, second)
+	}
+	release <- struct{}{}
+
+	for i := 0; i < 2; i++ {
+		if err := <-errors; err != nil {
+			t.Fatalf("WithFileLock: %v", err)
+		}
+	}
+
+	if FileExists(lockPath) {
+		t.Fatalf("expected stale lock to be removed")
 	}
 }

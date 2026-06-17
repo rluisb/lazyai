@@ -8,14 +8,10 @@ import (
 
 	sidecarpkg "github.com/rluisb/lazyai/packages/cli/internal/sidecar"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // WorkspaceConfig holds the global workspace registry.
 type WorkspaceConfig = sidecarpkg.WorkspaceConfig
-
-// LinkedProject is a cross-project reference within a sidecar.
-type LinkedProject = sidecarpkg.LinkedProject
 
 // SidecarConfig holds the sidecar configuration for a single scope level.
 type SidecarConfig = sidecarpkg.SidecarConfig
@@ -70,65 +66,6 @@ func init() {
 // Helpers
 // ---------------------------------------------------------------------------
 
-func getGlobalConfigDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("unable to determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".lazyai"), nil
-}
-
-func getWorkspacesConfigPath() (string, error) {
-	dir, err := getGlobalConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "workspaces.yaml"), nil
-}
-
-func loadWorkspaceConfig() (*WorkspaceConfig, error) {
-	path, err := getWorkspacesConfigPath()
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &WorkspaceConfig{}, nil
-		}
-		return nil, fmt.Errorf("reading workspace config: %w", err)
-	}
-
-	var cfg WorkspaceConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing workspace config: %w", err)
-	}
-	return &cfg, nil
-}
-
-func saveWorkspaceConfig(cfg *WorkspaceConfig) error {
-	path, err := getWorkspacesConfigPath()
-	if err != nil {
-		return err
-	}
-
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating config directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("marshaling workspace config: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("writing workspace config: %w", err)
-	}
-	return nil
-}
-
 func workspaceExists(cfg *WorkspaceConfig, name string) bool {
 	for _, w := range cfg.Workspaces {
 		if w.Name == name {
@@ -180,7 +117,7 @@ func hasLazyAIArtifacts(dir string) bool {
 // ---------------------------------------------------------------------------
 
 func runWorkspaceList(cmd *cobra.Command, args []string) error {
-	cfg, err := loadWorkspaceConfig()
+	cfg, err := sidecarpkg.LoadWorkspaceConfig()
 	if err != nil {
 		return err
 	}
@@ -231,31 +168,27 @@ func runWorkspaceAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg, err := loadWorkspaceConfig()
+	becameActive := false
+	err = sidecarpkg.UpdateWorkspaceConfig(func(cfg *sidecarpkg.WorkspaceConfig) error {
+		if workspaceExists(cfg, name) {
+			return fmt.Errorf("workspace '%s' already exists", name)
+		}
+		cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{
+			Name: name,
+			Path: absPath,
+		})
+		if cfg.Active == "" {
+			cfg.Active = name
+			becameActive = true
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	if workspaceExists(cfg, name) {
-		return fmt.Errorf("workspace '%s' already exists", name)
-	}
-
-	cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{
-		Name: name,
-		Path: absPath,
-	})
-
-	// If this is the first workspace, auto-activate it.
-	if cfg.Active == "" {
-		cfg.Active = name
-	}
-
-	if err := saveWorkspaceConfig(cfg); err != nil {
-		return err
-	}
-
 	fmt.Printf("✅ Workspace added: %s → %s\n", name, absPath)
-	if cfg.Active == name {
+	if becameActive {
 		fmt.Printf("   (set as active)\n")
 	}
 
@@ -271,35 +204,34 @@ func runWorkspaceAdd(cmd *cobra.Command, args []string) error {
 func runWorkspaceSwitch(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	cfg, err := loadWorkspaceConfig()
+	var wsPath string
+	err := sidecarpkg.UpdateWorkspaceConfig(func(cfg *sidecarpkg.WorkspaceConfig) error {
+		w := findWorkspace(cfg, name)
+		if w == nil {
+			return fmt.Errorf("workspace '%s' not found. Run 'workspace list' to see registered workspaces", name)
+		}
+		cfg.Active = name
+		wsPath = w.Path
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	w := findWorkspace(cfg, name)
-	if w == nil {
-		return fmt.Errorf("workspace '%s' not found. Run 'workspace list' to see registered workspaces", name)
-	}
-
-	cfg.Active = name
-	if err := saveWorkspaceConfig(cfg); err != nil {
-		return err
-	}
-
 	fmt.Printf("✅ Active workspace set to: %s\n", name)
-	fmt.Printf("   Path: %s\n", w.Path)
+	fmt.Printf("   Path: %s\n", wsPath)
 
 	// Best-effort ledger append.
 	_ = appendToLedger("workspace_switch", map[string]string{
 		"name": name,
-		"path": w.Path,
+		"path": wsPath,
 	})
 
 	return nil
 }
 
 func runWorkspaceStatus(cmd *cobra.Command, args []string) error {
-	cfg, err := loadWorkspaceConfig()
+	cfg, err := sidecarpkg.LoadWorkspaceConfig()
 	if err != nil {
 		return err
 	}

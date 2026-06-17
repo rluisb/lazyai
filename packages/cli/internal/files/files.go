@@ -44,6 +44,171 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+// AtomicWriteFile writes data to path atomically.
+//
+// - ensures the target directory exists
+// - creates/refreshes a single-slot `.bak` file for existing regular files
+// - writes through a temporary `.tmp` file, then renames into place
+func AtomicWriteFile(path string, data []byte, perm os.FileMode) (string, error) {
+	if err := EnsureDir(filepath.Dir(path)); err != nil {
+		return "", err
+	}
+
+	backupPath := ""
+	if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+		backupPath = path + ".bak"
+		if err := CopyFile(path, backupPath); err != nil {
+			return backupPath, err
+		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return "", aierror.Unknown(fmt.Sprintf("unable to inspect %s", path), err)
+	}
+
+	var (
+		tmpPath string
+		tmpFile *os.File
+		err     error
+	)
+	for {
+		tmpPath = filepath.Join(filepath.Dir(path), fmt.Sprintf(".%s.%d.tmp", filepath.Base(path), time.Now().UnixNano()))
+		tmpFile, err = os.OpenFile(tmpPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
+		if err == nil {
+			break
+		}
+		if os.IsExist(err) {
+			continue
+		}
+		return backupPath, aierror.Unknown(fmt.Sprintf("create temporary file for: %s", path), err)
+	}
+
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		return backupPath, aierror.Unknown(fmt.Sprintf("write temporary file for: %s", path), err)
+	}
+	if err := tmpFile.Sync(); err != nil {
+		tmpFile.Close()
+		return backupPath, aierror.Unknown(fmt.Sprintf("sync temporary file for: %s", path), err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return backupPath, aierror.Unknown(fmt.Sprintf("close temporary file for: %s", path), err)
+	}
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		return backupPath, aierror.Unknown(fmt.Sprintf("rename temporary file for: %s", path), err)
+	}
+
+	tmpPath = ""
+	return backupPath, nil
+}
+
+// WithFileLock acquires a lock file, retries until timeout, and runs fn while held.
+func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Duration, fn func() error) error {
+	if err := EnsureDir(filepath.Dir(lockPath)); err != nil {
+		return err
+	}
+
+	deadline := time.Now().Add(timeout)
+	for {
+		if time.Now().After(deadline) {
+			return fmt.Errorf("acquiring lock %s: timeout after %s", lockPath, timeout)
+		}
+
+		lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if err == nil {
+			payload := fmt.Sprintf("%d %s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339Nano))
+			if _, writeErr := lockFile.WriteString(payload); writeErr != nil {
+				_ = lockFile.Close()
+				_ = os.Remove(lockPath)
+				return aierror.Unknown(fmt.Sprintf("write lock file: %s", lockPath), writeErr)
+			}
+			if syncErr := lockFile.Sync(); syncErr != nil {
+				_ = lockFile.Close()
+				_ = os.Remove(lockPath)
+				return aierror.Unknown(fmt.Sprintf("sync lock file: %s", lockPath), syncErr)
+			}
+			if closeErr := lockFile.Close(); closeErr != nil {
+				_ = os.Remove(lockPath)
+				return aierror.Unknown(fmt.Sprintf("close lock file: %s", lockPath), closeErr)
+			}
+
+			defer os.Remove(lockPath)
+			return fn()
+		}
+		if !os.IsExist(err) {
+			return aierror.Unknown(fmt.Sprintf("acquire lock %s", lockPath), err)
+		}
+
+		info, statErr := os.Stat(lockPath)
+		if statErr != nil {
+			if !os.IsNotExist(statErr) {
+				return aierror.Unknown(fmt.Sprintf("inspect lock for stale cleanup %s", lockPath), statErr)
+			}
+			continue
+		}
+		if time.Since(info.ModTime()) <= staleAfter {
+			time.Sleep(25 * time.Millisecond)
+			continue
+		}
+
+		// Stale lock cleanup is serialized via an O_EXCL guard file to
+		// prevent two cleaners from racing. The guard itself has a
+		// stale timeout so a crashed cleaner doesn't permanently block
+		// recovery: if the guard's mtime is older than staleAfter, we
+		// remove it and retry. While holding the guard, re-stat the
+		// main lock to confirm it's still the same stale file (not
+		// recreated by another contender), then rename it to trash
+		// and remove. The guard is always cleaned up before continuing.
+		guardPath := lockPath + ".stale-cleanup"
+		guardFile, guardErr := os.OpenFile(guardPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if guardErr != nil {
+			if !os.IsExist(guardErr) {
+				return aierror.Unknown(fmt.Sprintf("acquire stale cleanup guard %s", guardPath), guardErr)
+			}
+			// Guard exists — check if it's stale (cleaner crashed).
+			guardInfo, guardStatErr := os.Stat(guardPath)
+			if guardStatErr != nil && !os.IsNotExist(guardStatErr) {
+				return aierror.Unknown(fmt.Sprintf("inspect stale cleanup guard %s", guardPath), guardStatErr)
+			}
+			if guardStatErr == nil && time.Since(guardInfo.ModTime()) > staleAfter {
+				_ = os.Remove(guardPath)
+			}
+			time.Sleep(25 * time.Millisecond)
+			continue
+		}
+		// Guard acquired — clean up the stale lock, then remove the guard.
+		_ = guardFile.Close()
+		if err := func() error {
+			defer os.Remove(guardPath)
+			refreshedInfo, refreshedErr := os.Stat(lockPath)
+			if refreshedErr != nil {
+				if !os.IsNotExist(refreshedErr) {
+					return aierror.Unknown(fmt.Sprintf("inspect stale lock %s", lockPath), refreshedErr)
+				}
+				return nil // lock already gone
+			}
+			if !refreshedInfo.ModTime().Equal(info.ModTime()) {
+				return nil // lock was recreated; not stale anymore
+			}
+			trashPath := filepath.Join(filepath.Dir(lockPath), fmt.Sprintf(".%s.stale.%d.%d.lock", filepath.Base(lockPath), os.Getpid(), time.Now().UnixNano()))
+			if renameErr := os.Rename(lockPath, trashPath); renameErr != nil {
+				if !os.IsNotExist(renameErr) {
+					return aierror.Unknown(fmt.Sprintf("rename stale lock %s", lockPath), renameErr)
+				}
+				return nil // lock already gone
+			}
+			_ = os.Remove(trashPath)
+			return nil
+		}(); err != nil {
+			return err
+		}
+		continue
+	}
+}
+
 // FileHash returns the first 16 hex characters of the SHA256 hash of the file at path.
 func FileHash(path string) (string, error) {
 	f, err := os.Open(path)

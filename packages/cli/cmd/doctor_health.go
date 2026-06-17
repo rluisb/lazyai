@@ -83,7 +83,6 @@ func runEnhancedHealthChecks() []HealthCheck {
 	}
 	checks = append(checks, check)
 
-
 	// 6. Check disk space
 	check = HealthCheck{Name: "Disk space", Checked: checkedAt}
 	if usage := getDiskUsage("."); usage >= 0 {

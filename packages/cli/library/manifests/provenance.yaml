@@ -69,7 +69,7 @@ entries:
     source_repo: github.com/rluisb/vibe-lab
     source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
     source_path: .agents/agents/evidence-verifier.md
-    local_sha256: f045ab319bb680953c8c3cef559abb890a9f7fcbe99014d33d09b39c62016405
+    local_sha256: 1518d4e43f537173f4e9623d3cf5a1d43c5b50300f9dd1f1a19090f5fd381019
     mode: exact-baseline
     notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
       agent parity.

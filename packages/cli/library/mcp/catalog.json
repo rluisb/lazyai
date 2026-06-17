@@ -1,23 +1,23 @@
 {
   "servers": {
-    "memory": {
-      "description": "Knowledge graph memory for AI sessions",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
+    "ai-memory": {
+      "description": "Long-term project memory, handoffs, and durable annotations for agent workflows",
+      "url": "http://127.0.0.1:49374/mcp",
       "tools": [
-        "create_entities",
-        "search_nodes",
-        "add_observations",
-        "read_graph"
+        "memory_query",
+        "memory_recent",
+        "memory_handoff_accept",
+        "memory_write_page",
+        "memory_auto_improve",
+        "memory_consolidate"
       ],
       "enabled": true,
-      "requiresInstall": false,
-      "preferred_interface": "mcp",
-      "cli_equivalent": null,
-      "token_policy": "mcp-only"
+      "requiresInstall": true,
+      "installHint": "curl -fsSL https://raw.githubusercontent.com/akitaonrails/ai-memory/main/bin/ai-memory -o ~/.local/bin/ai-memory && chmod +x ~/.local/bin/ai-memory",
+      "setupHint": "Start the ai-memory server, then point clients at http://127.0.0.1:49374/mcp or a remote /mcp endpoint. Add an Authorization header when bearer auth is enabled.",
+      "preferred_interface": "hybrid",
+      "cli_equivalent": "ai-memory",
+      "token_policy": "hybrid"
     },
     "filesystem": {
       "description": "Local filesystem read/write access",
@@ -56,24 +56,6 @@
       "cli_equivalent": "rg",
       "token_policy": "cli-first"
     },
-    "memoria": {
-      "description": "Git history analysis and code memory",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@byronwade/memoria"
-      ],
-      "tools": [
-        "get_context",
-        "ask_history",
-        "search_memories"
-      ],
-      "enabled": true,
-      "requiresInstall": false,
-      "preferred_interface": "mcp",
-      "cli_equivalent": null,
-      "token_policy": "mcp-only"
-    },
     "codegraph": {
       "description": "Code knowledge graph for semantic exploration",
       "command": "codegraph",
@@ -94,83 +76,6 @@
       "cli_equivalent": "codegraph",
       "token_policy": "hybrid"
     },
-    "qmd": {
-      "description": "Markdown knowledge base search",
-      "command": "qmd",
-      "args": [
-        "mcp"
-      ],
-      "tools": [
-        "query",
-        "get"
-      ],
-      "enabled": true,
-      "requiresInstall": true,
-      "installHint": "brew install qmd",
-      "preferred_interface": "hybrid",
-      "cli_equivalent": "qmd",
-      "token_policy": "hybrid"
-    },
-    "context7": {
-      "description": "Up-to-date library documentation and code examples",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      },
-      "tools": [
-        "resolve-library-id",
-        "query-docs"
-      ],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Create a Context7 API key at https://context7.com/dashboard and expose it as CONTEXT7_API_KEY.",
-      "preferred_interface": "mcp",
-      "cli_equivalent": "ctx7",
-      "token_policy": "hybrid"
-    },
-    "github": {
-      "description": "GitHub repository, issue, pull request, Actions, and Copilot context via the official remote MCP server",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      },
-      "tools": [
-        "context",
-        "repos",
-        "issues",
-        "pull_requests",
-        "users",
-        "copilot"
-      ],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Set GITHUB_PERSONAL_ACCESS_TOKEN to a GitHub PAT for PAT-based hosts, or use your host's OAuth flow when supported.",
-      "preferred_interface": "hybrid",
-      "cli_equivalent": "gh",
-      "token_policy": "hybrid"
-    },
-    "graphify": {
-      "description": "Knowledge graph builder and query engine for codebases",
-      "command": "graphify",
-      "args": [
-        "query"
-      ],
-      "tools": [
-        "query_graph",
-        "get_node",
-        "get_neighbors",
-        "get_community",
-        "god_nodes",
-        "graph_stats",
-        "shortest_path"
-      ],
-      "enabled": true,
-      "requiresInstall": true,
-      "installHint": "brew install graphify",
-      "preferred_interface": "hybrid",
-      "cli_equivalent": "graphify",
-      "token_policy": "cli-first"
-    },
     "obsidian": {
       "description": "Obsidian vault read/write access for persistent knowledge",
       "command": "ob",
@@ -190,112 +95,33 @@
       "preferred_interface": "hybrid",
       "cli_equivalent": "ob",
       "token_policy": "cli-first"
-    },
-    "playwright": {
-      "description": "Browser automation and testing",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp",
-        "--headless"
-      ],
-      "tools": [
-        "browser_navigate",
-        "browser_snapshot",
-        "browser_click",
-        "browser_type",
-        "browser_take_screenshot"
-      ],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Install required browser binaries by running: npx playwright install",
-      "preferred_interface": "mcp",
-      "cli_equivalent": null,
-      "token_policy": "mcp-only"
-    },
-    "atlassian": {
-      "description": "Jira and Confluence read-only access (search issues, read pages via OAuth)",
-      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
-      "tools": [
-        "searchAtlassian",
-        "getJiraIssue",
-        "searchJiraIssuesUsingJql",
-        "getConfluencePage"
-      ],
-      "enabled": false,
-      "requiresInstall": false,
-      "setupHint": "Authenticate via browser the first time your MCP client connects to https://mcp.atlassian.com/v1/mcp/authv2",
-      "preferred_interface": "mcp",
-      "cli_equivalent": "acli",
-      "token_policy": "mcp-only"
-    },
-    "fetch": {
-      "description": "HTTP fetch for web content retrieval",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-fetch"
-      ],
-      "tools": [
-        "fetch"
-      ],
-      "enabled": false,
-      "requiresInstall": false,
-      "preferred_interface": "cli",
-      "cli_equivalent": "curl / wget",
-      "token_policy": "cli-first"
     }
   },
   "cliTools": {
-    "acli": {
-      "description": "Atlassian CLI for Jira and Confluence workflows",
-      "installHint": "https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/",
-      "enabled": false
+    "ai-jail": {
+      "description": "Sandbox wrapper for AI coding agents with per-project path constraints",
+      "installHint": "brew tap akitaonrails/tap && brew install ai-jail",
+      "enabled": true
+    },
+    "ai-memory": {
+      "description": "Thin client and installer for the ai-memory project memory server",
+      "installHint": "curl -fsSL https://raw.githubusercontent.com/akitaonrails/ai-memory/main/bin/ai-memory -o ~/.local/bin/ai-memory && chmod +x ~/.local/bin/ai-memory",
+      "enabled": true
     },
     "gh": {
       "description": "GitHub CLI for repository, issue, and PR operations (never pushes without explicit user approval)",
       "installHint": "brew install gh",
       "enabled": true
     },
-    "rtk": {
-      "description": "Token-efficient output formatting",
-      "installHint": "brew install rtk",
-      "enabled": false
-    },
     "codegraph": {
       "description": "Code knowledge graph for semantic exploration",
       "installHint": "bun install -g codegraph",
-      "enabled": true
-    },
-    "qmd": {
-      "description": "Markdown knowledge base search",
-      "installHint": "brew install qmd",
-      "enabled": true
-    },
-    "graphify": {
-      "description": "Knowledge graph builder and query engine for codebases",
-      "installHint": "brew install graphify",
       "enabled": true
     },
     "ob": {
       "description": "Obsidian vault read/write access for persistent knowledge",
       "installHint": "npm install -g obsidian-cli",
       "enabled": true
-    },
-    "memoria": {
-      "description": "Git history analysis and code memory",
-      "installHint": "npx @byronwade/memoria",
-      "enabled": true
-    },
-    "playwright": {
-      "description": "Browser automation and testing via Playwright MCP",
-      "installHint": "npx @playwright/mcp",
-      "enabled": false
-    },
-    "fetch": {
-      "description": "HTTP fetch for web content retrieval",
-      "installHint": "npx @modelcontextprotocol/server-fetch",
-      "enabled": false
     }
   }
 }

@@ -29,12 +29,12 @@ Example:
 
 ```bash
 # Before
-ai-setup init --enable-servers filesystem,memory
+ai-setup init --enable-servers filesystem,ai-memory
 ai-setup compile
 ai-setup doctor
 
 # After
-lazyai-cli init --enable-servers filesystem,memory
+lazyai-cli init --enable-servers filesystem,ai-memory
 lazyai-cli compile
 lazyai-cli doctor
 ```

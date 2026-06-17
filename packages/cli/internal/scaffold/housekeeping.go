@@ -32,25 +32,13 @@ func ScaffoldHousekeeping(targetDir string, cfg *types.HousekeepingConfig) error
 	initialState := map[string]any{
 		"schemaVersion": 1,
 		"updatedAt":     "",
-		"qmd": map[string]any{
-			"enabled":     cfg.EnableQmd,
-			"indexPath":   cfg.QmdIndexPath,
-			"driftStatus": "unknown",
-		},
 		"codegraph": map[string]any{
 			"enabled":     cfg.EnableCodegraph,
 			"dataPath":    cfg.CodegraphDataPath,
 			"driftStatus": "unknown",
 		},
-		"graphify": map[string]any{
-			"enabled":     cfg.EnableGraphify,
-			"dataPath":    cfg.GraphifyDataPath,
-			"driftStatus": "unknown",
-		},
 		"staleAcked": map[string]any{
-			"qmd":       []any{},
 			"codegraph": []any{},
-			"graphify":  []any{},
 		},
 		"repairProposals": []any{},
 	}

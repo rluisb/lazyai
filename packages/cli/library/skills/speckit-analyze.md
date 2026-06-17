@@ -26,7 +26,7 @@ consumes:
 produces_for:
   - speckit-checklist
   - human gate (go/hold/rework verdict)
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [spec.md, plan.md, tasks.md, constitution.md]
   contract: [speckit-checklist]

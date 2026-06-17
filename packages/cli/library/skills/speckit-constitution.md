@@ -21,7 +21,7 @@ produces_for:
   - speckit-implement
   - review
   - process-audit
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [library/constitution/constitution.template.md]
   contract: [reviewer-judge]

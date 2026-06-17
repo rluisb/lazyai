@@ -27,7 +27,7 @@ produces_for:
   - speckit-tasks
   - speckit-analyze
   - speckit-checklist
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [spec.md, constitution.md, last-known-state.md]
   contract: [speckit-analyze]

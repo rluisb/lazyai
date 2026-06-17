@@ -24,7 +24,7 @@ consumes:
 produces_for:
   - github (PR comment / approval)
   - memory (if findings reveal missing standards)
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [PR, ticket, constitution.md]
   contract: [speckit-review verdict]

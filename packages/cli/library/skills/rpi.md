@@ -21,7 +21,7 @@ consumes:
 produces_for:
   - phase-specific skills (speckit-specify, speckit-clarify, speckit-plan, etc.)
   - human gates (approval points)
-mcp_tools: [filesystem, qmd, ripgrep]
+mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [constitution.md]
   contract: [human gates at Research, Plan, Implement]

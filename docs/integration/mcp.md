@@ -10,13 +10,13 @@ The canonical catalog is written to:
 .ai/mcp.json
 ```
 
-It contains bundled server definitions, enable/disable state, install hints, and environment-variable placeholders.
+It contains managed server definitions, install hints, and environment-variable placeholders.
 
 ## Per-tool compilation
 
 | Tool | Compiled MCP output | Notes |
 |---|---|---|
-| OpenCode | `.opencode/opencode.jsonc` | MCP entries live under the OpenCode config |
+| OpenCode | `.opencode/lazyai.mcp.jsonc` | LazyAI-managed MCP entries live alongside the baseline OpenCode config |
 | Claude Code | `.mcp.json` or `.claude/settings.local.json` | Depends on scope and `--local-secrets` |
 | Copilot | `.vscode/mcp.json` and optional `~/.copilot/mcp-config.json` | CLI probe decides whether the home config is emitted |
 
@@ -25,7 +25,7 @@ It contains bundled server definitions, enable/disable state, install hints, and
 During setup:
 
 ```bash
-lazyai-cli init --enable-servers filesystem,memory
+lazyai-cli init --enable-servers filesystem,ai-memory
 ```
 
 Or edit `.ai/mcp.json` later, then recompile:
@@ -34,29 +34,20 @@ Or edit `.ai/mcp.json` later, then recompile:
 lazyai-cli compile
 ```
 
-## Disabling servers
 
-Set a server's `enabled` flag to `false` in `.ai/mcp.json`, then rerun `lazyai-cli compile`.
+## Cataloged MCP servers
 
-## Bundled MCP servers
-
-| Server | Default status | Requires install | Notes |
-|---|---|---|---|
-| `memory` | enabled | No | Knowledge graph memory server |
-| `filesystem` | enabled | No | Local filesystem read/write access |
-| `ripgrep` | enabled | No | Fast code search |
-| `memoria` | enabled | No | Git history + code memory |
-| `codegraph` | enabled | No | Repository graph exploration |
-| `qmd` | enabled | No | Markdown/document search |
-| `graphify` | disabled | No | Knowledge-graph rendering |
-| `obsidian` | disabled | No | Obsidian vault integration |
-| `playwright` | disabled | No | Browser automation |
-| `atlassian` | disabled | No | Jira + Confluence integration |
-| `fetch` | disabled | No | General HTTP fetch MCP |
+| Server | Requires install | Notes |
+|---|---|---|
+| `ai-memory` | Yes | Shared project memory, handoffs, and durable annotations via a local or remote ai-memory server |
+| `filesystem` | No | Local filesystem read/write access |
+| `ripgrep` | No | Fast code search |
+| `codegraph` | Yes | Repository graph exploration |
+| `obsidian` | Yes | Obsidian vault integration |
 
 ## Token-efficient usage
 
-Many bundled servers have equivalent CLI tools. For bulk or deterministic work, prefer the CLI to avoid MCP JSON-RPC overhead and keep agent context windows small. See [MCP vs CLI](../concepts/mcp-vs-cli.md) for the broader comparison.
+Many cataloged servers have equivalent CLI tools. For bulk or deterministic work, prefer the CLI to avoid MCP JSON-RPC overhead and keep agent context windows small. See [MCP vs CLI](../concepts/mcp-vs-cli.md) for the broader comparison.
 
 ## Environment variables
 

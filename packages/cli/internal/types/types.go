@@ -312,13 +312,9 @@ type ToolSyncState struct {
 type SyncState struct {
 	SchemaVersion int           `json:"schemaVersion"`
 	UpdatedAt     string        `json:"updatedAt"`
-	QMD           ToolSyncState `json:"qmd"`
 	Codegraph     ToolSyncState `json:"codegraph"`
-	Graphify      ToolSyncState `json:"graphify"`
 	StaleAcked    struct {
-		QMD       []SyncAcknowledgement `json:"qmd"`
 		Codegraph []SyncAcknowledgement `json:"codegraph"`
-		Graphify  []SyncAcknowledgement `json:"graphify"`
 	} `json:"staleAcked"`
 	RepairProposals []RepairProposal `json:"repairProposals,omitempty"`
 }
@@ -327,12 +323,8 @@ type HousekeepingConfig struct {
 	MemoryPath        string `json:"memoryPath,omitempty"`
 	EnableObsidian    bool   `json:"enableObsidian,omitempty"`
 	ObsidianVaultPath string `json:"obsidianVaultPath,omitempty"`
-	EnableQmd         bool   `json:"enableQmd,omitempty"`
-	QmdIndexPath      string `json:"qmdIndexPath,omitempty"`
 	EnableCodegraph   bool   `json:"enableCodegraph,omitempty"`
 	CodegraphDataPath string `json:"codegraphDataPath,omitempty"`
-	EnableGraphify    bool   `json:"enableGraphify,omitempty"`
-	GraphifyDataPath  string `json:"graphifyDataPath,omitempty"`
 }
 
 // PresetLevel defines the preset density level.

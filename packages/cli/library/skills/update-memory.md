@@ -20,7 +20,7 @@ consumes:
 produces_for:
   - future workflows (memory is searchable and context-aware)
   - constitution amendments (if memory contradicts assumptions)
-mcp_tools: [filesystem, qmd]
+mcp_tools: [filesystem, ai-memory]
 harness:
   feed_forward: [decisions/learnings from upstream phases]
   contract: [memory-searchable]

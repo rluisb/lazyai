@@ -29,7 +29,7 @@ This launches a wizard where you choose:
 lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
-  --enable-servers filesystem,memory \
+  --enable-servers filesystem,ai-memory \
   --name my-app \
   --preset standard \
   --no-interactive

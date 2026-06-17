@@ -1,7 +1,9 @@
 package adapter
 
 import (
+	"encoding/json"
 	"io/fs"
+	"sort"
 	"testing"
 	"testing/fstest"
 
@@ -173,6 +175,49 @@ func TestLoadSkillContractsLibraryIntegration(t *testing.T) {
 	if len(contracts) == 0 {
 		t.Fatal("expected at least one contract from real library")
 	}
+}
+
+func TestLibrarySkillMCPToolsExistInCatalog(t *testing.T) {
+	libFS := realLibFS(t)
+	contracts, err := LoadSkillContracts(libFS)
+	if err != nil {
+		t.Fatalf("LoadSkillContracts on real lib: %v", err)
+	}
+
+	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
+	if err != nil {
+		t.Fatalf("read mcp/catalog.json: %v", err)
+	}
+	var catalog struct {
+		Servers map[string]json.RawMessage `json:"servers"`
+	}
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		t.Fatalf("unmarshal mcp/catalog.json: %v", err)
+	}
+
+	missing := map[string][]string{}
+	for _, contract := range contracts {
+		for _, tool := range contract.MCPTools {
+			if _, ok := catalog.Servers[tool]; ok {
+				continue
+			}
+			missing[tool] = append(missing[tool], contract.Source)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+
+	keys := make([]string, 0, len(missing))
+	for tool := range missing {
+		keys = append(keys, tool)
+	}
+	sort.Strings(keys)
+	for _, tool := range keys {
+		sort.Strings(missing[tool])
+		t.Errorf("unknown mcp tool %q declared by %v", tool, missing[tool])
+	}
+	t.FailNow()
 }
 
 // realLibFS returns the on-disk library FS used by the production binary.

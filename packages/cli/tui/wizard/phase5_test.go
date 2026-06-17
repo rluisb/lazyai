@@ -50,7 +50,7 @@ func TestBuildPhase5Result(t *testing.T) {
 		want Phase5Result
 	}{
 		{
-			name: "all optional integrations disabled keeps explicit paths except memory fallback",
+			name: "all optional integrations omitted keeps explicit paths except memory fallback",
 			args: Phase5Result{},
 			want: Phase5Result{MemoryPath: ".specify/memory"},
 		},
@@ -58,16 +58,6 @@ func TestBuildPhase5Result(t *testing.T) {
 			name: "obsidian enabled preserves provided vault path",
 			args: Phase5Result{MemoryPath: "memory/custom", EnableObsidian: true, ObsidianVaultPath: "/vault"},
 			want: Phase5Result{MemoryPath: "memory/custom", EnableObsidian: true, ObsidianVaultPath: "/vault"},
-		},
-		{
-			name: "qmd enabled keeps empty index path for global qmd index",
-			args: Phase5Result{EnableQmd: true},
-			want: Phase5Result{MemoryPath: ".specify/memory", EnableQmd: true},
-		},
-		{
-			name: "qmd enabled preserves provided index path",
-			args: Phase5Result{EnableQmd: true, QmdIndexPath: "custom-index"},
-			want: Phase5Result{MemoryPath: ".specify/memory", EnableQmd: true, QmdIndexPath: "custom-index"},
 		},
 		{
 			name: "codegraph enabled fills default data path when empty",
@@ -80,19 +70,9 @@ func TestBuildPhase5Result(t *testing.T) {
 			want: Phase5Result{MemoryPath: ".specify/memory", EnableCodegraph: true, CodegraphDataPath: "custom-graph"},
 		},
 		{
-			name: "graphify enabled fills default data path when empty",
-			args: Phase5Result{EnableGraphify: true},
-			want: Phase5Result{MemoryPath: ".specify/memory", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
-		},
-		{
-			name: "graphify enabled preserves provided data path",
-			args: Phase5Result{EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
-			want: Phase5Result{MemoryPath: ".specify/memory", EnableGraphify: true, GraphifyDataPath: "custom-graphify"},
-		},
-		{
 			name: "all enabled applies default fallbacks",
-			args: Phase5Result{EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true, EnableGraphify: true},
-			want: Phase5Result{MemoryPath: ".specify/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableQmd: true, EnableCodegraph: true, CodegraphDataPath: ".codegraph/", EnableGraphify: true, GraphifyDataPath: "graphify-out"},
+			args: Phase5Result{EnableObsidian: true, ObsidianVaultPath: "/vault", EnableCodegraph: true},
+			want: Phase5Result{MemoryPath: ".specify/memory", EnableObsidian: true, ObsidianVaultPath: "/vault", EnableCodegraph: true, CodegraphDataPath: ".codegraph/"},
 		},
 	}
 
@@ -105,12 +85,8 @@ func TestBuildPhase5Result(t *testing.T) {
 				tt.args.MemoryPath,
 				tt.args.EnableObsidian,
 				tt.args.ObsidianVaultPath,
-				tt.args.EnableQmd,
-				tt.args.QmdIndexPath,
 				tt.args.EnableCodegraph,
 				tt.args.CodegraphDataPath,
-				tt.args.EnableGraphify,
-				tt.args.GraphifyDataPath,
 				tt.args.OpenCodePlugins,
 			)
 
@@ -140,10 +116,10 @@ func TestDefaultPhase5ResultEnablesToolingByDefault(t *testing.T) {
 	t.Parallel()
 
 	result := defaultPhase5Result()
-	if !result.EnableObsidian || !result.EnableQmd || !result.EnableCodegraph || !result.EnableGraphify {
+	if !result.EnableObsidian || !result.EnableCodegraph {
 		t.Fatalf("tooling defaults not enabled: %#v", result)
 	}
-	if result.MemoryPath != ".specify/memory" || result.QmdIndexPath != "" || result.CodegraphDataPath != ".codegraph/" || result.GraphifyDataPath != "graphify-out" {
+	if result.MemoryPath != ".specify/memory" || result.CodegraphDataPath != ".codegraph/" {
 		t.Fatalf("unexpected phase 5 defaults: %#v", result)
 	}
 }
@@ -161,16 +137,10 @@ func TestRunPhase5NonInteractiveDefaults(t *testing.T) {
 	if result.MemoryPath != ".specify/memory" {
 		t.Fatalf("MemoryPath = %q, want .specify/memory", result.MemoryPath)
 	}
-	if !result.EnableObsidian || !result.EnableQmd || !result.EnableCodegraph || !result.EnableGraphify {
+	if !result.EnableObsidian || !result.EnableCodegraph {
 		t.Fatalf("tooling defaults not enabled: %#v", result)
-	}
-	if result.QmdIndexPath != "" {
-		t.Fatalf("QmdIndexPath = %q, want empty", result.QmdIndexPath)
 	}
 	if result.CodegraphDataPath != ".codegraph/" {
 		t.Fatalf("CodegraphDataPath = %q, want .codegraph/", result.CodegraphDataPath)
-	}
-	if result.GraphifyDataPath != "graphify-out" {
-		t.Fatalf("GraphifyDataPath = %q, want graphify-out", result.GraphifyDataPath)
 	}
 }

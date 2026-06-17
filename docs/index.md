@@ -32,11 +32,17 @@ See [Product Boundaries](concepts/product-boundaries.md) for the command and int
 
 ## Architecture at a glance
 
-```text
-lazyai-cli (Go binary)
-   │ init/update ──▶ .ai/ (canonical)
-   │ compile ─────▶ .opencode/ + .claude/ + .github/ + .vscode/ + .pi/ + .gemini/
-   │ doctor ──────▶ .ai-setup.json / .ai-setup.db
+```mermaid
+flowchart TD
+    CLI["lazyai-cli (Go binary)"]
+    CLI -->|"init / update"| AI[".ai/ (canonical source)"]
+    CLI -->|"compile"| TOOLS["tool-native configs"]
+    AI --> TOOLS
+    CLI -->|"doctor / status"| DB[".ai-setup.json / .ai-setup.db"]
+    TOOLS --> OC[".opencode/"]
+    TOOLS --> CC[".claude/ + .mcp.json"]
+    TOOLS --> CP[".github/ + .vscode/"]
+    TOOLS --> PI[".pi/ + .gemini/"]
 ```
 
 The execution path uses local native agents directly. A2A remains a config seam only; remote/network execution is not the default, and retired Fortnite/orchestrator/eval surfaces are not part of the active runtime.

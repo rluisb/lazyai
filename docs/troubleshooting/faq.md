@@ -124,7 +124,7 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 
 ### `lazyai-cli init` fails with "unsupported tool"
 
-Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`. IDs are case-sensitive.
+Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`, `pi`, `antigravity`. IDs are case-sensitive.
 
 ### `lazyai-cli compile` does not generate files for a tool
 

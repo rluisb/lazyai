@@ -71,15 +71,14 @@ Validate your environment before starting work.
 lazyai-cli doctor
 ```
 
-Checks:
-- File integrity (managed files present and unmodified)
-- Stray AGENTS.md files
-- Metadata gaps in specs
-- Stale Claude MCP entries
-- Dependency health (sqlite3, git, jq, bash)
-- Provider status (ollama, openai)
-- Disk space
-- LazyAI runtime boundary checks for active setup artifacts
+Doctor reports setup integrity first, then these 6 environment checks:
+
+1. `sqlite3` dependency
+2. `git` dependency
+3. `jq` dependency (optional warning)
+4. `bash` dependency
+5. `ollama` provider on `localhost:11434` (warning if unavailable)
+6. Disk space usage
 
 ### JSON Output
 
@@ -88,6 +87,80 @@ lazyai-cli doctor --json
 ```
 
 Useful for CI/CD pipelines and automated monitoring.
+
+## Setup and Configuration Commands
+
+These setup-core commands cover common maintenance tasks around an initialized LazyAI project.
+
+### Manage MCP Servers
+
+Enable or disable cataloged MCP servers, then compile per-tool configs.
+
+```bash
+lazyai-cli server list
+lazyai-cli server add ai-memory
+lazyai-cli compile
+```
+
+### Configure Local Defaults
+
+Create and update `.opencode/config.yaml`.
+
+```bash
+lazyai-cli config init
+lazyai-cli config set notifications.enabled true
+```
+
+### Create an Artifact
+
+Generate agents, skills, prompts, commands, templates, or hooks.
+
+```bash
+lazyai-cli create agent release-reviewer --description "Reviews release readiness" --no-interactive
+```
+
+### Manage Sidecars
+
+Attach optional docs/specs/plans directories to workspace, project, or global scope.
+
+```bash
+lazyai-cli sidecar init --scope project --path ../shared-docs
+lazyai-cli sidecar status
+```
+
+### Import an Existing Setup
+
+Import an existing tool setup into LazyAI-managed form.
+
+```bash
+lazyai-cli import ../existing-setup --tool opencode --preview
+```
+
+### Migrate Older LazyAI or ai-setup Config
+
+Move older LazyAI or ai-setup files into the current canonical format.
+
+```bash
+lazyai-cli migrate ~/old-ai-setup --preview
+```
+
+### Update the CLI Binary
+
+Check or install a GitHub Release for `lazyai-cli`.
+
+```bash
+lazyai-cli update-self --check
+```
+
+### Inspect Setup Inventory
+
+Scan or plan supported setup targets without starting runtime execution.
+
+```bash
+lazyai-cli setup --scan
+lazyai-cli setup --dry-run --global --all
+```
+
 
 ## Audit Trail
 
@@ -139,9 +212,10 @@ lazyai-cli validate agents
 ```
 
 Checks:
-- Dispatch Parameters section present
-- Tool Schema Quick Reference present
-- Common mistakes (text vs content, mode misuse)
+- YAML frontmatter present (**error**)
+- `# System Prompt` heading present (**error**)
+- Managed marker present (**warning**)
+- Section heading after `# System Prompt` present (**warning**)
 
 ### Validate Skills
 
@@ -149,9 +223,10 @@ Checks:
 lazyai-cli validate skills
 ```
 
-Checks:
-- Skills directory exists
-- Skill structure validation (basic checks; expanding)
+Current behavior:
+- Confirms `.opencode/skills/` exists
+- Prints `Skill validation not yet implemented`
+- Lists planned checks for quick reference, frontmatter, and script references
 
 ## Workspace
 

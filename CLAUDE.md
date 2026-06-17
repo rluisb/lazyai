@@ -165,7 +165,7 @@ Respect the project's existing architecture, paradigm, and naming before applyin
 
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
 - OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
-- Copilot uses `.github/agents/*.agent.yaml` and `.github/copilot-instructions.md`.
+- Copilot uses `.github/agents/*.agent.md` for default agents and `.github/copilot-instructions.md` for project instructions. When skills are selected, skill-to-agent conversions are emitted as `.agent.yaml` files.
 - OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
 - Antigravity is minimal `.gemini/settings.json` plus `.gemini/hooks/` scripts; no separate skills or agents are emitted.
 - If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.

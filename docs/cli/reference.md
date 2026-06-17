@@ -23,16 +23,46 @@ Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup
 
 - [Top-level command surface](#top-level-command-surface)
 - [Init](#init)
-- [Session Management](#session-management)
-- [Health Checks](#health-checks)
-- [Audit Trail](#audit-trail)
-- [Validation](#validation)
+- [Add](#add)
+- [Compile](#compile)
+- [Update](#update)
+- [Status](#status)
+- [Doctor](#doctor)
+- [Server](#server)
+  - [server list](#server-list)
+  - [server add](#server-add)
+  - [server remove](#server-remove)
+  - [server doctor](#server-doctor)
+- [Config](#config)
+- [Create](#create)
+- [Import](#import)
+- [Migrate](#migrate)
+- [Eject](#eject)
+- [Info](#info)
+- [List](#list)
+- [Build Plugin](#build-plugin)
+- [Update Self](#update-self)
+- [Setup](#setup)
+- [Models](#models)
+- [Session](#session)
+- [Auth](#auth)
+- [Cost](#cost)
+- [Ledger](#ledger)
+- [Validate](#validate)
 - [Migration Note](#migration-note)
-- [Agent Message Bus](#agent-message-bus)
-- [Metrics Dashboard](#metrics-dashboard)
-- [Memory Vault](#memory-vault)
+- [Message](#message)
+- [Metrics](#metrics)
+- [Memory](#memory)
 - [Workspace](#workspace)
 - [Completion](#completion)
+- [Git](#git)
+- [Backup](#backup)
+- [Restore Runtime DB](#restore-runtime-db)
+- [Secret](#secret)
+- [Notify](#notify)
+- [Sidecar](#sidecar)
+- [Environment Variables](#environment-variables)
+- [Exit Codes](#exit-codes)
 
 ---
 
@@ -70,8 +100,509 @@ lazyai-cli init --tools opencode --preset standard --no-interactive
 ```
 
 ---
+## Add
 
-## Session Management
+### `add`
+
+Add agents, skills, or tool configurations to an existing initialized setup, then rerun the scaffold pipeline and update the setup store.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--tools` | Tool IDs to add configuration for |
+| `--agents` | Agent IDs to add |
+| `--skills` | Skill IDs to add |
+| `--no-interactive` | Run without prompts; at least one of `--tools`, `--agents`, or `--skills` is required |
+
+**Tool validation:**
+
+`--tools` is validated before scaffold dispatch. Valid tool IDs are `opencode`, `claude-code`, `copilot`, `pi`, and `antigravity`.
+
+Invalid tool IDs fail early with:
+
+```text
+invalid tool "X": valid tool IDs are opencode, claude-code, copilot, pi, antigravity
+```
+
+**Examples:**
+
+```bash
+lazyai-cli add --tools claude-code,pi --no-interactive
+lazyai-cli add --agents reviewer,evidence-verifier --skills fast-feedback --no-interactive
+```
+
+---
+
+## Compile
+
+### `compile`
+
+Compile `.ai/mcp.json` or `.ai/mcp.jsonc` into per-tool MCP/config files for the selected tools in the setup store.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--tool` | Compile only one tool (`opencode`, `claude-code`, `copilot`, `pi`, or `antigravity`) |
+| `--dry-run` | Preview the tools that would be compiled without writing |
+| `--local-secrets` | Route Claude Code MCP writes to `.claude/settings.local.json` instead of committed config |
+| `--validate-contracts` | Validate skill contracts before compile (default: `true`) |
+| `--strict-contracts` | Turn contract warnings into compile failures |
+
+**Example:**
+
+```bash
+lazyai-cli compile --tool claude-code --local-secrets
+```
+
+---
+
+## Update
+
+### `update`
+
+Refresh managed files to match the embedded library version while applying LazyAI conflict handling.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--force` | Overwrite local changes without prompting |
+| `--no-interactive` | Run without interactive prompts |
+| `--dry-run` | Show what would change without writing |
+
+**Example:**
+
+```bash
+lazyai-cli update --dry-run
+```
+
+---
+
+## Status
+
+### `status`
+
+Show current setup state, selected tools, file health, git conventions, and CLI version.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--dir` | Target directory (default: current directory) |
+| `--json` | Output JSON |
+
+**Example:**
+
+```bash
+lazyai-cli status --json
+```
+
+---
+
+## Server
+
+Manage MCP servers from the embedded catalog and the current setup store. The current catalog includes `ai-memory`, `filesystem`, `ripgrep`, `codegraph`, and `obsidian`.
+
+### `server list`
+
+List cataloged MCP servers and show whether each is enabled.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--json` | Output JSON |
+
+**Example:**
+
+```bash
+lazyai-cli server list --json
+```
+
+---
+
+### `server add`
+
+Enable a cataloged MCP server in the setup store. Run `lazyai-cli compile` afterward to regenerate per-tool configs.
+
+**Arguments:**
+
+- `name` (required): Catalog server name
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--no-interactive` | Skip confirmation prompt |
+
+**Example:**
+
+```bash
+lazyai-cli server add ai-memory
+lazyai-cli compile
+```
+
+Unknown server names fail with `unknown MCP server: <name>` and include the available catalog names in the error metadata.
+
+---
+
+### `server remove`
+
+Disable a cataloged MCP server in the setup store. Run `lazyai-cli compile` afterward to remove it from generated per-tool configs.
+
+**Arguments:**
+
+- `name` (required): Catalog server name
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--no-interactive` | Skip confirmation prompt |
+
+**Example:**
+
+```bash
+lazyai-cli server remove ripgrep
+lazyai-cli compile
+```
+
+---
+
+### `server doctor`
+
+Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-tool MCP config files. Pass a server name to validate only one server.
+
+**Arguments:**
+
+- `name` (optional): Catalog server name
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--json` | Output JSON |
+
+**Example:**
+
+```bash
+lazyai-cli server doctor ai-memory --json
+```
+
+---
+
+## Config
+
+### `config init`
+
+Create `.opencode/config.yaml` with defaults for agent, model, database, ledger, and notifications.
+
+```bash
+lazyai-cli config init
+```
+
+### `config get`
+
+Read one config key.
+
+```bash
+lazyai-cli config get agent.default_agent
+```
+
+### `config set`
+
+Set one config key. Critical keys print a warning before saving.
+
+```bash
+lazyai-cli config set notifications.enabled true
+```
+
+Supported keys: `agent.default_agent`, `agent.default_model`, `database.path`, `ledger.path`, `notifications.enabled`, and `notifications.webhook`.
+
+### `config list`
+
+Print all current config values.
+
+```bash
+lazyai-cli config list
+```
+
+---
+
+## Create
+
+### `create`
+
+Generate a new artifact using the artifact generator registry.
+
+**Usage:**
+
+```bash
+lazyai-cli create [type] [name]
+```
+
+**Valid types:** `agent`, `skill`, `prompt`, `command`, `template`, `hook`
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--force` | Overwrite an existing artifact |
+| `--no-interactive` | Require type and name from arguments; do not prompt |
+| `--description` | Description used by generators that support it |
+
+**Example:**
+
+```bash
+lazyai-cli create agent release-reviewer --description "Reviews release readiness" --no-interactive
+```
+
+Invalid types fail with:
+
+```text
+invalid artifact type: <type> (valid: agent, skill, prompt, command, template, hook)
+```
+
+---
+
+## Import
+
+### `import`
+
+Import configuration from another AI tool setup into LazyAI-managed form. If `source` is omitted, the current directory is scanned.
+
+**Usage:**
+
+```bash
+lazyai-cli import [source]
+```
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--tool` | Source tool to import (`opencode`, `claude-code`, `copilot`, `pi`, or `antigravity`); auto-detected if omitted |
+| `--no-interactive` | Run without confirmation prompts |
+| `--preview` | Show the import plan without writing |
+| `--strategy` | Merge strategy: `smart`, `preserve`, `replace`, or `append` |
+| `--verbose` | Show detailed output |
+| `--skip-backup` | Do not create a backup before writing |
+
+**Example:**
+
+```bash
+lazyai-cli import ../existing-setup --tool opencode --preview
+```
+
+---
+
+## Migrate
+
+### `migrate`
+
+Migrate an older LazyAI or ai-setup configuration into the current canonical format. If `source` is omitted, the current directory is scanned.
+
+**Usage:**
+
+```bash
+lazyai-cli migrate [source]
+```
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--from` | Source version hint |
+| `--no-interactive` | Run without confirmation prompts |
+| `--preview` | Show the migration plan without writing |
+| `--strategy` | Merge strategy: `smart`, `preserve`, `replace`, or `append` |
+| `--verbose` | Show detailed output |
+| `--skip-backup` | Do not create a backup before writing |
+
+**Example:**
+
+```bash
+lazyai-cli migrate ~/old-ai-setup --preview
+```
+
+---
+
+## Eject
+
+### `eject`
+
+Remove `.ai-setup.json` and `.ai-setup.db` so LazyAI stops managing the generated files. The generated files remain in place.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--no-interactive` | Skip confirmation prompt |
+
+**Example:**
+
+```bash
+lazyai-cli eject --no-interactive
+```
+
+---
+
+## Info
+
+### `info`
+
+Show metadata for one tracked artifact by basename or tracked path.
+
+**Arguments:**
+
+- `name` (required): Artifact basename or tracked file path
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--json` | Output JSON |
+
+**Example:**
+
+```bash
+lazyai-cli info guide --json
+```
+
+---
+
+## List
+
+### `list`
+
+List installed tracked artifacts, optionally filtered by category.
+
+**Usage:**
+
+```bash
+lazyai-cli list [category]
+```
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--type` | Filter by artifact type (`agents`, `skills`, `templates`, `rules`, and so on) |
+| `--verbose` | Include file paths |
+| `--json` | Output JSON |
+
+**Example:**
+
+```bash
+lazyai-cli list agents --verbose
+```
+
+---
+
+## Build Plugin
+
+### `build-plugin`
+
+Generate a Claude Code plugin directory from the embedded LazyAI library.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--out` | Output directory (default: `./dist/plugin`) |
+| `--force` | Overwrite the output directory if it exists and is non-empty |
+
+**Example:**
+
+```bash
+lazyai-cli build-plugin --out ./dist/lazyai-plugin --force
+```
+
+---
+
+## Update Self
+
+### `update-self`
+
+Download and replace the current `lazyai-cli` binary from GitHub Releases. Development builds print `Development build — skipping self-update` unless `--version` is provided.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--check` | Only check whether an update is available; exits non-zero when one is available |
+| `--force` | Skip version comparison |
+| `--dry-run` | Preview without downloading |
+| `--verbose` | Show detailed release and asset information |
+| `--version` | Download a specific release tag |
+
+**Example:**
+
+```bash
+lazyai-cli update-self --check
+lazyai-cli update-self --version v1.2.3 --dry-run
+```
+
+---
+
+## Setup
+
+### `setup`
+
+Inspect setup inventory and setup planning output. This command reports setup state; it does not start daemons or runtime execution.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--scan` | Scan known tool targets and print inventory JSON |
+| `--list` | List supported setup targets and reusable setup resources |
+| `--dry-run` | Show the setup plan without writing |
+| `--adopt` | Mark adoptable external configs as LazyAI managed; requires `--scan` |
+| `--import` | Import external configs into LazyAI reference storage; requires `--scan` |
+| `--tool` | Limit planning to a tool; repeatable and only valid with `--list` or `--dry-run` |
+| `--all` | Select all supported setup targets for the requested scope |
+| `--global` | Use global scope/home layout where supported |
+
+Select exactly one of `--scan`, `--list`, or `--dry-run`.
+
+**Examples:**
+
+```bash
+lazyai-cli setup --scan
+lazyai-cli setup --list --tool claude-code
+lazyai-cli setup --dry-run --global --all
+```
+
+---
+
+## Models
+
+### `models sync`
+
+Maintainer-only dev-harness command that refreshes `packages/cli/internal/models/catalog_gen.go` from `models.dev/api.json`.
+
+It filters the upstream catalog to the providers each supported CLI uses, checks curated tier references, prints a diff, and writes only after confirmation unless `--yes` is passed.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--yes` | Skip the confirmation prompt and write if there are no missing curated references |
+| `--output` | Write the regenerated catalog to a custom path |
+| `--dry-run` | Print the diff without writing |
+
+**Example:**
+
+```bash
+lazyai-cli models sync --dry-run
+```
+
+---
+
+## Session
 
 ### `session start [goal]`
 
@@ -141,19 +672,35 @@ lazyai-cli session end ses_1234567890
 
 ---
 
-## Health Checks
+## Doctor
 
 ### `doctor`
 
-Run health checks on the environment.
+Validate setup integrity and run six environment health checks.
 
-**Checks:**
-- File integrity (managed files present and unmodified)
-- Stray AGENTS.md files in specs/
+**Integrity checks:**
+
+- Managed files exist and match tracked hashes
+- Stray `AGENTS.md` files under `specs/`
 - Metadata gaps in spec frontmatter
-- Dependencies: sqlite3, git, jq, bash
-- Providers: ollama (localhost:11434), openai (API key)
-- Disk space usage
+
+**Environment health checks:**
+
+1. `sqlite3` dependency — fail if not found
+2. `git` dependency — fail if not found
+3. `jq` dependency — warn if not found
+4. `bash` dependency — fail if not found
+5. `ollama` provider — warn if not running on `localhost:11434`
+6. Disk space — warn above 80% used, fail above 90% used
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--fix` | Print fix instructions for detected issues |
+| `--verbose` | Show detailed output for all files and metadata issues |
+| `--json` | Output JSON |
+
 **Example:**
 
 ```bash
@@ -161,7 +708,8 @@ lazyai-cli doctor
 ```
 
 **Output:**
-```
+
+```text
 🩺 Integrity Check
 
   Status ✅ All files healthy
@@ -181,13 +729,68 @@ lazyai-cli doctor
   ⚠️  Dependency: jq          | jq not found (optional but recommended)
   ✅ Dependency: bash         | GNU bash, version 5.2.0
   ⚠️  Provider: ollama       | Ollama not running on localhost:11434
-  ✅ Provider: openai        | API key configured
   ✅ Disk space              | 45% used
 ```
 
 ---
 
-## Audit Trail
+## Auth
+
+### `auth list`
+
+List configured AI providers from the setup store and show common authentication environment variables with masked values.
+
+**Example:**
+
+```bash
+lazyai-cli auth list
+```
+
+Checks `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, and `GITHUB_TOKEN`.
+
+---
+
+## Cost
+
+### `cost show`
+
+Show cost breakdown by session.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--period`, `-p` | Time period: `day`, `week`, `month`, or `all` |
+
+```bash
+lazyai-cli cost show --period week
+```
+
+### `cost agent`
+
+Show cost and dispatch counts grouped by agent.
+
+```bash
+lazyai-cli cost agent
+```
+
+### `cost budget`
+
+Show current spend against an optional budget limit.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--limit`, `-l` | Budget limit in USD |
+
+```bash
+lazyai-cli cost budget --limit 25
+```
+
+---
+
+## Ledger
 
 ### `ledger init`
 
@@ -247,16 +850,20 @@ lazyai-cli ledger show 5
 
 ---
 
-## Validation
+## Validate
 
 ### `validate agents`
 
-Validate agent file structure.
+Validate `.opencode/agents/*.md` files.
 
 **Checks:**
-- Dispatch parameters present
-- Tool schemas correct
-- Common mistakes (text vs content, mode misuse)
+
+- YAML frontmatter is present (**error**)
+- `# System Prompt` heading is present (**error**)
+- `vibe-lab:managed kind=agent` marker comment is present (**warning**)
+- At least one `## ` section heading appears after `# System Prompt` (**warning**)
+
+The command exits with an error only when error-severity checks fail.
 
 **Example:**
 ```bash
@@ -267,11 +874,13 @@ lazyai-cli validate agents
 
 ### `validate skills`
 
-Validate skill file structure.
+Validate `.opencode/skills/`. This command is currently a stub: after confirming the skills directory exists, it prints `Skill validation not yet implemented` and exits successfully.
 
-**Checks:**
-- Skills directory exists under `.opencode/skills/`
-- Basic structure validation (expanding)
+**Planned checks printed by the stub:**
+
+- Quick Reference section presence
+- Proper frontmatter format
+- Script references validity
 
 **Example:**
 ```bash
@@ -295,7 +904,7 @@ Do not use repository harness scripts or archived assets as replacements for rem
 ---
 
 
-## Agent Message Bus
+## Message
 
 ### `message send [to-agent] [subject] [body]`
 
@@ -352,7 +961,7 @@ lazyai-cli message broadcast "All hands" "System update at 2pm"
 
 ---
 
-## Metrics Dashboard
+## Metrics
 
 ### `metrics list`
 
@@ -400,7 +1009,7 @@ lazyai-cli metrics dashboard --output my-dashboard.html
 
 ---
 
-## Memory Vault
+## Memory
 
 ### `memory save [content]`
 
@@ -527,7 +1136,7 @@ lazyai-cli completion fish | source
 
 ---
 
-## Git Integration
+## Git
 
 ### `git sync`
 
@@ -542,6 +1151,31 @@ Auto-commit all changes with descriptive messages.
 **Example:**
 ```bash
 lazyai-cli git sync --message "Fix auth bug" --force
+```
+
+---
+
+### `git log`
+
+Show recent commits, highlighting LazyAI-attributed commits.
+
+**Flags:**
+- `--limit`, `-n`: Number of commits to show (default: 10)
+
+**Example:**
+```bash
+lazyai-cli git log --limit 5
+```
+
+---
+
+### `git status`
+
+Show `git status` with LazyAI context, including the most recent active session when one is recorded.
+
+**Example:**
+```bash
+lazyai-cli git status
 ```
 
 ---
@@ -581,7 +1215,33 @@ lazyai-cli backup restore my-backup.tar.gz
 
 ---
 
-## Secrets
+## Restore Runtime DB
+
+### `restore-runtime-db`
+
+Restore `.specify/session.db` from a backup file. The current runtime database is renamed to `.specify/session.db.pre-restore` before the backup is copied into place.
+
+**Arguments:**
+
+- `backup-path` (required): Path to the SQLite backup file
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+**Safety note:** This overwrites the current runtime database. Data written since the backup was created will be lost.
+
+**Example:**
+
+```bash
+lazyai-cli restore-runtime-db .specify/session.db.backup --force
+```
+
+---
+
+## Secret
 
 ### `secret set [name] [value]`
 
@@ -644,7 +1304,7 @@ lazyai-cli secret remove api-key
 
 ---
 
-## Notifications
+## Notify
 
 ### `notify config`
 
@@ -691,7 +1351,7 @@ lazyai-cli notify test
 
 ---
 
-## Sidecar Commands
+## Sidecar
 
 Manage optional sidecar directories for docs, specs, and plans.
 

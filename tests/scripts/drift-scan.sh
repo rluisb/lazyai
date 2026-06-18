@@ -25,7 +25,7 @@
 #   bin/doctor, bin/inject       — legacy bash scripts that still mention
 #                                  vibe-lab (a separate cleanup follow-up)
 #   curation.yaml                 — historical provenance comment
-#   recommendation-summary.md    — historical planning document
+#   .archive/**/recommendation-summary.md  — archived historical planning document
 #   specs/issues                  — historical parity audit notes
 #   docs/AI-Agentic-Setup-Templates/ — historical template library
 
@@ -52,8 +52,7 @@ EXCLUDE_DIRS=(
 EXCLUDE_FILES=(
   --exclude=curation.yaml
   --exclude=doctor
-  --exclude=inject
-  --exclude=recommendation-summary.md
+  --exclude=.archive/**/recommendation-summary.md
   --exclude=drift-canary-test.md
 )
 

@@ -14,7 +14,7 @@ func TestValidateProjectAssetManifestsCurrentLibrary(t *testing.T) {
 	}
 }
 
-func TestHistoricalLibraryMaterialArchivedOutOfActiveRoots(t *testing.T) {
+func TestHistoricalLibraryMaterialRemovedFromActiveAndArchiveRoots(t *testing.T) {
 	projectRoot := projectRootForAssetManifestTest(t)
 
 	activePaths := []string{
@@ -38,8 +38,10 @@ func TestHistoricalLibraryMaterialArchivedOutOfActiveRoots(t *testing.T) {
 		"archive/issue-244-historical-library/packages/cli/library/standards/starter/orchestration-patterns.md",
 	}
 	for _, relPath := range archivedPaths {
-		if _, err := os.Stat(filepath.Join(projectRoot, filepath.FromSlash(relPath))); err != nil {
-			t.Fatalf("archived historical asset %s missing: %v", relPath, err)
+		if _, err := os.Stat(filepath.Join(projectRoot, filepath.FromSlash(relPath))); err == nil {
+			t.Fatalf("archived historical asset %s still present after cleanup", relPath)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat archived historical asset %s: %v", relPath, err)
 		}
 	}
 }

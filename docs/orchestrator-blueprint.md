@@ -160,7 +160,7 @@ ai-setup/
 │           ├── team-state.test.ts          🔴
 │           └── server.test.ts              🔴
 │
-├── demo/                                   ✅
+# demo/ removed during root housekeeping
 ├── docs/                                   ✅
 ├── scripts/                                ✅
 ├── specs/                                  ✅

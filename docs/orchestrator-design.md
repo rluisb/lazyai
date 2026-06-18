@@ -483,7 +483,7 @@ ai-setup/
 │           ├── team-state.test.ts                                  🔴
 │           └── server.test.ts                                      🔴
 │
-├── demo/                                                           ✅
+# demo/ removed during root housekeeping
 ├── docs/                                                           🟡 add orchestrator-design.md
 ├── scripts/                                                        ✅
 ├── specs/                                                          ✅

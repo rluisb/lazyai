@@ -1,0 +1,399 @@
+/* LazyAI Design System — design tokens
+ * Source of truth: rluisb/lazyai @ packages/cli/tui/theme/theme.go
+ * Every --lz-* color maps 1:1 to a lipgloss.Color in the upstream Go file.
+ */
+
+/* JetBrains Mono Nerd Font — official, ships from the upstream repo's terminal aesthetic.
+ * Nerd Font variant chosen because the TUI uses Unicode glyphs (✓ ⚠ ✗ ⚡ ⠋…) that the
+ * standard JetBrains Mono renders fine, but the Nerd Font also covers anything we'd need
+ * in docs / CLI mockups (tree connectors, progress bars, devicons). Light, Regular, Medium,
+ * Bold loaded — that covers display, body, status lines, and emphasis.
+ */
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-Light.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-Italic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("fonts/JetBrainsMonoNerdFont-ExtraBold.ttf") format("truetype");
+}
+
+/* Inter remains a substitution — only mono was provided upstream.
+ * If the team ships an official sans, swap it here.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ─── Color: brand & accents ────────────────────────────────────────── */
+  --lz-primary:    #7D56F4;  /* purple — titles, brand */
+  --lz-secondary:  #4ECDC4;  /* teal   — subtitles, bullets */
+  --lz-success:    #2ECC71;  /* green  — installed, ok */
+  --lz-warning:    #F1C40F;  /* yellow — modified, drift */
+  --lz-error:      #E74C3C;  /* red    — missing, failed */
+  --lz-orange:     #E8912D;  /* orange — conflict */
+  --lz-highlight:  #89B4FA;  /* blue   — keys, table headers */
+
+  /* ─── Color: surfaces & text ────────────────────────────────────────── */
+  --lz-text:       #CDD6F4;  /* default fg */
+  --lz-text-2:     #BAC2DE;  /* slightly dim */
+  --lz-dimmed:     #6C7086;  /* secondary fg, separators */
+  --lz-bg:         #1E1E2E;  /* canvas */
+  --lz-bg-2:       #181825;  /* deeper recess */
+  --lz-bg-code:    #313244;  /* inline code, row stripe */
+  --lz-bg-card:    #232334;  /* slightly lifted card */
+
+  /* ─── Type ──────────────────────────────────────────────────────────── */
+  /* Brand stack is monospace top-to-bottom. Propo is the prose variant
+   * (proportional metrics) so paragraphs and headings don't sit on a strict
+   * fixed-pitch grid. Use --font-mono for terminal-faithful surfaces. */
+  --font-sans: "JetBrains Mono Propo", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: var(--font-sans);
+
+  --fs-xs:   12px;
+  --fs-sm:   13px;
+  --fs-base: 14px;
+  --fs-md:   16px;
+  --fs-lg:   18px;
+  --fs-xl:   22px;
+  --fs-2xl:  28px;
+  --fs-3xl:  36px;
+  --fs-4xl:  48px;
+  --fs-5xl:  64px;
+
+  --lh-tight:  1.15;
+  --lh-snug:   1.3;
+  --lh-normal: 1.5;
+  --lh-loose:  1.7;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:    0.04em;
+
+  /* ─── Spacing (8px grid) ────────────────────────────────────────────── */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  24px;
+  --sp-6:  32px;
+  --sp-7:  48px;
+  --sp-8:  64px;
+  --sp-9:  96px;
+
+  /* ─── Radii ─────────────────────────────────────────────────────────── */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* ─── Borders ───────────────────────────────────────────────────────── */
+  --border-w: 1px;
+  --border:   1px solid var(--lz-dimmed);
+  --border-success: 1px solid var(--lz-success);
+  --border-warning: 1px solid var(--lz-warning);
+  --border-error:   1px solid var(--lz-error);
+
+  /* ─── Shadows (used sparingly) ──────────────────────────────────────── */
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 6px 24px rgba(0, 0, 0, 0.45);
+
+  /* ─── Glow (the one allowed accent) ─────────────────────────────────── */
+  --glow-primary: radial-gradient(60% 60% at 50% 0%, color-mix(in oklch, var(--lz-primary) 12%, transparent), transparent 70%);
+
+  /* ─── Motion ────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-linear: linear;
+  --dur-fast: 80ms;
+  --dur-base: 120ms;
+  --dur-slow: 200ms;
+}
+
+/* ─── Semantic element styles ─────────────────────────────────────────── */
+/* Use these directly in HTML so artifacts inherit the brand voice. */
+
+html {
+  background: var(--lz-bg);
+  color: var(--lz-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body { margin: 0; }
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--lz-primary);
+  margin: 0 0 var(--sp-4) 0;
+}
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--lz-text);
+  margin: 0 0 var(--sp-3) 0;
+}
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  color: var(--lz-text);
+  margin: 0 0 var(--sp-3) 0;
+}
+h4, .h4 {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--lz-secondary);
+  margin: 0 0 var(--sp-2) 0;
+}
+
+p { margin: 0 0 var(--sp-3) 0; max-width: 72ch; }
+
+a {
+  color: var(--lz-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--lz-secondary) 40%, transparent);
+  transition: color var(--dur-base) var(--ease-out);
+}
+a:hover { color: color-mix(in oklch, var(--lz-secondary) 90%, white); }
+
+code, .code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--lz-bg-code);
+  color: var(--lz-text);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  background: var(--lz-bg-2);
+  color: var(--lz-text);
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  border: var(--border);
+  overflow-x: auto;
+  line-height: var(--lh-normal);
+}
+pre code { background: transparent; padding: 0; }
+
+kbd, .kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--lz-highlight);
+  background: var(--lz-bg-code);
+  border: 1px solid color-mix(in oklch, var(--lz-highlight) 40%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  font-weight: 700;
+}
+
+hr {
+  border: none;
+  border-top: var(--border);
+  margin: var(--sp-5) 0;
+}
+
+/* ─── TUI primitives (web translations of Lip Gloss styles) ───────────── */
+
+.tui-line {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  white-space: pre;
+}
+
+.tui-box {
+  font-family: var(--font-mono);
+  background: var(--lz-bg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+}
+.tui-box--success { border-color: var(--lz-success); }
+.tui-box--warning { border-color: var(--lz-warning); }
+.tui-box--error   { border-color: var(--lz-error); }
+
+.tui-title    { color: var(--lz-primary);   font-weight: 700; }
+.tui-subtitle { color: var(--lz-secondary); }
+.tui-dim      { color: var(--lz-dimmed); }
+.tui-key      { color: var(--lz-highlight); font-weight: 700; }
+.tui-success  { color: var(--lz-success); }
+.tui-warning  { color: var(--lz-warning); }
+.tui-error    { color: var(--lz-error); }
+.tui-conflict { color: var(--lz-orange); }
+
+.tui-section-header {
+  color: var(--lz-primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Status glyph helpers — color is always paired with a glyph */
+.glyph-ok::before      { content: "✓ "; color: var(--lz-success); }
+.glyph-err::before     { content: "✗ "; color: var(--lz-error); }
+.glyph-warn::before    { content: "⚠ "; color: var(--lz-warning); }
+.glyph-conflict::before{ content: "⚡ "; color: var(--lz-orange); }
+.glyph-pending::before { content: "○ "; color: var(--lz-dimmed); }
+.glyph-bullet::before  { content: "• "; color: var(--lz-secondary); }
+
+/* Chips / badges */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--lz-dimmed);
+  color: var(--lz-text);
+  background: var(--lz-bg-code);
+}
+.chip--primary  { border-color: var(--lz-primary);   color: var(--lz-primary); }
+.chip--success  { border-color: var(--lz-success);   color: var(--lz-success); }
+.chip--warning  { border-color: var(--lz-warning);   color: var(--lz-warning); }
+.chip--error    { border-color: var(--lz-error);     color: var(--lz-error); }
+
+/* Focus — keyboard-first product, always visible */
+:focus-visible {
+  outline: 2px solid var(--lz-highlight);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Card — the bordered Lip Gloss box, in CSS form */
+.card {
+  background: var(--lz-bg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-0);
+}
+
+/* Buttons — primary fills, secondary outlines, link style for tertiary */
+.btn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--lz-text);
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out),
+              border-color var(--dur-base) var(--ease-out);
+}
+.btn--primary {
+  background: var(--lz-primary);
+  color: #fff;
+}
+.btn--primary:hover {
+  background: color-mix(in oklch, var(--lz-primary) 90%, white);
+}
+.btn--primary:active {
+  background: color-mix(in oklch, var(--lz-primary) 80%, black);
+}
+.btn--secondary {
+  border-color: var(--lz-dimmed);
+  color: var(--lz-text);
+}
+.btn--secondary:hover {
+  border-color: var(--lz-secondary);
+  color: var(--lz-secondary);
+}
+.btn--ghost {
+  color: var(--lz-secondary);
+  padding-left: 0;
+  padding-right: 0;
+}
+.btn--ghost:hover {
+  color: color-mix(in oklch, var(--lz-secondary) 90%, white);
+}
+
+/* Spinner — Bubbles Dot style */
+@keyframes lz-spin-dot { to { content: "⠏"; } }
+.spinner {
+  display: inline-block;
+  font-family: var(--font-mono);
+  color: var(--lz-primary);
+  animation: lz-spinner-frames 0.64s steps(1) infinite;
+}
+@keyframes lz-spinner-frames {
+  0%   { content: "⠋"; }
+  10%  { content: "⠙"; }
+  20%  { content: "⠹"; }
+  30%  { content: "⠸"; }
+  40%  { content: "⠼"; }
+  50%  { content: "⠴"; }
+  60%  { content: "⠦"; }
+  70%  { content: "⠧"; }
+  80%  { content: "⠇"; }
+  90%  { content: "⠏"; }
+}
+.spinner::before {
+  content: "⠋";
+  animation: lz-spinner-frames 0.8s steps(1) infinite;
+}
+
+/* Subtle primary glow for hero areas only */
+.lz-glow {
+  background: var(--glow-primary), var(--lz-bg);
+}

@@ -6,16 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/spf13/cobra"
-
-	"github.com/rluisb/lazyai/packages/cli/internal/handoff"
-	runtimesession "github.com/rluisb/lazyai/packages/cli/internal/runtime/session"
 )
 
 // captureStdout redirects os.Stdout to a buffer for the duration of fn.
@@ -200,94 +195,5 @@ func TestSessionEnd(t *testing.T) {
 	}
 	if !endedAt.Valid || endedAt.String == "" {
 		t.Errorf("expected ended_at to be set, got %v", endedAt)
-	}
-}
-func TestSessionEndWritesHandoffAndMetadata(t *testing.T) {
-	tmpDir := withTempDir(t)
-
-	db, err := openRuntimeDB()
-	if err != nil {
-		t.Fatalf("openRuntimeDB failed: %v", err)
-	}
-	defer db.Close()
-
-	mgr := runtimesession.NewManager(db)
-	s, err := mgr.Start("ship phase four handoff", runtimesession.StartOptions{
-		Agent:    "implementer",
-		Model:    "sonnet",
-		Repo:     "lazyai",
-		Worktree: "feature/phase4",
-		Tags:     []string{"phase4", "handoff"},
-	})
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
-	if err := mgr.UpdateSummary(s.ID, "Phase 3 is complete; session close should emit a resumable handoff."); err != nil {
-		t.Fatalf("UpdateSummary failed: %v", err)
-	}
-
-	dispatch, err := mgr.Dispatch(s.ID, runtimesession.DispatchOptions{
-		Agent:        "planner",
-		Task:         "define handoff writer contract",
-		Phase:        "phase4",
-		FilesTouched: []string{"packages/cli/internal/handoff/writer.go"},
-	})
-	if err != nil {
-		t.Fatalf("Dispatch failed: %v", err)
-	}
-	if err := mgr.CompleteDispatch(dispatch.ID, "writer contract defined", 17); err != nil {
-		t.Fatalf("CompleteDispatch failed: %v", err)
-	}
-
-	if err := runSessionEnd(&cobra.Command{}, []string{s.ID}); err != nil {
-		t.Fatalf("runSessionEnd failed: %v", err)
-	}
-
-	var handoffPath, goal, status string
-	if err := db.QueryRow("SELECT path, goal, status FROM handoff WHERE session_id = ?", s.ID).Scan(&handoffPath, &goal, &status); err != nil {
-		t.Fatalf("query handoff row failed: %v", err)
-	}
-	if goal != s.Goal {
-		t.Fatalf("handoff goal = %q, want %q", goal, s.Goal)
-	}
-	if status != "done" {
-		t.Fatalf("handoff status = %q, want done", status)
-	}
-	if matched := regexp.MustCompile(`^specs/memory/handoffs/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$`).MatchString(handoffPath); !matched {
-		t.Fatalf("handoff path %q does not match expected convention", handoffPath)
-	}
-
-	var count int
-	if err := db.QueryRow("SELECT COUNT(*) FROM handoff WHERE session_id = ?", s.ID).Scan(&count); err != nil {
-		t.Fatalf("count handoff rows failed: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("handoff row count = %d, want 1", count)
-	}
-
-	doc, err := handoff.Read(filepath.Join(tmpDir, handoffPath))
-	if err != nil {
-		t.Fatalf("handoff.Read failed: %v", err)
-	}
-	if doc.Goal != s.Goal {
-		t.Fatalf("doc goal = %q, want %q", doc.Goal, s.Goal)
-	}
-	if doc.Progress != handoff.ProgressDone {
-		t.Fatalf("doc progress = %q, want %q", doc.Progress, handoff.ProgressDone)
-	}
-	if len(doc.Constraints) == 0 {
-		t.Fatal("doc constraints should not be empty")
-	}
-	if len(doc.Decisions) == 0 {
-		t.Fatal("doc decisions should not be empty")
-	}
-	if len(doc.NextSteps) == 0 {
-		t.Fatal("doc next steps should not be empty")
-	}
-	if len(doc.Items.Done) == 0 {
-		t.Fatal("doc progress done items should not be empty")
-	}
-	if doc.SessionID != s.ID {
-		t.Fatalf("doc session_id = %q, want %q", doc.SessionID, s.ID)
 	}
 }

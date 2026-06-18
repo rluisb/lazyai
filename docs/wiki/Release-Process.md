@@ -4,11 +4,12 @@ Canonical release docs live at <https://rluisb.github.io/lazyai/development/rele
 
 ## Package tags
 
-LazyAI has independent active Go modules under `packages/`, so release tags must be prefixed by module directory:
+LazyAI has independent Go modules under `packages/`, so release tags must be prefixed by module directory:
 
 | Module | Command | Tag format |
 |---|---|---|
 | `packages/cli` | `lazyai-cli` | `packages/cli/vX.Y.Z` |
+| `packages/orchestrator` | `lazyai-orchestrator` | `packages/orchestrator/vX.Y.Z` |
 | `packages/diffviewer` | `lazyai-diffviewer` | `packages/diffviewer/vX.Y.Z` |
 
 Root `vX.Y.Z` tags do not version these submodules for Go users.
@@ -27,6 +28,7 @@ Root `vX.Y.Z` tags do not version these submodules for Go users.
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
 
@@ -35,5 +37,8 @@ Pinned installs use the same paths with `@vX.Y.Z`.
 ## Release asset names
 
 - `lazyai-cli-<os>-<arch>[.exe]`
+- `lazyai-orchestrator-<os>-<arch>[.exe]`
 - `lazyai-diffviewer-<os>-<arch>[.exe]`
 - `checksums.txt`
+
+Generated MCP configs should reference `lazyai-orchestrator`, not the old `ai-setup-orchestrator` binary name.

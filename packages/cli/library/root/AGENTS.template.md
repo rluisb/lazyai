@@ -187,15 +187,13 @@ instructions, tool runtime settings, and prompt-level framing.
 - 20–100 lines → list affected files, wait for confirmation
 - Over 100 lines → write a plan, wait for approval
 
-### Four-Point Work Contract
-For ambiguous or non-trivial work, capture these points from the request and repository context before acting:
-
-1. **WHAT** — requested outcome and scope
-2. **HOW** — approach, likely files, and whether to plan first
-3. **DON'T WANT** — exclusions, non-goals, and risky surfaces to avoid
-4. **VALIDATE** — tests, checks, or manual proof that will show the work is done
-
-Ask only when a missing point would change the work.
+### Before Every Non-Trivial Task
+1. State the goal in one sentence
+2. List files you expect to touch
+3. List what you will NOT touch
+4. List your assumptions and mark each as verified or unverified
+5. State uncertainty level (low/medium/high) and biggest unknown
+6. Wait for confirmation
 
 ### Reasoning Protocol (Non-Trivial Tasks Only)
 Use this protocol before acting on medium/large or ambiguous tasks.

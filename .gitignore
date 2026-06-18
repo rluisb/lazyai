@@ -46,8 +46,6 @@ INSTRUCTIONS.md
 
 # Scaffold-generated docs (copies from library/)
 specs/adrs/
-!specs/adrs/
-!specs/adrs/*.md
 specs/bugfixes/
 specs/features/
 specs/memory/

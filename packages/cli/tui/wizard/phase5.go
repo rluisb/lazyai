@@ -25,8 +25,12 @@ type Phase5Result struct {
 	MemoryPath        string
 	EnableObsidian    bool
 	ObsidianVaultPath string
+	EnableQmd         bool
+	QmdIndexPath      string
 	EnableCodegraph   bool
 	CodegraphDataPath string
+	EnableGraphify    bool
+	GraphifyDataPath  string
 	OpenCodePlugins   []string
 	// OpenCodeProviders are the provider IDs (e.g., "openai", "ollama-cloud")
 	// the user has authenticated and chosen to expose to OpenCode-side agents
@@ -56,8 +60,12 @@ func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction
 		result.MemoryPath,
 		result.EnableObsidian,
 		result.ObsidianVaultPath,
+		result.EnableQmd,
+		result.QmdIndexPath,
 		result.EnableCodegraph,
 		result.CodegraphDataPath,
+		result.EnableGraphify,
+		result.GraphifyDataPath,
 		result.OpenCodePlugins,
 	), PhaseContinue, nil
 }
@@ -130,28 +138,39 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 		state.MemoryPath,
 		state.EnableObsidian,
 		state.ObsidianVaultPath,
+		state.EnableQmd,
+		state.QmdIndexPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
+		state.EnableGraphify,
+		state.GraphifyDataPath,
 		state.OpenCodePlugins,
 	)
 	result.OpenCodeProviders = state.OpenCodeProviders
 	return result, PhaseContinue, nil
 }
 
-func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableCodegraph bool, codegraphDataPath string, opencodePlugins []string) *Phase5Result {
+func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableQmd bool, qmdIndexPath string, enableCodegraph bool, codegraphDataPath string, enableGraphify bool, graphifyDataPath string, opencodePlugins []string) *Phase5Result {
 	if memoryPath == "" {
 		memoryPath = ".specify/memory"
 	}
 	if enableCodegraph && codegraphDataPath == "" {
 		codegraphDataPath = ".codegraph/"
 	}
+	if enableGraphify && graphifyDataPath == "" {
+		graphifyDataPath = "graphify-out"
+	}
 
 	return &Phase5Result{
 		MemoryPath:        memoryPath,
 		EnableObsidian:    enableObsidian,
 		ObsidianVaultPath: obsidianVaultPath,
+		EnableQmd:         enableQmd,
+		QmdIndexPath:      qmdIndexPath,
 		EnableCodegraph:   enableCodegraph,
 		CodegraphDataPath: codegraphDataPath,
+		EnableGraphify:    enableGraphify,
+		GraphifyDataPath:  graphifyDataPath,
 		OpenCodePlugins:   opencodePlugins,
 	}
 }
@@ -160,8 +179,11 @@ func defaultPhase5Result() Phase5Result {
 	return Phase5Result{
 		MemoryPath:        ".specify/memory",
 		EnableObsidian:    true,
+		EnableQmd:         true,
 		EnableCodegraph:   true,
 		CodegraphDataPath: ".codegraph/",
+		EnableGraphify:    true,
+		GraphifyDataPath:  "graphify-out",
 	}
 }
 

@@ -111,16 +111,15 @@ func (m *Manager) GetDispatch(dispatchID int) (*Dispatch, error) {
 	var d Dispatch
 	var startedAt, endedAt sql.NullString
 	var parentID sql.NullInt64
-	var model, task, phase, workflow, mode sql.NullString
-	var result, errorMessage, summary, filesTouched sql.NullString
+	var filesTouched string
 
 	err := m.db.QueryRow(
 		"SELECT id, session_id, seq, parent_id, agent, model, task, phase, workflow, mode, started_at, ended_at, result, token_used, error_message, summary, files_touched FROM dispatches WHERE id = ?",
 		dispatchID,
 	).Scan(
-		&d.ID, &d.SessionID, &d.Seq, &parentID, &d.Agent, &model, &task,
-		&phase, &workflow, &mode, &startedAt, &endedAt,
-		&result, &d.TokenUsed, &errorMessage, &summary, &filesTouched,
+		&d.ID, &d.SessionID, &d.Seq, &parentID, &d.Agent, &d.Model, &d.Task,
+		&d.Phase, &d.Workflow, &d.Mode, &startedAt, &endedAt,
+		&d.Result, &d.TokenUsed, &d.ErrorMessage, &d.Summary, &filesTouched,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("dispatch not found: %d", dispatchID)
@@ -143,32 +142,8 @@ func (m *Manager) GetDispatch(dispatchID int) (*Dispatch, error) {
 		d.EndedAt = &t
 	}
 
-	if model.Valid {
-		d.Model = model.String
-	}
-	if task.Valid {
-		d.Task = task.String
-	}
-	if phase.Valid {
-		d.Phase = phase.String
-	}
-	if workflow.Valid {
-		d.Workflow = workflow.String
-	}
-	if mode.Valid {
-		d.Mode = mode.String
-	}
-	if result.Valid {
-		d.Result = result.String
-	}
-	if errorMessage.Valid {
-		d.ErrorMessage = errorMessage.String
-	}
-	if summary.Valid {
-		d.Summary = summary.String
-	}
-	if filesTouched.Valid && filesTouched.String != "" {
-		d.FilesTouched = strings.Split(filesTouched.String, ",")
+	if filesTouched != "" {
+		d.FilesTouched = strings.Split(filesTouched, ",")
 	}
 
 	return &d, nil
@@ -190,13 +165,12 @@ func (m *Manager) ListDispatches(sessionID string) ([]Dispatch, error) {
 		var d Dispatch
 		var startedAt, endedAt sql.NullString
 		var parentID sql.NullInt64
-		var model, task, phase, workflow, mode sql.NullString
-		var result, errorMessage, summary, filesTouched sql.NullString
+		var filesTouched string
 
 		if err := rows.Scan(
-			&d.ID, &d.SessionID, &d.Seq, &parentID, &d.Agent, &model, &task,
-			&phase, &workflow, &mode, &startedAt, &endedAt,
-			&result, &d.TokenUsed, &errorMessage, &summary, &filesTouched,
+			&d.ID, &d.SessionID, &d.Seq, &parentID, &d.Agent, &d.Model, &d.Task,
+			&d.Phase, &d.Workflow, &d.Mode, &startedAt, &endedAt,
+			&d.Result, &d.TokenUsed, &d.ErrorMessage, &d.Summary, &filesTouched,
 		); err != nil {
 			continue
 		}
@@ -215,32 +189,8 @@ func (m *Manager) ListDispatches(sessionID string) ([]Dispatch, error) {
 			d.EndedAt = &t
 		}
 
-		if model.Valid {
-			d.Model = model.String
-		}
-		if task.Valid {
-			d.Task = task.String
-		}
-		if phase.Valid {
-			d.Phase = phase.String
-		}
-		if workflow.Valid {
-			d.Workflow = workflow.String
-		}
-		if mode.Valid {
-			d.Mode = mode.String
-		}
-		if result.Valid {
-			d.Result = result.String
-		}
-		if errorMessage.Valid {
-			d.ErrorMessage = errorMessage.String
-		}
-		if summary.Valid {
-			d.Summary = summary.String
-		}
-		if filesTouched.Valid && filesTouched.String != "" {
-			d.FilesTouched = strings.Split(filesTouched.String, ",")
+		if filesTouched != "" {
+			d.FilesTouched = strings.Split(filesTouched, ",")
 		}
 
 		dispatches = append(dispatches, d)

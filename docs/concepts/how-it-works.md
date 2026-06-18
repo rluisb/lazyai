@@ -1,74 +1,47 @@
 # How It Works
 
-`lazyai-cli` uses a canonical-source-to-compile model. You edit one tool-agnostic layer; `lazyai-cli` generates the tool-native files. LazyAI owns the runtime/product surface that performs this setup, compilation, and local runtime-adjacent state management.
-
-vibe-lab is an input to the product boundary: it supplies principles, assets, and adapter expectations that LazyAI may embed or adapt. It is not a runtime dependency, and LazyAI keeps execution ownership inside the LazyAI product.
+`lazyai-cli` uses a **canonical source → compile** model. You edit one tool-agnostic layer; `lazyai-cli` generates the rest.
 
 ## Canonical source
 
-The managed source of truth starts with `.ai/` for MCP/catalog state and `.specify/` for project constitution/templates:
+The canonical layer lives under `.ai/`:
 
 ```text
 .ai/
+├── constitution/
+│   ├── constitution.md
+│   ├── constraints.md
+│   ├── quality-gates.md
+│   └── uncertainty.md
 ├── mcp.json
-├── populate-needed
-└── housekeeping/sync-state.json
-
-.specify/
-├── memory/constitution.md
-└── templates/
+└── orchestration/         # when orchestrator is enabled
+    ├── chains/
+    ├── teams/
+    ├── workflows/
+    └── skills/
+        ├── domains/
+        └── modes/
 ```
 
-These files are human-editable and version-controllable.
+This is where you make changes. Everything in `.ai/` is human-editable and version-controllable.
 
 ## Compiled output
 
-From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
+From `.ai/`, `lazyai-cli compile` generates tool-native files:
 
 - `AGENTS.md` — root instructions for all tools
 - `.opencode/` — OpenCode agents, skills, commands, and MCP config
 - `.claude/` — Claude Code rules, agents, skills, and `.mcp.json`
 - `.github/` — Copilot instructions and prompt files
-- `.pi/` — Pi-compatible skills-only surface
-- `.gemini/` — Antigravity settings and `hooks/lazyai/*`
 - `.vscode/` — VS Code MCP config
-
-
-```mermaid
-flowchart TD
-    A[Canonical .ai/mcp.json] --> B[lazyai-cli compile]
-    B --> C[OpenCode .opencode/lazyai.mcp.jsonc]
-    B --> D[Claude Code .mcp.json or settings.local.json]
-    B --> E[Copilot .vscode/mcp.json]
-    B --> F[Pi skill-compatible output]
-    B --> G[Antigravity .gemini settings and hooks]
-```
-
-
-The active default adapter contract uses the front-door `guide` agent plus current canonical library content. `implementer` and the other specialists remain available, but simple sessions no longer start in implementation-first mode. Retired Fortnite defaults, old orchestrator runtime files, obsolete eval surfaces, and archived research/rollback material are not part of generated default runtime output.
+- per-tool orchestrator guidance (when enabled)
 
 ## Workflow
 
 1. **Initialize once**: `lazyai-cli init`
-2. **Edit canonical files**: change `.ai/mcp.json`, `.specify/memory/constitution.md`, templates, or the relevant source docs/config for the setup
-3. **Recompile**: `lazyai-cli compile` or `lazyai-cli update`
+2. **Edit canonical files**: change rules, agents, or templates in `.ai/`
+3. **Recompile**: `lazyai-cli compile` (or `lazyai-cli update` to refresh library content)
 4. **Verify**: `lazyai-cli doctor` checks drift and missing files
-
-```mermaid
-flowchart TD
-    A[lazyai-cli init] --> B{Scope selected}
-    B -->|project| C[Project .ai and .specify]
-    B -->|global| D[Home .ai and config]
-    B -->|workspace| E[Workspace planning repo]
-    C --> F[Scaffold managed files]
-    D --> F
-    E --> F
-    F --> G[Write .ai-setup store]
-    G --> H[lazyai-cli compile]
-    H --> I[Tool-native files]
-    I --> J[lazyai-cli doctor]
-```
-
 
 ## Manifest tracking
 
@@ -101,7 +74,7 @@ This powers `lazyai-cli status`, `lazyai-cli doctor`, and `lazyai-cli update`.
 
 Backups are written under `.ai-setup-backup/` with relative paths preserved.
 
-## TOML defaults
+## TOML defaults (optional)
 
 You can provide CLI defaults via TOML:
 
@@ -112,7 +85,6 @@ Precedence: `CLI flags > project TOML > global TOML > built-in defaults`
 
 ## Execution model
 
-- Local native agents are the intended execution path: Claude Code, OpenCode, and Copilot.
-- A2A remains a config seam only and is not remote/network execution by default.
-- Runtime-adjacent state in LazyAI is local: sessions, ledger, memory, messages, metrics, costs, and backups are optional CLI-managed state around the setup.
-- Product scope is defined in [Product Boundaries](product-boundaries.md), including the shipped CLI command inventory, active embedded library, repository harness scripts, and retired/archived material.
+- **Local native agents** are the intended execution path (Claude Code, OpenCode, Copilot).
+- **A2A** is a config/seam only and is not remote/network execution by default.
+- The optional `lazyai-orchestrator` is a Go runtime invoked via `connect` so multiple MCP clients share a single daemon process.

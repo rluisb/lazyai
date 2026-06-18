@@ -28,8 +28,8 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
 	initCmd.Flags().String("workspace-root", "", "Workspace root directory for AI tool configs (workspace scope)")
-	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot, pi, antigravity)")
-	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (for example: filesystem, ai-memory, ripgrep)")
+	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot)")
+	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (orchestrator, filesystem, memory)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
 	initCmd.Flags().StringSlice("disable-features", []string{}, "Features to disable")
@@ -40,6 +40,7 @@ func init() {
 	initCmd.Flags().Bool("no-interactive", false, "Run without interactive prompts")
 	initCmd.Flags().Bool("drive-cli", false, "Delegate scaffolding to the tool's own CLI when available (Claude Code)")
 	initCmd.Flags().Bool("local-secrets", false, "Route Claude Code MCP/settings writes to gitignored .claude/settings.local.json instead of committed surfaces")
+	initCmd.Flags().Bool("plain-opencode", false, "Use plain OpenCode scaffolding without Fortnite multi-agent mode")
 	initCmd.Flags().String("org", "", "Organization name (populates [YOUR_ORG] in AGENTS.md)")
 	initCmd.Flags().String("team", "", "Team name (populates [YOUR_TEAM] in AGENTS.md)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
@@ -67,6 +68,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
 	localSecrets, _ := cmd.Flags().GetBool("local-secrets")
+	plainOpenCode, _ := cmd.Flags().GetBool("plain-opencode")
 	orgName, _ := cmd.Flags().GetString("org")
 	teamName, _ := cmd.Flags().GetString("team")
 	enableServersStr, _ := cmd.Flags().GetStringSlice("enable-servers")
@@ -100,6 +102,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		DryRun:                 dryRun,
 		CLIDriveCLI:            driveCLI,
 		CLILocalSecrets:        localSecrets,
+		CLIPlainOpenCode:       plainOpenCode,
 		CLIOrg:                 orgName,
 		CLITeam:                teamName,
 		CLIEnableServers:       enableServersStr,
@@ -303,7 +306,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(config.CLITools) == 0 {
-		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity)")
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot)")
 	}
 
 	// Drop tools that don't support the chosen scope (e.g. copilot × global).
@@ -399,8 +402,12 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 			MemoryPath:        config.CLIMemoryPath,
 			EnableObsidian:    true,
 			ObsidianVaultPath: "",
+			EnableQmd:         true,
+			QmdIndexPath:      "",
 			EnableCodegraph:   true,
 			CodegraphDataPath: ".codegraph/",
+			EnableGraphify:    true,
+			GraphifyDataPath:  "graphify-out",
 		},
 	}
 

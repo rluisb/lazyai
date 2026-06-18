@@ -1,0 +1,46 @@
+name: refactor
+trigger: /refactor
+description: Code cleanup workflow — Plan → Implement → Verify (no behavior change)
+modes:
+  standard:
+    phases: [plan, implement, verify]
+    skip_gates: false
+  fast:
+    phases: [implement, verify]
+    skip_gates: true
+default_mode: standard
+phases:
+  - name: plan
+    agent: turbo-crank
+    skill: storm-scout
+    mode: plan
+    feedforward: "Refactor target: {TARGET}. Scope: {SCOPE}. Plan the refactoring. No behavior changes allowed."
+    gate: human_approves_plan
+    gate_prompt: "Refactor plan approved. Proceed?"
+    scope:
+      files: []  # To be filled: list of files/directories in scope
+      allow_new_files: false
+      allow_behavior_change: false
+    before_validation:
+      tests_must_pass: true
+      no_drift: true
+      capture_baseline: true
+  - name: implement
+    agent: wall-builder
+    skill: build-mode
+    mode: standard
+    feedforward: "Refactor plan: {PLAN}. Execute the refactoring. Preserve all existing behavior. Run tests after each change."
+    gate: null
+  - name: verify
+    agent: shield-audit
+    skill: zero-point
+    mode: review
+    feedforward: "Refactor complete. Verify: no behavior changes, all tests pass, code quality improved."
+    gate: human_confirms_pass
+    gate_prompt: "Refactor verified. Commit?"
+    after_validation:
+      tests_must_pass: true
+      no_new_drift: true
+      behavior_preserved: true
+    metrics:
+      scope_violation_detection: true

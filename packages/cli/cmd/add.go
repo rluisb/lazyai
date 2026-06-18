@@ -8,7 +8,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
@@ -47,29 +46,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		tools = append(tools, types.ToolId(t))
 	}
 
-	if err := validateToolIDs(tools); err != nil {
-		return err
-	}
-
 	if nonInteractive {
 		return runAddNonInteractive(tools, agentsStr, skillsStr)
 	}
 	return runAddInteractive(tools, agentsStr, skillsStr)
-}
-
-func validateToolIDs(tools []types.ToolId) error {
-	if len(tools) == 0 {
-		return nil
-	}
-
-	registry := adapter.NewRegistry()
-	for _, tool := range tools {
-		if _, err := registry.Get(tool); err != nil {
-			return fmt.Errorf("invalid tool %q: valid tool IDs are opencode, claude-code, copilot, pi, antigravity", tool)
-		}
-	}
-
-	return nil
 }
 
 func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
@@ -78,7 +58,11 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 		var toolStrs []string
 		toolSelect := huh.NewMultiSelect[string]().
 			Title("Which AI tools to add configuration for?").
-			Options(addToolOptions()...).
+			Options(
+				huh.NewOption("OpenCode", "opencode"),
+				huh.NewOption("Claude Code", "claude-code"),
+				huh.NewOption("GitHub Copilot", "copilot"),
+			).
 			Value(&toolStrs)
 
 		if err := theme.NewForm(huh.NewGroup(toolSelect)).Run(); err != nil {
@@ -95,7 +79,15 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 		var agentStrs []string
 		agentSelect := huh.NewMultiSelect[string]().
 			Title("Which agents to add?").
-			Options(addAgentOptions()...).
+			Options(
+				huh.NewOption("Builder", "builder"),
+				huh.NewOption("Documenter", "documenter"),
+				huh.NewOption("Orchestrator", "orchestrator"),
+				huh.NewOption("Planner", "planner"),
+				huh.NewOption("Red Team", "red-team"),
+				huh.NewOption("Reviewer", "reviewer"),
+				huh.NewOption("Scout", "scout"),
+			).
 			Value(&agentStrs)
 
 		if err := theme.NewForm(huh.NewGroup(agentSelect)).Run(); err != nil {
@@ -109,7 +101,18 @@ func runAddInteractive(tools []types.ToolId, agents, skills []string) error {
 		var skillStrs []string
 		skillSelect := huh.NewMultiSelect[string]().
 			Title("Which skills to add?").
-			Options(addSkillOptions()...).
+			Options(
+				huh.NewOption("Anti-Speculation", "anti-speculation"),
+				huh.NewOption("Extract Standards", "extract-standards"),
+				huh.NewOption("Implement", "implement"),
+				huh.NewOption("Iterate", "iterate"),
+				huh.NewOption("Memory Write", "memory-write"),
+				huh.NewOption("Orchestrate", "orchestrate"),
+				huh.NewOption("Parallel Execution", "parallel-execution"),
+				huh.NewOption("Plan", "plan"),
+				huh.NewOption("Research", "research"),
+				huh.NewOption("TDD Loop", "tdd-loop"),
+			).
 			Value(&skillStrs)
 
 		if err := theme.NewForm(huh.NewGroup(skillSelect)).Run(); err != nil {
@@ -198,30 +201,4 @@ func runAddWithSelections(newTools []types.ToolId, newAgents, newSkills []string
 	}
 	fmt.Println()
 	return nil
-}
-
-func addToolOptions() []huh.Option[string] {
-	return []huh.Option[string]{
-		huh.NewOption("OpenCode", string(types.ToolIdOpenCode)),
-		huh.NewOption("Claude Code", string(types.ToolIdClaudeCode)),
-		huh.NewOption("GitHub Copilot", string(types.ToolIdCopilot)),
-		huh.NewOption("OMP/Pi", string(types.ToolIdPi)),
-		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),
-	}
-}
-
-func addAgentOptions() []huh.Option[string] {
-	options := make([]huh.Option[string], 0, len(types.ALL_AGENTS))
-	for _, agent := range types.ALL_AGENTS {
-		options = append(options, huh.NewOption(string(agent), string(agent)))
-	}
-	return options
-}
-
-func addSkillOptions() []huh.Option[string] {
-	options := make([]huh.Option[string], 0, len(types.ALL_SKILLS))
-	for _, skill := range types.ALL_SKILLS {
-		options = append(options, huh.NewOption(string(skill), string(skill)))
-	}
-	return options
 }

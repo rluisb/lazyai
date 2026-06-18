@@ -15,15 +15,15 @@ Ensures consistency, quality, traceability, and prevents speculative implementat
 
 ## Workflow
 
-1. **Research:** Researcher agent explores the codebase and existing patterns
-2. **Plan:** Planner agent creates a plan with acceptance criteria
-3. **Implement:** Implementer agent executes the plan
+1. **Research:** Scout agent explores the codebase and existing patterns
+2. **Plan:** Planner agent creates a phased task list with dependencies
+3. **Implement:** Builder agent implements one task at a time, writing tests first
 4. **Review:** Reviewer agent verifies the implementation against the spec
 5. **Merge:** Human review and merge
 
 ## Purpose Gate (Before Implementation)
 
-Before writing any code, the implementer must verify:
+Before writing any code, the builder must verify:
 
 1. **Is this behavior in the spec or task?** → If NO, don't build it
 2. **Is this the simplest way to satisfy the spec?** → If NO, simplify

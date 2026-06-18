@@ -44,7 +44,7 @@ func TestMergeJSONFile_PreservesUserKeys(t *testing.T) {
 
 	patch := map[string]any{
 		"mcpServers": map[string]any{
-			"memory": map[string]any{"command": "ai-setup", "args": []any{"server"}},
+			"orchestrator": map[string]any{"command": "ai-setup", "args": []any{"server"}},
 		},
 	}
 	bak, err := MergeJSONFile(path, patch)

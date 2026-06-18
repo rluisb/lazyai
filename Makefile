@@ -1,7 +1,8 @@
-.PHONY: build test lint vet clean cli-build cli-test cli-vet cli-tidy diffviewer-build diffviewer-test diffviewer-vet diffviewer-tidy go-work-sync cli-snapshot diffviewer-snapshot snapshot all
+.PHONY: build test lint vet clean cli-build cli-test cli-vet cli-tidy orchestrator-build orchestrator-test orchestrator-vet orchestrator-tidy diffviewer-build diffviewer-test diffviewer-vet diffviewer-tidy go-work-sync cli-snapshot orchestrator-snapshot diffviewer-snapshot snapshot all
 
 GO = go
 CLI_DIR = packages/cli
+ORCHESTRATOR_DIR = packages/orchestrator
 DIFFVIEWER_DIR = packages/diffviewer
 DIST_DIR = dist
 VERSION ?= 0.0.0-dev
@@ -20,6 +21,18 @@ cli-vet:
 cli-tidy:
 	cd $(CLI_DIR) && $(GO) mod tidy
 
+orchestrator-build:
+	cd $(ORCHESTRATOR_DIR) && $(GO) build -o lazyai-orchestrator ./cmd/lazyai-orchestrator
+
+orchestrator-test:
+	cd $(ORCHESTRATOR_DIR) && $(GO) test ./... -count=1
+
+orchestrator-vet:
+	cd $(ORCHESTRATOR_DIR) && $(GO) vet ./...
+
+orchestrator-tidy:
+	cd $(ORCHESTRATOR_DIR) && $(GO) mod tidy
+
 diffviewer-build:
 	cd $(DIFFVIEWER_DIR) && $(GO) build -o lazyai-diffviewer ./cmd/lazyai-diffviewer
 
@@ -35,25 +48,29 @@ diffviewer-tidy:
 go-work-sync:
 	$(GO) work sync
 
-build: cli-build diffviewer-build
+build: cli-build orchestrator-build diffviewer-build
 
-test: cli-test diffviewer-test
+test: cli-test orchestrator-test diffviewer-test
 
-vet: cli-vet diffviewer-vet
+vet: cli-vet orchestrator-vet diffviewer-vet
 
 lint: vet
 
 clean:
 	rm -f $(CLI_DIR)/lazyai-cli $(CLI_DIR)/coverage.out $(CLI_DIR)/coverage.html
+	rm -f $(ORCHESTRATOR_DIR)/lazyai-orchestrator
 	rm -f $(DIFFVIEWER_DIR)/lazyai-diffviewer
-	rm -f $(CLI_DIR)/dist $(DIFFVIEWER_DIR)/dist
+	rm -rf $(CLI_DIR)/dist $(ORCHESTRATOR_DIR)/dist $(DIFFVIEWER_DIR)/dist
 
 cli-snapshot:
 	cd $(CLI_DIR) && goreleaser build --snapshot --clean
 
+orchestrator-snapshot:
+	cd $(ORCHESTRATOR_DIR) && goreleaser build --snapshot --clean
+
 diffviewer-snapshot:
 	cd $(DIFFVIEWER_DIR) && goreleaser build --snapshot --clean
 
-snapshot: cli-snapshot diffviewer-snapshot
+snapshot: cli-snapshot orchestrator-snapshot diffviewer-snapshot
 
 all: vet test build

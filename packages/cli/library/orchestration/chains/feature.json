@@ -1,0 +1,115 @@
+{
+  "kind": "chain",
+  "name": "feature",
+  "description": "New feature delivery from research through review and documentation",
+  "version": "1.0.0",
+  "entry": "research",
+  "domain_skill_injection": "all_steps",
+  "mode_skill_injection": "builder_steps_only",
+  "steps": [
+    {
+      "id": "research",
+      "agent": "scout",
+      "skills": ["research"],
+      "description": "Map affected code, patterns, and dependencies before planning work.",
+      "transitions": {
+        "success": "plan",
+        "failure": {
+          "retry": 1,
+          "then": "handoff"
+        }
+      }
+    },
+    {
+      "id": "plan",
+      "agent": "planner",
+      "skills": ["plan"],
+      "description": "Create a phased implementation plan before quality review and approval.",
+      "transitions": {
+        "success": "plan-quality"
+      }
+    },
+    {
+      "id": "plan-quality",
+      "agent": "planner",
+      "skills": ["plan"],
+      "description": "Run the inline plan quality checklist and emit a PlanQualityReport before approval.",
+      "transitions": {
+        "success": "plan-gate",
+        "pass": "plan-gate",
+        "warn": "plan-gate",
+        "fail": "plan-gate"
+      }
+    },
+    {
+      "id": "plan-gate",
+      "agent": "planner",
+      "skills": [],
+      "description": "Present PlanQualityReport verdict and findings for user approval before implementation.",
+      "gate": "user_approval",
+      "transitions": {
+        "approved": "implement",
+        "rejected": "plan"
+      }
+    },
+    {
+      "id": "implement",
+      "agent": "builder",
+      "skills": ["implement", "anti-speculation"],
+      "description": "Implement the approved plan and run the standard quality gates.",
+      "transitions": {
+        "success": "review",
+        "failure": {
+          "retry": 2,
+          "then": "plan"
+        }
+      }
+    },
+    {
+      "id": "review",
+      "agent": "reviewer",
+      "skills": ["extract-standards"],
+      "description": "Review the implementation for correctness, quality, and standards alignment.",
+      "transitions": {
+        "pass": "chain-verify",
+        "minor_issues": "fix",
+        "blocking": "fix",
+        "design_issues": "plan"
+      }
+    },
+    {
+      "id": "fix",
+      "agent": "builder",
+      "skills": ["iterate"],
+      "description": "Address review findings and rerun the relevant checks.",
+      "transitions": {
+        "success": "review",
+        "failure": {
+          "retry": 1,
+          "then": "handoff"
+        }
+      }
+    },
+    {
+      "id": "chain-verify",
+      "agent": "reviewer",
+      "skills": ["chain-verify"],
+      "description": "Verify spec, plan, task, implementation, review, and test evidence before documentation.",
+      "transitions": {
+        "success": "document",
+        "pass": "document",
+        "warn": "document",
+        "fail": "document"
+      }
+    },
+    {
+      "id": "document",
+      "agent": "documenter",
+      "skills": [],
+      "description": "Update user-facing or developer-facing documentation when behavior changed.",
+      "transitions": {
+        "success": "done"
+      }
+    }
+  ]
+}

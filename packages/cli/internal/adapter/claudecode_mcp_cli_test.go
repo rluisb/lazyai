@@ -203,33 +203,11 @@ func TestMcpServerToJSON_HTTP(t *testing.T) {
 		t.Errorf("invalid JSON: %v", err)
 	}
 
-	if payloadType, ok := payload["type"]; !ok || payloadType != "http" {
-		t.Errorf("missing or wrong type: %v", payloadType)
-	}
 	if url, ok := payload["url"]; !ok || url != "http://localhost:3000" {
 		t.Errorf("missing or wrong url: %v", url)
 	}
 	if headers, ok := payload["headers"].(map[string]interface{}); !ok {
 		t.Errorf("missing headers: %v", headers)
-	}
-}
-
-// TestMcpServerToJSON_StdioNoType verifies stdio payload has no type key.
-func TestMcpServerToJSON_StdioNoType(t *testing.T) {
-	srv := McpServer{
-		Command: "npx",
-		Args:    []string{"-y", "my-mcp-server"},
-	}
-
-	jsonStr := mcpServerToJSON(srv)
-
-	// Verify it's valid JSON and contains no type key.
-	var payload map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &payload); err != nil {
-		t.Errorf("invalid JSON: %v\nJSON: %s", err, jsonStr)
-	}
-	if _, ok := payload["type"]; ok {
-		t.Errorf("stdio payload should not include type, got: %v", payload["type"])
 	}
 }
 
@@ -362,8 +340,8 @@ func TestMCPMultipleServersAddedInSequence(t *testing.T) {
 	}
 }
 
-// TestMCPFalseFlagServerSkipped verifies that servers flagged false are not registered.
-func TestMCPFalseFlagServerSkipped(t *testing.T) {
+// TestMCPDisabledServerSkipped verifies that disabled servers are not registered.
+func TestMCPDisabledServerSkipped(t *testing.T) {
 	runner := &recordingRunner{}
 	ctx := CompileContext{
 		SetupScope: types.SetupScopeProject,
@@ -376,7 +354,7 @@ func TestMCPFalseFlagServerSkipped(t *testing.T) {
 			Args:    []string{"-y", "@modelcontextprotocol/server-filesystem"},
 			Enabled: boolPtr(true),
 		},
-		"flagged-off-server": {
+		"disabled-server": {
 			Command: "npx",
 			Args:    []string{"-y", "some-server"},
 			Enabled: boolPtr(false),

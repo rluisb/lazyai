@@ -10,14 +10,8 @@ import (
 // Resolution priority: workspace > project > global > default.
 // When no sidecar is configured at any level, it falls back to the scope root.
 func Resolve(scope Scope, projectRoot string) (ResolvedPaths, error) {
-	// 1. Load global config dir before applying configured sidecars.
-	globalDir, err := getGlobalConfigDir()
-	if err != nil {
-		return ResolvedPaths{}, err
-	}
-
-	// 2. Determine the default (fallback) root for this scope.
-	defaultRoot, err := scopeDefaultRoot(scope, projectRoot, globalDir)
+	// 1. Determine the default (fallback) root for this scope.
+	defaultRoot, err := scopeDefaultRoot(scope, projectRoot)
 	if err != nil {
 		return ResolvedPaths{}, err
 	}
@@ -29,76 +23,61 @@ func Resolve(scope Scope, projectRoot string) (ResolvedPaths, error) {
 		ConfigLevel: "default",
 	}
 
-	apply := func(cfg *SidecarConfig, level, anchor string) error {
-		if cfg == nil {
-			return nil
-		}
-
-		resolved, err := resolveSidecar(cfg, anchor)
-		if err != nil {
-			return err
-		}
-		result = resolved
-		result.ConfigLevel = level
-		return nil
+	// 2. Load sidecars in priority order and merge.
+	globalCfg, err := LoadGlobalSidecar()
+	if err != nil {
+		return ResolvedPaths{}, err
 	}
 
-	// 3. Load and apply sidecars in scope-specific chain order.
-	switch scope {
-	case ScopeGlobal:
-		globalCfg, err := LoadGlobalSidecar()
+	projectCfg, err := LoadProjectSidecar(projectRoot)
+	if err != nil {
+		return ResolvedPaths{}, err
+	}
+
+	workspaceCfg, err := LoadWorkspaceSidecar()
+	if err != nil {
+		return ResolvedPaths{}, err
+	}
+
+	// Apply global if present.
+	if globalCfg != nil {
+		resolved, err := resolveSidecar(globalCfg, scopeAnchor(scope, projectRoot, ""))
 		if err != nil {
 			return ResolvedPaths{}, err
 		}
-		if err := apply(globalCfg, "global", globalDir); err != nil {
-			return ResolvedPaths{}, err
-		}
-	case ScopeProject:
-		globalCfg, err := LoadGlobalSidecar()
+		result = resolved
+		result.ConfigLevel = "global"
+	}
+
+	// Apply project if present.
+	if projectCfg != nil {
+		resolved, err := resolveSidecar(projectCfg, scopeAnchor(scope, projectRoot, projectRoot))
 		if err != nil {
 			return ResolvedPaths{}, err
 		}
-		projectCfg, err := LoadProjectSidecar(projectRoot)
+		result = resolved
+		result.ConfigLevel = "project"
+	}
+
+	// Apply workspace if present.
+	if workspaceCfg != nil {
+		globalDir, err := getGlobalConfigDir()
 		if err != nil {
 			return ResolvedPaths{}, err
 		}
-		if err := apply(globalCfg, "global", globalDir); err != nil {
-			return ResolvedPaths{}, err
-		}
-		if err := apply(projectCfg, "project", projectRoot); err != nil {
-			return ResolvedPaths{}, err
-		}
-	case ScopeWorkspace:
-		globalCfg, err := LoadGlobalSidecar()
+		resolved, err := resolveSidecar(workspaceCfg, scopeAnchor(scope, projectRoot, globalDir))
 		if err != nil {
 			return ResolvedPaths{}, err
 		}
-		projectCfg, err := LoadProjectSidecar(projectRoot)
-		if err != nil {
-			return ResolvedPaths{}, err
-		}
-		workspaceCfg, err := LoadWorkspaceSidecar()
-		if err != nil {
-			return ResolvedPaths{}, err
-		}
-		if err := apply(globalCfg, "global", globalDir); err != nil {
-			return ResolvedPaths{}, err
-		}
-		if err := apply(projectCfg, "project", projectRoot); err != nil {
-			return ResolvedPaths{}, err
-		}
-		if err := apply(workspaceCfg, "workspace", globalDir); err != nil {
-			return ResolvedPaths{}, err
-		}
-	default:
-		return ResolvedPaths{}, fmt.Errorf("unknown scope: %v", scope)
+		result = resolved
+		result.ConfigLevel = "workspace"
 	}
 
 	return result, nil
 }
 
 // scopeDefaultRoot returns the fallback directory when no sidecar is configured.
-func scopeDefaultRoot(scope Scope, projectRoot, globalDir string) (string, error) {
+func scopeDefaultRoot(scope Scope, projectRoot string) (string, error) {
 	switch scope {
 	case ScopeWorkspace:
 		cfg, err := LoadWorkspaceConfig()
@@ -117,9 +96,29 @@ func scopeDefaultRoot(scope Scope, projectRoot, globalDir string) (string, error
 	case ScopeProject:
 		return projectRoot, nil
 	case ScopeGlobal:
-		return globalDir, nil
+		dir, err := getGlobalConfigDir()
+		if err != nil {
+			return "", err
+		}
+		return dir, nil
 	default:
 		return "", fmt.Errorf("unknown scope: %v", scope)
+	}
+}
+
+// scopeAnchor returns the anchor directory for resolving relative sidecar.path values.
+func scopeAnchor(scope Scope, projectRoot string, fallback string) string {
+	switch scope {
+	case ScopeWorkspace, ScopeGlobal:
+		dir, err := getGlobalConfigDir()
+		if err != nil {
+			return fallback
+		}
+		return dir
+	case ScopeProject:
+		return projectRoot
+	default:
+		return fallback
 	}
 }
 
@@ -132,9 +131,9 @@ func resolveSidecar(cfg *SidecarConfig, anchor string) (ResolvedPaths, error) {
 
 	sidecarPath := cfg.Path
 	if sidecarPath == "" {
-		return ResolvedPaths{}, fmt.Errorf("sidecar path is required but empty")
-	}
-	if !filepath.IsAbs(sidecarPath) {
+		// If path is empty, use the anchor as the sidecar root.
+		sidecarPath = anchor
+	} else if !filepath.IsAbs(sidecarPath) {
 		sidecarPath = filepath.Join(anchor, sidecarPath)
 	}
 

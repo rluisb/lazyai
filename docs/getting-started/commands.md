@@ -45,7 +45,7 @@ Status: active
 Started: 2026-05-24T00:44:40Z
 
 Dispatches:
-  [completed] implementer: Implement auth middleware
+  [completed] builder: Implement auth middleware
   [completed] reviewer: Review auth implementation
 ```
 
@@ -71,14 +71,15 @@ Validate your environment before starting work.
 lazyai-cli doctor
 ```
 
-Doctor reports setup integrity first, then these 6 environment checks:
-
-1. `sqlite3` dependency
-2. `git` dependency
-3. `jq` dependency (optional warning)
-4. `bash` dependency
-5. `ollama` provider on `localhost:11434` (warning if unavailable)
-6. Disk space usage
+Checks:
+- File integrity (managed files present and unmodified)
+- Stray AGENTS.md files
+- Metadata gaps in specs
+- Stale Claude MCP entries
+- Dependency health (sqlite3, git, jq, bash)
+- Provider status (ollama, openai)
+- Disk space
+- Orchestrator binary on PATH
 
 ### JSON Output
 
@@ -87,80 +88,6 @@ lazyai-cli doctor --json
 ```
 
 Useful for CI/CD pipelines and automated monitoring.
-
-## Setup and Configuration Commands
-
-These setup-core commands cover common maintenance tasks around an initialized LazyAI project.
-
-### Manage MCP Servers
-
-Enable or disable cataloged MCP servers, then compile per-tool configs.
-
-```bash
-lazyai-cli server list
-lazyai-cli server add ai-memory
-lazyai-cli compile
-```
-
-### Configure Local Defaults
-
-Create and update `.opencode/config.yaml`.
-
-```bash
-lazyai-cli config init
-lazyai-cli config set notifications.enabled true
-```
-
-### Create an Artifact
-
-Generate agents, skills, prompts, commands, templates, or hooks.
-
-```bash
-lazyai-cli create agent release-reviewer --description "Reviews release readiness" --no-interactive
-```
-
-### Manage Sidecars
-
-Attach optional docs/specs/plans directories to workspace, project, or global scope.
-
-```bash
-lazyai-cli sidecar init --scope project --path ../shared-docs
-lazyai-cli sidecar status
-```
-
-### Import an Existing Setup
-
-Import an existing tool setup into LazyAI-managed form.
-
-```bash
-lazyai-cli import ../existing-setup --tool opencode --preview
-```
-
-### Migrate Older LazyAI or ai-setup Config
-
-Move older LazyAI or ai-setup files into the current canonical format.
-
-```bash
-lazyai-cli migrate ~/old-ai-setup --preview
-```
-
-### Update the CLI Binary
-
-Check or install a GitHub Release for `lazyai-cli`.
-
-```bash
-lazyai-cli update-self --check
-```
-
-### Inspect Setup Inventory
-
-Scan or plan supported setup targets without starting runtime execution.
-
-```bash
-lazyai-cli setup --scan
-lazyai-cli setup --dry-run --global --all
-```
-
 
 ## Audit Trail
 
@@ -177,7 +104,7 @@ Creates `.specify/ledger.jsonl` with a genesis entry.
 ### Append Events
 
 ```bash
-lazyai-cli ledger append dispatch "agent=implementer task=auth"
+lazyai-cli ledger append dispatch "agent=builder task=auth"
 lazyai-cli ledger append session_start "goal=Implement auth"
 lazyai-cli ledger append validation "status=pass agents=8"
 ```
@@ -212,10 +139,9 @@ lazyai-cli validate agents
 ```
 
 Checks:
-- YAML frontmatter present (**error**)
-- `# System Prompt` heading present (**error**)
-- Managed marker present (**warning**)
-- Section heading after `# System Prompt` present (**warning**)
+- Dispatch Parameters section present
+- Tool Schema Quick Reference present
+- Common mistakes (text vs content, mode misuse)
 
 ### Validate Skills
 
@@ -223,10 +149,9 @@ Checks:
 lazyai-cli validate skills
 ```
 
-Current behavior:
-- Confirms `.opencode/skills/` exists
-- Prints `Skill validation not yet implemented`
-- Lists planned checks for quick reference, frontmatter, and script references
+Checks:
+- Skills directory exists
+- Skill structure validation (basic checks; expanding)
 
 ## Workspace
 
@@ -256,11 +181,31 @@ lazyai-cli workspace switch my-project
 lazyai-cli workspace status
 ```
 
-## Runtime migration note
+## Workflow
 
-Legacy `task`, `workflow`, `orchestration`, `mcp-setup`, and obsolete `eval` CLI commands were removed during the runtime refactor. Repository harness scripts are not replacements for those product commands.
+Execute structured workflows defined in `.opencode/workflows/*.yaml`.
 
-See `../migration/fortnite-orchestrator-removal.md` and `../concepts/product-boundaries.md` for replacements, rollback guidance, and current command ownership.
+### List Workflows
+
+```bash
+lazyai-cli workflow list
+```
+
+### Show Workflow Details
+
+```bash
+lazyai-cli workflow show <workflow-name>
+```
+
+### Run a Workflow
+
+```bash
+# Dry run by default — shows what would execute
+lazyai-cli workflow run <workflow-name>
+
+# Actually execute
+lazyai-cli workflow run <workflow-name> --dry-run=false
+```
 
 ## Agent Message Bus
 
@@ -269,13 +214,13 @@ SQLite-based messaging between agents.
 ### Send a Message
 
 ```bash
-lazyai-cli message send implementer "Need help" "Can you review the auth code?" --priority high
+lazyai-cli message send builder "Need help" "Can you review the auth code?" --priority high
 ```
 
 ### Receive Messages
 
 ```bash
-lazyai-cli message recv implementer
+lazyai-cli message recv builder
 ```
 
 **Note:** This marks all unread messages for the agent as read and shows the 10 most recent messages.

@@ -18,7 +18,7 @@ func setupSessionTestDB(t *testing.T) *runtime.DB {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if _, err := db.Exec(runtime.SchemaCurrent); err != nil {
+	if _, err := db.Exec(runtime.SchemaV1); err != nil {
 		t.Fatalf("apply schema failed: %v", err)
 	}
 

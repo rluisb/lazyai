@@ -107,7 +107,20 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 	metadataErrors := countMetadataSeverity(metadataGaps, "error")
 
-	// Run enhanced health checks.
+	// Diagnose Claude user-scope MCP entries that still reference the legacy
+	// ai-setup orchestrator binary/package — they conflict with the
+	// project-scope `lazyai-orchestrator connect` LazyAI writes today (#209).
+	// Detection is best-effort: a missing $HOME, an absent `~/.claude.json`,
+	// or malformed JSON all surface as zero findings rather than errors.
+	homeDir, _ := os.UserHomeDir()
+	staleMcpEntries, err := findStaleClaudeMcpEntries(homeDir)
+	if err != nil {
+		// I/O error (e.g., permission denied). Warn but don't block doctor.
+		cmdLog.Warn("could not scan Claude user-scope MCP config", "error", err)
+		staleMcpEntries = nil
+	}
+
+	// Run enhanced health checks
 	envChecks := runEnhancedHealthChecks()
 	envPass, envWarn, envFail := 0, 0, 0
 	for _, c := range envChecks {
@@ -121,7 +134,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	issues := len(missingFiles) + len(modifiedFiles) + metadataErrors + len(strayAgentsFiles) + envFail
+	issues := len(missingFiles) + len(modifiedFiles) + len(strayAgentsFiles) + metadataErrors + len(staleMcpEntries) + envFail
 	isHealthy := issues == 0
 
 	// JSON output
@@ -133,6 +146,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			"modifiedFiles":    modifiedFiles,
 			"strayAgentsFiles": strayAgentsFiles,
 			"metadataGaps":     metadataGaps,
+			"staleMcpEntries":  staleMcpEntries,
 			"healthChecks":     envChecks,
 			"checkedAt":        checkedAt,
 		}
@@ -194,7 +208,11 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	} else {
 		printKV("  Metadata gaps", dimStyle.Render("0"), labelStyle, lipgloss.NewStyle())
 	}
-	printKV("  Health warnings", dimStyle.Render(fmt.Sprintf("%d", envWarn)), labelStyle, lipgloss.NewStyle())
+	if len(staleMcpEntries) > 0 {
+		printKV("  Stale MCP entries", yellowStyle.Render(fmt.Sprintf("%d", len(staleMcpEntries))), labelStyle, lipgloss.NewStyle())
+	} else {
+		printKV("  Stale MCP entries", dimStyle.Render("0"), labelStyle, lipgloss.NewStyle())
+	}
 
 	// Show missing files
 	if len(missingFiles) > 0 {
@@ -253,13 +271,12 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if envWarn > 0 || envFail > 0 {
+	if len(staleMcpEntries) > 0 {
 		fmt.Println()
-		fmt.Printf("  %s %s\n", yellowStyle.Render("!"), yellowStyle.Render("Environment health warnings:"))
-		for _, check := range envChecks {
-			if check.Status == "warn" || check.Status == "fail" {
-				fmt.Printf("    %s %s — %s\n", yellowStyle.Render("!"), check.Name, check.Detail)
-			}
+		fmt.Printf("  %s %s\n", yellowStyle.Render("!"), yellowStyle.Render(fmt.Sprintf("Stale Claude MCP entries (%d):", len(staleMcpEntries))))
+		for _, entry := range staleMcpEntries {
+			fmt.Printf("    %s %s\n", yellowStyle.Render("!"), entry.Reason)
+			fmt.Printf("      %s %s\n", dimStyle.Render("fix:"), cyanStyle.Render(entry.Remediation))
 		}
 	}
 

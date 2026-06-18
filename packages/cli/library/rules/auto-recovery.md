@@ -58,6 +58,6 @@ Before any recovery action, answer:
 
 ## Enforcement
 
-- Recovery guidance must distinguish auto-allowed low-risk actions from human-gated recovery.
+- Orchestrator guidance must distinguish auto-allowed low-risk actions from human-gated recovery.
 - Recovery summaries must include failure cause/evidence, selected pattern, retry count/limit, and idempotency/safety check.
-- Do not change runtime retry semantics, state schemas, or workflow behavior for this policy.
+- Do not change orchestrator runtime retry semantics, chain-machine behavior, workflow-machine behavior, or state schemas for this policy.

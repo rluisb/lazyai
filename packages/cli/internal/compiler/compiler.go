@@ -12,10 +12,9 @@ type ToolOverrides struct {
 // ToolOverrideMap maps tool IDs to their template overrides.
 var ToolOverrideMap = map[string]ToolOverrides{
 	"opencode": {
-		Description: "This project uses OpenCode with LazyAI integration.",
+		Description: "This project uses OpenCode with ai-setup integration.",
 		Notes: "## OpenCode-Specific Notes\n\n" +
-			"- Project config: `opencode.json`\n" +
-			"- LazyAI-only MCP extras: `.opencode/lazyai.mcp.jsonc`\n" +
+			"- Project config: `opencode.json` at project root\n" +
 			"- Agents: `.opencode/agents/<name>.md`\n" +
 			"- Skills: `.opencode/skills/<name>/SKILL.md`\n" +
 			"- Commands: `.opencode/commands/<name>.md`\n" +

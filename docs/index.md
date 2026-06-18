@@ -1,51 +1,39 @@
 # LazyAI
 
-Scaffold a canonical, multi-tool AI development environment from one CLI.
+Scaffold a canonical, multi-tool AI development environment from one CLI, with optional orchestration scaffolding and MCP runtime integration.
 
-`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, GitHub Copilot, OMP/Pi, and Antigravity. It ships with bundled agents, skills, templates, rules, hook runtimes, a workflow catalog, and an MCP catalog so teams can keep one managed source of truth. LazyAI owns this runtime/product surface; vibe-lab informs principles, assets, and adapter expectations, but is not a runtime dependency.
+`lazyai-cli` initializes and maintains a **tool-agnostic canonical layer** under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, and GitHub Copilot. It ships with bundled agents, skills, templates, rules, and optional MCP servers so teams can adopt a consistent AI operating system with minimal configuration.
 
 ## What it does
 
 - **One-time setup**: `lazyai-cli init` scaffolds canonical files, tool-native directories, and an MCP catalog.
 - **Compile**: `lazyai-cli compile` regenerates per-tool configs from the canonical source of truth.
 - **Update**: `lazyai-cli update` refreshes library content while preserving customizations.
-- **Doctor**: `lazyai-cli doctor` checks drift, missing files, metadata gaps, and environment health.
-
-
-## Product boundary
-
-- **Shipped CLI:** `lazyai-cli` commands registered in `packages/cli/cmd/`.
-- **Active embedded library:** canonical and adapter-selected assets embedded under `packages/cli/library/`.
-- **Repository harness:** maintainer scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal`; these are not shipped CLI commands.
-- **Retired/archived:** Fortnite defaults, the old orchestrator runtime, obsolete eval/task/workflow surfaces, and `archive/` material are historical or migration references only.
-
-See [Product Boundaries](concepts/product-boundaries.md) for the command and internal-package inventory.
+- **Doctor**: `lazyai-cli doctor` checks drift, missing files, and skill state.
+- **Orchestration** (opt-in): `lazyai-cli init --enable-servers orchestrator` scaffolds chain/team/workflow definitions and registers the local orchestrator MCP runtime.
 
 ## Where to start
 
 - [Quick Start](getting-started/quick-start.md) — run your first setup in minutes
 - [Installation](getting-started/installation.md) — install options and prerequisites
-- [How It Works](concepts/how-it-works.md) — canonical source, compile model, manifest tracking, and runtime boundary
-- [Product Boundaries](concepts/product-boundaries.md) — supported CLI, embedded library, repository harness, and archived surfaces
+- [How It Works](concepts/how-it-works.md) — canonical source, compile model, and manifest tracking
 - [CLI Reference](cli/reference.md) — full command and flag documentation
 - [GitHub Wiki](https://github.com/rluisb/lazyai/wiki) — short-form operational notes and release/install references
 
 ## Architecture at a glance
 
-```mermaid
-flowchart TD
-    CLI["lazyai-cli (Go binary)"]
-    CLI -->|"init / update"| AI[".ai/ (canonical source)"]
-    CLI -->|"compile"| TOOLS["tool-native configs"]
-    AI --> TOOLS
-    CLI -->|"doctor / status"| DB[".ai-setup.json / .ai-setup.db"]
-    TOOLS --> OC[".opencode/"]
-    TOOLS --> CC[".claude/ + .mcp.json"]
-    TOOLS --> CP[".github/ + .vscode/"]
-    TOOLS --> PI[".pi/ + .gemini/"]
+```text
+lazyai-cli (Go binary)
+   │ init ──▶ .ai/ (canonical)
+   │ compile ──▶ .opencode/ + .claude/ + .github/ + .vscode/
+   │ doctor ──▶ .ai-setup.json / .ai-setup.db (manifest + SQLite)
+   │
+   └── optional orchestrator MCP server
+         └── lazyai-orchestrator (Go runtime)
+             └── catalog, state, handoffs, prompt composition
 ```
 
-The execution path uses local native agents directly. A2A remains a config seam only; remote/network execution is not the default, and retired Fortnite/orchestrator/eval surfaces are not part of the active runtime.
+The execution path uses **local native agents** (Claude Code, OpenCode, Copilot) directly. A2A is an optional config seam only; remote/network execution is not the default.
 
 ## Status
 

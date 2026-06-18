@@ -8,15 +8,16 @@ LazyAI scaffolds a canonical, multi-tool AI development environment from one Go 
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
 
-The primary command is `lazyai-cli`. The diff viewer is an optional companion utility.
+The primary command is `lazyai-cli`. The orchestrator runtime is optional and is used when you enable the local MCP orchestrator server.
 
 ## Wiki map
 
 - [[Installation]] — prerequisites, install commands, and local development installs
-- [[Package Layout|Package-Layout]] — the active Go modules and command packages
+- [[Package Layout|Package-Layout]] — the three independent Go modules and command packages
 - [[Go Install Versions|Go-Install-Versions]] — `@latest`, pinned versions, and submodule tags
 - [[Migration from ai-setup to LazyAI|Migration-ai-setup-to-LazyAI]] — breaking rename checklist
 - [[Troubleshooting]] — common install, PATH, MCP, and update issues
@@ -26,5 +27,5 @@ The primary command is `lazyai-cli`. The diff viewer is an optional companion ut
 
 - Repository: <https://github.com/rluisb/lazyai>
 - Pages docs: <https://rluisb.github.io/lazyai/>
-- Go modules: `github.com/rluisb/lazyai/packages/{cli,diffviewer}`
+- Go modules: `github.com/rluisb/lazyai/packages/{cli,orchestrator,diffviewer}`
 - Distribution: Go installs and release assets only; no npm/npx package is planned for this restructure.

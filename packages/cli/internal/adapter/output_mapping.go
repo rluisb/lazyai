@@ -50,7 +50,7 @@ type OutputShape string
 
 const (
 	// ShapeFlat copies the file under the destination directory using its
-	// original basename (e.g. "researcher.md" → "<dest>/researcher.md").
+	// original basename (e.g. "scout.md" → "<dest>/scout.md").
 	ShapeFlat OutputShape = "flat"
 	// ShapeDirPerItem creates a per-item subdirectory and writes the file as
 	// SKILL.md inside it (e.g. "review.md" → "<dest>/review/SKILL.md").
@@ -80,7 +80,7 @@ type OutputTarget struct {
 	// RewriteSuffix is the new extension (incl. dot) when Shape == ShapeRewriteExt.
 	RewriteSuffix string
 	// IncludeFile is an optional filter; when non-nil, returning false skips
-	// the file.
+	// the file. Used e.g. to exclude orchestrator from the bulk agents copy.
 	IncludeFile func(filename string) bool
 	// Notes documents *why* a particular mapping exists, surfaced in test
 	// failures and in the `info` command.
@@ -97,14 +97,17 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		return outputMappings
 	}
 
-	canonicalAgents := func(file string) bool { return isCanonicalAgentFile(file) }
+	// Spec 022: orchestrator is now a first-class agent with the
+	// Orchestrator→Workers→Synthesizer topology. It should be installed
+	// alongside other agents.
+	allAgents := func(file string) bool { return true }
 
 	m := map[types.ToolId]map[AssetKind]OutputTarget{
 		types.ToolIdClaudeCode: {
 			AssetKindAgents: {
 				Tool: types.ToolIdClaudeCode, Kind: AssetKindAgents,
-				SourceSubdir: "canonical/agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: canonicalAgents,
+				SourceSubdir: "agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: allAgents,
 				Notes: "Claude Code reads agents from .claude/agents/<name>.md",
 			},
 			AssetKindSkills: {
@@ -145,8 +148,8 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdOpenCode: {
 			AssetKindAgents: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindAgents,
-				SourceSubdir: "canonical/agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: canonicalAgents,
+				SourceSubdir: "agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: allAgents,
 				Notes: "OpenCode reads agents from .opencode/agents/<name>.md after frontmatter rewrite",
 			},
 			AssetKindSkills: {
@@ -185,9 +188,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdCopilot: {
 			AssetKindAgents: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindAgents,
-				SourceSubdir: "canonical/agents", DestSubdir: "agents",
-				Shape: ShapeFlat, IncludeFile: canonicalAgents,
-				Notes: "Copilot agents are generated from canonical markdown into .github/agents/<name>.agent.md",
+				SourceSubdir: "copilot/agents", DestSubdir: "agents",
+				Shape: ShapeFlat,
+				Notes: "Copilot agents at .github/agents/",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindSkills,
@@ -221,79 +224,6 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				SourceSubdir: "prompts", DestSubdir: "prompts",
 				Shape: ShapeRewriteExt, RewriteSuffix: ".prompt.md",
 				Notes: "Copilot prompts at .github/prompts/<name>.prompt.md",
-			},
-		},
-		types.ToolIdPi: {
-			AssetKindAgents: {
-				Tool: types.ToolIdPi, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Pi is skills-only; no agent surface is emitted",
-			},
-			AssetKindSkills: {
-				Tool: types.ToolIdPi, Kind: AssetKindSkills,
-				SourceSubdir: "skills", DestSubdir: "skills",
-				Shape: ShapeDirPerItem,
-				Notes: "Pi reads skills as .pi/skills/<name>/SKILL.md",
-			},
-			AssetKindTemplates: {
-				Tool: types.ToolIdPi, Kind: AssetKindTemplates,
-				Shape: ShapeNone,
-				Notes: "Pi has no template surface",
-			},
-			AssetKindCommands: {
-				Tool: types.ToolIdPi, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-				Notes: "Pi has no slash command surface",
-			},
-			AssetKindChatModes: {
-				Tool: types.ToolIdPi, Kind: AssetKindChatModes,
-				Shape: ShapeNone,
-				Notes: "Pi has no chat mode surface",
-			},
-			AssetKindOutputStyles: {
-				Tool: types.ToolIdPi, Kind: AssetKindOutputStyles,
-				Shape: ShapeNone,
-			},
-			AssetKindPrompts: {
-				Tool: types.ToolIdPi, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Pi has no prompt surface",
-			},
-		},
-		types.ToolIdAntigravity: {
-			AssetKindAgents: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Antigravity does not emit agent files",
-			},
-			AssetKindSkills: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindSkills,
-				Shape: ShapeNone,
-				Notes: "Antigravity uses root context plus settings/hooks, not skills directories",
-			},
-			AssetKindTemplates: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindTemplates,
-				Shape: ShapeNone,
-				Notes: "Antigravity has no template surface",
-			},
-			AssetKindCommands: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-				Notes: "Antigravity has no slash command surface",
-			},
-			AssetKindChatModes: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindChatModes,
-				Shape: ShapeNone,
-				Notes: "Antigravity has no chat mode surface",
-			},
-			AssetKindOutputStyles: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindOutputStyles,
-				Shape: ShapeNone,
-			},
-			AssetKindPrompts: {
-				Tool: types.ToolIdAntigravity, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Antigravity has no prompt surface",
 			},
 		},
 	}
@@ -334,7 +264,7 @@ func OutputTargetsForTool(tool types.ToolId) (map[AssetKind]OutputTarget, error)
 func ValidateOutputCoverage() error {
 	per := buildOutputMappings()
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdAntigravity,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
 	} {
 		entries, ok := per[tool]
 		if !ok {

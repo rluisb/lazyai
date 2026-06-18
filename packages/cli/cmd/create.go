@@ -18,7 +18,7 @@ import (
 var createCmd = &cobra.Command{
 	Use:   "create [type] [name]",
 	Short: "Generate new artifacts",
-	Long:  "Create new artifacts such as agents, skills, prompts, commands, or templates.",
+	Long:  "Create new artifacts such as agents, skills, workflows, domains, modes, prompts, commands, or templates.",
 	Args:  cobra.MaximumNArgs(2),
 	RunE:  runCreate,
 }
@@ -51,10 +51,12 @@ func runCreate(cmd *cobra.Command, args []string) error {
 			Options(
 				huh.NewOption("Agent", "agent"),
 				huh.NewOption("Skill", "skill"),
+				huh.NewOption("Workflow", "workflow"),
+				huh.NewOption("Domain", "domain"),
+				huh.NewOption("Mode", "mode"),
 				huh.NewOption("Prompt", "prompt"),
 				huh.NewOption("Command", "command"),
 				huh.NewOption("Template", "template"),
-				huh.NewOption("Hook", "hook"),
 			).
 			Value(&typeValue)
 
@@ -92,15 +94,12 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	// Validate artifact type.
 	validTypes := map[string]bool{
-		"agent":    true,
-		"skill":    true,
-		"prompt":   true,
-		"command":  true,
-		"template": true,
-		"hook":     true,
+		"agent": true, "skill": true, "workflow": true,
+		"domain": true, "mode": true, "prompt": true,
+		"command": true, "template": true,
 	}
 	if !validTypes[artifactType] {
-		return fmt.Errorf("invalid artifact type: %s (valid: agent, skill, prompt, command, template, hook)", artifactType)
+		return fmt.Errorf("invalid artifact type: %s (valid: agent, skill, workflow, domain, mode, prompt, command, template)", artifactType)
 	}
 
 	// Get the target directory.

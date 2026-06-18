@@ -5,17 +5,17 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 	"github.com/rluisb/lazyai/packages/cli/internal/models"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
-	"io/fs"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // CopilotAdapter implements ToolAdapter for GitHub Copilot.
@@ -54,10 +54,6 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	_ = files.EnsureDir(instructionsDir)
 	promptsDir := filepath.Join(githubDir, "prompts")
 	_ = files.EnsureDir(promptsDir)
-	hooksDir := filepath.Join(githubDir, "hooks")
-	if ctx.SetupScope != types.SetupScopeGlobal {
-		_ = files.EnsureDir(hooksDir)
-	}
 
 	adapterLog.Info("installing tools", "adapter", "copilot")
 
@@ -80,38 +76,10 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	}
 
 	// Copy skills as Copilot agent files.
+	if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
+		return nil, err
+	}
 
-	// Copy Copilot project/workspace hooks. Global Copilot support remains
-	// agent/instructions/MCP oriented; no verified user-scope hook surface is
-	// emitted there.
-	if ctx.SetupScope != types.SetupScopeGlobal {
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "copilot/hooks",
-			IncludeFile:  func(file string) bool { return strings.HasSuffix(file, ".json") },
-			ToDestPath: func(file string) string {
-				return filepath.Join(hooksDir, file)
-			},
-		}); err != nil {
-			return nil, err
-		}
-		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-			Ctx:          ctx,
-			SourceSubdir: "copilot/hooks",
-			IncludeFile:  func(file string) bool { return strings.HasSuffix(file, ".sh") },
-			ToDestPath: func(file string) string {
-				return filepath.Join(hooksDir, file)
-			},
-			Mode: 0o755,
-		}); err != nil {
-			return nil, err
-		}
-	}
-	if len(selectedSkills) > 0 {
-		if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
-			return nil, err
-		}
-	}
 	// Copy chat modes to .github/chatmodes/<name>.chatmode.md.
 	chatmodesDir := filepath.Join(githubDir, "chatmodes")
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
@@ -220,90 +188,27 @@ func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContex
 	return nil
 }
 
-// copyCopilotAgents renders canonical agent markdown into Copilot .agent.md files.
+// copyCopilotAgents copies agent files from library/copilot/agents/ to the
+// target agents directory, rewriting each yaml's model: line based on the
+// tier declared in the source-of-truth library/agents/<name>.md. Agents
+// without a matching .md (Copilot-only authoring) keep their hand-pinned
+// model.
 func (a *CopilotAdapter) copyCopilotAgents(ctx *AdapterContext, agentsDir string) error {
-	if err := CopyWithRecord(
-		filepath.ToSlash(filepath.Join("canonical", "agents", defaultAgentID+".md")),
-		filepath.Join(agentsDir, defaultAgentID+".agent.md"),
-		ctx,
-		true,
-		copilotAgentMarkdownContent,
-		0o644,
-	); err != nil {
-		return err
-	}
-
-	if ctx.LibraryFS != nil {
-		entries, err := fs.ReadDir(ctx.LibraryFS, "canonical/agents")
-		if err != nil {
-			return nil
-		}
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
+	return CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "copilot/agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(agentsDir, filepath.Base(file))
+		},
+		Transform: func(content []byte) []byte {
+			out, err := RewriteCopilotAgent(content, ctx)
+			if err != nil {
+				adapterLog.Warn("copilot agent model rewrite fell back to verbatim copy", "adapter", "copilot", "error", err)
+				return content
 			}
-			file := entry.Name()
-			if !isCanonicalAgentFile(file) || isDefaultAgentFile(file) {
-				continue
-			}
-			src := filepath.ToSlash(filepath.Join("canonical", "agents", file))
-			dest := filepath.Join(agentsDir, fileID(file)+".agent.md")
-			if err := CopyWithRecord(src, dest, ctx, true, copilotAgentMarkdownContent, 0o644); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	sourceDir := filepath.Join(ctx.LibraryDir, "canonical", "agents")
-	if !files.DirExists(sourceDir) {
-		return nil
-	}
-	for _, file := range files.ListDir(sourceDir) {
-		srcPath := filepath.Join(sourceDir, file)
-		if files.IsDirectory(srcPath) || !isCanonicalAgentFile(file) || isDefaultAgentFile(file) {
-			continue
-		}
-		sourcePath := filepath.ToSlash(filepath.Join("canonical", "agents", file))
-		dest := filepath.Join(agentsDir, fileID(file)+".agent.md")
-		if err := CopyWithRecord(sourcePath, dest, ctx, true, copilotAgentMarkdownContent, 0o644); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func copilotAgentMarkdownContent(source []byte) []byte {
-	fm, body, err := frontmatter.ExtractFrontmatter(source)
-	description := ""
-	agentName := "agent"
-	if err == nil {
-		agentName = strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
-		if agentName == "" {
-			agentName = "agent"
-		}
-		description = strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
-	}
-	if description == "" {
-		description = "Agent for the LazyAI runtime."
-	}
-
-	bodyStr := strings.TrimLeft(string(body), "\n")
-	var b strings.Builder
-	b.WriteString("---\n")
-	b.WriteString("name: ")
-	b.WriteString(agentName)
-	b.WriteString("\ndescription: ")
-	b.WriteString(strconv.Quote(description))
-	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
-	b.WriteString(managedAgentMarker("copilot", agentName))
-	b.WriteString("\n\n")
-	b.WriteString(bodyStr)
-	if !strings.HasSuffix(bodyStr, "\n") {
-		b.WriteString("\n")
-	}
-	b.WriteString("\n")
-	return []byte(b.String())
+			return out
+		},
+	})
 }
 
 // copyCopilotInstructions copies instruction files from library/copilot/instructions/ to the target instructions directory.
@@ -317,13 +222,8 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 	})
 }
 
-// copySkillsAsAgents converts explicitly selected skill files to .agent.yaml
-// format in the agents directory. No .agent.yaml files are emitted unless the
-// user selected the corresponding skill.
+// copySkillsAsAgents converts skill files to .agent.yaml format in the agents directory.
 func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
-	if selected == nil || len(selected) == 0 {
-		return nil
-	}
 	libFS := ctx.LibraryFS
 	if libFS != nil {
 		return a.copySkillsAsAgentsFromFS(ctx, libFS, agentsDir, selected)
@@ -339,12 +239,12 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 			continue
 		}
 		fileIDVal := fileID(file)
-		if !selected[types.SkillId(fileIDVal)] {
+		if selected != nil && !selected[types.SkillId(fileIDVal)] {
 			continue
 		}
 		destFile := fileIDVal + ".agent.yaml"
 		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
+		libRelPath := "skills/" + file
 		if err := a.copySkillAsAgentWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
 			return err
 		}
@@ -369,7 +269,7 @@ func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.
 		}
 		destFile := fileIDVal + ".agent.yaml"
 		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
+		libRelPath := "skills/" + file
 		if err := a.copySkillAsAgentFromFS(ctx, libFS, libRelPath, dest); err != nil {
 			return err
 		}
@@ -511,7 +411,7 @@ func skillToAgentYAML(ctx *AdapterContext, skillName string, skillContent string
 	yaml := fmt.Sprintf(`name: %s
 displayName: %s
 description: >
-  %s skill for the LazyAI runtime.
+  %s skill for the ai-setup orchestrator.
 model: %s
 tools:
   - "*"

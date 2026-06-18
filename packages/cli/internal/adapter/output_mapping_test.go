@@ -15,7 +15,7 @@ func TestOutputCoverageIsExhaustive(t *testing.T) {
 
 func TestOutputTargetsAllKnownTools(t *testing.T) {
 	tools := []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdAntigravity,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
 	}
 	for _, tool := range tools {
 		entries, err := OutputTargetsForTool(tool)
@@ -64,33 +64,11 @@ func TestOutputMappingClaudeCodeAgents(t *testing.T) {
 	if target.IncludeFile == nil {
 		t.Fatal("claude agents must have an IncludeFile filter")
 	}
-	if target.IncludeFile("orchestrator.md") {
-		t.Error("orchestrator must be excluded from neutral agent mappings")
+	if !target.IncludeFile("orchestrator.md") {
+		t.Error("orchestrator should be included — it is a first-class agent per Spec 022")
 	}
-	if !target.IncludeFile("researcher.md") {
-		t.Error("researcher should be included in bulk agent copy")
-	}
-}
-
-func TestOutputMappingCopilotAgentsWritesMd(t *testing.T) {
-	target, ok := LookupOutputTarget(types.ToolIdCopilot, AssetKindAgents)
-	if !ok {
-		t.Fatal("copilot has no agents target")
-	}
-	if target.Shape != ShapeFlat {
-		t.Errorf("copilot agents Shape=%q, want %q", target.Shape, ShapeFlat)
-	}
-	if target.RewriteSuffix != "" {
-		t.Errorf("copilot agents RewriteSuffix=%q, want empty", target.RewriteSuffix)
-	}
-	if target.IncludeFile == nil {
-		t.Fatal("copilot agents must have an IncludeFile filter")
-	}
-	if target.IncludeFile("orchestrator.md") {
-		t.Error("orchestrator must be excluded from copilot agent mappings")
-	}
-	if !target.IncludeFile("researcher.md") {
-		t.Error("researcher should be included in copilot agent copy")
+	if !target.IncludeFile("scout.md") {
+		t.Error("scout should be included in bulk agent copy")
 	}
 }
 
@@ -104,29 +82,6 @@ func TestOutputMappingCopilotSkillsRewritesExt(t *testing.T) {
 	}
 	if target.RewriteSuffix != ".agent.yaml" {
 		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, ".agent.yaml")
-	}
-}
-
-func TestOutputMappingPiSkillsDirPerItem(t *testing.T) {
-	target, ok := LookupOutputTarget(types.ToolIdPi, AssetKindSkills)
-	if !ok {
-		t.Fatal("pi has no skills target")
-	}
-	if target.Shape != ShapeDirPerItem {
-		t.Errorf("pi skills Shape=%q, want %q", target.Shape, ShapeDirPerItem)
-	}
-	if target.SourceSubdir != "skills" {
-		t.Errorf("pi skills SourceSubdir=%q, want skills", target.SourceSubdir)
-	}
-}
-
-func TestOutputMappingAntigravitySkillsNone(t *testing.T) {
-	target, ok := LookupOutputTarget(types.ToolIdAntigravity, AssetKindSkills)
-	if !ok {
-		t.Fatal("antigravity has no skills target")
-	}
-	if target.Shape != ShapeNone {
-		t.Errorf("antigravity skills Shape=%q, want %q", target.Shape, ShapeNone)
 	}
 }
 

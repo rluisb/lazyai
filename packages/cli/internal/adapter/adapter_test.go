@@ -5,63 +5,28 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
+	"github.com/rluisb/lazyai/packages/cli/internal/jsonc"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
 // createTestFS creates a memo FS with the minimum files needed for adapter tests.
 func createTestFS() fstest.MapFS {
 	return fstest.MapFS{
-		"agents/implementer.md": &fstest.MapFile{
-			Data: []byte("---\nname: Implementer\ndescription: Test implementer agent.\nmodel: sonnet\n---\n\n# Implementer\n\nYou are an implementer."),
+		"agents/builder.md": &fstest.MapFile{
+			Data: []byte("---\nname: Builder\ndescription: Test builder agent.\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
 		},
-		"agents/researcher.md": &fstest.MapFile{
-			Data: []byte("---\nname: Researcher\ndescription: Test researcher agent.\nmodel: haiku\n---\n\n# Researcher\n\nYou are a researcher."),
+		"agents/orchestrator.md": &fstest.MapFile{
+			Data: []byte("---\nname: Orchestrator\ndescription: Test orchestrator agent.\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
 		},
-		"canonical/agents/guide.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("guide", "Test guide agent."),
-		},
-		"canonical/agents/implementer.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("implementer", "Test implementer agent."),
-		},
-		"canonical/agents/researcher.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("researcher", "Test researcher agent."),
-		},
-		"canonical/agents/deployer.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("deployer", "Test deployer agent."),
-		},
-		"canonical/agents/responder.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("responder", "Test responder agent."),
-		},
-		"canonical/agents/planner.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("planner", "Test planner agent."),
-		},
-		"canonical/agents/reviewer.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("reviewer", "Test reviewer agent."),
-		},
-		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("evidence-verifier", "Test evidence verifier agent."),
-		},
-		"agents/extra.md": &fstest.MapFile{
-			Data: []byte("---\nname: Extra\ndescription: Test unselected agent.\nmodel: opus\n---\n\n# Extra\n\nYou are not selected by default."),
-		},
-		"skills/codebase-exploration.md": &fstest.MapFile{
-			Data: canonicalSkillFixture("codebase-exploration", "Explore code paths."),
-		},
-		"skills/test-first-change.md": &fstest.MapFile{
-			Data: canonicalSkillFixture("test-first-change", "Drive changes through tests."),
-		},
-		"skills/diagnose.md": &fstest.MapFile{
-			Data: canonicalSkillFixture("diagnose", "Diagnose failures."),
-		},
-		"skills/issue-triage.md": &fstest.MapFile{
-			Data: canonicalSkillFixture("issue-triage", "Triage issues."),
+		"skills/implement.md": &fstest.MapFile{
+			Data: []byte("---\nname: implement\ndescription: Implementation skill\n---\n\n# Implement\n\nImplement features."),
 		},
 		"tool-agents/agents-dir.md": &fstest.MapFile{
 			Data: []byte("# Agents Directory\n\nThis directory contains agent definitions."),
@@ -129,36 +94,6 @@ func createTestFS() fstest.MapFS {
 		"claudecode/output-styles/explanatory.md": &fstest.MapFile{
 			Data: []byte("---\nname: Explanatory\ndescription: Detailed responses\nkeep-coding-instructions: true\n---\n\nExplanatory style body."),
 		},
-		"claudecode/hooks/block-destructive-shell.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"claudecode/hooks/objective-workflow-gate.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"copilot/hooks/block-destructive-shell.json": &fstest.MapFile{
-			Data: []byte("{\"version\":1}"),
-		},
-		"copilot/hooks/block-destructive-shell.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"copilot/hooks/objective-workflow-gate.json": &fstest.MapFile{
-			Data: []byte("{\"version\":1}"),
-		},
-		"copilot/hooks/objective-workflow-gate.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"opencode/plugins/vibe-lab-hooks.js": &fstest.MapFile{
-			Data: []byte("export const VibeLabHooks = () => ({})\n"),
-		},
-		"antigravity/settings.json": &fstest.MapFile{
-			Data: []byte("{\"hooks\":{}}\n"),
-		},
-		"antigravity/hooks/lazyai/block-destructive-shell.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
-		"antigravity/hooks/lazyai/objective-workflow-gate.sh": &fstest.MapFile{
-			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
-		},
 	}
 }
 
@@ -175,8 +110,8 @@ func createTestAdapterContext(t *testing.T) (*AdapterContext, string) {
 		LibraryFS:  libFS,
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"researcher"},
-			Skills: []types.SkillId{types.SkillIdDiagnose},
+			Agents: []types.AgentId{"builder"},
+			Skills: []types.SkillId{"implement"},
 		},
 	}, targetDir
 }
@@ -185,9 +120,9 @@ func createTestAdapterContext(t *testing.T) (*AdapterContext, string) {
 
 func TestCopyWithRecord_FromFS(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
-	dest := filepath.Join(targetDir, ".opencode", "agents", "implementer.md")
+	dest := filepath.Join(targetDir, ".opencode", "agents", "builder.md")
 
-	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -202,7 +137,7 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 	}
 
 	// Check that the content matches what's in the FS.
-	expected, _ := ctx.LibraryFS.Open("agents/implementer.md")
+	expected, _ := ctx.LibraryFS.Open("agents/builder.md")
 	expectedData := make([]byte, len(data))
 	n, _ := expected.Read(expectedData)
 	expectedData = expectedData[:n]
@@ -215,8 +150,8 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 	if len(ctx.FileRecords) != 1 {
 		t.Fatalf("expected 1 file record, got %d", len(ctx.FileRecords))
 	}
-	if ctx.FileRecords[0].Source != "agents/implementer.md" {
-		t.Errorf("expected source 'agents/implementer.md', got %q", ctx.FileRecords[0].Source)
+	if ctx.FileRecords[0].Source != "agents/builder.md" {
+		t.Errorf("expected source 'agents/builder.md', got %q", ctx.FileRecords[0].Source)
 	}
 }
 
@@ -224,7 +159,7 @@ func TestCopyWithRecord_FromFS(t *testing.T) {
 
 func TestCopyWithRecord_WithTransform(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
-	dest := filepath.Join(targetDir, ".opencode", "agents", "implementer.md")
+	dest := filepath.Join(targetDir, ".opencode", "agents", "builder.md")
 
 	transformCalled := false
 	transform := func(content []byte) []byte {
@@ -232,7 +167,7 @@ func TestCopyWithRecord_WithTransform(t *testing.T) {
 		return append([]byte("<!-- transformed -->\n"), content...)
 	}
 
-	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, transform, 0o644)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, transform, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord with transform failed: %v", err)
 	}
@@ -271,16 +206,16 @@ func TestCopyLibraryDirectory_FromFS(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory failed: %v", err)
 	}
 
-	// researcher.md should exist (it's in our selection).
-	researcherDest := filepath.Join(agentsDir, "researcher.md")
-	if _, err := os.Stat(researcherDest); os.IsNotExist(err) {
-		t.Error("researcher.md was not copied")
+	// builder.md should exist (it's in our selection).
+	builderDest := filepath.Join(agentsDir, "builder.md")
+	if _, err := os.Stat(builderDest); os.IsNotExist(err) {
+		t.Error("builder.md was not copied")
 	}
 
-	// extra.md should NOT exist (not in our selection).
-	extraDest := filepath.Join(agentsDir, "extra.md")
-	if _, err := os.Stat(extraDest); !os.IsNotExist(err) {
-		t.Error("extra.md should not have been copied (not selected)")
+	// orchestrator.md should NOT exist (not in our selection).
+	orchDest := filepath.Join(agentsDir, "orchestrator.md")
+	if _, err := os.Stat(orchDest); !os.IsNotExist(err) {
+		t.Error("orchestrator.md should not have been copied (not selected)")
 	}
 }
 
@@ -306,8 +241,8 @@ func TestCopyLibraryDirectory_InstallAll(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory failed: %v", err)
 	}
 
-	// Both implementer.md and extra.md should exist.
-	for _, name := range []string{"implementer.md", "extra.md"} {
+	// Both builder.md and orchestrator.md should exist.
+	for _, name := range []string{"builder.md", "orchestrator.md"} {
 		path := filepath.Join(agentsDir, name)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("%s was not copied (should install all)", name)
@@ -370,7 +305,7 @@ func TestInstallRootTemplateIfMissing_FromFS(t *testing.T) {
 func TestCopyWithRecord_SkipExisting(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Strategy = types.ConflictStrategySkip
-	dest := filepath.Join(targetDir, "implementer.md")
+	dest := filepath.Join(targetDir, "builder.md")
 
 	// Write an existing file.
 	existingContent := []byte("existing content")
@@ -378,7 +313,7 @@ func TestCopyWithRecord_SkipExisting(t *testing.T) {
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
 	// CopyWithRecord with skip strategy should skip.
-	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord failed: %v", err)
 	}
@@ -396,14 +331,14 @@ func TestCopyWithRecord_ForceOverwrite(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Force = true
 	ctx.Strategy = types.ConflictStrategyBackupAndReplace
-	dest := filepath.Join(targetDir, "implementer.md")
+	dest := filepath.Join(targetDir, "builder.md")
 
 	// Write an existing file.
 	existingContent := []byte("existing content")
 	_ = files.EnsureDir(filepath.Dir(dest))
 	_ = os.WriteFile(dest, existingContent, 0o644)
 
-	err := CopyWithRecord("agents/implementer.md", dest, ctx, true, nil, 0o644)
+	err := CopyWithRecord("agents/builder.md", dest, ctx, true, nil, 0o644)
 	if err != nil {
 		t.Fatalf("CopyWithRecord force failed: %v", err)
 	}
@@ -421,6 +356,114 @@ func TestCopyWithRecord_ForceOverwrite(t *testing.T) {
 		t.Errorf("no backup directory was created: %v", err)
 	} else if len(entries) == 0 {
 		t.Error("backup directory is empty")
+	}
+}
+
+// --- Test: readOrchestratorAgentSource from fs.FS ---
+
+func TestReadOrchestratorAgentSource_FromFS(t *testing.T) {
+	ctx, _ := createTestAdapterContext(t)
+	result := readOrchestratorAgentSource(ctx)
+
+	if result == "" {
+		t.Fatal("readOrchestratorAgentSource returned empty string")
+	}
+	if len(result) < 20 {
+		t.Errorf("orchestrator agent source seems too short: %q", result[:min(50, len(result))])
+	}
+}
+
+// --- Test: readOrchestratorAgentSource fallback ---
+
+func TestReadOrchestratorAgentSource_Fallback(t *testing.T) {
+	ctx := &AdapterContext{
+		LibraryFS: nil, // No FS
+	}
+	result := readOrchestratorAgentSource(ctx)
+
+	if result == "" {
+		t.Fatal("fallback should return hardcoded content")
+	}
+	// Verify fallback content includes key markers.
+	if len(result) < 10 {
+		t.Errorf("fallback content seems too short")
+	}
+}
+
+// --- Test: OpenCode adapter with fs.FS ---
+
+func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: types.ALL_AGENTS[:],
+		Skills: types.ALL_SKILLS[:],
+	}
+	ctx.EnableServers = []string{"orchestrator"}
+
+	adapter := &OpenCodeAdapter{}
+	records, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	if len(records) == 0 {
+		t.Fatal("expected at least one tracked file record")
+	}
+
+	// Check that key files were created. Adapter install preserves actual agent
+	// and skill definitions, but must not create reserved context docs inside the
+	// tool directory; root context docs are handled elsewhere.
+	keyFiles := []string{
+		".opencode/opencode.jsonc",
+		".opencode/agents/builder.md",
+		".opencode/agents/orchestrator.md",
+		".opencode/skills/implement/SKILL.md",
+	}
+	// The pre-unification .json variant must never be produced on a fresh install.
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "opencode.json")); err == nil {
+		t.Error("opencode.json should not exist; install must target opencode.jsonc only")
+	}
+	for _, f := range keyFiles {
+		path := filepath.Join(targetDir, f)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("expected file %s was not created", f)
+		}
+	}
+	for _, f := range []string{
+		".opencode/AGENTS.md",
+		".opencode/agents/AGENTS.md",
+		".opencode/skills/AGENTS.md",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, f)); err == nil {
+			t.Errorf("reserved context doc %s should not be created by adapter install", f)
+		}
+	}
+
+	// Every installed agent file must carry opencode-schema-valid
+	// frontmatter: at minimum `description` and `mode`. This closes the gap
+	// where the old shared stripper emitted HTML comments that opencode
+	// could not parse.
+	agentsDir := filepath.Join(targetDir, ".opencode", "agents")
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		t.Fatalf("read agents dir: %v", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || e.Name() == "AGENTS.md" {
+			continue
+		}
+		data, _ := os.ReadFile(filepath.Join(agentsDir, e.Name()))
+		fm, _, err := frontmatter.ExtractFrontmatter(data)
+		if err != nil {
+			t.Errorf("%s: frontmatter does not parse: %v", e.Name(), err)
+			continue
+		}
+		if fm["description"] == nil || fm["description"] == "" {
+			t.Errorf("%s: missing description key", e.Name())
+		}
+		if fm["mode"] == nil || fm["mode"] == "" {
+			t.Errorf("%s: missing mode key", e.Name())
+		}
 	}
 }
 
@@ -453,24 +496,14 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 
 	// --- Skill transformed to agent YAML format ---
 	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
-	// --- Default agents are compiled as Markdown files ---
-	defaultAgentFile := filepath.Join(agentsDir, "guide.agent.md")
-	if _, err := os.Stat(defaultAgentFile); os.IsNotExist(err) {
-		t.Error("default agent .agent.md was not created in .github/agents/")
-	}
-	legacyDefaultAgentFile := filepath.Join(agentsDir, "guide.agent.yaml")
-	if _, err := os.Stat(legacyDefaultAgentFile); err == nil {
-		t.Error("guide.agent.yaml should not be emitted for default copilot agents")
-	}
-
+	skillAgentFile := filepath.Join(agentsDir, "implement.agent.yaml")
 	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
 		t.Error("skill agent .agent.yaml was not created")
 	}
 	data, _ := os.ReadFile(skillAgentFile)
 	content := string(data)
-	if !strings.Contains(content, "name: diagnose") {
-		t.Error("skill agent missing 'name: diagnose' in YAML")
+	if !strings.Contains(content, "name: implement") {
+		t.Error("skill agent missing 'name: implement' in YAML")
 	}
 
 	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
@@ -482,127 +515,21 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
 	}
 	hasPreFlight := false
-	hasDiagnose := false
+	hasImplement := false
 	for _, rec := range ctx.FileRecords {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
-		case ".github/agents/diagnose.agent.yaml":
-			hasDiagnose = true
+		case ".github/agents/implement.agent.yaml":
+			hasImplement = true
 		}
 	}
 	if !hasPreFlight {
 		t.Error("no tracked record for preflight-task-framing.prompt.md")
 	}
-	if !hasDiagnose {
-		t.Error("no tracked record for diagnose.agent.yaml")
+	if !hasImplement {
+		t.Error("no tracked record for implement.agent.yaml")
 	}
-}
-
-func TestClaudeCodeAdapter_Install_CopiesHookScriptsAndSettings(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-	ctx.Selections = AdapterSelections{
-		Agents: []types.AgentId{types.AgentIdResearcher},
-		Skills: []types.SkillId{types.SkillIdDiagnose},
-	}
-
-	adapter := &ClaudeCodeAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("ClaudeCode Install failed: %v", err)
-	}
-
-	for _, rel := range []string{
-		".claude/hooks/block-destructive-shell.sh",
-		".claude/hooks/objective-workflow-gate.sh",
-	} {
-		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
-			t.Fatalf("expected %s: %v", rel, err)
-		}
-	}
-
-	settings, err := os.ReadFile(filepath.Join(targetDir, ".claude", "settings.json"))
-	if err != nil {
-		t.Fatalf("read settings.json: %v", err)
-	}
-	for _, want := range []string{
-		"block-destructive-shell.sh",
-		"objective-workflow-gate.sh",
-	} {
-		if !strings.Contains(string(settings), want) {
-			t.Fatalf("settings.json missing hook reference %q: %s", want, string(settings))
-		}
-	}
-	if strings.Contains(string(settings), "startup-self-heal.sh") {
-		t.Fatalf("settings.json should not reference startup-self-heal.sh: %s", string(settings))
-	}
-}
-
-func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-	ctx.Selections = AdapterSelections{
-		Agents: []types.AgentId{types.AgentIdResearcher},
-		Skills: []types.SkillId{types.SkillIdDiagnose},
-	}
-
-	adapter := &OpenCodeAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("OpenCode Install failed: %v", err)
-	}
-
-	pluginPath := filepath.Join(targetDir, ".opencode", "plugins", "vibe-lab-hooks.js")
-	data, err := os.ReadFile(pluginPath)
-	if err != nil {
-		t.Fatalf("read hook plugin: %v", err)
-	}
-	if !strings.Contains(string(data), "VibeLabHooks") {
-		t.Fatalf("hook plugin missing export: %s", string(data))
-	}
-}
-
-func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-	ctx.Selections = AdapterSelections{
-		Skills: []types.SkillId{types.SkillIdDiagnose, types.SkillIdIssueTriage},
-	}
-
-	adapter := &PiAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("Pi Install failed: %v", err)
-	}
-
-	for _, rel := range []string{
-		".pi/skills/diagnose/SKILL.md",
-		".pi/skills/issue-triage/SKILL.md",
-	} {
-		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
-			t.Fatalf("expected %s: %v", rel, err)
-		}
-	}
-	assertMissing(t, filepath.Join(targetDir, ".pi", "agents"))
-	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
-}
-
-func TestAntigravityAdapter_Install_MinimalSurface(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-
-	adapter := &AntigravityAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("Antigravity Install failed: %v", err)
-	}
-
-	if _, err := os.Stat(filepath.Join(targetDir, ".gemini", "settings.json")); err != nil {
-		t.Fatalf("expected .gemini/settings.json: %v", err)
-	}
-	for _, rel := range []string{
-		".gemini/hooks/lazyai/block-destructive-shell.sh",
-		".gemini/hooks/lazyai/objective-workflow-gate.sh",
-	} {
-		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
-			t.Fatalf("expected %s: %v", rel, err)
-		}
-	}
-	assertMissing(t, filepath.Join(targetDir, ".gemini", "agents"))
-	assertMissing(t, filepath.Join(targetDir, ".gemini", "skills"))
 }
 
 // --- Test: Disk fallback mode ---
@@ -612,7 +539,7 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 	libDir := t.TempDir()
 	agentsDir := filepath.Join(libDir, "agents")
 	_ = os.MkdirAll(agentsDir, 0o755)
-	_ = os.WriteFile(filepath.Join(agentsDir, "researcher.md"), []byte("---\nname: Researcher\n---\n\nResearcher content."), 0o644)
+	_ = os.WriteFile(filepath.Join(agentsDir, "builder.md"), []byte("---\nname: Builder\n---\n\nBuilder content."), 0o644)
 
 	targetDir := t.TempDir()
 	destAgentsDir := filepath.Join(targetDir, ".opencode", "agents")
@@ -624,7 +551,7 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 		LibraryFS:  nil, // nil = disk mode
 		Strategy:   types.ConflictStrategyAlign,
 		Selections: AdapterSelections{
-			Agents: []types.AgentId{"researcher"},
+			Agents: []types.AgentId{"builder"},
 		},
 	}
 
@@ -641,9 +568,9 @@ func TestCopyLibraryDirectory_DiskFallback(t *testing.T) {
 		t.Fatalf("CopyLibraryDirectory disk fallback failed: %v", err)
 	}
 
-	destFile := filepath.Join(destAgentsDir, "researcher.md")
+	destFile := filepath.Join(destAgentsDir, "builder.md")
 	if _, err := os.Stat(destFile); os.IsNotExist(err) {
-		t.Error("researcher.md was not copied from disk")
+		t.Error("builder.md was not copied from disk")
 	}
 }
 
@@ -652,6 +579,353 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// --- Test: OpenCode adapter global scope path resolution ---
+
+func TestOpenCodeAdapter_GlobalScope_UsesGlobalPath(t *testing.T) {
+	targetDir := t.TempDir()
+	libFS := createTestFS()
+
+	// Create a temp dir that mimics ~/.config/opencode structure.
+	homeDir := t.TempDir()
+	expectedDir := filepath.Join(homeDir, ".config", "opencode")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeGlobal,
+		HomeDir:    homeDir,
+		LibraryDir: "",
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Agents: []types.AgentId{"builder"},
+			Skills: []types.SkillId{"implement"},
+		},
+	}
+
+	adapter := &OpenCodeAdapter{}
+	records, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install in global scope failed: %v", err)
+	}
+
+	if len(records) == 0 {
+		t.Fatal("expected at least one tracked file record")
+	}
+
+	// Verify the expected directory structure was created in the global dir.
+	keyDirs := []string{
+		filepath.Join(expectedDir, "agents"),
+		filepath.Join(expectedDir, "skills"),
+		filepath.Join(expectedDir, "commands"),
+	}
+	for _, d := range keyDirs {
+		if _, err := os.Stat(d); os.IsNotExist(err) {
+			t.Errorf("expected directory %s was not created", d)
+		}
+	}
+
+	// Verify no .opencode directory was created in the project target dir.
+	projectOpencode := filepath.Join(targetDir, ".opencode")
+	if _, err := os.Stat(projectOpencode); !os.IsNotExist(err) {
+		t.Error("global scope should not create .opencode in project target dir")
+	}
+}
+
+func TestOpenCodeAdapter_GlobalScope_FallbackHomeDir(t *testing.T) {
+	targetDir := t.TempDir()
+	libFS := createTestFS()
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeGlobal,
+		HomeDir:    "", // empty — should fall back to os.UserHomeDir()
+		LibraryDir: "",
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Agents: []types.AgentId{"builder"},
+			Skills: []types.SkillId{"implement"},
+		},
+	}
+
+	adapter := &OpenCodeAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install with empty HomeDir failed: %v", err)
+	}
+
+	// Verify files were written to the real home directory.
+	realHome, _ := os.UserHomeDir()
+	expectedDir := filepath.Join(realHome, ".config", "opencode")
+	if _, err := os.Stat(expectedDir); os.IsNotExist(err) {
+		t.Errorf("expected global dir %s was not created", expectedDir)
+	}
+}
+
+// --- Test: OpenCode adapter migrates pre-existing opencode.json to .jsonc ---
+
+func TestOpenCodeAdapter_Install_MigratesJsonToJsonc(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{"builder"},
+		Skills: []types.SkillId{"implement"},
+	}
+
+	// Seed a pre-existing opencode.json with a user-authored key that must
+	// survive the migration unchanged.
+	ocDir := filepath.Join(targetDir, ".opencode")
+	if err := files.EnsureDir(ocDir); err != nil {
+		t.Fatalf("EnsureDir: %v", err)
+	}
+	jsonPath := filepath.Join(ocDir, "opencode.json")
+	jsoncPath := filepath.Join(ocDir, "opencode.jsonc")
+	original := []byte(`{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": { "edit": "allow" },
+  "user_key": "preserved"
+}
+`)
+	if err := os.WriteFile(jsonPath, original, 0o644); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	// .jsonc must exist; .json must be gone; .json.bak must preserve original.
+	if _, err := os.Stat(jsoncPath); os.IsNotExist(err) {
+		t.Fatal("opencode.jsonc was not created by migration")
+	}
+	if _, err := os.Stat(jsonPath); err == nil {
+		t.Error("opencode.json should have been removed after migration")
+	}
+	bakPath := jsonPath + ".bak"
+	bakContents, err := os.ReadFile(bakPath)
+	if err != nil {
+		t.Fatalf("opencode.json.bak was not created: %v", err)
+	}
+	if string(bakContents) != string(original) {
+		t.Errorf(".bak sidecar content mismatch.\nwant: %q\ngot:  %q", original, bakContents)
+	}
+
+	// The migrated .jsonc must carry the user-authored key forward verbatim
+	// (no default-config merge on top of the migrated file — that would
+	// silently clobber customizations like permission.edit == "allow").
+	jsoncContents, err := os.ReadFile(jsoncPath)
+	if err != nil {
+		t.Fatalf("read migrated .jsonc: %v", err)
+	}
+	if !strings.Contains(string(jsoncContents), `"user_key": "preserved"`) {
+		t.Errorf("migrated .jsonc dropped user_key:\n%s", jsoncContents)
+	}
+	if !strings.Contains(string(jsoncContents), `"edit": "allow"`) {
+		t.Errorf("migrated .jsonc did not preserve user-authored permission.edit:\n%s", jsoncContents)
+	}
+}
+
+// --- Test: opencode commands + modes install at every scope ---
+
+func TestOpenCodeAdapter_InstallsCommandsAndModes(t *testing.T) {
+	type scopeCase struct {
+		name   string
+		scope  types.SetupScope
+		rootFn func(targetDir, homeDir string) string
+	}
+	cases := []scopeCase{
+		{"project", types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".opencode") }},
+		{"workspace", types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".opencode") }},
+		{"global", types.SetupScopeGlobal, func(_, h string) string { return filepath.Join(h, ".config", "opencode") }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			homeDir := t.TempDir()
+			ctx := &AdapterContext{
+				TargetDir:  targetDir,
+				SetupScope: tc.scope,
+				HomeDir:    homeDir,
+				LibraryFS:  createTestFS(),
+				Strategy:   types.ConflictStrategyAlign,
+				Selections: AdapterSelections{
+					Agents: []types.AgentId{"builder"},
+					Skills: []types.SkillId{"implement"},
+					// Leaving OpenCodeCommands / OpenCodeModes unset means
+					// "install all" — the wizard will populate these later.
+				},
+			}
+
+			if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install (%s): %v", tc.name, err)
+			}
+
+			root := tc.rootFn(targetDir, homeDir)
+			for _, want := range []string{
+				"commands/review.md",
+				"commands/test.md",
+				"commands/commit.md",
+				"modes/plan.md",
+				"modes/audit.md",
+			} {
+				path := filepath.Join(root, want)
+				if _, err := os.Stat(path); os.IsNotExist(err) {
+					t.Errorf("%s: missing %s after install", tc.name, want)
+				}
+			}
+		})
+	}
+}
+
+// TestOpenCodeAdapter_SelectionFiltersCommandsAndModes verifies that
+// ctx.Selections.OpenCodeCommands narrows the install set. An explicit
+// selection of ["review"] must leave test.md and commit.md uninstalled.
+func TestOpenCodeAdapter_SelectionFiltersCommandsAndModes(t *testing.T) {
+	targetDir := t.TempDir()
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  createTestFS(),
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Agents:           []types.AgentId{"builder"},
+			Skills:           []types.SkillId{"implement"},
+			OpenCodeCommands: []types.OpenCodeCommandId{types.OpenCodeCommandIdReview},
+			OpenCodeModes:    []types.OpenCodeModeId{types.OpenCodeModeIdPlan},
+		},
+	}
+	if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := filepath.Join(targetDir, ".opencode")
+	mustExist := []string{"commands/review.md", "modes/plan.md"}
+	mustNotExist := []string{"commands/test.md", "commands/commit.md", "modes/audit.md"}
+	for _, p := range mustExist {
+		if _, err := os.Stat(filepath.Join(root, p)); os.IsNotExist(err) {
+			t.Errorf("selection did not include %s: missing", p)
+		}
+	}
+	for _, p := range mustNotExist {
+		if _, err := os.Stat(filepath.Join(root, p)); err == nil {
+			t.Errorf("selection leaked: %s should not exist", p)
+		}
+	}
+}
+
+// --- Test: instructions key resolves to a real file at every scope ---
+//
+// opencode resolves entries in opencode.jsonc's `instructions` array
+// relative to the config file's directory. Project/workspace configs live in
+// `.opencode/`, so they must point up to the root AGENTS.md. Global configs
+// live alongside the global AGENTS.md and can use `AGENTS.md` directly.
+
+func TestOpenCodeAdapter_InstructionsKeyResolves(t *testing.T) {
+	type scopeCase struct {
+		name  string
+		scope types.SetupScope
+		// rootFn returns the expected .opencode/ root given a fresh (targetDir, homeDir) pair.
+		rootFn func(targetDir, homeDir string) string
+	}
+
+	cases := []scopeCase{
+		{
+			name:  "project",
+			scope: types.SetupScopeProject,
+			rootFn: func(targetDir, _ string) string {
+				return filepath.Join(targetDir, ".opencode")
+			},
+		},
+		{
+			name:  "workspace",
+			scope: types.SetupScopeWorkspace,
+			rootFn: func(targetDir, _ string) string {
+				return filepath.Join(targetDir, ".opencode")
+			},
+		},
+		{
+			name:  "global",
+			scope: types.SetupScopeGlobal,
+			rootFn: func(_, homeDir string) string {
+				return filepath.Join(homeDir, ".config", "opencode")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			homeDir := t.TempDir()
+			rootDoc := filepath.Join(targetDir, "AGENTS.md")
+			if tc.scope == types.SetupScopeGlobal {
+				rootDoc = filepath.Join(homeDir, ".config", "opencode", "AGENTS.md")
+				if err := os.MkdirAll(filepath.Dir(rootDoc), 0o755); err != nil {
+					t.Fatalf("create global root doc dir: %v", err)
+				}
+			}
+			if err := os.WriteFile(rootDoc, []byte("# Root instructions\n"), 0o644); err != nil {
+				t.Fatalf("write root doc: %v", err)
+			}
+			ctx := &AdapterContext{
+				TargetDir:  targetDir,
+				SetupScope: tc.scope,
+				HomeDir:    homeDir,
+				LibraryFS:  createTestFS(),
+				Strategy:   types.ConflictStrategyAlign,
+				Selections: AdapterSelections{
+					Agents: []types.AgentId{"builder"},
+					Skills: []types.SkillId{"implement"},
+				},
+			}
+
+			if _, err := (&OpenCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install (%s): %v", tc.name, err)
+			}
+
+			root := tc.rootFn(targetDir, homeDir)
+
+			// Read back opencode.jsonc and assert instructions shape.
+			cfgPath := filepath.Join(root, OpenCodeConfigFilename)
+			cfg, err := jsonc.ReadJSONCFile(cfgPath)
+			if err != nil {
+				t.Fatalf("read %s: %v", cfgPath, err)
+			}
+			rawInstr, ok := cfg["instructions"]
+			if !ok {
+				t.Fatalf("opencode.jsonc missing `instructions` key at %s", tc.name)
+			}
+			instr, ok := rawInstr.([]any)
+			if !ok || len(instr) == 0 {
+				t.Fatalf("instructions must be a non-empty array, got %T: %v", rawInstr, rawInstr)
+			}
+
+			// Each instructions entry, resolved relative to the config dir,
+			// must point at an existing, non-empty file.
+			cfgDir := filepath.Dir(cfgPath)
+			for _, raw := range instr {
+				rel, ok := raw.(string)
+				if !ok {
+					t.Errorf("instructions entry is not a string: %T %v", raw, raw)
+					continue
+				}
+				resolved := rel
+				if !filepath.IsAbs(rel) {
+					resolved = filepath.Join(cfgDir, rel)
+				}
+				info, err := os.Stat(resolved)
+				if err != nil {
+					t.Errorf("instructions entry %q resolves to %q which does not exist: %v", rel, resolved, err)
+					continue
+				}
+				if info.Size() == 0 {
+					t.Errorf("instructions entry %q resolves to an empty file at %q", rel, resolved)
+				}
+			}
+		})
+	}
 }
 
 // Tests for the removed isGlobalOpenCodeDir heuristic were deleted when
@@ -765,6 +1039,362 @@ func TestClaudeCodeCommandsFrontmatter(t *testing.T) {
 	}
 }
 
+// TestGetOrchestratorAgentContent_SpaceDelimitedTools verifies that the
+// orchestrator agent uses space-delimited tools (spec 012 task 004).
+func TestGetOrchestratorAgentContent_SpaceDelimitedTools(t *testing.T) {
+	ctx, _ := createTestAdapterContext(t)
+
+	content := GetOrchestratorAgentContent(ctx)
+	contentStr := string(content)
+
+	// Should contain "tools: " followed by space-separated values, not commas.
+	if !strings.Contains(contentStr, "tools: ") {
+		t.Fatal("no tools line in orchestrator agent")
+	}
+
+	// Parse the tools line to verify it's space-separated.
+	lines := strings.Split(contentStr, "\n")
+	var toolsLine string
+	for _, line := range lines {
+		if strings.HasPrefix(line, "tools: ") {
+			toolsLine = line
+			break
+		}
+	}
+
+	if toolsLine == "" {
+		t.Fatal("could not find tools line")
+	}
+
+	// Check that there are no commas (space-delimited, not comma-delimited).
+	if strings.Contains(toolsLine, ",") {
+		t.Errorf("orchestrator tools should be space-separated, got: %s", toolsLine)
+	}
+
+	// Verify some expected tools are present.
+	if !strings.Contains(toolsLine, "list_catalog") || !strings.Contains(toolsLine, "start_chain") {
+		t.Errorf("expected tools missing from: %s", toolsLine)
+	}
+}
+
+// --- Test: OpenCode adapter Fortnite mode install ---
+
+func testRepoRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
+	}
+
+	// Parse opencode.jsonc
+	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfg, err := jsonc.ReadJSONCFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+
+	// Assert default_agent == loop-driver
+	if da, ok := cfg["default_agent"].(string); !ok || da != "loop-driver" {
+		t.Errorf("default_agent = %q, want %q", da, "loop-driver")
+	}
+
+	// Assert instructions contain AGENTS.md and STARTUP.md
+	rawInstr, ok := cfg["instructions"].([]any)
+	if !ok || len(rawInstr) == 0 {
+		t.Fatalf("instructions must be non-empty array, got %T", cfg["instructions"])
+	}
+	var instr []string
+	for _, v := range rawInstr {
+		if s, ok := v.(string); ok {
+			instr = append(instr, s)
+		}
+	}
+	if !sliceContains(instr, "AGENTS.md") {
+		t.Errorf("instructions missing AGENTS.md: %v", instr)
+	}
+	if !sliceContains(instr, "STARTUP.md") {
+		t.Errorf("instructions missing STARTUP.md: %v", instr)
+	}
+
+	// Assert .opencode/STARTUP.md exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "STARTUP.md")); os.IsNotExist(err) {
+		t.Error(".opencode/STARTUP.md was not created")
+	}
+
+	// Assert root AGENTS.md exists
+	if _, err := os.Stat(filepath.Join(targetDir, "AGENTS.md")); os.IsNotExist(err) {
+		t.Error("root AGENTS.md was not created")
+	}
+
+	// Assert root AGENTS.md contains managed block markers and loop-driver
+	rootAgentsData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read root AGENTS.md: %v", err)
+	}
+	rootAgentsContent := string(rootAgentsData)
+	if !strings.Contains(rootAgentsContent, ManagedBlockStartMarker) {
+		t.Errorf("root AGENTS.md missing managed block start marker")
+	}
+	if !strings.Contains(rootAgentsContent, ManagedBlockEndMarker) {
+		t.Errorf("root AGENTS.md missing managed block end marker")
+	}
+	if !strings.Contains(rootAgentsContent, "loop-driver") {
+		t.Errorf("root AGENTS.md missing loop-driver reference")
+	}
+
+	// Assert .opencode/scripts exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "scripts")); os.IsNotExist(err) {
+		t.Error(".opencode/scripts was not created")
+	}
+
+	// Assert .opencode/workflows exists
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "workflows")); os.IsNotExist(err) {
+		t.Error(".opencode/workflows was not created")
+	}
+
+	// Assert the 8 Fortnite agents exist under .opencode/agents/
+	fortniteAgents := []string{
+		"loop-driver.md",
+		"engine-control.md",
+		"loot-hawk.md",
+		"turbo-crank.md",
+		"wall-builder.md",
+		"shield-audit.md",
+		"rift-deploy.md",
+		"respawn-crew.md",
+	}
+	for _, name := range fortniteAgents {
+		path := filepath.Join(targetDir, ".opencode", "agents", name)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("Fortnite agent %s was not installed", name)
+		}
+	}
+
+	// Assert non-agent reference files are NOT copied to .opencode/agents/
+	referenceDocs := []string{
+		"DISPATCH-MATRIX.md",
+		"FALLBACK-CHAINS.md",
+		"OUTPUT-SCHEMAS.md",
+		"REPO-PROFILES.md",
+		"SAFETY-BOUNDARIES.md",
+		"TOOL-SCHEMAS.md",
+		"_TEMPLATE.md",
+	}
+	for _, name := range referenceDocs {
+		path := filepath.Join(targetDir, ".opencode", "agents", name)
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("reference doc %s should NOT be installed in .opencode/agents/", name)
+		}
+	}
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode_PreservesExistingRootAgents(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	// Seed an existing root AGENTS.md with user content.
+	existingContent := "# My Project\n\nThis is my custom project overview.\n"
+	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(existingContent), 0o644); err != nil {
+		t.Fatalf("seed existing AGENTS.md: %v", err)
+	}
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install (FortniteMode) failed: %v", err)
+	}
+
+	// Read back root AGENTS.md
+	data, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read root AGENTS.md: %v", err)
+	}
+	content := string(data)
+
+	// Must preserve existing user content
+	if !strings.Contains(content, "My Project") {
+		t.Error("existing user content was lost")
+	}
+	if !strings.Contains(content, "This is my custom project overview") {
+		t.Error("existing user content was lost")
+	}
+
+	// Must contain managed block markers
+	if !strings.Contains(content, ManagedBlockStartMarker) {
+		t.Error("root AGENTS.md missing managed block start marker")
+	}
+	if !strings.Contains(content, ManagedBlockEndMarker) {
+		t.Error("root AGENTS.md missing managed block end marker")
+	}
+
+	// Must contain Fortnite content (loop-driver)
+	if !strings.Contains(content, "loop-driver") {
+		t.Error("root AGENTS.md missing loop-driver reference")
+	}
+}
+
+func TestOpenCodeAdapter_Install_FortniteMode_Idempotent(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: true,
+	}
+
+	adapter := &OpenCodeAdapter{}
+
+	// First install
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("first install failed: %v", err)
+	}
+
+	firstData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md after first install: %v", err)
+	}
+
+	// Second install (idempotent)
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("second install failed: %v", err)
+	}
+
+	secondData, err := os.ReadFile(filepath.Join(targetDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md after second install: %v", err)
+	}
+
+	if string(firstData) != string(secondData) {
+		t.Error("second install mutated AGENTS.md; expected idempotent behavior")
+	}
+}
+
+func TestMergeManagedBlock_CreateNew(t *testing.T) {
+	managed := []byte("managed content")
+	result := MergeManagedBlock(nil, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), ManagedBlockStartMarker) {
+		t.Error("missing start marker")
+	}
+	if !strings.Contains(string(result), ManagedBlockEndMarker) {
+		t.Error("missing end marker")
+	}
+	if !strings.Contains(string(result), "managed content") {
+		t.Error("missing managed content")
+	}
+}
+
+func TestMergeManagedBlock_AppendToExisting(t *testing.T) {
+	existing := []byte("# User Content\n")
+	managed := []byte("managed content")
+	result := MergeManagedBlock(existing, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), "# User Content") {
+		t.Error("existing content was lost")
+	}
+	if !strings.Contains(string(result), ManagedBlockStartMarker) {
+		t.Error("missing start marker")
+	}
+	if !strings.Contains(string(result), ManagedBlockEndMarker) {
+		t.Error("missing end marker")
+	}
+}
+
+func TestMergeManagedBlock_ReplaceExistingBlock(t *testing.T) {
+	existing := []byte("# User Content\n\n" + ManagedBlockStartMarker + "\nold content\n" + ManagedBlockEndMarker + "\n\nmore user content")
+	managed := []byte("new managed content")
+	result := MergeManagedBlock(existing, managed, ManagedBlockStartMarker, ManagedBlockEndMarker)
+	if !strings.Contains(string(result), "# User Content") {
+		t.Error("pre-block user content was lost")
+	}
+	if !strings.Contains(string(result), "more user content") {
+		t.Error("post-block user content was lost")
+	}
+	if !strings.Contains(string(result), "new managed content") {
+		t.Error("new managed content not inserted")
+	}
+	if strings.Contains(string(result), "old content") {
+		t.Error("old managed content was not replaced")
+	}
+}
+
+func TestOpenCodeAdapter_Install_PlainOpenCodeMode(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:    targetDir,
+		SetupScope:   types.SetupScopeProject,
+		LibraryFS:    libFS,
+		Strategy:     types.ConflictStrategyAlign,
+		Selections:   AdapterSelections{},
+		FortniteMode: false,
+	}
+
+	adapter := &OpenCodeAdapter{}
+	_, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("OpenCode Install (plain) failed: %v", err)
+	}
+
+	// Parse opencode.jsonc
+	cfgPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
+	cfg, err := jsonc.ReadJSONCFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read opencode.jsonc: %v", err)
+	}
+
+	// Assert default_agent is NOT loop-driver (legacy uses orchestrator)
+	if da, ok := cfg["default_agent"].(string); ok && da == "loop-driver" {
+		t.Errorf("plain mode default_agent should not be loop-driver, got %q", da)
+	}
+
+	// Assert generic legacy agent exists (e.g., builder)
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "builder.md")); os.IsNotExist(err) {
+		t.Error("plain mode: generic agent builder.md was not installed")
+	}
+
+	// Assert a Fortnite-only agent does NOT exist
+	if _, err := os.Stat(filepath.Join(targetDir, ".opencode", "agents", "loop-driver.md")); err == nil {
+		t.Error("plain mode: Fortnite agent loop-driver.md should not exist")
+	}
+}
+
 // --- Test: CopyLibraryDirectory recursive nested paths ---
 
 func TestCopyLibraryDirectory_RecursiveNestedPaths(t *testing.T) {
@@ -861,134 +1491,4 @@ func sliceContains(haystack []string, needle string) bool {
 		}
 	}
 	return false
-}
-
-// baselineAgentSource matches the exact vibe-lab baseline canonical agent shape:
-// name and description only, no tier/risk/model/temperature/mode/steps/skills.
-func baselineAgentSource(name, description string) []byte {
-	return []byte("---\nname: " + name + "\ndescription: " + description + "\n---\n\n# System Prompt\n\nYou are " + name + ".")
-}
-
-// TestRewriteAgentForClaudeCode_BaselineNoTier verifies that a baseline-style
-// agent source without LazyAI tier metadata produces the exact Claude adapter
-// shape: name, quoted description, managed marker, body.
-func TestRewriteAgentForClaudeCode_BaselineNoTier(t *testing.T) {
-	source := baselineAgentSource("implementer", "Universal implementer.")
-	out, err := RewriteAgentForClaudeCode(source, &AdapterContext{})
-	if err != nil {
-		t.Fatalf("RewriteAgentForClaudeCode: %v", err)
-	}
-	wantMarker := managedAgentMarker("claude", "implementer")
-	if !strings.Contains(string(out), wantMarker) {
-		t.Errorf("missing managed marker:\n%s", out)
-	}
-	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
-		if strings.Contains(string(out), forbidden) {
-			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
-		}
-	}
-}
-
-// TestRewriteAgentForOpenCode_BaselineNoTier verifies that a baseline-style
-// agent source produces the exact OpenCode adapter shape: quoted description
-// and managed marker, with no tier/model/etc.
-func TestRewriteAgentForOpenCode_BaselineNoTier(t *testing.T) {
-	source := baselineAgentSource("implementer", "Universal implementer.")
-	out, err := RewriteAgentForOpenCode(source, &AdapterContext{}, "")
-	if err != nil {
-		t.Fatalf("RewriteAgentForOpenCode: %v", err)
-	}
-	wantMarker := managedAgentMarker("opencode", "implementer")
-	if !strings.Contains(string(out), wantMarker) {
-		t.Errorf("missing managed marker:\n%s", out)
-	}
-	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
-		if strings.Contains(string(out), forbidden) {
-			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
-		}
-	}
-}
-
-// TestCopilotAgentMarkdownContent_BaselineNoTier verifies the Copilot .agent.md
-// shape for a baseline-style source: name, quoted description, tools array,
-// managed marker, body.
-func TestCopilotAgentMarkdownContent_BaselineNoTier(t *testing.T) {
-	source := baselineAgentSource("implementer", "Universal implementer.")
-	out := copilotAgentMarkdownContent(source)
-	wantMarker := managedAgentMarker("copilot", "implementer")
-	if !strings.Contains(string(out), wantMarker) {
-		t.Errorf("missing managed marker:\n%s", out)
-	}
-	if !strings.Contains(string(out), `tools: ["read", "search", "edit", "shell"]`) {
-		t.Errorf("missing expected tools array:\n%s", out)
-	}
-	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
-		if strings.Contains(string(out), forbidden) {
-			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
-		}
-	}
-}
-
-// TestCopilotAdapter_DefaultSevenBaselineAgentsOnly installs with an empty
-// selection and asserts .github/agents contains exactly the seven baseline
-// .agent.md files and zero .agent.yaml files.
-func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
-	ctx, targetDir := createTestAdapterContext(t)
-	ctx.LibraryFS = createTestFS()
-	ctx.LibraryDir = ""
-	ctx.Selections = AdapterSelections{}
-	adapter := &CopilotAdapter{}
-	if _, err := adapter.Install(ctx); err != nil {
-		t.Fatalf("Copilot Install failed: %v", err)
-	}
-	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	entries, err := os.ReadDir(agentsDir)
-	if err != nil {
-		t.Fatalf("read agents dir: %v", err)
-	}
-	var mdFiles, yamlFiles []string
-	for _, ent := range entries {
-		if ent.IsDir() {
-			continue
-		}
-		if strings.HasSuffix(ent.Name(), ".agent.md") {
-			mdFiles = append(mdFiles, ent.Name())
-		} else if strings.HasSuffix(ent.Name(), ".agent.yaml") {
-			yamlFiles = append(yamlFiles, ent.Name())
-		}
-	}
-	want := []string{
-		"deployer.agent.md",
-		"evidence-verifier.agent.md",
-		"guide.agent.md",
-		"implementer.agent.md",
-		"planner.agent.md",
-		"researcher.agent.md",
-		"responder.agent.md",
-		"reviewer.agent.md",
-	}
-	got := sortedStrings(mdFiles)
-	if !slicesEqual(got, want) {
-		t.Errorf(".agent.md files = %v, want %v", got, want)
-	}
-	if len(yamlFiles) != 0 {
-		t.Errorf("unexpected .agent.yaml files: %v", yamlFiles)
-	}
-}
-
-func sortedStrings(s []string) []string {
-	sort.Strings(s)
-	return s
-}
-
-func slicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

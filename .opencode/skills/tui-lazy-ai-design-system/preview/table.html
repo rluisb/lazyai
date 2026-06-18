@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Table</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 18px 24px; }
+  table { font-family: var(--font-mono); font-size: 13px; border-collapse: collapse; }
+  th { text-align: left; padding: 4px 14px 4px 0; color: var(--lz-highlight); font-weight: 700; border-bottom: 1px dashed var(--lz-dimmed); }
+  td { padding: 4px 14px 4px 0; }
+  td.dim { color: var(--lz-dimmed); }
+</style>
+</head>
+<body>
+  <table>
+    <thead><tr><th>tool</th><th>scope</th><th>preset</th><th>status</th></tr></thead>
+    <tbody>
+      <tr><td>opencode</td><td>project</td><td>standard</td><td><span class="tui-success">✓ ok</span></td></tr>
+      <tr><td>claude-code</td><td>project</td><td>standard</td><td><span class="tui-warning">⚠ drift</span></td></tr>
+      <tr><td>copilot</td><td>project</td><td>minimal</td><td><span class="tui-error">✗ missing</span></td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

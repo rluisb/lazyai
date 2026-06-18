@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -18,7 +16,6 @@ import (
 )
 
 const latestReleaseURL = "https://api.github.com/repos/rluisb/lazyai/releases/latest"
-const releaseByTagURLFormat = "https://api.github.com/repos/rluisb/lazyai/releases/tags/%s"
 
 type githubRelease struct {
 	TagName string        `json:"tag_name"`
@@ -29,8 +26,6 @@ type githubAsset struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
-
-var plainSemverPattern = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 
 var updateSelfCmd = &cobra.Command{
 	Use:   "update-self",
@@ -44,7 +39,6 @@ func init() {
 	updateSelfCmd.Flags().Bool("force", false, "Skip version check")
 	updateSelfCmd.Flags().Bool("dry-run", false, "Preview without downloading")
 	updateSelfCmd.Flags().Bool("verbose", false, "Show detailed output")
-	updateSelfCmd.Flags().String("version", "", "Download a specific release by tag (e.g. v1.2.3 or pre-refactor-025-phase-2)")
 	rootCmd.AddCommand(updateSelfCmd)
 	updateSelfCmd.GroupID = "lifecycle"
 }
@@ -54,9 +48,8 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	verbose, _ := cmd.Flags().GetBool("verbose")
-	specificVersion, _ := cmd.Flags().GetString("version")
 
-	if Version == "0.0.0-dev" && specificVersion == "" {
+	if Version == "0.0.0-dev" {
 		fmt.Println("Development build — skipping self-update")
 		return nil
 	}
@@ -65,29 +58,17 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 	client := http.DefaultClient
 	token := os.Getenv("GITHUB_TOKEN")
 
-	var release *githubRelease
-	var err error
+	if verbose {
+		fmt.Printf("Current version: %s\n", displayVersion(currentVersion))
+		fmt.Printf("Fetching latest release from %s\n", latestReleaseURL)
+	}
 
-	if specificVersion != "" {
-		tag := requestedReleaseTag(specificVersion)
-		releaseURL := releaseByTagURL(tag)
-		if verbose {
-			fmt.Printf("Fetching specific release: %s\n", releaseURL)
-		}
-		release, err = fetchReleaseByTag(client, token, tag)
-		if err != nil {
-			return err
-		}
-		force = true // skip version comparison for specific version
-	} else {
-		if verbose {
-			fmt.Printf("Current version: %s\n", displayVersion(currentVersion))
-			fmt.Printf("Fetching latest release from %s\n", latestReleaseURL)
-		}
-		release, err = fetchLatestRelease(client, token)
-		if err != nil {
-			return err
-		}
+	release, err := fetchLatestRelease(client, token)
+	if err != nil {
+		return err
+	}
+	if release.TagName == "" {
+		return fmt.Errorf("latest release did not include a tag_name")
 	}
 
 	latestVersion := normalizeVersion(release.TagName)
@@ -165,33 +146,25 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 }
 
 func fetchLatestRelease(client *http.Client, token string) (*githubRelease, error) {
-	return fetchRelease(client, token, latestReleaseURL, "latest release")
-}
-
-func fetchReleaseByTag(client *http.Client, token, tag string) (*githubRelease, error) {
-	return fetchRelease(client, token, releaseByTagURL(tag), fmt.Sprintf("release %q", tag))
-}
-
-func fetchRelease(client *http.Client, token, releaseURL, subject string) (*githubRelease, error) {
-	req, err := http.NewRequest(http.MethodGet, releaseURL, nil)
+	req, err := http.NewRequest(http.MethodGet, latestReleaseURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating %s request: %w", subject, err)
+		return nil, fmt.Errorf("creating release request: %w", err)
 	}
 	addGitHubHeaders(req, token)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", subject, err)
+		return nil, fmt.Errorf("fetching latest release: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("fetching %s: GitHub returned %s", subject, resp.Status)
+		return nil, fmt.Errorf("fetching latest release: GitHub returned %s", resp.Status)
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", subject, err)
+		return nil, fmt.Errorf("parsing latest release: %w", err)
 	}
 	return &release, nil
 }
@@ -205,29 +178,11 @@ func addGitHubHeaders(req *http.Request, token string) {
 }
 
 func normalizeVersion(version string) string {
-	return strings.TrimPrefix(strings.TrimSpace(version), "v")
-}
-
-func requestedReleaseTag(version string) string {
-	trimmed := strings.TrimSpace(version)
-	if trimmed == "" {
-		return ""
-	}
-	if strings.HasPrefix(trimmed, "v") {
-		return trimmed
-	}
-	if plainSemverPattern.MatchString(trimmed) {
-		return "v" + trimmed
-	}
-	return trimmed
-}
-
-func releaseByTagURL(tag string) string {
-	return fmt.Sprintf(releaseByTagURLFormat, url.PathEscape(tag))
+	return strings.TrimPrefix(version, "v")
 }
 
 func displayVersion(version string) string {
-	return requestedReleaseTag(version)
+	return "v" + normalizeVersion(version)
 }
 
 func binaryAssetName(goos, goarch string) string {

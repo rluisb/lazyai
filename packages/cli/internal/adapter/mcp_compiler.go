@@ -92,10 +92,8 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileClaudeCodeMCP(ctx, enabledServers)
 	case types.ToolIdCopilot:
 		return compileCopilotMCP(ctx, enabledServers)
-	case types.ToolIdPi, types.ToolIdAntigravity:
-		return ctx.FileRecords, nil
 	default:
-		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", toolId)
+		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", toolId)
 	}
 }
 
@@ -136,10 +134,13 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	if err != nil {
 		return ctx.FileRecords, err
 	}
-	// Global root is ~/.config/opencode — lazyai.mcp.jsonc lives directly in it.
-	// Project/workspace root is <target>/.opencode — same placement.
-	configPath := filepath.Join(root, OpenCodeRuntimeMCPFilename)
+	// Global root is ~/.config/opencode — opencode.jsonc lives directly in it.
+	// Project/workspace root is <target>/.opencode — same placement. The
+	// filename constant is shared with OpenCodeAdapter.Install so install and
+	// compile always target the same file (no .json/.jsonc split).
+	configPath := filepath.Join(root, OpenCodeConfigFilename)
 	ocMcp := toOpenCodeMcp(catalog.Servers)
+
 	// Read existing config and merge.
 	var existingConfig map[string]any
 	if files.FileExists(configPath) {
@@ -170,10 +171,15 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 }
 
 // mergeOpenCodeMcpServers merges the ai-setup-managed mcp map into whatever
-// the user currently has under `mcp` in their lazyai.mcp.jsonc. Managed
+// the user currently has under `mcp` in their opencode.jsonc. Managed
 // servers (those present in `managed`) are upserted; any existing entry
 // keyed by a name NOT in `managed` is preserved untouched — so a user who
-// hand-adds an MCP server directly keeps it on the next `ai-setup compile`.
+// hand-adds an MCP server directly in opencode.jsonc does not lose it on
+// the next `ai-setup compile`.
+//
+// Documented limit: if a user hand-authors a server with the same name as a
+// managed server, the managed definition wins (this matches the catalog's
+// intent that `ai-setup` owns the named server).
 func mergeOpenCodeMcpServers(existingRaw any, managed map[string]any) map[string]any {
 	merged := make(map[string]any, len(managed))
 	if existing, ok := existingRaw.(map[string]any); ok {
@@ -352,10 +358,7 @@ func toClaudeCodeMcpInner(servers map[string]McpServer) map[string]any {
 	mcpServers := make(map[string]any)
 	for name, server := range servers {
 		if server.URL != "" {
-			entry := map[string]any{
-				"type": "http",
-				"url":  server.URL,
-			}
+			entry := map[string]any{"url": server.URL}
 			if server.Headers != nil {
 				entry["headers"] = server.Headers
 			}

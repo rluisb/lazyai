@@ -70,7 +70,7 @@ func runPhase1NonInteractive(defaults *Phase1Result) (*Phase1Result, PhaseAction
 		return nil, PhaseCancel, fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(defaults.Tools) == 0 {
-		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity)")
+		return nil, PhaseCancel, fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot)")
 	}
 	if defaults.ProjectName == "" {
 		return nil, PhaseCancel, fmt.Errorf("project name is required in non-interactive mode")
@@ -313,11 +313,9 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 // only tools that support the given scope (see adapter.IsScopeSupported).
 func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 	all := []huh.Option[string]{
-		huh.NewOption("OpenCode", string(types.ToolIdOpenCode)),
-		huh.NewOption("Claude Code", string(types.ToolIdClaudeCode)),
-		huh.NewOption("GitHub Copilot", string(types.ToolIdCopilot)),
-		huh.NewOption("OMP/Pi", string(types.ToolIdPi)),
-		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),
+		huh.NewOption("OpenCode", "opencode"),
+		huh.NewOption("Claude Code", "claude-code"),
+		huh.NewOption("GitHub Copilot", "copilot"),
 	}
 	if scope == "" {
 		return all

@@ -171,18 +171,19 @@ var migratedStrayAgentsPaths = []string{
 	"specs/features/AGENTS.md",
 }
 
-// legacyAgentPaths lists pre-baseline-parity agent files that should be removed
-// when a project is regenerated onto the guide default contract. Only
-// files that are tracked as library-owned and unmodified (hash matches) are
-// deleted; user-edited agents are preserved.
+// legacyAgentPaths lists the generic (pre-Fortnite) agent files that should be
+// removed when the project migrates to Fortnite mode. Only files that are
+// tracked as library-owned and unmodified (hash matches) are deleted;
+// user-edited agents are preserved.
 var legacyAgentPaths = []string{
-	".opencode/agents/primary-agent.md",
 	".opencode/agents/builder.md",
-	".opencode/agents/scout.md",
 	".opencode/agents/documenter.md",
 	".opencode/agents/implementor.md",
 	".opencode/agents/orchestrator.md",
+	".opencode/agents/planner.md",
 	".opencode/agents/red-team.md",
+	".opencode/agents/reviewer.md",
+	".opencode/agents/scout.md",
 }
 
 func removeMigratedStrayAgentsArtifacts(targetDir string, trackedFiles []types.TrackedFile) error {
@@ -218,14 +219,15 @@ func removeMigratedStrayAgentsArtifacts(targetDir string, trackedFiles []types.T
 	return nil
 }
 
-// removeLegacyAgents deletes unmodified legacy agent files from
+// removeLegacyAgents deletes unmodified legacy (pre-Fortnite) agent files from
 // .opencode/agents/. A file is only removed if:
 //  1. It is tracked in the store
 //  2. Its owner is FileOwnerLibrary (not user-edited)
-//  3. Its current hash still matches the tracked hash
+//  3. It exists on disk
+//  4. Its current hash matches the tracked hash (unmodified since install)
 //
 // This prevents deleting user-customized agents while cleaning up stale
-// library-owned artifacts after migrating to the implementer contract.
+// library-owned artifacts after migrating to Fortnite mode.
 func removeLegacyAgents(targetDir string, trackedFiles []types.TrackedFile) error {
 	trackedByPath := make(map[string]types.TrackedFile, len(trackedFiles))
 	for _, tracked := range trackedFiles {

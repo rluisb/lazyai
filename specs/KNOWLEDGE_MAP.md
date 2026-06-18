@@ -28,8 +28,6 @@
 | 022 | Speckit workflow alignment | ✅ Complete | archived top-level spec; workspace-root follow-up noted in tasks |
 | 023 | Repository cleanup — local hazard cleanup, legacy package audit, and spec hygiene proposal | ✅ Complete | `feature/repo-cleanup` |
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
-| 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, rollback, manifest, product-boundary, four-point, command-category, large-file seam, and minimality contracts | ✅ Issues #229–#236 merged — runtime refactor complete | `specs/025-lazyai-runtime-refactor/` |
-| 026 | vibe-lab alignment — exact baseline parity applied for default agent/tool surfaces across Claude Code, OpenCode, GitHub Copilot, and compatible `bin/` commands; runtime-adjacent CLI commands and LazyAI-only MCP extras remain secondary/transitional | ✅ Exact baseline parity applied | `specs/refactors/026-vibe-lab-alignment/` |
 
 ## Standards
 
@@ -43,27 +41,25 @@
 |----------|-----|-----------|
 | Scope resolver as single source of truth for tool paths | — | Eliminates per-adapter `isGlobal` branching; easy to extend for new tools |
 | Deep-merge with backup-on-first-touch for config files | — | Preserves user-authored keys across re-runs; one `.bak` sidecar only |
-| Copilot global scope is probe-gated, not forbidden | — | `copilot` CLI or `~/.copilot/` must exist before user-scope files are emitted |
-| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts such as Copilot `.agent.yaml` and exact OpenCode baseline surface shape (`opencode.json`, with LazyAI-only MCP extras isolated in `.opencode/lazyai.mcp.jsonc`). |
-| Pi is skills-only; Antigravity is minimal `.gemini` settings + hooks | `specs/adrs/004-vibe-lab-alignment-contract.md` | Matches verified baseline breadth without reviving unsupported agents or workflow runtime behavior |
-| LazyAI defaults to setup-core; runtime-adjacent commands are optional modules | `specs/adrs/005-core-vs-optional-modules.md` | Maximizes vibe-lab philosophy alignment while preserving retained runtime-adjacent capabilities behind a documented future opt-in boundary |
+| Copilot unsupported at global scope | — | No upstream concept for global Copilot config |
+| Codex split root: `.codex/` for config, `.agents/skills/` for skills | — | Matches upstream Codex CLI conventions |
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |
-| `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all supported adapters; clean internal migration |
+| `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all 5 adapters; clean internal migration |
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |
-| OpenCode config unified on `opencode.json`; MCP compile writes LazyAI extras to `.opencode/lazyai.mcp.jsonc` and preserves user keys on managed server collisions | — | Prevents clobbering user-authored config while keeping baseline `opencode.json` shape intact |
+| OpenCode config unified on `opencode.jsonc`; MCP compile preserves user servers via deep-merge | — | Prevents clobbering user-authored `mcp.servers` on re-run; managed entries win on key collision |
 | OpenCode CLI used only for validation (`opencode debug *`) and plugin install, not file-writing | — | CLI is interactive-only for most operations; direct-write gives deterministic output |
 
 ## Packages Reference
 
 | Package | Purpose |
 |---------|---------|
-| `packages/cli/internal/adapter/scope.go` | `ResolveToolRoot`, `IsScopeSupported`, `ErrScopeUnsupported` for Claude, OpenCode, Copilot, Pi, and Antigravity |
+| `packages/cli/internal/adapter/scope.go` | `ResolveToolRoot`, `ResolveCodexRoots`, `IsScopeSupported`, `ErrScopeUnsupported` |
 | `packages/cli/internal/adapter/mcp_compiler.go` | `CompileMCPForTool`, per-tool compile functions (scope-aware via `CompileContext`) |
 | `packages/cli/internal/configmerge/` | `MergeJSONFile`, `MergeTOMLFile` — deep-merge with `.bak` |
-| `packages/cli/internal/globalpaths/` | Home-dir roots for global-capable tools |
+| `packages/cli/internal/globalpaths/` | Home-dir roots for all tools; `ResolveCodexSkillsGlobalDir` |
 | `packages/cli/internal/scaffold/root.go` | Single emitter for memory docs (`memoryDocDestPath`) |
-| `packages/cli/internal/adapter/pi.go` | Pi skills-only adapter (`.pi/skills/<name>/SKILL.md`) |
-| `packages/cli/internal/adapter/antigravity.go` | Minimal `.gemini` adapter (`settings.json` + hook scripts) |
+| `library/commands/*.toml` | Gemini custom slash command templates |
+| `library/chatmodes/*.chatmode.md` | Copilot chat mode templates |
 | `packages/cli/internal/scaffold/root.go#fillClaudeMdPlaceholders` | Hybrid template-placeholder substitution (mechanical auto-infer + subjective fill-in markers) |
 | `packages/cli/internal/adapter/opencode_frontmatter.go` | `BuildOpenCodeAgentFrontmatter` — emits opencode-schema YAML frontmatter, drops incompatible source fields |
 | `packages/cli/internal/adapter/opencode_validate.go` | `ValidateOpenCodeInstall` — post-install opencode debug checks via injectable `CmdRunner` |
@@ -88,22 +84,6 @@
 | `packages/cli/internal/adapter/codex.go#codexExecValidationArgs` | Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
-
-## Terminology
-
-### Accepted domain terms
-
-| Term | Meaning | Source of truth |
-|------|---------|-----------------|
-| setup-core | The default lazyai-cli command set (init, compile, update, doctor, add, build-plugin, etc.) | `specs/adrs/005-core-vs-optional-modules.md` |
-| runtime-adjacent module | Optional command families (session, message, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) | `specs/adrs/005-core-vs-optional-modules.md` |
-| artifact type | A category of generated asset: agent, skill, command, prompt, template, rule, infra, specs-dir | `packages/cli/internal/validation/validation.go` |
-| library | Embedded reference content used by lazyai-cli to populate target repos | `packages/cli/library/` |
-| curation manifest | YAML manifest of every embedded library asset with provenance metadata | `packages/cli/library/manifests/curation.yaml` |
-
-### Vocabulary source of truth
-
-Runtime must not introduce a dedicated terminology lookup subsystem: the source of truth stays in this Markdown section, with derived enums (e.g. `packages/cli/internal/types/types.go`) hand-mapped from the table above. If a lookup feels necessary, extend the table instead.
 
 ## Pending / Follow-up
 

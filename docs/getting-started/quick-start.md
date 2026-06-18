@@ -19,7 +19,7 @@ This launches a wizard where you choose:
 - **Scope**: `project`, `global`, or `workspace`
 - **Tools**: OpenCode, Claude Code, GitHub Copilot
 - **Preset**: `minimal`, `standard`, or `full`
-- **Optional MCP servers**: filesystem, ripgrep, memory, and other catalog entries
+- **Optional MCP servers**: filesystem, ripgrep, memory, orchestrator, etc.
 
 ## Non-interactive setup
 
@@ -29,7 +29,7 @@ This launches a wizard where you choose:
 lazyai-cli init \
   --scope project \
   --tools opencode,claude-code,copilot \
-  --enable-servers filesystem,ai-memory \
+  --enable-servers orchestrator \
   --name my-app \
   --preset standard \
   --no-interactive
@@ -67,16 +67,20 @@ lazyai-cli init \
 4. Generates tool-native directories such as `.opencode/`, `.claude/`, `.github/`, and `.vscode/`
 5. Writes `.ai-setup.json` to track managed files, hashes, selections, and operations
 6. Generates `.env.example` when enabled MCP servers require environment variables
+7. Scaffolds `.ai/orchestration/` when the optional `orchestrator` MCP server is enabled
 
 ## OpenCode default behavior
 
-When OpenCode is selected during `init`, LazyAI installs the neutral canonical adapter path. The default install includes:
+When OpenCode is selected during `init`, LazyAI defaults to the **Fortnite/OpenCode runtime**. The default install includes:
 
-- Canonical agents, with `guide` as the front-door default and `implementer` preserved as a specialist
-- root `opencode.json` with the baseline config shape
-- `.opencode/agents/guide.md`
+- Fortnite agents, skills, scripts, and workflows
+- `AGENTS.md`, `.opencode/STARTUP.md`, and `opencode.jsonc` with `default_agent: loop-driver`
 
-Fortnite agents, `.opencode/STARTUP.md`, and `loop-driver` are not installed by default.
+To opt out and use legacy/generic OpenCode assets instead, pass `--plain-opencode`:
+
+```bash
+lazyai-cli init --tools opencode --plain-opencode
+```
 
 Existing safety constraints still apply: no push/deploy by default, and project files are created with no-overwrite behavior where applicable.
 

@@ -1,18 +1,14 @@
 # CLI Overview
 
-`lazyai-cli` is a single shipped binary with subcommands grouped by purpose. It is distinct from repository harness scripts such as `bin/doctor`, `bin/inject`, and `bin/startup-self-heal`, which are maintainer tools and not product commands.
+`lazyai-cli` is a single binary with subcommands grouped by purpose:
 
-- **Setup core**: `init`, `compile`, `update`, `doctor`, `status`, `setup`, `config`, `server`, `workspace`, `sidecar`, `validate`
-- **Scaffolding and discovery**: `create`, `add`, `import`, `migrate`, `eject`, `list`, `info`, `build-plugin`
-- **Runtime extras**: `session`, `ledger`, `memory`, `message`, `metrics`, `cost`, `backup`, `restore-runtime-db`, `secret`, `auth`, `notify`, `git`
-- **Shell and binary lifecycle**: `completion`, `update-self`
-- **Maintainer catalog tooling**: `models sync`
+- **Lifecycle**: `init`, `compile`, `update`, `doctor`, `status`
+- **Scaffolding**: `create`, `add`, `import`, `migrate`, `eject`
+- **Discovery**: `list`, `info`, `extensions`
+- **Orchestration**: `orchestration list`, `orchestration create`, `orchestration status`
+- **Utilities**: `completions`, `update-self`
 
-Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup`, and obsolete `eval` are not active CLI commands. The hidden deprecated `completions` alias exists only for compatibility; use `completion`.
-
-See [Product Boundaries](../concepts/product-boundaries.md) for the source-backed category inventory.
-
-Global flags: `--verbose` / `-v`, `--log-level`, and `--log-format`. Command-specific flags such as `--dry-run`, `--force`, `--json`, and `--no-interactive` are documented per command.
+All commands support `--verbose` / `-v`.
 
 ## Common workflows
 
@@ -52,11 +48,11 @@ lazyai-cli doctor --migration-check
 
 | Flag | Description |
 |---|---|
-| `--verbose`, `-v` | Enable verbose debug output |
-| `--log-level` | Set log level (`debug`, `info`, `warn`, `error`) |
-| `--log-format` | Set log format (`text`, `json`, `logfmt`) |
-
-Flags such as `--dry-run`, `--force`, `--json`, and `--no-interactive` are command-specific, not global.
+| `--verbose`, `-v` | Detailed output |
+| `--dry-run` | Preview changes without writing |
+| `--force` | Overwrite files and create backups |
+| `--json` | Emit JSON instead of formatted output |
+| `--no-interactive` | Disable prompts; all required flags must be provided |
 
 ## TOML defaults
 

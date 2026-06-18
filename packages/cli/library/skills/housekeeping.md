@@ -21,7 +21,7 @@ consumes:
 produces_for:
   - code review (PR with cleanups)
   - standards / constitution (if new rule needed)
-mcp_tools: [filesystem, ripgrep]
+mcp_tools: [filesystem, ripgrep, qmd]
 harness:
   feed_forward: [inventory]
   contract: [speckit-review]

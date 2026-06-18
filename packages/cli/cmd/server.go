@@ -760,6 +760,25 @@ func runServerHealthChecks(dir string, name string, catalog *Catalog, tools []st
 		}
 	}
 
+	// L1.3: Orchestrator-specific checks
+	if name == "orchestrator" {
+		chainsDir := filepath.Join(dir, ".ai", "orchestration", "chains")
+		if files.FileExists(chainsDir) {
+			checks = append(checks, CheckResult{
+				Name:    "orchestration chains",
+				Status:  CheckPass,
+				Message: ".ai/orchestration/chains/ present",
+			})
+		} else {
+			checks = append(checks, CheckResult{
+				Name:        "orchestration chains",
+				Status:      CheckFail,
+				Message:     ".ai/orchestration/chains/ is missing",
+				Remediation: "Run 'lazyai-cli server add orchestrator'",
+			})
+		}
+	}
+
 	// Note: L3 stdio handshake is skipped in the Go implementation.
 	// The TypeScript version spawns the MCP server process and performs a
 	// tools/list handshake, but this requires the Node.js MCP SDK.
@@ -826,7 +845,7 @@ func boldStyle() lipgloss.Style {
 // perToolMCPConfig maps each tool ID to its per-tool MCP config file path.
 // An empty string means the tool uses a global config (no project-local file).
 var perToolMCPConfig = map[string]string{
-	"opencode":    ".opencode/lazyai.mcp.jsonc",
+	"opencode":    ".opencode/opencode.jsonc",
 	"claude-code": ".mcp.json",
 	"copilot":     ".vscode/mcp.json",
 }

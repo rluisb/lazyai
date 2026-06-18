@@ -1,0 +1,49 @@
+# HOTFIX WORKFLOW — Emergency production fix
+# ⚠️ SAFETY: Post-hoc verification is MANDATORY and NON-NEGOTIABLE
+# Fast path skips gates during emergency, but post_verify must complete within 1h
+
+name: hotfix
+trigger: /hotfix
+description: Emergency production fix — minimal phases, no gates, fast path
+modes:
+  emergency:
+    phases: [triage, fix, verify, post_verify]
+    skip_gates: true
+    post_verify:
+      async: true
+      timeout: 3600
+      mandatory: true
+default_mode: emergency
+phases:
+  - name: triage
+    agent: respawn-crew
+    skill: reboot-van
+    mode: triage
+    feedforward: "Production incident: {INCIDENT_DESCRIPTION}. Severity: {SEVERITY}. Triage immediately."
+    gate: null
+  - name: fix
+    agent: wall-builder
+    skill: build-mode
+    mode: senior
+    feedforward: "Triage: {TRIAGE_OUTPUT}. Apply minimal fix. No refactoring. Ship the smallest change that resolves the incident."
+    gate: null
+  - name: verify
+    agent: shield-audit
+    skill: zero-point
+    mode: quick
+    feedforward: "Hotfix applied. Quick verification: does it resolve the incident? Any regressions?"
+    gate: null
+  - name: post_verify
+    agent: shield-audit
+    skill: zero-point
+    mode: quick
+    feedforward: "Hotfix applied: {VERIFY_OUTPUT}. Mandatory post-hoc verification within 1h. Check for regressions, verify fix durability."
+    gate: null
+    async: true
+    timeout: 3600  # 1 hour
+    metrics:
+      record_latency: true
+      record_cost: true
+      record_tokens: true
+      gate_result: true
+      deferred_gate_result: true

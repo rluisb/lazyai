@@ -9,7 +9,7 @@
 
 Use one bounded lifecycle label when reporting agent progress, handoffs, recovery summaries, or completion evidence. These labels are report vocabulary only: they describe what the agent is doing in prose and handoff artifacts.
 
-This rule does not add runtime per-agent state tracking, persistence fields, state-machine support, or host-tool status APIs. Runtime lifecycle tracking requires a separate approval decision and ADR.
+This rule does not add runtime per-agent state tracking and does not imply runtime state-machine support. Wave 2 does not change `ChainState`, `StepState`, persistence, or `get_status`; runtime lifecycle tracking requires a separate approval decision and ADR.
 
 ## Lifecycle Vocabulary
 
@@ -49,4 +49,4 @@ Translate common free-form status words into the bounded vocabulary instead of i
 
 - Agents must use the vocabulary consistently in progress updates, handoff notes, recovery summaries, and final completion reports.
 - Do not create new lifecycle labels for one-off statuses; add a rationale and ask for approval if the vocabulary is insufficient.
-- Do not persist labels, add lifecycle fields, or change status APIs for this guidance layer.
+- Do not persist labels, add lifecycle fields, change `ChainState` or `StepState`, or change `get_status` output for this guidance layer.

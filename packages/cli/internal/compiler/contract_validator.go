@@ -37,26 +37,15 @@ type SkillContract struct {
 	MCPTools    []string
 }
 
-// LoadSkillContracts walks the active canonical skills and agents directories
-// and returns contract records for markdown files with a frontmatter name.
+// LoadSkillContracts walks the library skills and agents directories and
+// returns contract records for markdown files with a frontmatter name.
 func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 	if libFS == nil {
 		return nil, fmt.Errorf("LoadSkillContracts: libFS is nil")
 	}
 
 	var contracts []SkillContract
-	var dirs []string
-	if _, err := fs.ReadDir(libFS, "skills"); err == nil {
-		dirs = append(dirs, "skills")
-	} else if _, err := fs.ReadDir(libFS, "canonical/skills"); err == nil {
-		dirs = append(dirs, "canonical/skills")
-	}
-	if _, err := fs.ReadDir(libFS, "canonical/agents"); err == nil {
-		dirs = append(dirs, "canonical/agents")
-	} else if _, err := fs.ReadDir(libFS, "agents"); err == nil {
-		dirs = append(dirs, "agents")
-	}
-	for _, dir := range dirs {
+	for _, dir := range []string{"skills", "agents"} {
 		entries, err := fs.ReadDir(libFS, dir)
 		if err != nil {
 			// Directory may not exist in minimal libraries.
@@ -373,6 +362,7 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 		"housekeeping":                  true,
 		"implement":                     true,
 		"iterate":                       true,
+		"orchestrate":                   true,
 		"parallel-execution":            true,
 		"plan":                          true,
 		"research":                      true,
@@ -394,27 +384,6 @@ func ValidateChain(contracts []SkillContract) []ContractIssue {
 		"improve-codebase-architecture": true,
 		"extract-standards":             true,
 		"process-audit":                 true,
-		"adhd-engineer":                 true,
-		"architecture-review":           true,
-		"caveman":                       true,
-		"codebase-exploration":          true,
-		"create-agent":                  true,
-		"create-hook":                   true,
-		"create-skill":                  true,
-		"create-workflow":               true,
-		"doc-backed-clarify":            true,
-		"fast-feedback":                 true,
-		"four-point-vibe-coding":        true,
-		"handoff":                       true,
-		"issue-triage":                  true,
-		"memory-promotion":              true,
-		"no-workarounds":                true,
-		"project-guardrails-init":       true,
-		"skill-authoring":               true,
-		"task-to-issues":                true,
-		"tdd-planning":                  true,
-		"test-first-change":             true,
-		"zoom-out":                      true,
 	}
 	for _, contract := range contracts {
 		if !strings.HasPrefix(contract.Source, "skills/") {

@@ -34,12 +34,10 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	settingsPath := filepath.Join(claudeDir, "settings.json")
 	rulesDir := filepath.Join(claudeDir, "rules")
-	hooksDir := filepath.Join(claudeDir, "hooks")
 	sampleRulePath := filepath.Join(rulesDir, "typescript.md")
 
 	_ = files.EnsureDir(claudeDir)
 	_ = files.EnsureDir(rulesDir)
-	_ = files.EnsureDir(hooksDir)
 	_ = files.EnsureDir(filepath.Join(claudeDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(claudeDir, "agents"))
 
@@ -56,29 +54,6 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		"permissions": map[string]any{
 			"allow": []any{},
 			"deny":  []any{},
-		},
-		"hooks": map[string]any{
-			"PreToolUse": []any{
-				map[string]any{
-					"hooks": []any{
-						map[string]any{
-							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/block-destructive-shell.sh",
-							"type":    "command",
-						},
-					},
-					"matcher": "Bash",
-				},
-			},
-			"Stop": []any{
-				map[string]any{
-					"hooks": []any{
-						map[string]any{
-							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/objective-workflow-gate.sh",
-							"type":    "command",
-						},
-					},
-				},
-			},
 		},
 	}
 	preExisted := files.FileExists(settingsPath)
@@ -111,25 +86,20 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 
 	adapterLog.Info("installing tools", "adapter", "claude-code")
 
-	// Copy agents from the canonical seven-agent baseline. Source frontmatter
-	// carries LazyAI metadata for other uses; generated Claude Code agents emit
-	// only name and description to match the baseline surface.
-	if err := copyCanonicalDefaultAgent(ctx,
-		filepath.Join(claudeDir, "agents", defaultAgentID+".md"),
-		claudeDefaultAgentContent,
-	); err != nil {
-		return nil, err
-	}
-
+	// Copy agents. Source frontmatter declares an abstract tier (frontier/
+	// balanced/speed); RewriteAgentForClaudeCode resolves it to the
+	// appropriate Anthropic alias (opus/sonnet/haiku) and emits a Claude
+	// Code-shaped frontmatter (drops tier/thinking/risk — Claude Code
+	// ignores them).
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
-		SourceSubdir: "canonical/agents",
+		SourceSubdir: "agents",
 		SelectionKey: "agents",
 		ToDestPath: func(file string) string {
 			return filepath.Join(claudeDir, "agents", file)
 		},
 		IncludeFile: func(file string) bool {
-			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
+			return fileID(file) != "orchestrator"
 		},
 		Transform: func(content []byte) []byte {
 			out, err := RewriteAgentForClaudeCode(content, ctx)
@@ -141,6 +111,25 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 		},
 	}); err != nil {
 		return nil, err
+	}
+
+	// Orchestrator agent if enabled. Spec 012 / Task 002: ship at all scopes;
+	// the previous `!isGlobal` gate silently skipped it at global scope.
+	if IsOrchestratorEnabled(ctx) {
+		raw := GetOrchestratorAgentContent(ctx)
+		content, err := RewriteAgentForClaudeCode(raw, ctx)
+		if err != nil {
+			adapterLog.Warn("claude-code orchestrator rewrite fell back to verbatim copy", "adapter", "claude-code", "error", err)
+			content = raw
+		}
+		if err := CopyWithRecord("agents/orchestrator.md",
+			filepath.Join(claudeDir, "agents", "orchestrator.md"),
+			ctx, false,
+			func([]byte) []byte { return content },
+			0o644,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	// Copy skills.
@@ -169,18 +158,6 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	}
 
 	// Copy Claude Code output styles (starter set).
-
-	// Copy generated hook scripts.
-	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-		Ctx:          ctx,
-		SourceSubdir: "claudecode/hooks",
-		ToDestPath: func(file string) string {
-			return filepath.Join(hooksDir, file)
-		},
-		Mode: 0o755,
-	}); err != nil {
-		return nil, err
-	}
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "claudecode/output-styles",
@@ -282,31 +259,11 @@ func installClaudeMCPViaCLI(ctx *AdapterContext, claudeDir string) bool {
 func mcpServerToJSON(srv McpServer) string {
 	// Build a JSON object matching claude's mcp add-json schema.
 	// For stdio servers: {"command": "...", "args": [...], "env": {...}}
-	// For http/sse servers: {"type":"http", "url": "...", "headers": {...}}
+	// For http/sse servers: {"url": "...", "headers": {...}}
 
 	var buf strings.Builder
 	buf.WriteString("{")
 	first := true
-	// URL (for HTTP/SSE servers)
-	if srv.URL != "" {
-		buf.WriteString(`"type":"http","url":"`)
-		fmt.Fprintf(&buf, `%s"`, srv.URL)
-		// Headers object (for HTTP/SSE servers)
-		if len(srv.Headers) > 0 {
-			buf.WriteString(`,"headers":{`)
-			headerFirst := true
-			for k, v := range srv.Headers {
-				if !headerFirst {
-					buf.WriteString(",")
-				}
-				fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
-				headerFirst = false
-			}
-			buf.WriteString("}")
-		}
-		buf.WriteString("}")
-		return buf.String()
-	}
 
 	// Command (for stdio/subprocess servers)
 	if srv.Command != "" {
@@ -348,6 +305,33 @@ func mcpServerToJSON(srv McpServer) string {
 		first = false
 	}
 
+	// URL (for HTTP/SSE servers)
+	if srv.URL != "" {
+		if !first {
+			buf.WriteString(",")
+		}
+		fmt.Fprintf(&buf, `"url":"%s"`, srv.URL)
+		first = false
+	}
+
+	// Headers object (for HTTP/SSE servers)
+	if len(srv.Headers) > 0 {
+		if !first {
+			buf.WriteString(",")
+		}
+		buf.WriteString(`"headers":{`)
+		headerFirst := true
+		for k, v := range srv.Headers {
+			if !headerFirst {
+				buf.WriteString(",")
+			}
+			fmt.Fprintf(&buf, `"%s":"%s"`, k, v)
+			headerFirst = false
+		}
+		buf.WriteString("}")
+		first = false
+	}
+
 	buf.WriteString("}")
 	return buf.String()
 }
@@ -362,7 +346,7 @@ func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
 
 	var agentFiles []string
 	if ctx.LibraryFS != nil {
-		entries, err := fs.ReadDir(ctx.LibraryFS, "canonical/agents")
+		entries, err := fs.ReadDir(ctx.LibraryFS, "agents")
 		if err == nil {
 			for _, e := range entries {
 				if e.IsDir() {
@@ -372,7 +356,7 @@ func migrateLegacyGlobalAgents(ctx *AdapterContext, claudeDir string) {
 			}
 		}
 	} else if ctx.LibraryDir != "" {
-		sourceDir := filepath.Join(ctx.LibraryDir, "canonical", "agents")
+		sourceDir := filepath.Join(ctx.LibraryDir, "agents")
 		for _, f := range files.ListDir(sourceDir) {
 			if files.IsDirectory(filepath.Join(sourceDir, f)) {
 				continue

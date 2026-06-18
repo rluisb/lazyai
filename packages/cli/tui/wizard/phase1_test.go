@@ -14,8 +14,8 @@ func TestRunPhase1NonInteractiveDefaults(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:         types.SetupScopeProject,
 		Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-		Skills:        []types.SkillId{types.SkillIdDiagnose},
-		Agents:        []types.AgentId{types.AgentIdImplementer},
+		Skills:        []types.SkillId{types.SkillIdImplement},
+		Agents:        []types.AgentId{types.AgentIdBuilder},
 		McpPreset:     McpPresetRecommended,
 		ProjectName:   "demo-app",
 		CliTools:      []string{"gh"},
@@ -53,8 +53,8 @@ func TestBuildPhase1Result(t *testing.T) {
 			t.Parallel()
 
 			tools := []types.ToolId{types.ToolIdOpenCode, types.ToolIdCopilot}
-			skills := []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview}
-			agents := []types.AgentId{types.AgentIdImplementer, types.AgentIdReviewer}
+			skills := []types.SkillId{types.SkillIdImplement, types.SkillIdPlan}
+			agents := []types.AgentId{types.AgentIdBuilder, types.AgentIdReviewer}
 			cliTools := []string{"gh"}
 			servers := []string{"filesystem"}
 
@@ -86,17 +86,17 @@ func TestBuildPhase1Result(t *testing.T) {
 			}
 
 			tools[0] = types.ToolIdClaudeCode
-			skills[0] = types.SkillIdCodebaseExploration
-			agents[0] = types.AgentIdResearcher
-			cliTools[0] = "ai-jail"
-			servers[0] = "ai-memory"
+			skills[0] = types.SkillIdResearch
+			agents[0] = types.AgentIdScout
+			cliTools[0] = "rtk"
+			servers[0] = "memory"
 			if result.Tools[0] != types.ToolIdOpenCode {
 				t.Fatalf("result.Tools was not copied")
 			}
-			if result.Skills[0] != types.SkillIdDiagnose {
+			if result.Skills[0] != types.SkillIdImplement {
 				t.Fatalf("result.Skills was not copied")
 			}
-			if result.Agents[0] != types.AgentIdImplementer {
+			if result.Agents[0] != types.AgentIdBuilder {
 				t.Fatalf("result.Agents was not copied")
 			}
 			if result.CliTools[0] != "gh" {
@@ -170,8 +170,8 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	defaults := &Phase1Result{
 		Scope:       types.SetupScopeProject,
 		Tools:       []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-		Skills:      []types.SkillId{types.SkillIdDiagnose, types.SkillIdPrReview},
-		Agents:      []types.AgentId{types.AgentIdImplementer},
+		Skills:      []types.SkillId{types.SkillIdImplement, types.SkillIdPlan},
+		Agents:      []types.AgentId{types.AgentIdBuilder},
 		McpPreset:   McpPresetRecommended,
 		ProjectName: "demo-app",
 	}
@@ -182,12 +182,12 @@ func TestPhase1StepInfoFor(t *testing.T) {
 	}
 
 	skillInfo := phase1StepInfoFor(3, types.SetupScopeProject, defaults)
-	if got, want := skillInfo.Title(), "Setup Context — 3/9: Skills (previous: diagnose, pr-review)"; got != want {
+	if got, want := skillInfo.Title(), "Setup Context — 3/9: Skills (previous: implement, plan)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
 	agentInfo := phase1StepInfoFor(4, types.SetupScopeProject, defaults)
-	if got, want := agentInfo.Title(), "Setup Context — 4/9: Agents (previous: implementer)"; got != want {
+	if got, want := agentInfo.Title(), "Setup Context — 4/9: Agents (previous: builder)"; got != want {
 		t.Fatalf("Title() = %q, want %q", got, want)
 	}
 
@@ -221,14 +221,14 @@ func TestDetectInstalledCliTools(t *testing.T) {
 		switch file {
 		case "gh":
 			return "/usr/bin/gh", nil
-		case "ai-jail":
+		case "rtk":
 			return "", errors.New("not found")
 		default:
 			return "", errors.New("unexpected")
 		}
 	}
 
-	catalog := &McpCatalog{CliTools: map[string]CliTool{"gh": {}, "ai-jail": {}}}
+	catalog := &McpCatalog{CliTools: map[string]CliTool{"gh": {}, "rtk": {}}}
 	got := detectInstalledCliTools(catalog)
 	if want := []string{"gh"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("detectInstalledCliTools() = %#v, want %#v", got, want)
@@ -244,13 +244,13 @@ func TestToolOptionsForScope_ReturnsSupportedTools(t *testing.T) {
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	if len(projectOpts) != 5 {
-		t.Errorf("project options count = %d, want 5", len(projectOpts))
+	if len(projectOpts) != 3 {
+		t.Errorf("project options count = %d, want 3", len(projectOpts))
 	}
 
 	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	if len(workspaceOpts) != 5 {
-		t.Errorf("workspace options count = %d, want 5", len(workspaceOpts))
+	if len(workspaceOpts) != 3 {
+		t.Errorf("workspace options count = %d, want 3", len(workspaceOpts))
 	}
 }
 
@@ -280,9 +280,9 @@ func TestNewCliToolsSelectUsesPreSelectedWhenNoDefaults(t *testing.T) {
 		t.Fatalf("GetValue() = %#v, want %#v", got, want)
 	}
 
-	selectField = NewCliToolsSelect([]string{"ai-jail"}, []string{"gh"})
+	selectField = NewCliToolsSelect([]string{"rtk"}, []string{"gh"})
 	got = selectField.GetValue().([]string)
-	if want := []string{"ai-jail"}; !reflect.DeepEqual(got, want) {
+	if want := []string{"rtk"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("GetValue() with defaults = %#v, want %#v", got, want)
 	}
 }

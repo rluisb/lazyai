@@ -4,11 +4,12 @@ LazyAI is released as Go submodules from `github.com/rluisb/lazyai`. It is not p
 
 ## Go module tags
 
-Each active package is an independent Go module and must be tagged with its module directory prefix:
+Each package is an independent Go module and must be tagged with its module directory prefix:
 
 | Module | Command | Tag format |
 |---|---|---|
 | `packages/cli` | `lazyai-cli` | `packages/cli/vX.Y.Z` |
+| `packages/orchestrator` | `lazyai-orchestrator` | `packages/orchestrator/vX.Y.Z` |
 | `packages/diffviewer` | `lazyai-diffviewer` | `packages/diffviewer/vX.Y.Z` |
 
 Root `vX.Y.Z` tags do not version these submodules for `go install`.
@@ -19,6 +20,7 @@ Released users install commands with:
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
 
@@ -42,8 +44,11 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 Release assets should use the LazyAI binary names:
 
 - `lazyai-cli-<os>-<arch>[.exe]`
+- `lazyai-orchestrator-<os>-<arch>[.exe]`
 - `lazyai-diffviewer-<os>-<arch>[.exe]`
 - `checksums.txt`
+
+The orchestrator MCP runtime is distributed as `lazyai-orchestrator`; generated MCP configs should not reference the old `ai-setup-orchestrator` name.
 
 ## Upgrading commands
 

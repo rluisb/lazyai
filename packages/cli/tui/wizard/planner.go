@@ -1,13 +1,18 @@
-// Package wizard provides plan types used by the setup wizard's confirmation
-// and conflict-resolution phases. The actual file installation is performed by
-// the scaffold pipeline; the plan is intentionally minimal and conflict-free.
 package wizard
 
-// InstallPlan describes what files would be installed.
-// The wizard currently uses scaffold.ScaffoldAll to perform installation, so
-// the plan is a placeholder used only for the review/confirm phase.
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/globalpaths"
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
+)
+
+// InstallPlan describes what files to install, directories to create,
+// and conflicts to resolve.
 type InstallPlan struct {
 	FilesToInstall []PlannedFile
+	DirsToCreate   []string
 	Conflicts      []ConflictInfo
 }
 
@@ -29,10 +34,41 @@ type ConflictInfo struct {
 	Type            string // file category
 }
 
-// ComputePlan computes the install plan. In the current architecture the
-// scaffold pipeline handles actual file selection and installation, so this
-// returns an empty, conflict-free plan used only for the confirmation phase.
+// ComputePlan computes what files to install and what conflicts exist
+// based on the wizard configuration.
+//
+// Currently this produces a placeholder plan. Full implementation requires
+// the scaffold/registry packages to list available templates. The planner
+// will be extended once those packages are ported.
 func ComputePlan(config *WizardConfig) (*InstallPlan, error) {
-	_ = config
-	return &InstallPlan{}, nil
+	plan := &InstallPlan{}
+
+	// Derive target dir from scope.
+	targetDir := config.TargetDir
+	if config.CLIScope == types.SetupScopeGlobal && config.HomeDir != "" {
+		globalPath, err := globalpaths.ResolveGlobalToolTargetDir(types.ToolIdOpenCode, config.HomeDir)
+		if err == nil {
+			targetDir = globalPath
+		} else {
+			targetDir = filepath.Join(config.HomeDir, ".config", "opencode")
+		}
+	}
+
+	// Build file list based on tools and preset.
+	// Determine preset and features.
+	preset := types.PresetLevelStandard
+	// This will be populated from Phase 2 results.
+
+	_ = targetDir
+	_ = preset
+
+	// TODO: Implement full plan computation once scaffold packages are ported.
+	// For now, return an empty plan with no conflicts.
+	return plan, nil
+}
+
+// fileExists checks if a file exists at the given path.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

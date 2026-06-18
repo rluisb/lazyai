@@ -45,81 +45,57 @@ func IsValidSetupPolicy(policy SetupPolicy) bool {
 type ToolId string
 
 const (
-	ToolIdOpenCode    ToolId = "opencode"
-	ToolIdClaudeCode  ToolId = "claude-code"
-	ToolIdCopilot     ToolId = "copilot"
-	ToolIdPi          ToolId = "pi"
-	ToolIdAntigravity ToolId = "antigravity"
+	ToolIdOpenCode   ToolId = "opencode"
+	ToolIdClaudeCode ToolId = "claude-code"
+	ToolIdCopilot    ToolId = "copilot"
 )
 
-// AgentId identifies a canonical agent role.
+// AgentId identifies a specialized agent role.
 type AgentId string
 
 const (
-	AgentIdGuide            AgentId = "guide"
-	AgentIdImplementer      AgentId = "implementer"
-	AgentIdResearcher       AgentId = "researcher"
-	AgentIdDeployer         AgentId = "deployer"
-	AgentIdResponder        AgentId = "responder"
-	AgentIdPlanner          AgentId = "planner"
-	AgentIdReviewer         AgentId = "reviewer"
-	AgentIdEvidenceVerifier AgentId = "evidence-verifier"
+	AgentIdBuilder      AgentId = "builder"
+	AgentIdDocumenter   AgentId = "documenter"
+	AgentIdImplementor  AgentId = "implementor"
+	AgentIdOrchestrator AgentId = "orchestrator"
+	AgentIdPlanner      AgentId = "planner"
+	AgentIdRedTeam      AgentId = "red-team"
+	AgentIdReviewer     AgentId = "reviewer"
+	AgentIdScout        AgentId = "scout"
 )
 
 // SkillId identifies a workflow skill.
 type SkillId string
 
 const (
-	SkillIdAdhdEngineer          SkillId = "adhd-engineer"
-	SkillIdAntiSpeculation       SkillId = "anti-speculation"
-	SkillIdArchitectureReview    SkillId = "architecture-review"
-	SkillIdBugfix                SkillId = "bugfix"
-	SkillIdCaveman               SkillId = "caveman"
-	SkillIdCodebaseExploration   SkillId = "codebase-exploration"
-	SkillIdCreateAgent           SkillId = "create-agent"
-	SkillIdCreateHook            SkillId = "create-hook"
-	SkillIdCreateSkill           SkillId = "create-skill"
-	SkillIdCreateWorkflow        SkillId = "create-workflow"
-	SkillIdDiagnose              SkillId = "diagnose"
-	SkillIdDocBackedClarify      SkillId = "doc-backed-clarify"
-	SkillIdExtractStandards      SkillId = "extract-standards"
-	SkillIdFastFeedback          SkillId = "fast-feedback"
-	SkillIdFourPointVibeCoding   SkillId = "four-point-vibe-coding"
-	SkillIdHandoff               SkillId = "handoff"
-	SkillIdHousekeeping          SkillId = "housekeeping"
-	SkillIdImpactCheck           SkillId = "impact-check"
-	SkillIdImplement             SkillId = "implement"
-	SkillIdIssueTriage           SkillId = "issue-triage"
-	SkillIdIterate               SkillId = "iterate"
-	SkillIdMemoryPromotion       SkillId = "memory-promotion"
-	SkillIdMemoryWrite           SkillId = "memory-write"
-	SkillIdNoWorkarounds         SkillId = "no-workarounds"
-	SkillIdParallelExecution     SkillId = "parallel-execution"
-	SkillIdPlan                  SkillId = "plan"
-	SkillIdPrReview              SkillId = "pr-review"
-	SkillIdProcessAudit          SkillId = "process-audit"
-	SkillIdProjectGuardrailsInit SkillId = "project-guardrails-init"
-	SkillIdProofOfConcept        SkillId = "proof-of-concept"
-	SkillIdResearch              SkillId = "research"
-	SkillIdReview                SkillId = "review"
-	SkillIdRpi                   SkillId = "rpi"
-	SkillIdSelfImprove           SkillId = "self-improve"
-	SkillIdSkillAuthoring        SkillId = "skill-authoring"
-	SkillIdSpeckitAnalyze        SkillId = "speckit-analyze"
-	SkillIdSpeckitChecklist      SkillId = "speckit-checklist"
-	SkillIdSpeckitClarify        SkillId = "speckit-clarify"
-	SkillIdSpeckitConstitute     SkillId = "speckit-constitution"
-	SkillIdSpeckitImplement      SkillId = "speckit-implement"
-	SkillIdSpeckitPlan           SkillId = "speckit-plan"
-	SkillIdSpeckitSpecify        SkillId = "speckit-specify"
-	SkillIdSpeckitTasks          SkillId = "speckit-tasks"
-	SkillIdSpike                 SkillId = "spike"
-	SkillIdTaskToIssues          SkillId = "task-to-issues"
-	SkillIdTddLoop               SkillId = "tdd-loop"
-	SkillIdTddPlanning           SkillId = "tdd-planning"
-	SkillIdTestFirstChange       SkillId = "test-first-change"
-	SkillIdUpdateMemory          SkillId = "update-memory"
-	SkillIdZoomOut               SkillId = "zoom-out"
+	SkillIdAntiSpeculation   SkillId = "anti-speculation"
+	SkillIdBugfix            SkillId = "bugfix"
+	SkillIdExtractStandards  SkillId = "extract-standards"
+	SkillIdHousekeeping      SkillId = "housekeeping"
+	SkillIdImpactCheck       SkillId = "impact-check"
+	SkillIdImplement         SkillId = "implement"
+	SkillIdIterate           SkillId = "iterate"
+	SkillIdMemoryWrite       SkillId = "memory-write"
+	SkillIdOrchestrate       SkillId = "orchestrate"
+	SkillIdParallelExecution SkillId = "parallel-execution"
+	SkillIdPlan              SkillId = "plan"
+	SkillIdProcessAudit      SkillId = "process-audit"
+	SkillIdProofOfConcept    SkillId = "proof-of-concept"
+	SkillIdResearch          SkillId = "research"
+	SkillIdReview            SkillId = "review"
+	SkillIdRpi               SkillId = "rpi"
+	SkillIdSelfImprove       SkillId = "self-improve"
+	SkillIdSpeckitAnalyze    SkillId = "speckit-analyze"
+	SkillIdSpeckitChecklist  SkillId = "speckit-checklist"
+	SkillIdSpeckitClarify    SkillId = "speckit-clarify"
+	SkillIdSpeckitConstitute SkillId = "speckit-constitution"
+	SkillIdSpeckitImplement  SkillId = "speckit-implement"
+	SkillIdSpeckitPlan       SkillId = "speckit-plan"
+	SkillIdSpeckitSpecify    SkillId = "speckit-specify"
+	SkillIdSpeckitTasks      SkillId = "speckit-tasks"
+	SkillIdSpike             SkillId = "spike"
+	SkillIdTddLoop           SkillId = "tdd-loop"
+	SkillIdUpdateMemory      SkillId = "update-memory"
 )
 
 // PromptId identifies a reusable prompt.
@@ -219,7 +195,6 @@ const (
 	ArtifactTypeCommand             ArtifactType = "command"
 	ArtifactTypePrompt              ArtifactType = "prompt"
 	ArtifactTypeTemplate            ArtifactType = "template"
-	ArtifactTypeHook                ArtifactType = "hook"
 	ArtifactTypeWorkflow            ArtifactType = "workflow"
 	ArtifactTypeChain               ArtifactType = "chain"
 	ArtifactTypeTeam                ArtifactType = "team"
@@ -312,9 +287,13 @@ type ToolSyncState struct {
 type SyncState struct {
 	SchemaVersion int           `json:"schemaVersion"`
 	UpdatedAt     string        `json:"updatedAt"`
+	QMD           ToolSyncState `json:"qmd"`
 	Codegraph     ToolSyncState `json:"codegraph"`
+	Graphify      ToolSyncState `json:"graphify"`
 	StaleAcked    struct {
+		QMD       []SyncAcknowledgement `json:"qmd"`
 		Codegraph []SyncAcknowledgement `json:"codegraph"`
+		Graphify  []SyncAcknowledgement `json:"graphify"`
 	} `json:"staleAcked"`
 	RepairProposals []RepairProposal `json:"repairProposals,omitempty"`
 }
@@ -323,8 +302,12 @@ type HousekeepingConfig struct {
 	MemoryPath        string `json:"memoryPath,omitempty"`
 	EnableObsidian    bool   `json:"enableObsidian,omitempty"`
 	ObsidianVaultPath string `json:"obsidianVaultPath,omitempty"`
+	EnableQmd         bool   `json:"enableQmd,omitempty"`
+	QmdIndexPath      string `json:"qmdIndexPath,omitempty"`
 	EnableCodegraph   bool   `json:"enableCodegraph,omitempty"`
 	CodegraphDataPath string `json:"codegraphDataPath,omitempty"`
+	EnableGraphify    bool   `json:"enableGraphify,omitempty"`
+	GraphifyDataPath  string `json:"graphifyDataPath,omitempty"`
 }
 
 // PresetLevel defines the preset density level.
@@ -389,35 +372,34 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
-		AgentIdGuide,
-		AgentIdImplementer,
-		AgentIdResearcher,
-		AgentIdDeployer,
-		AgentIdResponder,
+		AgentIdBuilder,
+		AgentIdDocumenter,
+		AgentIdImplementor,
+		AgentIdOrchestrator,
 		AgentIdPlanner,
+		AgentIdRedTeam,
 		AgentIdReviewer,
-		AgentIdEvidenceVerifier,
+		AgentIdScout,
 	}
 
 	ALL_SKILLS = []SkillId{
-		SkillIdAdhdEngineer,
-		SkillIdArchitectureReview,
-		SkillIdCaveman,
-		SkillIdCodebaseExploration,
-		SkillIdCreateAgent,
-		SkillIdCreateHook,
-		SkillIdCreateSkill,
-		SkillIdCreateWorkflow,
-		SkillIdDiagnose,
-		SkillIdDocBackedClarify,
-		SkillIdFastFeedback,
-		SkillIdFourPointVibeCoding,
-		SkillIdHandoff,
-		SkillIdIssueTriage,
-		SkillIdMemoryPromotion,
-		SkillIdNoWorkarounds,
-		SkillIdProjectGuardrailsInit,
-		SkillIdSkillAuthoring,
+		SkillIdAntiSpeculation,
+		SkillIdBugfix,
+		SkillIdExtractStandards,
+		SkillIdHousekeeping,
+		SkillIdImpactCheck,
+		SkillIdImplement,
+		SkillIdIterate,
+		SkillIdMemoryWrite,
+		SkillIdOrchestrate,
+		SkillIdParallelExecution,
+		SkillIdPlan,
+		SkillIdProcessAudit,
+		SkillIdProofOfConcept,
+		SkillIdResearch,
+		SkillIdReview,
+		SkillIdRpi,
+		SkillIdSelfImprove,
 		SkillIdSpeckitAnalyze,
 		SkillIdSpeckitChecklist,
 		SkillIdSpeckitClarify,
@@ -426,10 +408,9 @@ var (
 		SkillIdSpeckitPlan,
 		SkillIdSpeckitSpecify,
 		SkillIdSpeckitTasks,
-		SkillIdTaskToIssues,
-		SkillIdTddPlanning,
-		SkillIdTestFirstChange,
-		SkillIdZoomOut,
+		SkillIdSpike,
+		SkillIdTddLoop,
+		SkillIdUpdateMemory,
 	}
 
 	ALL_PROMPTS = []PromptId{
@@ -800,7 +781,7 @@ func IsValidSetupScope(s SetupScope) bool {
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
 	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdAntigravity:
+	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot:
 		return true
 	default:
 		return false

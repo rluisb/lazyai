@@ -9,27 +9,31 @@ import (
 // RemoveWorkspaceSidecar removes the sidecar block from the active workspace entry.
 // Returns nil if there is no active workspace or no sidecar block.
 func RemoveWorkspaceSidecar() error {
-	return UpdateWorkspaceConfig(func(wsCfg *WorkspaceConfig) error {
-		if wsCfg.Active == "" {
-			return nil
-		}
+	wsCfg, err := LoadWorkspaceConfig()
+	if err != nil {
+		return err
+	}
 
-		found := false
-		for i := range wsCfg.Workspaces {
-			if wsCfg.Workspaces[i].Name == wsCfg.Active {
-				if wsCfg.Workspaces[i].Sidecar == nil {
-					return nil
-				}
-				wsCfg.Workspaces[i].Sidecar = nil
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("active workspace %q not found", wsCfg.Active)
-		}
+	if wsCfg.Active == "" {
 		return nil
-	})
+	}
+
+	found := false
+	for i := range wsCfg.Workspaces {
+		if wsCfg.Workspaces[i].Name == wsCfg.Active {
+			if wsCfg.Workspaces[i].Sidecar == nil {
+				return nil
+			}
+			wsCfg.Workspaces[i].Sidecar = nil
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("active workspace %q not found", wsCfg.Active)
+	}
+
+	return saveWorkspaceConfig(wsCfg)
 }
 
 // RemoveProjectSidecar deletes .lazyai-sidecar.yaml from projectRoot.

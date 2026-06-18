@@ -21,6 +21,11 @@ Install the CLI:
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
+Install the optional orchestrator MCP runtime:
+
+```bash
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
+```
 
 Install the diff viewer utility:
 
@@ -33,6 +38,7 @@ go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@la
 ```bash
 lazyai-cli --help
 lazyai-cli doctor --help
+lazyai-orchestrator --help
 lazyai-diffviewer --help
 ```
 
@@ -43,8 +49,9 @@ If a command is not found, make sure `$(go env GOPATH)/bin` is on your shell `PA
 ```bash
 git clone git@github.com:rluisb/lazyai.git
 cd lazyai
-go install ./packages/cli/cmd/lazyai-cli
-go install ./packages/diffviewer/cmd/lazyai-diffviewer
+cd packages/cli && go install ./cmd/lazyai-cli
+cd ../orchestrator && go install ./cmd/lazyai-orchestrator
+cd ../diffviewer && go install ./cmd/lazyai-diffviewer
 ```
 
 ## Upgrade

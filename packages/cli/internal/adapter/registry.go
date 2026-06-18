@@ -22,8 +22,6 @@ func NewRegistry() *Registry {
 	r.register(&OpenCodeAdapter{})
 	r.register(&ClaudeCodeAdapter{})
 	r.register(&CopilotAdapter{})
-	r.register(&PiAdapter{})
-	r.register(&AntigravityAdapter{})
 
 	return r
 }
@@ -36,7 +34,7 @@ func (r *Registry) register(a ToolAdapter) {
 func (r *Registry) Get(id types.ToolId) (ToolAdapter, error) {
 	a, ok := r.adapters[id]
 	if !ok {
-		return nil, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", id)
+		return nil, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", id)
 	}
 	return a, nil
 }

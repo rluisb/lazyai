@@ -31,9 +31,10 @@ func TestResolve_OpenCodeNeverReturnsClaude(t *testing.T) {
 	}
 }
 
-// risk=5 promotes any non-frontier tier to frontier. This protects high-risk
-// default or router-shaped roles from resolving to a small model without
-// changing the spec.Tier the agent author wrote.
+// risk=5 promotes any non-frontier tier to frontier. The orchestrator is the
+// canonical case: declared Balanced (router-shaped) but Risk 5 (wrong route
+// cascades), so we want the catalog's frontier pick — without changing the
+// spec.Tier the agent author wrote.
 func TestResolve_RiskFloorPromotesToFrontier(t *testing.T) {
 	spec := AgentSpec{Name: "router", Tier: TierSpeed, Risk: 5}
 	got, err := Resolve(spec, ResolveCtx{Catalog: ClaudeCodeCatalog})
@@ -63,7 +64,7 @@ func TestResolve_RiskFloorPromotesSpeedToBalancedAtRiskFour(t *testing.T) {
 // the user hasn't authenticated with. With only ollama-cloud configured,
 // every other provider's candidates fall away.
 func TestResolve_OpenCodeRespectsConfiguredProviders(t *testing.T) {
-	spec := AgentSpec{Name: "researcher", Tier: TierBalanced, Risk: 2}
+	spec := AgentSpec{Name: "scout", Tier: TierBalanced, Risk: 2}
 	got, err := Resolve(spec, ResolveCtx{
 		Catalog:             OpenCodeCatalog,
 		ConfiguredProviders: []string{"ollama-cloud"},
@@ -79,7 +80,7 @@ func TestResolve_OpenCodeRespectsConfiguredProviders(t *testing.T) {
 // When no configured provider has any catalog candidate, Resolve must fail
 // with ErrNoEligibleModel rather than picking a random fallback.
 func TestResolve_OpenCodeFailsWhenNoConfiguredProviderHasCandidate(t *testing.T) {
-	spec := AgentSpec{Name: "researcher", Tier: TierFrontier, Risk: 5}
+	spec := AgentSpec{Name: "scout", Tier: TierFrontier, Risk: 5}
 	_, err := Resolve(spec, ResolveCtx{
 		Catalog:             OpenCodeCatalog,
 		ConfiguredProviders: []string{"anthropic"}, // denied by catalog anyway

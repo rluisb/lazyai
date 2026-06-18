@@ -1,6 +1,7 @@
-# Retired Orchestrator Blueprint
+# Orchestrator Blueprint: What Changes, What's New, What Stays
 
-> Historical only. Spec 025 removed this runtime from the active product surface. This blueprint is preserved to explain earlier design intent; it is not current setup guidance.
+> This document shows exactly how the orchestrator feature integrates into the existing ai-setup codebase. 
+> Green (✅) = exists today, unchanged. Yellow (🟡) = exists, needs modification. Red (🔴) = new.
 
 ---
 
@@ -160,7 +161,7 @@ ai-setup/
 │           ├── team-state.test.ts          🔴
 │           └── server.test.ts              🔴
 │
-# demo/ removed during root housekeeping
+├── demo/                                   ✅
 ├── docs/                                   ✅
 ├── scripts/                                ✅
 ├── specs/                                  ✅

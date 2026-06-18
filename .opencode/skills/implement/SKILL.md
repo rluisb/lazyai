@@ -1,0 +1,42 @@
+---
+name: implement
+description: Implement requested changes safely with test-first workflow.
+argument-hint: "[task-or-scope]"
+trigger: /implement
+phase: implement
+---
+## Quick Reference
+
+| | |
+|---|---|
+| **Use when** | [When to use this skill] |
+| **Do not use when** | [When NOT to use this skill] |
+| **Primary agent** | [Which agent uses this] |
+| **Runtime risk** | [Low/Medium/High] |
+| **Outputs** | [What this skill produces] |
+| **Validation** | [How to validate output] |
+| **Deep mode trigger** | [How to trigger full mode] |
+
+
+
+# Implement Skill
+
+## Workflow
+1. Read task — confirm scope, acceptance criteria, and constraints
+2. Write failing tests first — one behavior at a time
+3. Implement minimum change to pass tests
+4. Refactor safely — no behavior changes
+5. Run quality gates — lint, typecheck, test, build. Fix before continuing.
+6. Update progress — mark task complete, record outcomes
+
+## Trace Protocol (complex implementations only)
+1. **Thought**: key consideration for this step
+2. **Action**: test write / code edit / command run
+3. **Observation**: concrete outcome
+4. **Decision**: continue / revise / escalate
+
+## Integration
+- Agent: Builder
+- Requires: plan output (plan.md + tasks/)
+- On failure feeds into: `iterate` skill
+- On success feeds into: `memory-write` skill (if lessons learned)

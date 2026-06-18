@@ -1,10 +1,10 @@
-# Retired Dashboard — Manual QA Checklist (v1)
-
-> Historical only. The dedicated dashboard runtime was removed from the active workspace in Spec 025. This checklist applies only to archived snapshots; current verification uses CLI tests and builds.
+# Orchestrator Dashboard — Manual QA Checklist (v1)
 
 **Issue:** https://github.com/rluisb/lazyai/issues/176
 **Scope:** v1 cut shipped via PRs #180, #181, #183, #184, #185
-**Use:** historical reference for archived dashboard changes.
+**Use:** run this before merging any dashboard change that touches HTML, CSS, or `dashboard.js`. The Go test suite covers structure and contracts; this checklist covers what only a human eye can catch.
+
+> Browser smoke automation is intentionally out of scope for v1. This checklist is the substitute.
 
 ---
 

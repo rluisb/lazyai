@@ -6,54 +6,126 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/rluisb/lazyai/packages/cli/internal/runtime/ledger"
 	"github.com/spf13/cobra"
 )
 
+func TestSha256Hash(t *testing.T) {
+	// Test that sha256Hash produces consistent results
+	data := []byte("test data")
+	hash1 := sha256Hash(data)
+	hash2 := sha256Hash(data)
+
+	if hash1 != hash2 {
+		t.Error("sha256Hash is not deterministic")
+	}
+
+	// Should be 64 characters (hex encoded SHA-256)
+	if len(hash1) != 64 {
+		t.Errorf("Expected hash length 64, got %d", len(hash1))
+	}
+
+	// Different data should produce different hashes
+	differentData := []byte("different data")
+	differentHash := sha256Hash(differentData)
+
+	if hash1 == differentHash {
+		t.Error("Different data produced same hash")
+	}
+}
+
+func TestLedgerEntryHash(t *testing.T) {
+	entry := LedgerEntry{
+		ID:        "test_entry",
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		EventType: "test",
+		Data:      "test data",
+		PrevHash:  "",
+	}
+
+	entryData, _ := json.Marshal(map[string]string{
+		"id":         entry.ID,
+		"timestamp":  entry.Timestamp,
+		"event_type": entry.EventType,
+		"data":       entry.Data,
+		"prev_hash":  entry.PrevHash,
+	})
+
+	entry.Hash = sha256Hash(entryData)
+
+	// Verify hash is not empty
+	if entry.Hash == "" {
+		t.Error("Hash should not be empty")
+	}
+
+	// Verify hash length
+	if len(entry.Hash) != 64 {
+		t.Errorf("Expected hash length 64, got %d", len(entry.Hash))
+	}
+}
+
 func TestReadLedgerEntries(t *testing.T) {
+	// Create a temporary ledger file
 	tmpDir := t.TempDir()
 	ledgerPath := filepath.Join(tmpDir, "test_ledger.jsonl")
 
-	l, err := ledger.Open(ledgerPath)
+	// Create test entries
+	entries := []LedgerEntry{
+		{
+			ID:        "entry1",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			EventType: "test",
+			Data:      "test data 1",
+			Hash:      "hash1",
+			PrevHash:  "",
+		},
+		{
+			ID:        "entry2",
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			EventType: "test",
+			Data:      "test data 2",
+			Hash:      "hash2",
+			PrevHash:  "hash1",
+		},
+	}
+
+	// Write entries to file
+	file, err := os.Create(ledgerPath)
 	if err != nil {
-		t.Fatalf("failed to open ledger: %v", err)
+		t.Fatalf("Failed to create test ledger: %v", err)
 	}
 
-	if err := l.Append(&ledger.Entry{Type: "test", Data: []byte(`{"message":"value1"}`)}); err != nil {
-		t.Fatalf("failed to append first entry: %v", err)
+	for _, entry := range entries {
+		entryJSON, _ := json.Marshal(entry)
+		file.WriteString(string(entryJSON) + "\n")
 	}
-	if err := l.Append(&ledger.Entry{Type: "test", Data: []byte(`{"message":"value2"}`)}); err != nil {
-		t.Fatalf("failed to append second entry: %v", err)
-	}
+	file.Close()
 
+	// Read entries back
 	readEntries, err := readLedgerEntries(ledgerPath)
 	if err != nil {
-		t.Fatalf("failed to read ledger: %v", err)
+		t.Fatalf("Failed to read ledger: %v", err)
 	}
 
-	if len(readEntries) != 3 {
-		t.Errorf("expected 3 entries (genesis + 2), got %d", len(readEntries))
+	if len(readEntries) != 2 {
+		t.Errorf("Expected 2 entries, got %d", len(readEntries))
 	}
 
+	// Verify first entry
+	if len(readEntries) > 0 {
+		if readEntries[0].ID != "entry1" {
+			t.Errorf("Expected ID 'entry1', got '%s'", readEntries[0].ID)
+		}
+	}
+
+	// Verify second entry
 	if len(readEntries) > 1 {
-		if readEntries[1].EventType != "test" {
-			t.Errorf("expected event type 'test', got '%s'", readEntries[1].EventType)
+		if readEntries[1].ID != "entry2" {
+			t.Errorf("Expected ID 'entry2', got '%s'", readEntries[1].ID)
 		}
-		if !strings.Contains(readEntries[1].Data, "value1") {
-			t.Errorf("expected data to contain 'value1', got '%s'", readEntries[1].Data)
-		}
-	}
-
-	if len(readEntries) > 2 {
-		if readEntries[2].EventType != "test" {
-			t.Errorf("expected event type 'test', got '%s'", readEntries[2].EventType)
-		}
-		if !strings.Contains(readEntries[2].Data, "value2") {
-			t.Errorf("expected data to contain 'value2', got '%s'", readEntries[2].Data)
-		}
-		if readEntries[2].PrevHash != readEntries[1].Hash {
-			t.Error("hash chain is broken")
+		if readEntries[1].PrevHash != "hash1" {
+			t.Errorf("Expected PrevHash 'hash1', got '%s'", readEntries[1].PrevHash)
 		}
 	}
 }
@@ -62,88 +134,84 @@ func TestInitLedger(t *testing.T) {
 	tmpDir := t.TempDir()
 	ledgerPath := filepath.Join(tmpDir, "test_ledger.jsonl")
 
-	if err := initLedger(ledgerPath); err != nil {
-		t.Fatalf("failed to initialize ledger: %v", err)
+	err := initLedger(ledgerPath)
+	if err != nil {
+		t.Fatalf("Failed to initialize ledger: %v", err)
 	}
 
+	// Verify file exists
 	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
-		t.Error("ledger file was not created")
+		t.Error("Ledger file was not created")
 	}
 
-	l, err := ledger.Open(ledgerPath)
+	// Read entries
+	entries, err := readLedgerEntries(ledgerPath)
 	if err != nil {
-		t.Fatalf("failed to open ledger: %v", err)
-	}
-
-	entries, err := l.ReadAll()
-	if err != nil {
-		t.Fatalf("failed to read ledger: %v", err)
+		t.Fatalf("Failed to read ledger: %v", err)
 	}
 
 	if len(entries) != 1 {
-		t.Errorf("expected 1 genesis entry, got %d", len(entries))
+		t.Errorf("Expected 1 entry, got %d", len(entries))
 	}
 
 	if len(entries) > 0 {
-		if entries[0].Type != "genesis" {
-			t.Errorf("expected genesis entry, got '%s'", entries[0].Type)
-		}
-		if entries[0].PrevHash != strings.Repeat("0", 64) {
-			t.Errorf("expected genesis prev_hash to be 64 zeros, got '%s'", entries[0].PrevHash)
+		if entries[0].EventType != "genesis" {
+			t.Errorf("Expected event type 'genesis', got '%s'", entries[0].EventType)
 		}
 	}
 }
 
 func TestAppendToLedger(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Save and switch to temp directory because appendToLedger uses os.Getwd()
 	origDir, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("failed to get current directory: %v", err)
+		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	tmpDir := t.TempDir()
 	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("failed to chdir to temp directory: %v", err)
+		t.Fatalf("Failed to chdir to temp directory: %v", err)
 	}
 	defer os.Chdir(origDir)
 
 	ledgerPath := getLedgerPath()
 
-	if err := initLedger(ledgerPath); err != nil {
-		t.Fatalf("failed to initialize ledger: %v", err)
-	}
-
-	if err := appendToLedger("test_event", map[string]string{"message": "value"}); err != nil {
-		t.Fatalf("failed to append to ledger: %v", err)
-	}
-
-	l, err := ledger.Open(ledgerPath)
+	// Initialize ledger
+	err = initLedger(ledgerPath)
 	if err != nil {
-		t.Fatalf("failed to open ledger: %v", err)
+		t.Fatalf("Failed to initialize ledger: %v", err)
 	}
 
-	entries, err := l.ReadAll()
+	// Append an event
+	err = appendToLedger("test_event", map[string]string{
+		"key": "value",
+	})
 	if err != nil {
-		t.Fatalf("failed to read ledger: %v", err)
+		t.Fatalf("Failed to append to ledger: %v", err)
+	}
+
+	// Read entries
+	entries, err := readLedgerEntries(ledgerPath)
+	if err != nil {
+		t.Fatalf("Failed to read ledger: %v", err)
 	}
 
 	if len(entries) != 2 {
-		t.Errorf("expected 2 entries, got %d", len(entries))
+		t.Errorf("Expected 2 entries, got %d", len(entries))
 	}
 
 	if len(entries) > 1 {
-		if entries[1].Type != "test_event" {
-			t.Errorf("expected event type 'test_event', got '%s'", entries[1].Type)
+		if entries[1].EventType != "test_event" {
+			t.Errorf("Expected event type 'test_event', got '%s'", entries[1].EventType)
 		}
 
-		var dataMap map[string]string
-		if err := json.Unmarshal(entries[1].Data, &dataMap); err != nil {
-			t.Fatalf("failed to unmarshal entry data: %v", err)
-		}
-		if dataMap["message"] != "value" {
-			t.Errorf("expected data message=value, got '%s'", dataMap["message"])
+		if !strings.Contains(entries[1].Data, "key=value") {
+			t.Errorf("Expected data to contain 'key=value', got '%s'", entries[1].Data)
 		}
 
+		// Verify hash chain
 		if entries[1].PrevHash != entries[0].Hash {
-			t.Error("hash chain is broken")
+			t.Error("Hash chain is broken")
 		}
 	}
 }
@@ -173,25 +241,22 @@ func TestLedgerInitRuntime(t *testing.T) {
 		t.Fatalf("failed to read ledger: %v", err)
 	}
 	if len(entries) != 1 {
-		t.Errorf("expected 1 genesis entry, got %d", len(entries))
+		t.Errorf("expected 1 entry, got %d", len(entries))
 	}
-	if len(entries) > 0 {
-		if entries[0].EventType != "genesis" {
-			t.Errorf("expected genesis entry, got '%s'", entries[0].EventType)
-		}
+	if len(entries) > 0 && entries[0].EventType != "genesis" {
+		t.Errorf("expected event type 'genesis', got '%s'", entries[0].EventType)
 	}
 }
 
 func TestLedgerAppendRuntime(t *testing.T) {
 	tmpDir := withTempDir(t)
-	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
 
-	if err := initLedger(ledgerPath); err != nil {
-		t.Fatalf("failed to init ledger: %v", err)
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
 	}
 
 	out := captureStdout(t, func() {
-		if err := runLedgerAppend(&cobra.Command{}, []string{"test_event", "test data"}); err != nil {
+		if err := runLedgerAppend(&cobra.Command{}, []string{"test_event", "test", "data"}); err != nil {
 			t.Fatalf("runLedgerAppend failed: %v", err)
 		}
 	})
@@ -200,6 +265,7 @@ func TestLedgerAppendRuntime(t *testing.T) {
 		t.Errorf("expected output to contain 'Entry appended', got:\n%s", out)
 	}
 
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
 	entries, err := readLedger(ledgerPath)
 	if err != nil {
 		t.Fatalf("failed to read ledger: %v", err)
@@ -207,21 +273,29 @@ func TestLedgerAppendRuntime(t *testing.T) {
 	if len(entries) != 2 {
 		t.Errorf("expected 2 entries, got %d", len(entries))
 	}
+
+	if len(entries) > 1 {
+		if entries[1].EventType != "test_event" {
+			t.Errorf("expected event type 'test_event', got '%s'", entries[1].EventType)
+		}
+		if entries[1].PrevHash != entries[0].Hash {
+			t.Errorf("hash chain broken: entry 1 prev_hash=%s, entry 0 hash=%s", entries[1].PrevHash, entries[0].Hash)
+		}
+	}
 }
 
 func TestLedgerShowRuntime(t *testing.T) {
 	tmpDir := withTempDir(t)
-	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
 
-	if err := initLedger(ledgerPath); err != nil {
-		t.Fatalf("failed to init ledger: %v", err)
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
 	}
-	if err := appendToLedger("show_test", map[string]string{"data": "show me"}); err != nil {
-		t.Fatalf("failed to append to ledger: %v", err)
+	if err := runLedgerAppend(&cobra.Command{}, []string{"show_test", "show", "data"}); err != nil {
+		t.Fatalf("runLedgerAppend failed: %v", err)
 	}
 
 	out := captureStdout(t, func() {
-		if err := runLedgerShow(&cobra.Command{}, []string{"5"}); err != nil {
+		if err := runLedgerShow(&cobra.Command{}, []string{}); err != nil {
 			t.Fatalf("runLedgerShow failed: %v", err)
 		}
 	})
@@ -229,17 +303,27 @@ func TestLedgerShowRuntime(t *testing.T) {
 	if !strings.Contains(out, "show_test") {
 		t.Errorf("expected output to contain 'show_test', got:\n%s", out)
 	}
+	if !strings.Contains(out, "show data") {
+		t.Errorf("expected output to contain 'show data', got:\n%s", out)
+	}
+	if !strings.Contains(out, "Last") {
+		t.Errorf("expected output to contain 'Last', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+		t.Errorf("expected ledger file to exist at %s", ledgerPath)
+	}
 }
 
 func TestLedgerVerifyRuntime(t *testing.T) {
 	tmpDir := withTempDir(t)
-	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
 
-	if err := initLedger(ledgerPath); err != nil {
-		t.Fatalf("failed to init ledger: %v", err)
+	if err := runLedgerInit(&cobra.Command{}, []string{}); err != nil {
+		t.Fatalf("runLedgerInit failed: %v", err)
 	}
-	if err := appendToLedger("verify_test", map[string]string{"data": "test"}); err != nil {
-		t.Fatalf("failed to append to ledger: %v", err)
+	if err := runLedgerAppend(&cobra.Command{}, []string{"verify_test", "verify", "data"}); err != nil {
+		t.Fatalf("runLedgerAppend failed: %v", err)
 	}
 
 	out := captureStdout(t, func() {
@@ -250,5 +334,13 @@ func TestLedgerVerifyRuntime(t *testing.T) {
 
 	if !strings.Contains(out, "verified") {
 		t.Errorf("expected output to contain 'verified', got:\n%s", out)
+	}
+	if !strings.Contains(out, "Chain intact") {
+		t.Errorf("expected output to contain 'Chain intact', got:\n%s", out)
+	}
+
+	ledgerPath := filepath.Join(tmpDir, ".specify", "ledger.jsonl")
+	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+		t.Errorf("expected ledger file to exist at %s", ledgerPath)
 	}
 }

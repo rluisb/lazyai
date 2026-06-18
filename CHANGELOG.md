@@ -2,36 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Changed
-- **Exact vibe-lab baseline parity for default agent/tool surfaces.** LazyAI now
-  emits the same seven baseline agents as `/Users/ricardo/code/vibe-lab` across
-  Claude Code (`.claude/agents`), OpenCode (`.opencode/agents`), GitHub Copilot
-  (`.github/agents`), and compatible `bin/` maintainer commands. The Go adapter
-  layer and `bin/inject` now emit the same managed-marker contract and frontmatter
-  shape as the baseline.
-
-### Added
-- `bin/inject.original` baseline artifact, copied as non-executable from vibe-lab.
-- Regression tests for baseline-style agents without LazyAI `tier` metadata and
-  for a default Copilot install producing exactly seven `.agent.md` files with no
-  `.agent.yaml` leakage.
-
-### Fixed
-- OpenCode default config is now root `opencode.json` copied from the vibe-lab
-  baseline; `.opencode/opencode.jsonc` was removed. LazyAI-only MCP/runtime extras
-  remain isolated in `.opencode/lazyai.mcp.jsonc`.
-- OpenCode hook plugin surface restored to baseline name
-  `.opencode/plugins/vibe-lab-hooks.js` / `VibeLabHooks`.
-- `ValidateAgentResolutions` now tolerates the missing `tier` field for canonical
-  baseline agents while still reporting malformed frontmatter.
-- Removed a stray `XXXX CONFIG_PATH` debug print from OpenCode adapter output.
-### Added (Plan C parity follow-up)
-- `packages/cli/library/skills/evidence-verifier.md` added as a setup-library skill; the canonical `evidence-verifier` agent was already emitted by adapters and the duplicate name is avoided by keeping only the canonical agent.
-- `packages/cli/library/skills/issue-triage.md` and `packages/cli/library/skills/task-to-issues.md` are now curated and tracked in `curation.yaml` as adapter-support skills.
-- `HookGenerator` already registered in `packages/cli/internal/generator/registry.go` for `lazyai-cli create hook <name>`; covered by `TestHookGeneratorRegisteredInRegistry`.
-
 ## [1.1.3] - 2026-05-13
 
 ### Fixed

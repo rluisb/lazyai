@@ -34,12 +34,27 @@ func TestKnowledgeMapIncludesLightweightTerminologySection(t *testing.T) {
 	assertContainsAll(t, "KNOWLEDGE_MAP.md", content, required)
 }
 
+func TestOrchestrateAlignsVocabularyBeforeDispatch(t *testing.T) {
+	t.Parallel()
+
+	content := readLibraryFile(t, "skills/orchestrate.md")
+
+	required := []string{
+		"vocabulary alignment",
+		"before dispatch",
+		"HITL",
+		"terminology decision",
+	}
+	assertContainsAll(t, "skills/orchestrate.md", content, required)
+}
+
 func TestTerminologyGuidanceDoesNotIntroduceRuntimeInfrastructure(t *testing.T) {
 	t.Parallel()
 
 	contents := map[string]string{
 		"skills/speckit-clarify.md": readLibraryFile(t, "skills/speckit-clarify.md"),
 		"KNOWLEDGE_MAP.md":          readRootKnowledgeMap(t),
+		"skills/orchestrate.md":     readLibraryFile(t, "skills/orchestrate.md"),
 	}
 	for path, content := range contents {
 		content := strings.ToLower(content)
@@ -63,7 +78,7 @@ func readRootKnowledgeMap(t *testing.T) string {
 	libraryDir, err := FindLibraryDir()
 	if err == nil && libraryDir != "" {
 		repoRoot := filepath.Dir(filepath.Dir(filepath.Dir(libraryDir)))
-		path := filepath.Join(repoRoot, "specs", "KNOWLEDGE_MAP.md")
+		path := filepath.Join(repoRoot, "KNOWLEDGE_MAP.md")
 		content, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
@@ -77,7 +92,7 @@ func readRootKnowledgeMap(t *testing.T) string {
 	}
 
 	for {
-		path := filepath.Join(dir, "specs", "KNOWLEDGE_MAP.md")
+		path := filepath.Join(dir, "KNOWLEDGE_MAP.md")
 		content, err := os.ReadFile(path)
 		if err == nil {
 			return string(content)
@@ -85,9 +100,10 @@ func readRootKnowledgeMap(t *testing.T) string {
 		if !os.IsNotExist(err) {
 			t.Fatalf("read %s: %v", path, err)
 		}
+
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatalf("specs/KNOWLEDGE_MAP.md not found walking upward from test working directory")
+			t.Fatalf("KNOWLEDGE_MAP.md not found walking upward from test working directory")
 		}
 		dir = parent
 	}

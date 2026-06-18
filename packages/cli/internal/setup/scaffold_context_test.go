@@ -14,16 +14,16 @@ func TestBuildAddScaffoldContextMergesSelectionsWithoutDuplicates(t *testing.T) 
 	storeData.Config.CLITools = []string{string(types.ToolIdOpenCode)}
 	storeData.Config.ProjectName = "lazy-app"
 	storeData.Config.PlanningDir = "specs"
-	storeData.Selections.Agents = []types.AgentId{types.AgentIdImplementer}
-	storeData.Selections.Skills = []types.SkillId{types.SkillIdDiagnose}
+	storeData.Selections.Agents = []types.AgentId{types.AgentIdBuilder}
+	storeData.Selections.Skills = []types.SkillId{types.SkillIdPlan}
 
 	ctx, presetLevel, err := BuildAddScaffoldContext("/work/app", Library{
 		Dir: "library",
 		FS:  fstest.MapFS{},
 	}, &storeData, AddSelections{
 		Tools:  []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
-		Agents: []string{string(types.AgentIdImplementer), string(types.AgentIdReviewer)},
-		Skills: []string{string(types.SkillIdDiagnose), string(types.SkillIdPrReview)},
+		Agents: []string{string(types.AgentIdBuilder), string(types.AgentIdReviewer)},
+		Skills: []string{string(types.SkillIdPlan), string(types.SkillIdResearch)},
 	})
 	if err != nil {
 		t.Fatalf("BuildAddScaffoldContext: %v", err)
@@ -34,8 +34,8 @@ func TestBuildAddScaffoldContextMergesSelectionsWithoutDuplicates(t *testing.T) 
 	}
 	assertToolIDs(t, ctx.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
 	assertStrings(t, ctx.CLITools, string(types.ToolIdOpenCode), string(types.ToolIdClaudeCode))
-	assertAgentIDs(t, ctx.Agents, types.AgentIdImplementer, types.AgentIdReviewer)
-	assertSkillIDs(t, ctx.Skills, types.SkillIdDiagnose, types.SkillIdPrReview)
+	assertAgentIDs(t, ctx.Agents, types.AgentIdBuilder, types.AgentIdReviewer)
+	assertSkillIDs(t, ctx.Skills, types.SkillIdPlan, types.SkillIdResearch)
 	if ctx.Strategy != types.ConflictStrategyAlign {
 		t.Fatalf("Strategy = %q, want %q", ctx.Strategy, types.ConflictStrategyAlign)
 	}
@@ -49,7 +49,7 @@ func TestBuildUpdateScaffoldContextAppliesForceDryRunAndStoreData(t *testing.T) 
 	storeData.Config.SetupScope = types.SetupScopeProject
 	storeData.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
 	storeData.Config.ProjectName = "lazy-app"
-	storeData.Selections.Agents = []types.AgentId{types.AgentIdImplementer}
+	storeData.Selections.Agents = []types.AgentId{types.AgentIdBuilder}
 
 	ctx, presetLevel, err := BuildUpdateScaffoldContext("/work/app", Library{FS: fstest.MapFS{}}, &storeData, UpdateOptions{
 		Force:  true,

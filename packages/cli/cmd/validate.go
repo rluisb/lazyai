@@ -70,54 +70,43 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 
 		contentStr := string(content)
 		fileName := entry.Name()
-		hasError := false
 
-		// Check for frontmatter
-		if !strings.HasPrefix(contentStr, "---\n") {
+		// Check for Dispatch Parameters section
+		if !strings.Contains(contentStr, "## Dispatch Parameters") {
 			results = append(results, ValidationResult{
 				File:     fileName,
 				Severity: "error",
-				Message:  "Missing YAML frontmatter",
+				Message:  "Missing '## Dispatch Parameters' section",
 			})
 			failCount++
-			hasError = true
+		} else {
+			passCount++
 		}
 
-		// Check for System Prompt
-		systemPromptIndex := strings.Index(contentStr, "# System Prompt")
-		if systemPromptIndex == -1 {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "error",
-				Message:  "Missing '# System Prompt' heading",
-			})
-			failCount++
-			hasError = true
-		}
-
-		// Check for managed marker
-		if !strings.Contains(contentStr, "vibe-lab:managed kind=agent") {
+		// Check for Tool Schema Quick Reference
+		if !strings.Contains(contentStr, "## Tool Schema Quick Reference") {
 			results = append(results, ValidationResult{
 				File:     fileName,
 				Severity: "warning",
-				Message:  "Missing 'vibe-lab:managed kind=agent' marker",
+				Message:  "Missing '## Tool Schema Quick Reference' section",
 			})
 		}
 
-		// Check for a section heading after System Prompt
-		if systemPromptIndex != -1 {
-			afterSystemPrompt := contentStr[systemPromptIndex:]
-			if !strings.Contains(afterSystemPrompt, "## ") {
-				results = append(results, ValidationResult{
-					File:     fileName,
-					Severity: "warning",
-					Message:  "Missing section heading after 'System Prompt'",
-				})
-			}
+		// Check for common mistakes
+		if strings.Contains(contentStr, "`text`") && strings.Contains(contentStr, "todowrite") {
+			results = append(results, ValidationResult{
+				File:     fileName,
+				Severity: "warning",
+				Message:  "May use 'text' instead of 'content' for todowrite",
+			})
 		}
 
-		if !hasError {
-			passCount++
+		if strings.Contains(contentStr, "mode:") && strings.Contains(contentStr, "task(") {
+			results = append(results, ValidationResult{
+				File:     fileName,
+				Severity: "warning",
+				Message:  "May use 'mode' as top-level field in task dispatch",
+			})
 		}
 	}
 

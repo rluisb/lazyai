@@ -14,6 +14,7 @@ LazyAI is the Go-only identity for the former `ai-setup` project. This restructu
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
 
@@ -22,26 +23,37 @@ go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@la
 | Old command | New command |
 |---|---|
 | `ai-setup` | `lazyai-cli` |
-| `ai-setup-orchestrator` | Removed; no active binary |
+| `ai-setup-orchestrator` | `lazyai-orchestrator` |
 | `diffviewer` | `lazyai-diffviewer` |
 
 Example:
 
 ```bash
 # Before
-ai-setup init --enable-servers filesystem,ai-memory
+ai-setup init --enable-servers orchestrator
 ai-setup compile
 ai-setup doctor
 
 # After
-lazyai-cli init --enable-servers filesystem,ai-memory
+lazyai-cli init --enable-servers orchestrator
 lazyai-cli compile
 lazyai-cli doctor
 ```
 
 ## MCP configuration changes
 
-Generated MCP configs no longer include the retired orchestration runtime. If you have hand-edited config for that server, remove the entry and regenerate/check managed files:
+Generated MCP configs should reference `lazyai-orchestrator`, not `ai-setup-orchestrator` or npm package names.
+
+If you have hand-edited MCP configuration, update the command manually:
+
+```json
+{
+  "command": "lazyai-orchestrator",
+  "args": ["connect"]
+}
+```
+
+Then regenerate/check managed files:
 
 ```bash
 lazyai-cli compile
@@ -52,14 +64,15 @@ lazyai-cli doctor
 
 Existing managed projects may still contain `.ai-setup.json`, `.ai-setup.db`, `.ai-setup.toml`, or `.ai-setup-backup/`. Those local file names are not automatically renamed by this package restructure.
 
-Historical runtime data under old user data directories is not migrated automatically. Archive or copy it if you need it for audit purposes.
+Existing orchestrator runtime data under old user data directories is also not migrated automatically. Archive or copy historical runtime state before switching generated MCP entries if you need it.
 
 ## Migration checklist
 
 1. Install `lazyai-cli` with Go.
-2. Replace scripts/docs references from `ai-setup` to `lazyai-cli`.
-3. Remove retired runtime MCP entries from hand-edited configs.
-4. Run `lazyai-cli update --check`, then `lazyai-cli update` when ready.
-5. Run `lazyai-cli doctor`.
+2. Install `lazyai-orchestrator` if you use the orchestrator MCP server.
+3. Replace scripts/docs references from `ai-setup` to `lazyai-cli`.
+4. Replace MCP command references from `ai-setup-orchestrator` to `lazyai-orchestrator`.
+5. Run `lazyai-cli update --check`, then `lazyai-cli update` when ready.
+6. Run `lazyai-cli doctor`.
 
 For detailed docs, use <https://rluisb.github.io/lazyai/migration/ai-setup-to-lazyai/>.

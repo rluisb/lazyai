@@ -132,11 +132,11 @@ func Root() string {
 	return "library"
 }
 
-// AgentsDir returns the path to the active canonical agents directory.
-func AgentsDir() string { return filepath.Join(Root(), "canonical", "agents") }
+// AgentsDir returns the path to the agents directory.
+func AgentsDir() string { return filepath.Join(Root(), "agents") }
 
-// SkillsDir returns the path to the active canonical skills directory.
-func SkillsDir() string { return filepath.Join(Root(), "canonical", "skills") }
+// SkillsDir returns the path to the skills directory.
+func SkillsDir() string { return filepath.Join(Root(), "skills") }
 
 // TemplatesDir returns the path to the templates directory.
 func TemplatesDir() string { return filepath.Join(Root(), "templates") }
@@ -158,6 +158,9 @@ func InfraDir() string { return filepath.Join(Root(), "infra") }
 
 // MCPDir returns the path to the MCP directory.
 func MCPDir() string { return filepath.Join(Root(), "mcp") }
+
+// OrchestrationDir returns the path to the orchestration directory.
+func OrchestrationDir() string { return filepath.Join(Root(), "orchestration") }
 
 // RootDir returns the path to the root templates directory.
 func RootDir() string { return filepath.Join(Root(), "root") }

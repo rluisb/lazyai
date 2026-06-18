@@ -1,7 +1,6 @@
 package library
 
 import (
-	"errors"
 	"io/fs"
 	"strings"
 	"testing"
@@ -11,19 +10,60 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 )
 
-// TestCopilotAgentsFixturesArchived verifies hand-authored Copilot agent YAML
-// fixtures stay out of the active library. The Copilot adapter now generates
-// agent YAML from canonical markdown.
-func TestCopilotAgentsFixturesArchived(t *testing.T) {
+// TestCopilotAgentsSchema verifies that every .agent.yaml file has required fields.
+func TestCopilotAgentsSchema(t *testing.T) {
 	libFS := GetLibraryFS()
 	agentsDir := "copilot/agents"
 
 	entries, err := fs.ReadDir(libFS, agentsDir)
-	if err == nil && len(entries) > 0 {
-		t.Fatalf("legacy Copilot agent fixtures remain active under %s", agentsDir)
-	}
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err != nil {
 		t.Fatalf("read agents dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".agent.yaml") {
+			continue
+		}
+
+		path := strings.TrimPrefix(agentsDir+"/"+entry.Name(), "copilot/agents/")
+		content, err := fs.ReadFile(libFS, agentsDir+"/"+entry.Name())
+		if err != nil {
+			t.Fatalf("read %s: %v", entry.Name(), err)
+		}
+
+		var agent map[string]any
+		if err := yaml.Unmarshal(content, &agent); err != nil {
+			t.Errorf("parse %s: %v", entry.Name(), err)
+			continue
+		}
+
+		// Validate required fields
+		if _, ok := agent["name"]; !ok {
+			t.Errorf("%s: missing 'name'", path)
+		}
+		if name, ok := agent["name"].(string); ok && name == "" {
+			t.Errorf("%s: 'name' is empty", path)
+		}
+		if name, ok := agent["name"].(string); ok {
+			// name must be lowercase
+			if name != strings.ToLower(name) {
+				t.Errorf("%s: 'name' must be lowercase, got %q", path, name)
+			}
+		}
+
+		if _, ok := agent["description"]; !ok {
+			t.Errorf("%s: missing 'description'", path)
+		}
+		if desc, ok := agent["description"].(string); ok && desc == "" {
+			t.Errorf("%s: 'description' is empty", path)
+		}
+
+		if _, ok := agent["prompt"]; !ok {
+			t.Errorf("%s: missing 'prompt'", path)
+		}
+		if prompt, ok := agent["prompt"].(string); ok && strings.TrimSpace(prompt) == "" {
+			t.Errorf("%s: 'prompt' is empty", path)
+		}
 	}
 }
 

@@ -1,0 +1,32 @@
+{
+  "kind": "team",
+  "name": "review-team",
+  "description": "Parallel review from correctness, security, and maintainability perspectives",
+  "version": "1.0.0",
+  "budget_multiplier": 3,
+  "user_confirmation_required": true,
+  "parallel": [
+    {
+      "role": "correctness-reviewer",
+      "agent": "reviewer",
+      "skills": [],
+      "focus": "Logic errors, missing cases, and incorrect behavior."
+    },
+    {
+      "role": "security-reviewer",
+      "agent": "red-team",
+      "skills": [],
+      "focus": "Security vulnerabilities, auth bypass, injection, and data exposure."
+    },
+    {
+      "role": "quality-reviewer",
+      "agent": "reviewer",
+      "skills": ["extract-standards"],
+      "focus": "Patterns, maintainability, test coverage, and readability."
+    }
+  ],
+  "synthesize": {
+    "agent": "orchestrator",
+    "description": "Merge overlapping findings and return a prioritized review verdict."
+  }
+}

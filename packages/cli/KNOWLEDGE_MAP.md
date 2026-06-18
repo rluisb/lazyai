@@ -51,20 +51,3 @@
 | [src/module-a/] | [what it does] | [team/person] |
 | [src/module-b/] | [what it does] | [team/person] |
 | [src/shared/] | Shared utilities (read-only for agents) | [team] |
-
-
-## Terminology
-
-### Accepted domain terms
-
-| Term | Meaning | Source of truth |
-|------|---------|-----------------|
-| setup-core | The default lazyai-cli command set (init, compile, update, doctor, add, build-plugin, etc.) | `specs/adrs/005-core-vs-optional-modules.md` |
-| runtime-adjacent module | Optional command families (session, message, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) | `specs/adrs/005-core-vs-optional-modules.md` |
-| artifact type | A category of generated asset: agent, skill, command, prompt, template, rule, infra, specs-dir | `packages/cli/internal/validation/validation.go` |
-| library | Embedded reference content used by lazyai-cli to populate target repos | `packages/cli/library/` |
-| curation manifest | YAML manifest of every embedded library asset with provenance metadata | `packages/cli/library/manifests/curation.yaml` |
-
-### Vocabulary source of truth
-
-Runtime must not introduce a dedicated terminology lookup subsystem: the source of truth stays in this Markdown section, with derived enums (e.g. `packages/cli/internal/types/types.go`) hand-mapped from the table above. If a lookup feels necessary, extend the table instead.

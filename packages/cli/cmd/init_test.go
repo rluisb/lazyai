@@ -49,7 +49,7 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	if !fileExists(filepath.Join(dir, ".ai", "mcp.json")) {
 		t.Fatal("expected .ai/mcp.json to exist")
 	}
-	opencodeConfigPath := filepath.Join(dir, "opencode.json")
+	opencodeConfigPath := filepath.Join(dir, ".opencode", "opencode.jsonc")
 	opencodeConfig, err := os.ReadFile(opencodeConfigPath)
 	if err != nil {
 		t.Fatalf("read opencode config: %v", err)
@@ -58,11 +58,8 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	if err := json.Unmarshal(opencodeConfig, &parsed); err != nil {
 		t.Fatalf("parse opencode config: %v", err)
 	}
-	if _, ok := parsed["default_agent"]; ok {
-		t.Fatalf("did not expect default_agent in baseline OpenCode config")
-	}
-	if _, ok := parsed["mcp"].(map[string]any); ok {
-		t.Fatalf("expected init to avoid baseline MCP in %s; got %s", opencodeConfigPath, string(opencodeConfig))
+	if _, ok := parsed["mcp"].(map[string]any); !ok {
+		t.Fatalf("expected init to compile MCP servers into %s; got %s", opencodeConfigPath, string(opencodeConfig))
 	}
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist")
@@ -512,5 +509,54 @@ func TestInitNonInteractiveScopeFilter_AllUnsupported(t *testing.T) {
 	err := runInitNonInteractive(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestBuildScaffoldContext_FortniteMode_DefaultTrue(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive: false,
+		HomeDir:     testRepoRoot(t),
+		TargetDir:   dir,
+		CLIScope:    types.SetupScopeProject,
+		CLITools:    []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:   types.PresetLevelMinimal,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "fortnite-default"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if !ctx.FortniteMode {
+		t.Fatalf("FortniteMode = false, want true when opencode is selected without --plain-opencode")
+	}
+}
+
+func TestBuildScaffoldContext_FortniteMode_PlainOpenCodeFalse(t *testing.T) {
+	dir := t.TempDir()
+	config := &wizard.WizardConfig{
+		Interactive:      false,
+		HomeDir:          testRepoRoot(t),
+		TargetDir:        dir,
+		CLIScope:         types.SetupScopeProject,
+		CLITools:         []types.ToolId{types.ToolIdOpenCode},
+		CLIPreset:        types.PresetLevelMinimal,
+		CLIPlainOpenCode: true,
+	}
+	result := &wizard.WizardResult{
+		Phase1: &wizard.Phase1Result{Scope: config.CLIScope, Tools: config.CLITools, ProjectName: "fortnite-plain"},
+		Phase2: &wizard.Phase2Result{Preset: config.CLIPreset},
+	}
+
+	ctx, err := buildScaffoldContext(result, config)
+	if err != nil {
+		t.Fatalf("buildScaffoldContext: %v", err)
+	}
+	if ctx.FortniteMode {
+		t.Fatalf("FortniteMode = true, want false when --plain-opencode is set")
 	}
 }

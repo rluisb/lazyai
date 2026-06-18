@@ -29,6 +29,7 @@ func TestStarterStandardsHaveExpectedFilesAndFrontmatter(t *testing.T) {
 		"agent-security.md",
 		"context-loading.md",
 		"error-handling.md",
+		"orchestration-patterns.md",
 		"test-patterns.md",
 	}
 	if !slices.Equal(got, want) {

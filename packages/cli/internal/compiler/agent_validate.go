@@ -27,10 +27,10 @@ func (i AgentValidationIssue) String() string {
 	return fmt.Sprintf("agent %q on %s: %v", i.Agent, i.Tool, i.Err)
 }
 
-// ValidateAgentResolutions walks every active canonical agent markdown file
-// and runs models.Resolve against each selected tool's catalog. Returns a
-// slice of issues; an empty slice means every resolved canonical agent is
-// valid on every tool.
+// ValidateAgentResolutions walks every library/agents/*.md and runs
+// models.Resolve against each selected tool's catalog. Returns a slice of
+// issues; an empty slice means every agent resolves on every tool.
+//
 // configuredProviders is the user-authenticated provider set used by
 // OpenCode's RequireConfigured filter. Pass nil to fall back to a live
 // auth.DetectAll probe (matches the behaviour of adapter installs that
@@ -39,14 +39,9 @@ func ValidateAgentResolutions(libFS fs.FS, tools []types.ToolId, configuredProvi
 	if libFS == nil {
 		return nil, nil
 	}
-	agentDir := "canonical/agents"
-	entries, err := fs.ReadDir(libFS, agentDir)
+	entries, err := fs.ReadDir(libFS, "agents")
 	if err != nil {
-		agentDir = "agents"
-		entries, err = fs.ReadDir(libFS, agentDir)
-		if err != nil {
-			return nil, nil
-		}
+		return nil, nil
 	}
 
 	if configuredProviders == nil {
@@ -62,20 +57,16 @@ func ValidateAgentResolutions(libFS fs.FS, tools []types.ToolId, configuredProvi
 		if ent.IsDir() || !strings.HasSuffix(ent.Name(), ".md") {
 			continue
 		}
-		data, err := fs.ReadFile(libFS, path.Join(agentDir, ent.Name()))
+		data, err := fs.ReadFile(libFS, path.Join("agents", ent.Name()))
 		if err != nil {
 			continue
 		}
 		raw, err := frontmatter.ParseAgentSpec(data)
 		if err != nil {
-			// Exact baseline agents intentionally omit LazyAI tier metadata.
-			// Ignore only the specific missing-tier error for canonical agents.
-			if !strings.Contains(err.Error(), "missing required field: tier") {
-				issues = append(issues, AgentValidationIssue{
-					Agent: ent.Name(),
-					Err:   err,
-				})
-			}
+			issues = append(issues, AgentValidationIssue{
+				Agent: ent.Name(),
+				Err:   err,
+			})
 			continue
 		}
 		spec := models.AgentSpec{

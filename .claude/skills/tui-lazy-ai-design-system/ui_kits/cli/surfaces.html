@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>LazyAI · CLI status surfaces</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    body { padding: 24px; font-family: var(--font-mono); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 1100px; margin: 0 auto; }
+    .term {
+      background: var(--lz-bg-2); border: var(--border); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-2); overflow: hidden;
+    }
+    .bar {
+      display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #11111b;
+      border-bottom: 1px solid color-mix(in oklch, var(--lz-dimmed) 60%, transparent);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 999px; }
+    .dot.r { background: #E74C3C; } .dot.y { background: #F1C40F; } .dot.g { background: #2ECC71; }
+    .bar .title { margin-left: 8px; font-size: 12px; color: var(--lz-dimmed); }
+    .body { padding: 16px 18px; min-height: 240px; font-size: 13px; line-height: 1.55; }
+    .h { color: var(--lz-primary); font-weight: 700; margin-bottom: 8px; font-size: 14px; }
+    .row { padding: 1px 0; }
+    .root { color: var(--lz-primary); font-weight: 700; }
+    .conn { color: var(--lz-dimmed); }
+    .table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    .table th { color: var(--lz-highlight); text-align: left; font-weight: 700; padding: 4px 12px 6px 0; border-bottom: 1px dashed var(--lz-dimmed); }
+    .table td { padding: 3px 12px 3px 0; }
+    .add { color: var(--lz-success); background: color-mix(in oklch, var(--lz-success) 10%, transparent); padding: 0 6px; display: block; }
+    .del { color: var(--lz-error);   background: color-mix(in oklch, var(--lz-error)   10%, transparent); padding: 0 6px; display: block; }
+    .ctx { color: var(--lz-dimmed); padding: 0 6px; display: block; }
+    .hunk { color: var(--lz-highlight); }
+    .help { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--lz-dimmed); color: var(--lz-dimmed); font-size: 11px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .help kbd { font-size: 10px; padding: 0 5px; }
+  </style>
+</head>
+<body>
+  <div class="grid">
+
+    <!-- doctor -->
+    <div class="term">
+      <div class="bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">lazyai-cli doctor</span>
+      </div>
+      <div class="body">
+        <div class="h">Environment check</div>
+        <div class="row"><span class="tui-success">✓</span> go 1.26.0 found at /usr/local/go</div>
+        <div class="row"><span class="tui-success">✓</span> opencode <span class="tui-dim">v0.42.1</span> on PATH</div>
+        <div class="row"><span class="tui-success">✓</span> claude-code <span class="tui-dim">v0.18.4</span> on PATH</div>
+        <div class="row"><span class="tui-warning">⚠</span> copilot <span class="tui-dim">vscode extension only — install gh-copilot for CLI</span></div>
+        <div class="row"><span class="tui-error">✗</span> mcp.json <span class="tui-dim">missing — run `lazyai-cli init`</span></div>
+        <div class="help">
+          <span><kbd>r</kbd> recheck</span><span><kbd>q</kbd> quit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- status / tree -->
+    <div class="term">
+      <div class="bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">lazyai-cli status</span>
+      </div>
+      <div class="body">
+        <div class="h">Manifest tracking</div>
+        <div class="row"><span class="root">.ai/</span></div>
+        <div class="row"><span class="conn">├── </span>constitution/</div>
+        <div class="row"><span class="conn">│   ├── </span>constitution.md <span class="tui-success">✓</span></div>
+        <div class="row"><span class="conn">│   ├── </span>constraints.md <span class="tui-warning">⚠</span> <span class="tui-dim">drift</span></div>
+        <div class="row"><span class="conn">│   └── </span>quality-gates.md <span class="tui-success">✓</span></div>
+        <div class="row"><span class="conn">├── </span>mcp.json <span class="tui-success">✓</span></div>
+        <div class="row"><span class="conn">└── </span>orchestration/</div>
+        <div class="row"><span class="conn">    ├── </span>chains/ <span class="tui-dim">○</span></div>
+        <div class="row"><span class="conn">    └── </span>workflows/ <span style="color:var(--lz-orange)">⚡</span></div>
+        <div class="help"><span><kbd>d</kbd> diff</span><span><kbd>s</kbd> sync</span><span><kbd>q</kbd> quit</span></div>
+      </div>
+    </div>
+
+    <!-- diff viewer -->
+    <div class="term">
+      <div class="bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">lazyai-diffviewer</span>
+      </div>
+      <div class="body">
+        <div class="h">Review change</div>
+        <div style="color:var(--lz-secondary); font-size: 12px; margin-bottom: 6px;">.claude/agents/reviewer.md</div>
+        <div class="hunk">@@ -3,5 +3,7 @@</div>
+        <span class="ctx"> name: reviewer</span>
+        <span class="del">- model: sonnet</span>
+        <span class="add">+ model: opus</span>
+        <span class="add">+ tools: [search, read, edit]</span>
+        <span class="ctx"> mode: agent</span>
+        <div class="help">
+          <span><kbd>a</kbd> accept</span><span><kbd>r</kbd> reject</span><span><kbd>n</kbd> next</span><span><kbd>q</kbd> quit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- compile table -->
+    <div class="term">
+      <div class="bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">lazyai-cli compile --plan</span>
+      </div>
+      <div class="body">
+        <div class="h">Files to write</div>
+        <table class="table">
+          <thead><tr><th>file</th><th>tool</th><th>state</th></tr></thead>
+          <tbody>
+            <tr><td>AGENTS.md</td><td>opencode</td><td class="tui-success">✓ ready</td></tr>
+            <tr><td>.opencode/agents/builder.md</td><td>opencode</td><td class="tui-success">✓ ready</td></tr>
+            <tr><td>.claude/skills/init.md</td><td>claude-code</td><td class="tui-success">✓ ready</td></tr>
+            <tr><td>.claude/agents/reviewer.md</td><td>claude-code</td><td class="tui-warning">⚠ modified</td></tr>
+            <tr><td>.github/copilot-instructions.md</td><td>copilot</td><td style="color:var(--lz-orange)">⚡ conflict</td></tr>
+          </tbody>
+        </table>
+        <div class="help"><span><kbd>↵</kbd> apply</span><span><kbd>esc</kbd> cancel</span></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

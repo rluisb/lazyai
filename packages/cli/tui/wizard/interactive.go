@@ -387,7 +387,11 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 		true,
 		"",
 		true,
+		"",
+		true,
 		".codegraph/",
+		true,
+		"graphify-out",
 		state.OpenCodePlugins,
 	)
 	p5.OpenCodeProviders = state.OpenCodeProviders

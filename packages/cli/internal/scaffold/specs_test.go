@@ -13,6 +13,7 @@ var expectedStarterStandards = []string{
 	"agent-security.md",
 	"context-loading.md",
 	"error-handling.md",
+	"orchestration-patterns.md",
 	"test-patterns.md",
 }
 

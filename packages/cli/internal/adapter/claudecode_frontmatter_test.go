@@ -24,42 +24,32 @@ func TestRewriteAgentForClaudeCode_EmitsDescription(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RewriteAgentForClaudeCode: %v", err)
 	}
-	fm, _, err := frontmatter.ExtractFrontmatter(out)
-	if err != nil {
-		t.Fatalf("extract frontmatter: %v", err)
-	}
-	if fm["description"] != "Coordinates feature builds." {
-		t.Errorf("description mismatch: got %v", fm["description"])
-	}
-	if _, ok := fm["model"]; ok {
-		t.Errorf("Claude frontmatter should not include model; got %v", fm["model"])
-	}
-	if _, ok := fm["temperature"]; ok {
-		t.Errorf("Claude frontmatter should not include temperature; got %v", fm["temperature"])
+	if !strings.Contains(string(out), "description: Coordinates feature builds.") {
+		t.Errorf("rewritten agent missing description line; got:\n%s", out)
 	}
 }
 
-// TestLibraryCanonicalAgentsHaveDescription asserts every active canonical
-// source agent in the embedded library declares a non-empty `description:`
-// field. Claude Code rejects agents that omit it, so missing this field on
-// any canonical agent produces a parse error on fresh install.
-func TestLibraryCanonicalAgentsHaveDescription(t *testing.T) {
+// TestLibraryAgentsHaveDescription asserts every source agent in the
+// embedded library declares a non-empty `description:` field. Claude Code
+// rejects agents that omit it, so missing this field on any library agent
+// produces a parse error on fresh install (#208).
+func TestLibraryAgentsHaveDescription(t *testing.T) {
 	libFS := library.GetLibraryFS()
 	if libFS == nil {
 		t.Fatal("library.GetLibraryFS returned nil")
 	}
-	entries, err := fs.ReadDir(libFS, "canonical/agents")
+	entries, err := fs.ReadDir(libFS, "agents")
 	if err != nil {
-		t.Fatalf("read canonical agents dir: %v", err)
+		t.Fatalf("read agents dir: %v", err)
 	}
 	if len(entries) == 0 {
-		t.Fatal("library canonical agents directory is empty")
+		t.Fatal("library agents directory is empty")
 	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
 			continue
 		}
-		data, err := fs.ReadFile(libFS, "canonical/agents/"+e.Name())
+		data, err := fs.ReadFile(libFS, "agents/"+e.Name())
 		if err != nil {
 			t.Errorf("read %q: %v", e.Name(), err)
 			continue

@@ -14,13 +14,13 @@ import (
 )
 
 // TestCompileOpenCodeMCP_ProjectScope verifies that at project scope, the MCP
-// config is written to <targetDir>/.opencode/lazyai.mcp.jsonc.
+// config is written to <targetDir>/.opencode/opencode.jsonc.
 func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 	targetDir := t.TempDir()
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatalf("failed to write mcp.json: %v", err)
 	}
@@ -33,9 +33,9 @@ func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	configPath := filepath.Join(targetDir, ".opencode", OpenCodeRuntimeMCPFilename)
+	configPath := filepath.Join(targetDir, ".opencode", "opencode.jsonc")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("expected .opencode/lazyai.mcp.jsonc was not created")
+		t.Fatal("expected .opencode/opencode.jsonc was not created")
 	}
 
 	if len(records) != 1 {
@@ -44,7 +44,7 @@ func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 }
 
 // TestCompileOpenCodeMCP_GlobalScope verifies that at global scope, the MCP
-// config is written to <home>/.config/opencode/lazyai.mcp.jsonc (via
+// config is written to <home>/.config/opencode/opencode.jsonc (via
 // ResolveToolRoot), not <targetDir>/.opencode/.
 func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 	targetDir := t.TempDir()
@@ -52,7 +52,7 @@ func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatalf("failed to write mcp.json: %v", err)
 	}
@@ -66,10 +66,10 @@ func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	// Global scope: lazyai.mcp.jsonc should live under <home>/.config/opencode.
-	globalConfigPath := filepath.Join(homeDir, ".config", "opencode", OpenCodeRuntimeMCPFilename)
+	// Global scope: opencode.jsonc should live under <home>/.config/opencode.
+	globalConfigPath := filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc")
 	if _, err := os.Stat(globalConfigPath); os.IsNotExist(err) {
-		t.Fatalf("expected lazyai.mcp.jsonc at %q, not found", globalConfigPath)
+		t.Fatalf("expected opencode.jsonc at %q, not found", globalConfigPath)
 	}
 
 	// Must not write under the project target dir.
@@ -92,12 +92,12 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatalf("write mcp.json: %v", err)
 	}
 
-	// Pre-seed lazyai.mcp.jsonc with a user-authored MCP entry under a name
+	// Pre-seed opencode.jsonc with a user-authored MCP entry under a name
 	// that ai-setup does not manage.
 	ocDir := filepath.Join(targetDir, ".opencode")
 	_ = files.EnsureDir(ocDir)
@@ -107,8 +107,8 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
     "userAuthored": { "type": "local", "command": ["custom-cli"], "enabled": true }
   }
 }`
-	if err := os.WriteFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"), []byte(preExisting), 0o644); err != nil {
-		t.Fatalf("seed lazyai.mcp.jsonc: %v", err)
+	if err := os.WriteFile(filepath.Join(ocDir, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
+		t.Fatalf("seed opencode.jsonc: %v", err)
 	}
 
 	if _, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
@@ -118,7 +118,7 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(ocDir, "opencode.jsonc"))
 	if err != nil {
 		t.Fatalf("read config: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 	if !strings.Contains(contents, `"userAuthored"`) {
 		t.Errorf("user-authored server was lost on compile:\n%s", contents)
 	}
-	if !strings.Contains(contents, `"filesystem"`) {
+	if !strings.Contains(contents, `"memory"`) {
 		t.Errorf("managed server missing after merge:\n%s", contents)
 	}
 	if !strings.Contains(contents, `"custom-cli"`) {
@@ -142,15 +142,15 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	ocDir := filepath.Join(targetDir, ".opencode")
 	_ = files.EnsureDir(ocDir)
-	preExisting := `{"mcp":{"filesystem":{"type":"local","command":["user-override"]}}}`
-	if err := os.WriteFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"), []byte(preExisting), 0o644); err != nil {
+	preExisting := `{"mcp":{"memory":{"type":"local","command":["user-override"]}}}`
+	if err := os.WriteFile(filepath.Join(ocDir, "opencode.jsonc"), []byte(preExisting), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -161,16 +161,16 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, _ := os.ReadFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"))
+	data, _ := os.ReadFile(filepath.Join(ocDir, "opencode.jsonc"))
 	if strings.Contains(string(data), "user-override") {
 		t.Errorf("user-override survived; managed entry should have won:\n%s", data)
 	}
-	if !strings.Contains(string(data), "@modelcontextprotocol/server-filesystem") {
-		t.Errorf("managed `filesystem` entry not present after collision:\n%s", data)
+	if !strings.Contains(string(data), "@modelcontextprotocol/server-memory") {
+		t.Errorf("managed `memory` entry not present after collision:\n%s", data)
 	}
 }
 
-func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *testing.T) {
+func TestCompileOpenCodeMCP_WiresManagedOrchestratorServer(t *testing.T) {
 	targetDir := t.TempDir()
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
@@ -190,23 +190,23 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *tes
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "opencode.jsonc"))
 	if err != nil {
-		t.Fatalf("read lazyai.mcp.jsonc: %v", err)
+		t.Fatalf("read opencode.jsonc: %v", err)
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"orchestrator"`) {
-		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator entry:\n%s", contents)
+		t.Fatalf("compiled config missing orchestrator entry:\n%s", contents)
 	}
 	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
-		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command/args:\n%s", contents)
+		t.Fatalf("compiled config missing orchestrator command/args:\n%s", contents)
 	}
 	if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
-		t.Fatalf("compiled config should not add retired orchestrator execution-mode defaults:\n%s", contents)
+		t.Fatalf("compiled config should keep orchestrator execution mode implicit/native by default:\n%s", contents)
 	}
 }
 
-func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *testing.T) {
+func TestCompileOpenCodeMCP_PreservesLazyAIOrchestratorCommand(t *testing.T) {
 	targetDir := t.TempDir()
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
@@ -230,20 +230,20 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "opencode.jsonc"))
 	if err != nil {
-		t.Fatalf("read lazyai.mcp.jsonc: %v", err)
+		t.Fatalf("read opencode.jsonc: %v", err)
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"lazyai-orchestrator"`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
-		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command:\n%s", contents)
+		t.Fatalf("compiled config did not preserve LazyAI orchestrator command:\n%s", contents)
 	}
 	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) {
-		t.Fatalf("compiled config did not preserve user-provided absolute legacy orchestrator command:\n%s", contents)
+		t.Fatalf("compiled config did not preserve absolute LazyAI orchestrator command:\n%s", contents)
 	}
 }
 
-func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPayloads(t *testing.T) {
+func TestMCPCompilerPreservesGoOrchestratorCommandArgsForToolPayloads(t *testing.T) {
 	servers := map[string]McpServer{
 		"orchestrator": {
 			Command: "/tmp/lazyai-orchestrator",
@@ -265,40 +265,11 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 		}
 		contents := string(encoded)
 		if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/tmp/project`) {
-			t.Fatalf("%s payload did not preserve user-provided legacy orchestrator command/args: %s", name, contents)
+			t.Fatalf("%s payload did not preserve Go orchestrator command/args: %s", name, contents)
 		}
 		if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
-			t.Fatalf("%s payload should not add retired orchestrator execution-mode defaults: %s", name, contents)
+			t.Fatalf("%s payload should not opt into A2A execution mode by default: %s", name, contents)
 		}
-	}
-}
-
-// TestToClaudeCodeMcpInner_RemoteHasType verifies remote MCP entries carry type: http.
-func TestToClaudeCodeMcpInner_RemoteHasType(t *testing.T) {
-	servers := map[string]McpServer{
-		"ai-memory": {
-			URL:     "http://127.0.0.1:49374/mcp",
-			Headers: map[string]string{"Authorization": "Bearer token"},
-		},
-	}
-
-	emitted := toClaudeCodeMcpInner(servers)
-	entry, ok := emitted["ai-memory"].(map[string]any)
-	if !ok {
-		t.Fatalf("emitted ai-memory entry is not a map: %T", emitted["ai-memory"])
-	}
-	if entry["type"] != "http" {
-		t.Fatalf("emitted type = %v, want http", entry["type"])
-	}
-	if entry["url"] != "http://127.0.0.1:49374/mcp" {
-		t.Fatalf("emitted url = %v, want http://127.0.0.1:49374/mcp", entry["url"])
-	}
-	headers, ok := entry["headers"].(map[string]string)
-	if !ok {
-		t.Fatalf("emitted headers is not a map: %T", entry["headers"])
-	}
-	if headers["Authorization"] != "Bearer token" {
-		t.Fatalf("emitted Authorization header = %v, want Bearer token", headers["Authorization"])
 	}
 }
 
@@ -311,7 +282,7 @@ func TestCompileMCPForTool_CopilotGlobalSkips(t *testing.T) {
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx","args":["-y"]}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +308,7 @@ func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
 
 	aiDir := filepath.Join(targetDir, ".ai")
 	_ = files.EnsureDir(aiDir)
-	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	mcpContent := `{"servers":{"memory":{"command":"npx"}}}`
 	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -359,9 +330,12 @@ func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
 	}
 }
 
-// TestAIMemoryCatalogEntryUsesRemoteURL verifies the retained ai-memory entry
-// stays URL-backed and compiles to the native remote MCP shape.
-func TestAIMemoryCatalogEntryUsesRemoteURL(t *testing.T) {
+// TestAtlassianCatalogEntryUsesAuthV2Remote verifies the atlassian server in
+// the embedded catalog is wired as a native remote MCP server (type: "remote")
+// pointing at the authv2 endpoint. The previous shape relied on the
+// `mcp-remote@latest` stdio shim, which Atlassian has since deprecated for
+// new clients (#193).
+func TestAtlassianCatalogEntryUsesAuthV2Remote(t *testing.T) {
 	libFS := library.GetLibraryFS()
 	if libFS == nil {
 		t.Fatal("library.GetLibraryFS returned nil")
@@ -376,77 +350,32 @@ func TestAIMemoryCatalogEntryUsesRemoteURL(t *testing.T) {
 	if err := json.Unmarshal(data, &catalog); err != nil {
 		t.Fatalf("unmarshal catalog: %v", err)
 	}
-	server, ok := catalog.Servers["ai-memory"]
+	atl, ok := catalog.Servers["atlassian"]
 	if !ok {
-		t.Fatal("catalog.servers missing 'ai-memory' entry")
+		t.Fatal("catalog.servers missing 'atlassian' entry")
 	}
-	if server.Enabled == nil || !*server.Enabled {
-		t.Fatal("ai-memory must be enabled by default")
+	if want := "https://mcp.atlassian.com/v1/mcp/authv2"; atl.URL != want {
+		t.Errorf("atlassian.url = %q, want %q", atl.URL, want)
 	}
-	if want := "http://127.0.0.1:49374/mcp"; server.URL != want {
-		t.Fatalf("ai-memory.url = %q, want %q", server.URL, want)
-	}
-	if server.Command != "" || len(server.Args) > 0 {
-		t.Fatalf("ai-memory entry must not declare stdio command/args: cmd=%q args=%v", server.Command, server.Args)
+	if atl.Command != "" || len(atl.Args) > 0 {
+		t.Errorf("atlassian entry must not declare stdio command/args (use remote URL): cmd=%q args=%v", atl.Command, atl.Args)
 	}
 
-	emitted := toOpenCodeMcp(map[string]McpServer{"ai-memory": server})
-	entry, ok := emitted["ai-memory"].(map[string]any)
+	// Force-enable for the emitted-shape assertion (catalog default is opt-in).
+	enabled := true
+	atl.Enabled = &enabled
+	emitted := toOpenCodeMcp(map[string]McpServer{"atlassian": atl})
+	entry, ok := emitted["atlassian"].(map[string]any)
 	if !ok {
-		t.Fatalf("emitted ai-memory entry is not a map: %T", emitted["ai-memory"])
+		t.Fatalf("emitted atlassian entry is not a map: %T", emitted["atlassian"])
 	}
 	if entry["type"] != "remote" {
-		t.Fatalf("emitted type = %v, want remote", entry["type"])
+		t.Errorf("emitted type = %v, want \"remote\"", entry["type"])
 	}
 	if entry["enabled"] != true {
-		t.Fatalf("emitted enabled = %v, want true", entry["enabled"])
+		t.Errorf("emitted enabled = %v, want true", entry["enabled"])
 	}
-	if entry["url"] != "http://127.0.0.1:49374/mcp" {
-		t.Fatalf("emitted url = %v, want ai-memory endpoint", entry["url"])
-	}
-}
-
-func TestMcpCatalogOmitsDormantEntries(t *testing.T) {
-	libFS := library.GetLibraryFS()
-	if libFS == nil {
-		t.Fatal("library.GetLibraryFS returned nil")
-	}
-	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
-	if err != nil {
-		t.Fatalf("read catalog.json: %v", err)
-	}
-	var catalog struct {
-		Servers map[string]McpServer `json:"servers"`
-	}
-	if err := json.Unmarshal(data, &catalog); err != nil {
-		t.Fatalf("unmarshal catalog: %v", err)
-	}
-	if got := len(catalog.Servers); got != 5 {
-		t.Fatalf("catalog server count = %d, want 5", got)
-	}
-	for _, excluded := range []string{"figma", "slack", "context7", "github", "playwright", "atlassian", "fetch", "memory", "memoria", "qmd", "graphify"} {
-		if _, ok := catalog.Servers[excluded]; ok {
-			t.Fatalf("catalog must not ship %q MCP server", excluded)
-		}
-	}
-}
-
-func TestMcpCatalogExcludesRetiredOrchestratorDefault(t *testing.T) {
-	libFS := library.GetLibraryFS()
-	if libFS == nil {
-		t.Fatal("library.GetLibraryFS returned nil")
-	}
-	data, err := fs.ReadFile(libFS, "mcp/catalog.json")
-	if err != nil {
-		t.Fatalf("read catalog.json: %v", err)
-	}
-	var catalog struct {
-		Servers map[string]McpServer `json:"servers"`
-	}
-	if err := json.Unmarshal(data, &catalog); err != nil {
-		t.Fatalf("unmarshal catalog: %v", err)
-	}
-	if _, ok := catalog.Servers["orchestrator"]; ok {
-		t.Fatal("catalog must not ship retired orchestrator as a default MCP server")
+	if entry["url"] != "https://mcp.atlassian.com/v1/mcp/authv2" {
+		t.Errorf("emitted url = %v, want authv2 endpoint", entry["url"])
 	}
 }

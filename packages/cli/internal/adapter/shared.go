@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
@@ -24,11 +23,6 @@ const (
 	ManagedBlockEndMarker   = "<!-- lazyai:managed:end root-agents v1 -->"
 )
 
-// vibe-lab managed-marker contract. Must match bin/inject exactly.
-func managedAgentMarker(surface, name string) string {
-	return fmt.Sprintf("<!-- vibe-lab:managed kind=agent surface=%s name=%s source=.agents/agents/%s.md -->", surface, name, name)
-}
-
 // selectionSet returns a set (map[T]bool) for the given slice, or nil if the
 // slice is empty (meaning "install everything").
 func selectionSet[T ~string](items []T) map[T]bool {
@@ -40,90 +34,6 @@ func selectionSet[T ~string](items []T) map[T]bool {
 		m[item] = true
 	}
 	return m
-}
-
-const (
-	defaultAgentID          = "guide"
-	defaultAgentDescription = "Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome."
-)
-
-var canonicalAgentIDs = map[string]struct{}{
-	defaultAgentID:      {},
-	"implementer":       {},
-	"researcher":        {},
-	"deployer":          {},
-	"responder":         {},
-	"planner":           {},
-	"reviewer":          {},
-	"evidence-verifier": {},
-}
-
-func isCanonicalAgentFile(file string) bool {
-	_, ok := canonicalAgentIDs[fileID(file)]
-	return ok
-}
-func isDefaultAgentFile(file string) bool {
-	return fileID(file) == defaultAgentID
-}
-
-func copyCanonicalDefaultAgent(ctx *AdapterContext, dest string, transform func([]byte) []byte) error {
-	return CopyWithRecord("canonical/agents/"+defaultAgentID+".md", dest, ctx, true, transform, 0o644)
-}
-
-func openCodeDefaultAgentContent(source []byte) []byte {
-	fm, body, _ := frontmatter.ExtractFrontmatter(source)
-	opts := OpenCodeAgentOpts{
-		Description:   inheritedDescription(fm),
-		ManagedMarker: managedAgentMarker("opencode", defaultAgentID),
-	}
-	// Preserve exact body trailing content while adding the marker.
-	return BuildOpenCodeAgentFrontmatter(append([]byte{'\n'}, body...), opts)
-}
-
-func claudeDefaultAgentContent(source []byte) []byte {
-	fm, body, _ := frontmatter.ExtractFrontmatter(source)
-	description := inheritedDescription(fm)
-	if description == "Agent" {
-		description = defaultAgentDescription
-	}
-	body = trimLeadingNewlines(body)
-	var b strings.Builder
-	b.WriteString("---\n")
-	b.WriteString("name: ")
-	b.WriteString(defaultAgentID)
-	b.WriteByte('\n')
-	b.WriteString("description: ")
-	b.WriteString(yamlDoubleQuote(description))
-	b.WriteString("\n---\n\n")
-	b.WriteString(managedAgentMarker("claude", defaultAgentID))
-	b.WriteString("\n\n")
-	b.Write(body)
-	return []byte(b.String())
-}
-
-func copilotDefaultAgentContent(source []byte) []byte {
-	fm, body, _ := frontmatter.ExtractFrontmatter(source)
-	description := inheritedDescription(fm)
-	if description == "Agent" {
-		description = defaultAgentDescription
-	}
-	body = trimLeadingNewlines([]byte(strings.TrimRight(string(body), "\n")))
-	var b strings.Builder
-	b.WriteString("---\n")
-	b.WriteString("name: ")
-	b.WriteString(defaultAgentID)
-	b.WriteByte('\n')
-	b.WriteString("description: ")
-	b.WriteString(strconv.Quote(description))
-	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
-	b.WriteString(managedAgentMarker("copilot", defaultAgentID))
-	b.WriteString("\n\n")
-	b.Write(body)
-	if !strings.HasSuffix(string(body), "\n") {
-		b.WriteByte('\n')
-	}
-	b.WriteByte('\n')
-	return []byte(b.String())
 }
 
 // MergeManagedBlock merges newManagedContent into existing content using managed
@@ -201,7 +111,7 @@ func bytesEqual(a, b []byte) bool {
 // ctx.FileRecords, and handles conflict resolution. If transform is non-nil,
 // it is applied to the file content before writing.
 //
-// src is a relative path within ctx.LibraryFS (e.g., "agents/implementer.md").
+// src is a relative path within ctx.LibraryFS (e.g., "agents/builder.md").
 // perm defaults to 0o644 if zero.
 func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, transform func([]byte) []byte, perm os.FileMode) error {
 	relPath, err := filepath.Rel(ctx.TargetDir, dest)
@@ -365,20 +275,14 @@ type CopyLibraryDirectoryOption struct {
 	Transform    func(content []byte) []byte
 	IncludeFile  func(file string) bool
 	Recursive    bool
-	Mode         fs.FileMode
 }
 
 // CopyLibraryDirectory copies all files from the library subdirectory,
 // applying selection filtering and conflict resolution.
 // Uses ctx.LibraryFS when available, falls back to ctx.LibraryDir + filesystem.
 func CopyLibraryDirectory(opts CopyLibraryDirectoryOption) error {
-	mode := opts.Mode
-	if mode == 0 {
-		mode = 0o644
-	}
-	opts.Mode = mode
-
 	libFS := opts.Ctx.LibraryFS
+
 	if libFS != nil {
 		return copyLibraryDirectoryFromFS(opts, libFS)
 	}
@@ -466,7 +370,7 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 
 		srcPath := opts.SourceSubdir + "/" + file
 		dest := opts.ToDestPath(file)
-		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, opts.Mode); err != nil {
+		if err := CopyWithRecord(srcPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
 			return err
 		}
 	}
@@ -543,7 +447,7 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 		dest := opts.ToDestPath(file)
 		// Use library-relative path for the source so CopyWithRecord reads from FS.
 		libRelPath := opts.SourceSubdir + "/" + file
-		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, opts.Mode); err != nil {
+		if err := CopyWithRecord(libRelPath, dest, opts.Ctx, opts.WarnOnSkip, opts.Transform, 0o644); err != nil {
 			return err
 		}
 	}
@@ -680,6 +584,67 @@ func InstallRootTemplateIfMissing(ctx *AdapterContext, recordPath, destPath, tem
 	return nil
 }
 
+// ---------------------------------------------------------------------------
+// Orchestrator helpers
+// ---------------------------------------------------------------------------
+
+// Fallback orchestrator tool names when the agent source file is unavailable.
+var fallbackOrchestratorTools = []string{
+	"list_catalog",
+	"compose_agent",
+	"start_chain",
+	"advance_chain",
+	"get_status",
+	"get_budget",
+	"retry_step",
+	"escalate_step",
+	"handoff",
+}
+
+// IsOrchestratorEnabled reports whether the orchestrator MCP server is enabled.
+func IsOrchestratorEnabled(ctx *AdapterContext) bool {
+	for _, s := range ctx.EnableServers {
+		if s == "orchestrator" {
+			return true
+		}
+	}
+	return false
+}
+
+// readOrchestratorAgentSource reads the orchestrator agent source file,
+// falling back to a hardcoded default if the file is missing.
+func readOrchestratorAgentSource(ctx *AdapterContext) string {
+	libFS := ctx.LibraryFS
+	if libFS != nil {
+		data, err := fs.ReadFile(libFS, "agents/orchestrator.md")
+		if err == nil {
+			return string(data)
+		}
+	} else if ctx.LibraryDir != "" {
+		sourcePath := filepath.Join(ctx.LibraryDir, "agents", "orchestrator.md")
+		if files.FileExists(sourcePath) {
+			data, err := files.ReadFile(sourcePath)
+			if err == nil {
+				return string(data)
+			}
+		}
+	}
+
+	// Fallback
+	lines := []string{
+		"---",
+		"name: Orchestrator",
+		"model: opus",
+		fmt.Sprintf("tools: %s", strings.Join(fallbackOrchestratorTools, " ")),
+		"---",
+		"",
+		"# Orchestrator Agent",
+		"",
+		"Use the orchestration MCP runtime to coordinate multi-agent execution.",
+	}
+	return strings.Join(lines, "\n")
+}
+
 // ReadSampleRuleContent reads the TypeScript sample rule from the library.
 // Returns an error if the file is not found (not a silent skip).
 func ReadSampleRuleContent(ctx *AdapterContext) ([]byte, error) {
@@ -733,6 +698,18 @@ func ExtractTools(content string) []string {
 		return result
 	}
 	return nil
+}
+
+// ReadOrchestratorTools returns the tools list from the orchestrator agent.
+func ReadOrchestratorTools(ctx *AdapterContext) []string {
+	source := readOrchestratorAgentSource(ctx)
+	tools := ExtractTools(source)
+	if len(tools) > 0 {
+		return tools
+	}
+	result := make([]string, len(fallbackOrchestratorTools))
+	copy(result, fallbackOrchestratorTools)
+	return result
 }
 
 // StripFrontmatterAndInjectModel strips YAML frontmatter and injects the model
@@ -814,6 +791,67 @@ func EnsureModeAgentFrontmatter(content string) string {
 		bodyStr = "\n" + bodyStr
 	}
 	return "---\n" + strings.Join(lines, "\n") + "\n---\n" + bodyStr
+}
+
+// GetOrchestratorAgentContent returns the orchestrator agent content with
+// whitespace-delimited tools in the frontmatter (per Claude Code spec).
+func GetOrchestratorAgentContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	return []byte(NormalizeToolsFrontmatter(source, "space"))
+}
+
+// GetOrchestratorSkillContent returns the orchestrator as a skill file.
+func GetOrchestratorSkillContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	_, body := frontmatter.SplitYamlFrontmatter(source)
+	tools := ReadOrchestratorTools(ctx)
+
+	lines := []string{
+		"---",
+		"name: orchestrator",
+		"description: Orchestration MCP runtime guidance",
+		"---",
+		"",
+		"# Orchestrator Skill",
+		"",
+		strings.TrimSpace(body),
+		"",
+		formatAllowedToolsSection(tools),
+		"",
+	}
+	return []byte(strings.Join(lines, "\n"))
+}
+
+// GetOrchestratorPromptContent returns the orchestrator as a prompt file.
+func GetOrchestratorPromptContent(ctx *AdapterContext) []byte {
+	source := readOrchestratorAgentSource(ctx)
+	_, body := frontmatter.SplitYamlFrontmatter(source)
+	tools := ReadOrchestratorTools(ctx)
+
+	lines := []string{
+		"---",
+		"mode: agent",
+		"---",
+		"",
+		"# Orchestrator Prompt",
+		"",
+		strings.TrimSpace(body),
+		"",
+		formatAllowedToolsSection(tools),
+		"",
+	}
+	return []byte(strings.Join(lines, "\n"))
+}
+
+func formatAllowedToolsSection(tools []string) string {
+	if len(tools) == 0 {
+		return ""
+	}
+	lines := []string{"## Allowed MCP Tools", ""}
+	for _, tool := range tools {
+		lines = append(lines, "- "+tool)
+	}
+	return strings.Join(lines, "\n")
 }
 
 // parseToolsFromFrontmatterBody extracts tool names from a YAML frontmatter body.

@@ -1,79 +1,94 @@
 ---
 name: diagnose
-description: Use when debugging a failing test, broken build, runtime error, or unexpected system behavior. Drives hypothesis-based investigation, root-cause fixes, verification, and reusable learning capture.
+description: Rigorous 6-phase debugging: build feedback loop → reproduce → rank hypotheses → instrument → fix + regression test → cleanup + post-mortem. Use for hard/non-obvious bugs where guess-and-check fails.
+trigger: /diagnose
+phase: diagnose
+techniques: [chain-of-thought, react]
+output_schema:
+  sections:
+    - Phase 1: Feedback Loop Strategy
+    - Phase 2: Reproduction Confirmation
+    - Phase 3: Ranked Hypotheses
+    - Phase 4: Instrumentation Log
+    - Phase 5: Correct Seam + Regression Test
+    - Phase 6: Memory Payload
+consumes:
+  - bug description or issue reference
+  - codebase access
+produces_for:
+  - memory-write (Phase 6 post-mortem)
+  - improve-codebase-architecture (optional handoff)
+mcp_tools: [filesystem, ripgrep, qmd]
+harness:
+  feed_forward: [bug description]
+  contract: [speckit-review]
+  anti_slope: [no-guessing, no-silent-proceed, regression-test-mandatory]
+workspace:
+  scope: [project]
+  reads: [buggy code, tests, relevant modules]
+  writes: [memory payload output as phase artifact]
 ---
 
-# Diagnose
+# Diagnose Skill
 
-## When to Use
+## Phase 1 — Build a Feedback Loop
 
-Use this skill when:
-- A test fails and the reason is not obvious.
-- A build breaks with a cryptic error.
-- A runtime exception occurs.
-- An integration returns unexpected results.
-- The user says "this is broken" without a clear cause.
+Everything else is mechanical. A fast, deterministic, agent-runnable pass/fail signal is required. **MUST NOT proceed without a loop.**
 
-Do not use for trivial typos or one-line fixes where the error points directly at the solution.
+10 strategies (pick best available):
+1. Failing test at the seam
+2. curl/HTTP script
+3. CLI with fixture diff
+4. Headless browser (Playwright/Puppeteer)
+5. Replay captured trace
+6. Throwaway harness
+7. Property/fuzz loop
+8. Bisection harness
+9. Differential loop
+10. HITL bash script
 
-## Rule
+If no loop can be built → stop and ask for environment access, captured artifact, or permission to add instrumentation.
 
-Debugging is hypothesis-driven investigation, not shotgun-fixing. Every proposed fix must trace back to a specific observation.
+## Phase 2 — Reproduce
 
-## Workflow
+Run the loop. Watch bug appear. Confirm loop produces the failure mode the **user described** (not a nearby failure). Confirm reproducibility across runs. Do not proceed until reproduction.
 
-1. Reproduce the failure and capture exact error, environment, and steps.
-2. State one hypothesis in one sentence.
-3. Gather evidence from code, logs, tests, docs, or recent changes.
-4. Test the hypothesis with the smallest experiment.
-5. Fix the root cause, not the symptom.
-6. Verify by rerunning the failing scenario and the smallest relevant broader check.
-7. Capture reusable learning when the root cause is likely to recur.
+**Non-deterministic bugs:** Goal is higher reproduction rate, not clean repro. Loop 100×, parallelize, stress, narrow timing windows until rate >50% is debuggable. Not "non-reproducible" until 100+ iterations attempted.
 
-## Diagnosis Template
+**Override:** If user explicitly overrides and says proceed without a loop → best-effort mode: document degraded confidence, proceed to Phase 2 with best available signal, note caveat in Phase 6.
 
-```markdown
-Failure: <exact symptom>
-Environment: <version/config/context>
-Hypothesis: <one sentence>
-Evidence: <observed fact>
-Root Cause: <specific cause>
-Fix: <why this fix addresses that cause>
-Verification: <command/scenario and result>
+## Phase 3 — Hypothesise
+
+Generate 3–5 ranked hypotheses **before** testing any. Format: "If X is the cause, then Y will happen." Each must be falsifiable.
+
+Show ranked list to user (they often have domain knowledge that re-ranks). Proceed with ranking if user is AFK.
+
+## Phase 4 — Instrument
+
+Each probe maps to ONE specific prediction from Phase 3. Change one variable at a time. Preference: (1) debugger/REPL, (2) targeted logs with `[DEBUG-xxxx]` tags, (3) never "log everything". Tag every debug log. Cleanup is a single `grep`.
+
+## Phase 5 — Fix + Regression Test
+
+Write regression test **before** fix, at the **correct seam** — where the bug manifests in real usage, not a shallow single-caller mock-amenable seam. If no correct seam exists → document finding explicitly as architectural problem; do NOT produce false-confidence regression test.
+
+## Phase 6 — Cleanup + Post-Mortem
+
+Original repro no longer reproduces. All `[DEBUG-...]` instrumentation removed. Throwaway prototypes deleted or moved to debug location.
+
+Ask: "What would have prevented this bug?" If answer involves architectural change → offer to hand off to `improve-codebase-architecture`.
+
+Commit/PR message should state the correct hypothesis.
+
+## Memory Payload
+
+Output at end of Phase 6:
+```
+[MEMORY-PAYLOAD]
+Type: lesson
+Tags: [bug-pattern, diagnostic-method]
+Context: "[Root cause category]: [1-sentence summary]. [Correct seam]: [seam name or 'architectural — no seam available']. [Handoff]: [architectural recommendation or 'none']."
+Importance: high (if architectural handoff) | normal
+[/MEMORY-PAYLOAD]
 ```
 
-## Learning Capture
-
-Use `canonical/learning-template.md` for reusable root causes, traps, environment gotchas, or diagnostic patterns.
-
-Classify diagnosis learnings as:
-- `trap`: false assumption or sharp edge.
-- `pattern`: recurring debug workflow.
-- `rule`: stable prevention rule.
-- `template`: reusable diagnostic report shape.
-
-Promote only through `memory-promotion` after approval.
-
-## Constraints
-
-- One hypothesis at a time.
-- Read relevant code before guessing.
-- No speculation in commit messages.
-- Intermittent bugs need reproduction conditions.
-- Environment details matter.
-
-## Verification Checklist
-
-- [ ] Failure reproduced or reproduction limit documented.
-- [ ] Hypothesis stated before fixing.
-- [ ] Evidence gathered from observed sources.
-- [ ] Fix addresses root cause.
-- [ ] Failing scenario rerun.
-- [ ] Reusable learning captured or intentionally skipped.
-
-## Related Skills
-
-- `test-first-change` — drive fixes through failing tests.
-- `issue-triage` — classify before debugging.
-- `no-workarounds` — reject symptom patches.
-- `memory-promotion` — promote durable diagnostic learning.
+The orchestrator chain step wrapping this skill will call `memory-write` with this payload.

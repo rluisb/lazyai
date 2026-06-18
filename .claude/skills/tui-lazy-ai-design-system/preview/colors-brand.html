@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brand colors</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 20px 24px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { height: 64px; border-radius: var(--radius-md); border: 1px solid color-mix(in oklch, var(--lz-text) 10%, transparent); }
+  .name { font-family: var(--font-mono); font-size: 11px; color: var(--lz-text); }
+  .hex  { font-family: var(--font-mono); font-size: 11px; color: var(--lz-dimmed); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:#7D56F4"></div><div class="name">primary</div><div class="hex">#7D56F4</div></div>
+    <div class="sw"><div class="chip" style="background:#4ECDC4"></div><div class="name">secondary</div><div class="hex">#4ECDC4</div></div>
+    <div class="sw"><div class="chip" style="background:#2ECC71"></div><div class="name">success</div><div class="hex">#2ECC71</div></div>
+    <div class="sw"><div class="chip" style="background:#F1C40F"></div><div class="name">warning</div><div class="hex">#F1C40F</div></div>
+    <div class="sw"><div class="chip" style="background:#E74C3C"></div><div class="name">error</div><div class="hex">#E74C3C</div></div>
+    <div class="sw"><div class="chip" style="background:#E8912D"></div><div class="name">orange</div><div class="hex">#E8912D</div></div>
+    <div class="sw"><div class="chip" style="background:#89B4FA"></div><div class="name">highlight</div><div class="hex">#89B4FA</div></div>
+  </div>
+</body>
+</html>

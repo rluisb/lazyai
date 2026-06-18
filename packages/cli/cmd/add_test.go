@@ -2,21 +2,10 @@ package cmd
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
-
-func TestAddRejectsInvalidToolID(t *testing.T) {
-	err := validateToolIDs([]types.ToolId{"filesystem"})
-	if err == nil {
-		t.Fatal("expected validation to fail")
-	}
-	if !strings.Contains(err.Error(), "invalid tool") {
-		t.Fatalf("unexpected error %q", err)
-	}
-}
 
 func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	dir := t.TempDir()
@@ -26,8 +15,8 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	if _, _ = captureOutput(t, func() {
 		if err := runAddNonInteractive(
 			[]types.ToolId{types.ToolIdClaudeCode},
-			[]string{string(types.AgentIdImplementer)},
-			[]string{string(types.SkillIdDiagnose)},
+			[]string{string(types.AgentIdBuilder)},
+			[]string{string(types.SkillIdPlan)},
 		); err != nil {
 			t.Fatalf("runAddNonInteractive: %v", err)
 		}
@@ -36,8 +25,8 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 
 	storeData := readSeededStoreData(t, dir)
 	assertToolSet(t, storeData.Config.Tools, types.ToolIdOpenCode, types.ToolIdClaudeCode)
-	assertAgentSet(t, storeData.Selections.Agents, types.AgentIdImplementer)
-	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdDiagnose)
+	assertAgentSet(t, storeData.Selections.Agents, types.AgentIdBuilder)
+	assertSkillSet(t, storeData.Selections.Skills, types.SkillIdPlan)
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist after adding claude-code")
 	}

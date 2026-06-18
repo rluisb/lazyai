@@ -21,13 +21,13 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 	}
 
 	claudeDir := filepath.Join(home, ".claude")
-	wantAgent := filepath.Join(claudeDir, "agents", "guide.md")
+	wantAgent := filepath.Join(claudeDir, "agents", "builder.md")
 	if !files.FileExists(wantAgent) {
 		t.Errorf("expected agent at canonical path %q, missing", wantAgent)
 	}
 
 	// Flat-layout file at the legacy path must not be created.
-	flatLegacy := filepath.Join(claudeDir, "guide.md")
+	flatLegacy := filepath.Join(claudeDir, "builder.md")
 	if files.FileExists(flatLegacy) {
 		t.Errorf("agent written at legacy flat path %q (regression of spec 012 Task 001)", flatLegacy)
 	}
@@ -51,14 +51,14 @@ func TestClaudeCode_GlobalAgentsInSubdir(t *testing.T) {
 func TestClaudeCode_GlobalLegacyAgentsMigrated(t *testing.T) {
 	ctx, _, home := newScopeTestContext(t, types.SetupScopeGlobal)
 
-	// Pre-seed the legacy flat layout: ~/.claude/implementer.md exists with
+	// Pre-seed the legacy flat layout: ~/.claude/builder.md exists with
 	// arbitrary user content (simulating the buggy pre-spec-012 install).
 	claudeDir := filepath.Join(home, ".claude")
 	if err := files.EnsureDir(claudeDir); err != nil {
 		t.Fatal(err)
 	}
-	legacyContent := []byte("---\nname: Implementer (legacy)\n---\nHand-edited by user\n")
-	legacyPath := filepath.Join(claudeDir, "implementer.md")
+	legacyContent := []byte("---\nname: Builder (legacy)\n---\nHand-edited by user\n")
+	legacyPath := filepath.Join(claudeDir, "builder.md")
 	if err := files.WriteFile(legacyPath, legacyContent, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestClaudeCode_GlobalLegacyAgentsMigrated(t *testing.T) {
 	if files.FileExists(legacyPath) {
 		t.Errorf("legacy flat agent %q still present after Install", legacyPath)
 	}
-	canonical := filepath.Join(claudeDir, "agents", "implementer.md")
+	canonical := filepath.Join(claudeDir, "agents", "builder.md")
 	if !files.FileExists(canonical) {
 		t.Errorf("canonical agent %q missing after Install (migration failed)", canonical)
 	}
@@ -185,7 +185,11 @@ func TestClaudeCode_CommandsAndOutputStylesScopeParity(t *testing.T) {
 	}
 }
 
-func TestClaudeCode_DefaultAgentScopeParity(t *testing.T) {
+// TestClaudeCode_OrchestratorScopeParity is the regression guard for spec 012,
+// task 002: when `orchestrator` is in EnableServers, the orchestrator agent
+// must be emitted at every scope (the previous `!isGlobal` gate silently
+// skipped global).
+func TestClaudeCode_OrchestratorScopeParity(t *testing.T) {
 	cases := []struct {
 		name  string
 		scope types.SetupScope
@@ -197,21 +201,31 @@ func TestClaudeCode_DefaultAgentScopeParity(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+		t.Run("enabled_"+c.name, func(t *testing.T) {
 			ctx, target, home := newScopeTestContext(t, c.scope)
+			ctx.EnableServers = []string{"orchestrator"}
 
 			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
 				t.Fatalf("Install: %v", err)
 			}
 
-			root := c.root(target, home)
-			defaultAgent := filepath.Join(root, "agents", "guide.md")
-			if !files.FileExists(defaultAgent) {
-				t.Errorf("expected guide at %q, missing", defaultAgent)
+			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
+			if !files.FileExists(orch) {
+				t.Errorf("expected orchestrator agent at %q, missing", orch)
 			}
-			orch := filepath.Join(root, "agents", "orchestrator.md")
+		})
+
+		t.Run("disabled_"+c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+			// EnableServers intentionally unset.
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			orch := filepath.Join(c.root(target, home), "agents", "orchestrator.md")
 			if files.FileExists(orch) {
-				t.Errorf("orchestrator agent present at %q", orch)
+				t.Errorf("orchestrator agent present at %q despite being disabled", orch)
 			}
 		})
 	}

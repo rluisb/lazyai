@@ -24,8 +24,8 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:     "lazyai-cli",
-	Short:   "LazyAI setup-core scaffold",
-	Long:    "LazyAI setup-core scaffold — one command to define and refresh your AI toolchain, with transitional runtime extras grouped separately",
+	Short:   "LazyAI development environment scaffold",
+	Long:    "LazyAI development environment scaffold — one command to set up your AI tools",
 	Version: Version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return applyLoggingEnv(loggingFlagConfigFromCommand(cmd))
@@ -42,7 +42,7 @@ func init() {
 	// Register command groups for organized help output
 	rootCmd.AddGroup(&cobra.Group{ID: "lifecycle", Title: "Environment Lifecycle"})
 	rootCmd.AddGroup(&cobra.Group{ID: "workspace", Title: "Workspace & Knowledge"})
-	rootCmd.AddGroup(&cobra.Group{ID: "runtime", Title: "Optional Runtime Modules"})
+	rootCmd.AddGroup(&cobra.Group{ID: "runtime", Title: "Runtime Coordination"})
 	rootCmd.AddGroup(&cobra.Group{ID: "audit", Title: "Audit & Observability"})
 	rootCmd.AddGroup(&cobra.Group{ID: "safety", Title: "Safety & Administration"})
 	rootCmd.AddGroup(&cobra.Group{ID: "scaffold", Title: "Scaffolding & Discovery"})

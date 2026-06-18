@@ -28,7 +28,7 @@ func validateToolFlag(tool string) error {
 	if tool == "" || types.IsValidToolId(types.ToolId(tool)) {
 		return nil
 	}
-	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", tool)
+	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot)", tool)
 }
 
 // openStore opens the SQLite database for the given target directory.
@@ -170,6 +170,18 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 
 	planningRepoPath, workspaceRoot := scaffoldRootsForScope(result.Phase1.Scope, config.TargetDir, config.CLIWorkspaceRoot)
 
+	// Determine FortniteMode: default true when opencode is selected,
+	// unless --plain-opencode is explicitly set.
+	fortniteMode := false
+	if !config.CLIPlainOpenCode {
+		for _, t := range result.Phase1.Tools {
+			if t == types.ToolIdOpenCode {
+				fortniteMode = true
+				break
+			}
+		}
+	}
+
 	ctx := &scaffold.ScaffoldContext{
 		TargetDir:           config.TargetDir,
 		LibraryDir:          libDir,
@@ -189,6 +201,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		DryRun:              config.DryRun,
 		DriveCLI:            config.CLIDriveCLI,
 		LocalSecrets:        config.CLILocalSecrets,
+		FortniteMode:        fortniteMode,
 		Organization:        firstNonEmpty(result.Phase1.Organization, config.CLIOrg),
 		Team:                firstNonEmpty(result.Phase1.Team, config.CLITeam),
 		ProjectOverview:     result.Phase2.ProjectOverview,
@@ -409,8 +422,12 @@ func housekeepingFromResult(result *wizard.WizardResult) *types.HousekeepingConf
 		MemoryPath:        result.Phase5.MemoryPath,
 		EnableObsidian:    result.Phase5.EnableObsidian,
 		ObsidianVaultPath: result.Phase5.ObsidianVaultPath,
+		EnableQmd:         result.Phase5.EnableQmd,
+		QmdIndexPath:      result.Phase5.QmdIndexPath,
 		EnableCodegraph:   result.Phase5.EnableCodegraph,
 		CodegraphDataPath: result.Phase5.CodegraphDataPath,
+		EnableGraphify:    result.Phase5.EnableGraphify,
+		GraphifyDataPath:  result.Phase5.GraphifyDataPath,
 	}
 }
 

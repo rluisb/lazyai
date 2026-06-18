@@ -104,9 +104,9 @@ func TestValidateChainMatchesTypeScriptIssueSemantics(t *testing.T) {
 		{Source: "skills/consumer.md", Name: "consumer", Consumes: []string{"missing-artifact", ".scaffolded", "path/to/file.md", "plan.md"}},
 		{Source: "skills/prose.md", Name: "prose", Consumes: []string{"task files"}, ProducesFor: []string{"human reviewer", "review.md"}},
 		{Source: "skills/orphan.md", Name: "orphan"},
-		{Source: "skills/standalone.md", Name: "handoff"},
 		{Source: "agents/agent.md", Name: "Agent"}, // TitleCase agent name
 		{Source: "skills/root.md", Name: "rpi"},
+		{Source: "skills/downstream.md", Name: "Reviewer", ProducesFor: []string{"agent"}}, // TitleCase produces_for targets lowercase agent
 	}
 
 	issues := ValidateChain(contracts)
@@ -115,8 +115,8 @@ func TestValidateChainMatchesTypeScriptIssueSemantics(t *testing.T) {
 	assertIssue(t, issues, "missing-producer", ContractSeverityWarn, "skills/consumer.md")
 	assertIssue(t, issues, "self-output", ContractSeverityWarn, "skills/source.md")
 	assertIssue(t, issues, "orphan-skill", ContractSeverityWarn, "skills/orphan.md")
-	assertNoIssue(t, issues, "skills/standalone.md", "orphan-skill")
 	assertNoIssue(t, issues, "agents/agent.md", "orphan-skill")
+	assertNoIssue(t, issues, "skills/root.md", "orphan-skill")
 	assertNoIssue(t, issues, "skills/prose.md", "missing-downstream")
 	assertNoIssue(t, issues, "skills/prose.md", "missing-producer")
 	assertNoIssue(t, issues, "skills/sinks.md", "missing-downstream")

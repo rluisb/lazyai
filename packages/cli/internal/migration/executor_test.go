@@ -89,7 +89,7 @@ func TestExecuteToCanonical_MigratesOpenCodeAgentsWithoutAbsorbingRootContext(t 
 	targetDir := t.TempDir()
 
 	mustWriteTestFile(t, filepath.Join(sourceDir, "AGENTS.md"), "# Demo Project\n\nRoot context should remain root context.")
-	mustWriteTestFile(t, filepath.Join(sourceDir, ".opencode", "agents", "implementer.md"), "# Implementer\n\nBuild things.")
+	mustWriteTestFile(t, filepath.Join(sourceDir, ".opencode", "agents", "builder.md"), "# Builder\n\nBuild things.")
 
 	ctx := &MigrationContext{
 		SourcePath: sourceDir,
@@ -119,7 +119,7 @@ func TestExecuteToCanonical_MigratesOpenCodeAgentsWithoutAbsorbingRootContext(t 
 		t.Fatalf("expected success, got errors: %v", result.Errors)
 	}
 
-	assertFileContent(t, filepath.Join(targetDir, ".ai", "agents", "implementer.md"), "# Implementer\n\nBuild things.")
+	assertFileContent(t, filepath.Join(targetDir, ".ai", "agents", "builder.md"), "# Builder\n\nBuild things.")
 	if files.FileExists(filepath.Join(targetDir, ".ai", "constitution", "opencode.md")) {
 		t.Fatal("root AGENTS.md should not create canonical constitution output")
 	}
@@ -182,7 +182,7 @@ func TestExecuteToCanonical_PreviewDoesNotWriteFiles(t *testing.T) {
 
 func TestParseDetectedSetupsParsesAgentButSkipsReservedContextDoc(t *testing.T) {
 	sourceDir := t.TempDir()
-	mustWriteTestFile(t, filepath.Join(sourceDir, ".opencode", "agents", "implementer.md"), "# Implementer\n\nBuild things.")
+	mustWriteTestFile(t, filepath.Join(sourceDir, ".opencode", "agents", "builder.md"), "# Builder\n\nBuild things.")
 	mustWriteTestFile(t, filepath.Join(sourceDir, ".opencode", "agents", "AGENTS.md"), "# Nested Context\n\nDo not parse.")
 
 	ctx := &MigrationContext{SourcePath: sourceDir, TargetPath: t.TempDir()}
@@ -196,11 +196,11 @@ func TestParseDetectedSetupsParsesAgentButSkipsReservedContextDoc(t *testing.T) 
 	}
 
 	parsed := parsedSetups[0]
-	if len(parsed.Agents) != 1 || parsed.Agents[0].ID != "implementer" {
-		t.Fatalf("agents = %+v, want only implementer", parsed.Agents)
+	if len(parsed.Agents) != 1 || parsed.Agents[0].ID != "builder" {
+		t.Fatalf("agents = %+v, want only builder", parsed.Agents)
 	}
-	if len(parsed.Files) != 1 || parsed.Files[0].Path != filepath.Join(".opencode", "agents", "implementer.md") {
-		t.Fatalf("files = %+v, want only implementer file", parsed.Files)
+	if len(parsed.Files) != 1 || parsed.Files[0].Path != filepath.Join(".opencode", "agents", "builder.md") {
+		t.Fatalf("files = %+v, want only builder file", parsed.Files)
 	}
 }
 

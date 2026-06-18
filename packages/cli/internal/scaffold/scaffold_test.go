@@ -29,44 +29,20 @@ func createMinimalLibraryFS() fstest.MapFS {
 			Data: []byte("# Uncertainty\n\nProject: {{PROJECT_NAME}}"),
 		},
 
-		// Canonical agents
-		"canonical/agents/guide.md": &fstest.MapFile{
-			Data: []byte("---\nname: guide\ndescription: Test guide agent.\ntier: balanced\ntemperature: 0.2\nthinking: low\nrisk: 2\n---\n\n# Guide\n\nYou are a guide.\n"),
+		// Agents
+		"agents/builder.md": &fstest.MapFile{
+			Data: []byte("---\nname: Builder\nmodel: sonnet\n---\n\n# Builder\n\nYou are a builder."),
 		},
-		"canonical/agents/implementer.md": &fstest.MapFile{
-			Data: []byte("---\nname: implementer\ndescription: Test implementer agent.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\n---\n\n# Implementer\n\nYou are an implementer.\n"),
-		},
-		"canonical/agents/researcher.md": &fstest.MapFile{
-			Data: []byte("---\nname: researcher\ndescription: Test researcher agent.\ntier: speed\ntemperature: 0.2\nthinking: none\nrisk: 1\n---\n\n# Researcher\n\nYou are a researcher.\n"),
-		},
-		"canonical/agents/deployer.md": &fstest.MapFile{
-			Data: []byte("---\nname: deployer\ndescription: Test deployer agent.\ntier: balanced\ntemperature: 0.2\nthinking: low\nrisk: 4\n---\n\n# Deployer\n\nYou are a deployer.\n"),
-		},
-		"canonical/agents/responder.md": &fstest.MapFile{
-			Data: []byte("---\nname: responder\ndescription: Test responder agent.\ntier: balanced\ntemperature: 0.2\nthinking: low\nrisk: 4\n---\n\n# Responder\n\nYou are a responder.\n"),
-		},
-		"canonical/agents/planner.md": &fstest.MapFile{
-			Data: []byte("---\nname: planner\ndescription: Test planner agent.\ntier: frontier\ntemperature: 0.1\nthinking: high\nrisk: 4\n---\n\n# Planner\n\nYou are a planner.\n"),
-		},
-		"canonical/agents/reviewer.md": &fstest.MapFile{
-			Data: []byte("---\nname: reviewer\ndescription: Test reviewer agent.\ntier: frontier\ntemperature: 0.1\nthinking: high\nrisk: 4\n---\n\n# Reviewer\n\nYou are a reviewer.\n"),
-		},
-		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
-			Data: []byte("---\nname: evidence-verifier\ndescription: Test evidence verifier agent.\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 2\n---\n\n# Evidence Verifier\n\nVerify evidence.\n"),
+		"agents/orchestrator.md": &fstest.MapFile{
+			Data: []byte("---\nname: Orchestrator\nmodel: opus\ntools: list_catalog compose_agent start_chain\n---\n\n# Orchestrator\n\nYou coordinate agents."),
 		},
 
-		// Active skills
-		"skills/codebase-exploration.md": &fstest.MapFile{
-			Data: []byte("---\nname: codebase-exploration\ndescription: Explore code.\ntier: balanced\nthinking: low\nrisk: 2\n---\n\n# Codebase Exploration\n\nExplore code paths.\n"),
+		// Skills
+		"skills/implement.md": &fstest.MapFile{
+			Data: []byte("---\nname: implement\n---\n\n# Implement\n\nImplement features."),
 		},
-		"skills/test-first-change.md": &fstest.MapFile{
-			Data: []byte("---\nname: test-first-change\ndescription: Test first changes.\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# Test First Change\n\nDrive changes through tests.\n"),
-		},
-		"skills/diagnose.md": &fstest.MapFile{
-			Data: []byte("---\nname: diagnose\ndescription: Diagnose failures.\ntier: frontier\nthinking: high\nrisk: 4\n---\n\n# Diagnose\n\nDiagnose bugs.\n"),
-		},
-		"skills/issue-triage.md": &fstest.MapFile{
-			Data: []byte("---\nname: issue-triage\ndescription: Triage issues.\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# Issue Triage\n\nTriage issues.\n"),
+		"skills/plan.md": &fstest.MapFile{
+			Data: []byte("---\nname: plan\n---\n\n# Plan\n\nPlan features."),
 		},
 
 		// Tool agents (context files)
@@ -91,6 +67,19 @@ func createMinimalLibraryFS() fstest.MapFS {
 		},
 		"root/copilot-instructions.template.md": &fstest.MapFile{
 			Data: []byte("# Copilot Instructions\n\nUse workspace instructions."),
+		},
+		// Orchestration minimal structure
+		"orchestration/chains/feature.json": &fstest.MapFile{
+			Data: []byte(`{"name":"feature","steps":[]}`),
+		},
+		"orchestration/skills/domains/backend.md": &fstest.MapFile{
+			Data: []byte("---\nname: backend\n---\n\n# Backend"),
+		},
+		"orchestration/teams/feature-team.json": &fstest.MapFile{
+			Data: []byte(`{"name":"feature-team"}`),
+		},
+		"orchestration/workflows/rpi.json": &fstest.MapFile{
+			Data: []byte(`{"name":"rpi"}`),
 		},
 
 		// Specs structure
@@ -127,6 +116,9 @@ func createMinimalLibraryFS() fstest.MapFS {
 		},
 		"standards/starter/error-handling.md": &fstest.MapFile{
 			Data: []byte("---\ntitle: Error Handling\n---\n\n# Error Handling\n"),
+		},
+		"standards/starter/orchestration-patterns.md": &fstest.MapFile{
+			Data: []byte("---\ntitle: Orchestration Patterns\n---\n\n# Orchestration Patterns\n"),
 		},
 		"standards/starter/test-patterns.md": &fstest.MapFile{
 			Data: []byte("---\ntitle: Test Patterns\n---\n\n# Test Patterns\n"),
@@ -241,8 +233,8 @@ func TestScaffoldAll_WorkspaceRoutesPlanningArtifactsToPlanningRepoAndToolsToWor
 	for _, rel := range []string{
 		".ai/mcp.json",
 		".mcp.json",
-		".opencode/agents/guide.md",
-		".claude/agents/guide.md",
+		".opencode/agents/builder.md",
+		".claude/agents/builder.md",
 		"AGENTS.md",
 		".github/copilot-instructions.md",
 	} {
@@ -271,8 +263,8 @@ func TestScaffoldAll_GlobalSkipsProjectPlanningArtifactsButInstallsGlobalTools(t
 			t.Fatalf("global scope must not create project planning artifact %s", rel)
 		}
 	}
-	if !fileExistsInDir(homeDir, ".claude/agents/guide.md") {
-		t.Fatal("expected global Claude Code guide under HomeDir")
+	if !fileExistsInDir(homeDir, ".claude/agents/builder.md") {
+		t.Fatal("expected global Claude Code artifacts under HomeDir")
 	}
 }
 
@@ -301,20 +293,20 @@ func TestScaffoldAll_OpenCode(t *testing.T) {
 	}
 
 	// Check opencode.jsonc was created in the correct subdirectory (install
-	// and compile output.
-	if !fileExistsInDir(targetDir, "opencode.json") {
-		t.Error("opencode.json was not created at the project root")
-	}
-	if fileExistsInDir(targetDir, ".opencode/opencode.jsonc") {
-		t.Error(".opencode/opencode.jsonc must not be emitted")
+	// and compile both target .jsonc per the spec 011 unification).
+	if !fileExistsInDir(targetDir, ".opencode/opencode.jsonc") {
+		t.Error("opencode.jsonc was not created in .opencode/")
 	}
 	if fileExistsInDir(targetDir, ".opencode/opencode.json") {
-		t.Error("opencode.json must not be inside .opencode")
+		t.Error("opencode.json must not coexist with opencode.jsonc")
+	}
+	if fileExistsInDir(targetDir, "opencode.json") || fileExistsInDir(targetDir, "opencode.jsonc") {
+		t.Error("opencode config must not be created at the project root")
 	}
 
 	// Check .opencode directory was created.
-	if !fileExistsInDir(targetDir, ".opencode/agents/guide.md") {
-		t.Error(".opencode/agents/guide.md was not created")
+	if !fileExistsInDir(targetDir, ".opencode/agents/builder.md") {
+		t.Error(".opencode/agents/builder.md was not created")
 	}
 
 	// Check .ai/mcp.json was created.
@@ -337,8 +329,8 @@ func TestScaffoldAll_ClaudeCode(t *testing.T) {
 	}
 
 	// Check .claude directory was created.
-	if !fileExistsInDir(targetDir, ".claude/agents/guide.md") {
-		t.Error(".claude/agents/guide.md was not created")
+	if !fileExistsInDir(targetDir, ".claude/agents/builder.md") {
+		t.Error(".claude/agents/builder.md was not created")
 	}
 
 	t.Logf("Scaffold created %d files", len(result.Files))
@@ -356,11 +348,11 @@ func TestScaffoldAll_MultipleTools(t *testing.T) {
 	}
 
 	// Both tool directories should exist.
-	if !fileExistsInDir(targetDir, ".opencode/agents/guide.md") {
-		t.Error(".opencode/agents/guide.md was not created")
+	if !fileExistsInDir(targetDir, ".opencode/agents/builder.md") {
+		t.Error(".opencode/agents/builder.md was not created")
 	}
-	if !fileExistsInDir(targetDir, ".claude/agents/guide.md") {
-		t.Error(".claude/agents/guide.md was not created")
+	if !fileExistsInDir(targetDir, ".claude/agents/builder.md") {
+		t.Error(".claude/agents/builder.md was not created")
 	}
 
 	t.Logf("Scaffold created %d files for 2 tools", len(result.Files))

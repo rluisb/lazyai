@@ -116,30 +116,26 @@ func runSidecarInit(cmd *cobra.Command, args []string) error {
 
 	switch scope {
 	case sidecarpkg.ScopeWorkspace:
-		var workspaceName string
-		err = sidecarpkg.UpdateWorkspaceConfig(func(wsCfg *sidecarpkg.WorkspaceConfig) error {
-			if wsCfg.Active == "" {
-				return fmt.Errorf("no active workspace set; use 'lazyai-cli workspace switch' first")
-			}
-			w := findWorkspace(wsCfg, wsCfg.Active)
-			if w == nil {
-				return fmt.Errorf("active workspace '%s' not found", wsCfg.Active)
-			}
-			w.Sidecar = cfg
-			workspaceName = w.Name
-			return nil
-		})
+		wsCfg, err := loadWorkspaceConfig()
 		if err != nil {
 			return err
 		}
-		fmt.Printf("✅ Sidecar initialized for workspace '%s'\n", workspaceName)
+		if wsCfg.Active == "" {
+			return fmt.Errorf("no active workspace set; use 'lazyai-cli workspace switch' first")
+		}
+		w := findWorkspace(wsCfg, wsCfg.Active)
+		if w == nil {
+			return fmt.Errorf("active workspace '%s' not found", wsCfg.Active)
+		}
+		w.Sidecar = cfg
+		if err := saveWorkspaceConfig(wsCfg); err != nil {
+			return err
+		}
+		fmt.Printf("✅ Sidecar initialized for workspace '%s'\n", w.Name)
 	case sidecarpkg.ScopeProject:
 		projectRoot, err := getProjectRoot()
 		if err != nil {
-			return fmt.Errorf("getting project root: %w", err)
-		}
-		if _, err := os.Stat(projectRoot); err != nil {
-			return fmt.Errorf("project root not accessible: %w", err)
+			return err
 		}
 		if err := sidecarpkg.WriteProjectSidecar(projectRoot, cfg); err != nil {
 			return err
@@ -170,10 +166,7 @@ func runSidecarStatus(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	projectRoot, err := getProjectRoot()
-	if err != nil {
-		return fmt.Errorf("getting project root: %w", err)
-	}
+	projectRoot, _ := getProjectRoot()
 	resolved, err := sidecarpkg.Resolve(scope, projectRoot)
 	if err != nil {
 		return err
@@ -199,6 +192,7 @@ func runSidecarStatus(cmd *cobra.Command, args []string) error {
 	}
 	return nil
 }
+
 func runSidecarAttach(cmd *cobra.Command, args []string) error {
 	scope, err := determineScope(cmd, true)
 	if err != nil {
@@ -213,7 +207,7 @@ func runSidecarAttach(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("resolving project path: %w", err)
 		}
 	} else if scope == sidecarpkg.ScopeWorkspace {
-		wsCfg, err := sidecarpkg.LoadWorkspaceConfig()
+		wsCfg, err := loadWorkspaceConfig()
 		if err != nil {
 			return err
 		}
@@ -255,35 +249,27 @@ func runSidecarAttach(cmd *cobra.Command, args []string) error {
 
 	switch scope {
 	case sidecarpkg.ScopeWorkspace:
-		var workspaceName string
-		err = sidecarpkg.UpdateWorkspaceConfig(func(wsCfg *sidecarpkg.WorkspaceConfig) error {
-			if wsCfg.Active == "" {
-				return fmt.Errorf("no active workspace set; use 'lazyai-cli workspace switch' first")
-			}
-			w := findWorkspace(wsCfg, wsCfg.Active)
-			if w == nil {
-				return fmt.Errorf("active workspace '%s' not found", wsCfg.Active)
-			}
-			wAbs, _ := filepath.Abs(w.Path)
-			if wAbs != absProject {
-				return fmt.Errorf("active workspace path (%s) does not match requested project path (%s)", wAbs, absProject)
-			}
-			w.Sidecar = cfg
-			workspaceName = w.Name
-			return nil
-		})
+		wsCfg, err := loadWorkspaceConfig()
 		if err != nil {
 			return err
 		}
-		fmt.Printf("✅ Sidecar attached to workspace '%s'\n", workspaceName)
+		if wsCfg.Active == "" {
+			return fmt.Errorf("no active workspace set; use 'lazyai-cli workspace switch' first")
+		}
+		w := findWorkspace(wsCfg, wsCfg.Active)
+		if w == nil {
+			return fmt.Errorf("active workspace '%s' not found", wsCfg.Active)
+		}
+		wAbs, _ := filepath.Abs(w.Path)
+		if wAbs != absProject {
+			return fmt.Errorf("active workspace path (%s) does not match requested project path (%s)", wAbs, absProject)
+		}
+		w.Sidecar = cfg
+		if err := saveWorkspaceConfig(wsCfg); err != nil {
+			return err
+		}
+		fmt.Printf("✅ Sidecar attached to workspace '%s'\n", w.Name)
 	case sidecarpkg.ScopeProject:
-		projectInfo, err := os.Stat(absProject)
-		if err != nil {
-			return fmt.Errorf("project path not accessible: %w", err)
-		}
-		if !projectInfo.IsDir() {
-			return fmt.Errorf("project path is not a directory: %s", absProject)
-		}
 		if err := sidecarpkg.WriteProjectSidecar(absProject, cfg); err != nil {
 			return err
 		}
@@ -311,19 +297,15 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine project path: positional arg, active workspace path, or current directory.
+	// Determine project path: positional arg, or active workspace path, or current directory
 	var absProject string
-	var activeWorkspace *sidecarpkg.WorkspaceEntry
-
 	if len(args) > 0 {
 		absProject, err = filepath.Abs(args[0])
 		if err != nil {
 			return fmt.Errorf("resolving project path: %w", err)
 		}
-	}
-
-	if scope == sidecarpkg.ScopeWorkspace {
-		wsCfg, err := sidecarpkg.LoadWorkspaceConfig()
+	} else if scope == sidecarpkg.ScopeWorkspace {
+		wsCfg, err := loadWorkspaceConfig()
 		if err != nil {
 			return err
 		}
@@ -336,11 +318,8 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Active workspace '%s' not found.\n", wsCfg.Active)
 			return nil
 		}
-		activeWorkspace = w
-		if absProject == "" {
-			absProject, _ = filepath.Abs(w.Path)
-		}
-	} else if absProject == "" {
+		absProject, _ = filepath.Abs(w.Path)
+	} else {
 		absProject, err = getProjectRoot()
 		if err != nil {
 			return err
@@ -351,20 +330,30 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 
 	switch scope {
 	case sidecarpkg.ScopeWorkspace:
-		if activeWorkspace == nil {
+		wsCfg, err := loadWorkspaceConfig()
+		if err != nil {
+			return err
+		}
+		if wsCfg.Active == "" {
 			fmt.Println("No active workspace set.")
 			return nil
 		}
-		if activeWorkspace.Sidecar == nil {
+		w := findWorkspace(wsCfg, wsCfg.Active)
+		if w == nil {
+			fmt.Printf("Active workspace '%s' not found.\n", wsCfg.Active)
+			return nil
+		}
+		if w.Sidecar == nil {
 			fmt.Println("No sidecar configured for active workspace.")
 			return nil
 		}
-		if wAbs, _ := filepath.Abs(activeWorkspace.Path); wAbs != absProject {
+		wAbs, _ := filepath.Abs(w.Path)
+		if wAbs != absProject {
 			return fmt.Errorf("active workspace path (%s) does not match requested project path (%s)", wAbs, absProject)
 		}
 		if !force {
-			fmt.Printf("Detach sidecar from workspace '%s'?\n", activeWorkspace.Name)
-			fmt.Printf("  Sidecar path: %s\n", activeWorkspace.Sidecar.Path)
+			fmt.Printf("Detach sidecar from workspace '%s'?\n", w.Name)
+			fmt.Printf("  Sidecar path: %s\n", w.Sidecar.Path)
 			fmt.Printf("  This will remove the sidecar block from the workspace config. [y/N]: ")
 			var response string
 			fmt.Scanln(&response)
@@ -373,36 +362,11 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 				return nil
 			}
 		}
-		workspaceName := activeWorkspace.Name
-		var detached bool
-		err = sidecarpkg.UpdateWorkspaceConfig(func(cfg *sidecarpkg.WorkspaceConfig) error {
-			if cfg.Active == "" {
-				return fmt.Errorf("active workspace changed to '%s' before detach completed", cfg.Active)
-			}
-			updatedWorkspace := findWorkspace(cfg, cfg.Active)
-			if updatedWorkspace == nil {
-				return fmt.Errorf("active workspace '%s' not found", cfg.Active)
-			}
-			wAbs, _ := filepath.Abs(updatedWorkspace.Path)
-			if wAbs != absProject {
-				return fmt.Errorf("active workspace path (%s) does not match requested project path (%s)", wAbs, absProject)
-			}
-			if updatedWorkspace.Sidecar == nil {
-				return nil
-			}
-			updatedWorkspace.Sidecar = nil
-			detached = true
-			workspaceName = updatedWorkspace.Name
-			return nil
-		})
-		if err != nil {
+		w.Sidecar = nil
+		if err := saveWorkspaceConfig(wsCfg); err != nil {
 			return err
 		}
-		if !detached {
-			fmt.Println("No sidecar configured for active workspace.")
-			return nil
-		}
-		fmt.Printf("✅ Sidecar detached from workspace '%s'\n", workspaceName)
+		fmt.Printf("✅ Sidecar detached from workspace '%s'\n", w.Name)
 	case sidecarpkg.ScopeProject:
 		cfg, err := sidecarpkg.LoadProjectSidecar(absProject)
 		if err != nil {
@@ -444,10 +408,7 @@ func runSidecarDoctor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	projectRoot, err := getProjectRoot()
-	if err != nil {
-		return fmt.Errorf("getting project root: %w", err)
-	}
+	projectRoot, _ := getProjectRoot()
 	issues, err := sidecarpkg.Doctor(scope, projectRoot)
 	if err != nil {
 		return err
@@ -495,9 +456,9 @@ func determineScope(cmd *cobra.Command, requireWorkspaceFallback bool) (sidecarp
 		return parseScope(scopeFlag)
 	}
 
-	wsCfg, err := sidecarpkg.LoadWorkspaceConfig()
+	wsCfg, err := loadWorkspaceConfig()
 	if err != nil {
-		return sidecarpkg.ScopeProject, err
+		return sidecarpkg.ScopeProject, nil
 	}
 	if wsCfg.Active != "" && findWorkspace(wsCfg, wsCfg.Active) != nil {
 		return sidecarpkg.ScopeWorkspace, nil
@@ -508,7 +469,7 @@ func determineScope(cmd *cobra.Command, requireWorkspaceFallback bool) (sidecarp
 	return sidecarpkg.ScopeProject, nil
 }
 
-var getProjectRoot = func() (string, error) {
+func getProjectRoot() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getting working directory: %w", err)

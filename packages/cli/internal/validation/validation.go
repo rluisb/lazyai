@@ -53,7 +53,9 @@ func IsValidArtifactType(t string) bool {
 		types.ArtifactTypeCommand,
 		types.ArtifactTypePrompt,
 		types.ArtifactTypeTemplate,
-		types.ArtifactTypeHook:
+		types.ArtifactTypeWorkflow,
+		types.ArtifactTypeDomain,
+		types.ArtifactTypeMode:
 		return true
 	default:
 		return false

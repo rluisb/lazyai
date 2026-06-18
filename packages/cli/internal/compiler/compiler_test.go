@@ -3,12 +3,11 @@ package compiler
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"testing/fstest"
-
-	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+// --- FragmentResolver tests ---
 
 func TestFragmentResolver_VariableInterpolation(t *testing.T) {
 	resolver := NewFragmentResolver("")
@@ -259,44 +258,6 @@ func TestCompileForTools(t *testing.T) {
 		if results[tool] == nil {
 			t.Errorf("no result for tool %q", tool)
 		}
-	}
-}
-
-// TestValidateAgentResolutions_ToleratesBaselineNoTier verifies that canonical
-// agents copied from the vibe-lab baseline (which carry name/description but no
-// LazyAI tier metadata) do not produce validation issues for the missing tier.
-func TestValidateAgentResolutions_ToleratesBaselineNoTier(t *testing.T) {
-	libFS := fstest.MapFS{
-		"canonical/agents/implementer.md": &fstest.MapFile{
-			Data: []byte("---\nname: implementer\ndescription: Test implementer.\n---\n\nBody."),
-		},
-	}
-	issues, err := ValidateAgentResolutions(libFS, []types.ToolId{types.ToolIdClaudeCode}, []string{"openai"})
-	if err != nil {
-		t.Fatalf("ValidateAgentResolutions: %v", err)
-	}
-	for _, issue := range issues {
-		if strings.Contains(issue.Err.Error(), "missing required field: tier") {
-			t.Errorf("unexpected missing-tier issue: %v", issue)
-		}
-	}
-}
-
-// TestValidateAgentResolutions_StillReportsMalformedFrontmatter verifies that
-// genuinely malformed frontmatter is still reported even while missing-tier is
-// tolerated for baseline agents.
-func TestValidateAgentResolutions_StillReportsMalformedFrontmatter(t *testing.T) {
-	libFS := fstest.MapFS{
-		"canonical/agents/broken.md": &fstest.MapFile{
-			Data: []byte("---\nname: broken\ndescription: ok\n  unclosed: [\n---\n\nBody."),
-		},
-	}
-	issues, err := ValidateAgentResolutions(libFS, []types.ToolId{types.ToolIdClaudeCode}, []string{"openai"})
-	if err != nil {
-		t.Fatalf("ValidateAgentResolutions: %v", err)
-	}
-	if len(issues) == 0 {
-		t.Fatal("expected malformed-frontmatter issue, got none")
 	}
 }
 

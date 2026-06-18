@@ -33,7 +33,7 @@ func TestRunSetupScanOutputsInventoryJSON(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(homeDir, ".config", "opencode"), 0o755); err != nil {
 		t.Fatalf("mkdir home config: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(homeDir, ".config", "opencode", "opencode.json"), []byte(`{"version":"2.0.0"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".config", "opencode", "opencode.jsonc"), []byte(`{"version":"2.0.0"}`), 0o644); err != nil {
 		t.Fatalf("seed opencode config: %v", err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, ".claude"), 0o755); err != nil {
@@ -152,7 +152,7 @@ func TestRunSetupListOutputsDeterministicJSON(t *testing.T) {
 	for _, target := range result.Targets {
 		gotTargets = append(gotTargets, target.ID)
 	}
-	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,opencode,pi"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,opencode"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 	if len(result.Agents) != 1 || result.Agents[0].ID != "test-agent" {
@@ -197,8 +197,8 @@ func TestRunSetupListGlobalFiltersUnsupportedTargets(t *testing.T) {
 		t.Fatalf("scopeFilter = %q, want global", result.ScopeFilter)
 	}
 	for _, target := range result.Targets {
-		if target.ID == "pi" || target.ID == "antigravity" {
-			t.Fatalf("did not expect %s in global list output", target.ID)
+		if target.ID == "pi" {
+			t.Fatal("did not expect pi in global list output")
 		}
 		if got := strings.Join(target.SupportedScopes, ","); got != "global" {
 			t.Fatalf("target %s supported scopes = %q, want global", target.ID, got)

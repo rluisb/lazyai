@@ -64,7 +64,7 @@ type SkillContract struct {
 	MCPTools    []string // frontmatter `mcp_tools`
 }
 
-// LoadSkillContracts walks the active canonical skills and agents directories,
+// LoadSkillContracts walks libFS reading skills/*.md and agents/*.md,
 // returning a SkillContract per file that has frontmatter. Files without
 // frontmatter are skipped silently — they aren't part of the contract.
 func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
@@ -73,18 +73,7 @@ func LoadSkillContracts(libFS fs.FS) ([]SkillContract, error) {
 	}
 
 	var contracts []SkillContract
-	var dirs []string
-	if _, err := fs.ReadDir(libFS, "skills"); err == nil {
-		dirs = append(dirs, "skills")
-	} else if _, err := fs.ReadDir(libFS, "canonical/skills"); err == nil {
-		dirs = append(dirs, "canonical/skills")
-	}
-	if _, err := fs.ReadDir(libFS, "canonical/agents"); err == nil {
-		dirs = append(dirs, "canonical/agents")
-	} else if _, err := fs.ReadDir(libFS, "agents"); err == nil {
-		dirs = append(dirs, "agents")
-	}
-	for _, dir := range dirs {
+	for _, dir := range []string{"skills", "agents"} {
 		entries, err := fs.ReadDir(libFS, dir)
 		if err != nil {
 			// Missing directory is fine in minimal-library tests.

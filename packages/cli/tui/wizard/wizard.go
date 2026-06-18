@@ -64,14 +64,23 @@ type WizardConfig struct {
 	CLIMemoryPath          string
 	CLIEnableObsidian      bool
 	CLIObsidianVaultPath   string
+	CLIEnableQmd           bool
+	CLIQmdIndexPath        string
 	CLIEnableCodegraph     bool
 	CLICodegraphDataPath   string
+	CLIEnableGraphify      bool
+	CLIGraphifyDataPath    string
 	CLIExistingSetupPolicy types.SetupPolicy
 	CLIUseReversa          *bool
 
 	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
 	// scaffolding to the tool's own CLI instead of direct-write.
 	CLIDriveCLI bool
+
+	// CLIPlainOpenCode, when true, disables Fortnite multi-agent mode for
+	// OpenCode scaffolding. Default false (Fortnite mode enabled when opencode
+	// is selected).
+	CLIPlainOpenCode bool
 
 	// CLILocalSecrets, when true, routes Claude Code MCP/settings writes to
 	// .claude/settings.local.json (gitignored) instead of the committed

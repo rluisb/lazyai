@@ -16,7 +16,7 @@ produces_for:
   - speckit-plan
   - speckit-checklist
   - speckit-analyze
-mcp_tools: [filesystem]
+mcp_tools: [filesystem, qmd]
 harness:
   feed_forward: [spec.md, constitution.md]
   contract: [human-gate]

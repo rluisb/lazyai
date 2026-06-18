@@ -1,18 +1,33 @@
 // OpenCode agent frontmatter emitter.
 //
-// Library agents ship with a small source frontmatter and body. The OpenCode
-// emitters flatten that to an agent-facing YAML block containing:
+// Library agents ship with a minimal source frontmatter (name, model, tools
+// as MCP-server names). Other adapters route agents through
+// StripFrontmatterAndInjectModel, which drops the frontmatter entirely and
+// replaces it with HTML comments — fine for Claude/Gemini, but opencode
+// requires a real YAML frontmatter block with its own schema:
 //
 //	---
+//	name: <string>                  # optional
+//	model: <provider/model>         # optional
 //	description: <string>
+//	reasoningEffort: high | medium | low | minimal   # optional
+//	textVerbosity: high | medium | low               # optional
+//	mode: primary | subagent | all
+//	temperature: <float>            # optional
+//	steps: <int>                    # optional
+//	tools:                          # optional — opencode tool gates (write/edit/bash)
+//	  bash: true
+//	  edit: false
+//	permission:                     # optional
+//	  edit: ask
+//	  bash: ask
 //	---
 //
-// (Additional keys are only emitted when explicitly provided in opts, which is
-// used by internal legacy paths and tests; baseline default emission keeps only
-// description.)
-//
-// BuildOpenCodeAgentFrontmatter produces that block in a stable canonical order.
-// Empty or zero-value fields are omitted to keep output minimal.
+// BuildOpenCodeAgentFrontmatter produces that block in the canonical key
+// order observed in real-world `~/.config/opencode/agents/` configs (#199
+// Bug 1). Empty / zero-value fields are omitted entirely so the rendered
+// YAML stays minimal.
+
 package adapter
 
 import (
@@ -23,20 +38,24 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 )
 
-// OpenCodeAgentOpts holds optional frontmatter additions. Baseline agent output
-// passes zero values so only description is emitted; non-empty opts are still
-// rendered for focused helper tests and non-default callers.
+// OpenCodeAgentOpts holds per-agent frontmatter overrides. All fields are
+// optional: zero-value fields fall back to source-inherited values or
+// opencode's own defaults. Field shapes match the canonical OpenCode agent
+// frontmatter (#199 Bug 1).
 type OpenCodeAgentOpts struct {
-	// Name is the agent's identifier. Emitted as `name:` only when provided.
+	// Name is the agent's identifier. Emitted as `name:`. Canonical OpenCode
+	// configs include this; we mirror that. If empty, key is omitted.
 	Name string
 	// Description is the agent's one-line summary. If empty, derived from
-	// source frontmatter (`name`, then `description`) or defaults to "Agent".
+	// the source frontmatter's `name` field (or defaults to "Agent").
 	Description string
 	// Model is a provider/model identifier (e.g., "openai/gpt-5.5",
-	// "ollama-cloud/kimi-k2.6:cloud"). Emitted only when provided.
+	// "ollama-cloud/kimi-k2.6:cloud"). If empty, the key is omitted and
+	// opencode uses its configured default.
 	Model string
-	// Mode is opencode's primary/subagent/all selector. Emitted only when
-	// provided.
+	// Mode is opencode's primary/subagent/all selector. Defaults to
+	// "subagent" — matches what real-world OpenCode subagent configs use.
+	// Pass "primary" explicitly for the orchestrator agent.
 	Mode string
 	// Temperature is the agent's sampling temperature (0.0–1.0+). Emitted
 	// only when non-zero. Defaults are inherited from opencode otherwise.
@@ -60,23 +79,28 @@ type OpenCodeAgentOpts struct {
 	// "ask" | "allow" | "deny", or to a nested allow/deny structure. If nil
 	// or empty, the key is omitted.
 	Permission map[string]string
-	// ManagedMarker is the vibe-lab managed-marker HTML comment emitted
-	// after the frontmatter and blank line when non-empty.
-	ManagedMarker string
 }
 
 // BuildOpenCodeAgentFrontmatter returns source rewritten with an
 // opencode-schema-valid YAML frontmatter block. The body is preserved
 // verbatim (with a single leading blank line between frontmatter and body).
 //
-// Current baseline output order is stable and intentionally minimal:
-// description first, then opt-in extras in deterministic order when provided.
+// Key emit order mirrors the canonical configs at
+// `~/.config/opencode/agents/`:
+//
+//	name → model → description → reasoningEffort → textVerbosity →
+//	mode → temperature → steps → tools (if non-empty) → permission (if non-empty)
 func BuildOpenCodeAgentFrontmatter(source []byte, opts OpenCodeAgentOpts) []byte {
 	srcFm, body, _ := frontmatter.ExtractFrontmatter(source)
 
 	description := opts.Description
 	if description == "" {
 		description = inheritedDescription(srcFm)
+	}
+
+	mode := opts.Mode
+	if mode == "" {
+		mode = "subagent"
 	}
 
 	var b strings.Builder
@@ -98,9 +122,10 @@ func BuildOpenCodeAgentFrontmatter(source []byte, opts OpenCodeAgentOpts) []byte
 	if opts.TextVerbosity != "" {
 		fmt.Fprintf(&b, "textVerbosity: %s\n", opts.TextVerbosity)
 	}
-	if opts.Mode != "" {
-		fmt.Fprintf(&b, "mode: %s\n", opts.Mode)
-	}
+
+	b.WriteString("mode: ")
+	b.WriteString(mode)
+	b.WriteByte('\n')
 
 	if opts.Temperature != 0 {
 		fmt.Fprintf(&b, "temperature: %s\n", trimFloat(opts.Temperature))
@@ -123,12 +148,7 @@ func BuildOpenCodeAgentFrontmatter(source []byte, opts OpenCodeAgentOpts) []byte
 		}
 	}
 
-	b.WriteString("---\n")
-	if opts.ManagedMarker != "" {
-		b.WriteString("\n")
-		b.WriteString(opts.ManagedMarker)
-	}
-	b.WriteString("\n\n")
+	b.WriteString("---\n\n")
 	b.WriteString(strings.TrimLeft(string(body), "\n"))
 	return []byte(b.String())
 }

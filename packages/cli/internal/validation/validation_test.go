@@ -46,7 +46,7 @@ func TestValidateArtifactName_AcceptsValidNames(t *testing.T) {
 
 	validNames := []string{
 		"my-agent",
-		"implementer",
+		"builder",
 		"code-review",
 		"test123",
 		"abc",
@@ -124,17 +124,15 @@ func TestValidateToolId(t *testing.T) {
 func TestIsValidArtifactType(t *testing.T) {
 	t.Parallel()
 
-	validTypes := []string{"agent", "skill", "command", "prompt", "template", "hook"}
+	validTypes := []string{"agent", "skill", "command", "prompt", "template", "workflow", "domain", "mode"}
 	for _, typ := range validTypes {
 		if !IsValidArtifactType(typ) {
 			t.Errorf("IsValidArtifactType(%q) = false, want true", typ)
 		}
 	}
 
-	for _, typ := range []string{"workflow", "domain", "mode", "invalid"} {
-		if IsValidArtifactType(typ) {
-			t.Errorf("IsValidArtifactType(%q) = true, want false", typ)
-		}
+	if IsValidArtifactType("invalid") {
+		t.Error("IsValidArtifactType(\"invalid\") = true, want false")
 	}
 }
 

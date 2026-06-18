@@ -1,9 +1,9 @@
 # SPEC: LazyAI Internal Sidecar
 
-**Version:** 1.1.0
-**Status:** Approved
+**Version:** 1.0.0
+**Status:** Draft
 **Author:** turbo-crank (Fortnite multi-agent system)
-**Date:** 2026-06-17
+**Date:** 2026-05-24
 
 ---
 
@@ -57,6 +57,9 @@ workspaces:
       specs_dir: specs                       # relative to path, or absolute
       docs_dir: docs                         # relative to path, or absolute
       plans_dir: plans                       # relative to path, or absolute
+      linked_projects:                       # optional cross-project references
+        - name: shared-lib
+          path: /Users/me/projects/shared-lib
 active: my-project
 ```
 
@@ -81,10 +84,10 @@ sidecar:
 **Acceptance criteria:**
 - [ ] Workspace YAML parsing tolerates missing `sidecar` block (backward compatible).
 - [ ] All `*_dir` fields default to their name (e.g., `specs_dir` defaults to `"specs"`) when omitted.
-- [ ] `path` is required when any sidecar block is present. A sidecar block with missing or empty `path` is invalid: `Resolve` returns an error, `sidecar status` returns non-zero, and `sidecar doctor` reports an ERROR.
+- [ ] `path` is required when any sidecar block is present; validation rejects a sidecar block without `path`.
+- [ ] `linked_projects` is optional and defaults to empty list.
 - [ ] Relative paths in `*_dir` are resolved against `sidecar.path`.
 - [ ] Absolute paths in `*_dir` are used as-is.
-- [ ] `linked_projects` is reserved for a future cross-project feature; this version ignores the field if present in YAML and does not validate, merge, or manage it.
 
 ### R2: Resolution Priority
 
@@ -98,21 +101,12 @@ When resolving docs/specs/plans directories, LazyAI applies the following priori
    - `workspace` scope → active workspace `path` (current behavior)
    - `global` scope → `~/.lazyai/` (current behavior)
 
-**Whole-config replacement (not field-level merge):** When a higher-priority sidecar level is present, that level supplies the complete docs/specs/plans tuple. Missing `docs_dir`, `specs_dir`, and `plans_dir` default under that same level's `path`; they do not inherit from lower-priority sidecars.
-
-**Level-specific relative-path anchors:** Sidecar `path` relative values are resolved against the directory of the config file that owns the block, not the requested command scope:
-- workspace sidecar `path` → resolved against `~/.lazyai/` (the block lives in `workspaces.yaml`);
-- project sidecar `path` → resolved against `projectRoot`;
-- global sidecar `path` → resolved against `~/.lazyai/`.
-
 **Acceptance criteria:**
 - [ ] `sidecar status` shows the resolved path and which level provided it.
 - [ ] A workspace sidecar with `specs_dir: my-specs` overrides a project sidecar with `specs_dir: other-specs`.
 - [ ] A project sidecar overrides a global sidecar when no workspace sidecar exists.
 - [ ] When no sidecar exists at any level, the scope default is used.
 - [ ] Resolution is computed once per command invocation (no caching across commands).
-- [ ] A project sidecar with `path: ../project-kb` and only `docs_dir: custom-docs` resolves docs to `../project-kb/custom-docs`, specs to `../project-kb/specs`, and plans to `../project-kb/plans` — not to global paths.
-- [ ] A global sidecar with relative `path: kb` resolves docs/specs/plans under `~/.lazyai/kb`, even when the requested scope is `project`.
 
 ### R3: Commands
 
@@ -124,7 +118,7 @@ Five new subcommands under `lazyai-cli sidecar`:
 | `sidecar status` | Displays resolved docs/specs/plans paths for the current scope, including which config level provided each value. |
 | `sidecar attach` | Adds a sidecar block to the active workspace or creates a project-level sidecar. Requires `--path`. |
 | `sidecar detach` | Removes the sidecar block from the active workspace or deletes the project-level sidecar file. Requires confirmation. |
-| `sidecar doctor` | Validates all configured sidecar paths in the requested scope chain exist and are writable. Reports issues with exit codes. |
+| `sidecar doctor` | Validates all configured sidecar paths exist and are writable. Reports issues with exit codes. |
 
 **Acceptance criteria:**
 - [ ] `sidecar init --scope workspace --path /tmp/kb` creates a sidecar block in the active workspace entry.
@@ -133,23 +127,22 @@ Five new subcommands under `lazyai-cli sidecar`:
 - [ ] `sidecar status` shows a table with columns: Scope, Config Level, Docs Dir, Specs Dir, Plans Dir.
 - [ ] `sidecar attach --path /tmp/kb` without `--scope` defaults to workspace scope.
 - [ ] `sidecar detach` prompts for confirmation and shows what will be removed before acting.
-- [ ] `sidecar doctor` exits 0 when all paths are valid; non-zero when ERROR issues are found; WARN issues do not fail the command.
-- [ ] `sidecar doctor` validates every configured sidecar level in the requested scope chain: `--scope global` validates global only; `--scope project` validates global + project; `--scope workspace` validates global + project + workspace. Missing sidecar at any level is not an issue.
-- [ ] `sidecar doctor` reports: missing directories, non-writable directories, invalid YAML. (linked_projects is reserved and not validated.)
+- [ ] `sidecar doctor` exits 0 when all paths are valid, non-zero when issues found.
+- [ ] `sidecar doctor` reports: missing directories, non-writable directories, invalid YAML, broken linked_projects references.
 
 ### R4: Edge Cases
+
 | Scenario | Expected Behavior |
 |---|---|
 | Sidecar `path` is a relative path in workspace config | Resolved relative to `~/.lazyai/` (the config file location) |
-| Sidecar `path` is a relative path in project config | Resolved relative to `projectRoot` |
-| Sidecar `path` is a relative path in global config | Resolved relative to `~/.lazyai/` |
-| Sidecar `path` does not exist on disk | `sidecar doctor` reports WARN; `sidecar init` and `sidecar attach` accept (directories are created on first write) |
+| Sidecar `path` is a relative path in project config | Resolved relative to project root |
+| Sidecar `path` does not exist on disk | `sidecar doctor` reports it; other commands warn but proceed (directories are created on first write) |
 | Workspace has sidecar but workspace is not active | Sidecar is ignored; resolution falls through to project/global/default |
+| `linked_projects` references a non-existent path | `sidecar doctor` reports it; other commands warn |
 | User runs `sidecar detach` with no sidecar configured | Command reports "no sidecar configured" and exits 0 |
-| Sidecar `path` is a file, not a directory | Validation rejects it; `sidecar doctor` reports ERROR; `sidecar attach` and `sidecar init` refuse |
-| Sidecar `path` is empty or missing in a present block | `Resolve` returns an error; `sidecar doctor` reports ERROR; `sidecar status` exits non-zero |
+| Multiple sidecar levels have different `linked_projects` | They are merged: workspace > project > global (higher priority wins for same-name entries) |
+| Sidecar `path` is a file, not a directory | Validation rejects it; `sidecar attach` and `sidecar init` refuse |
 | YAML is malformed | Command fails with a parse error pointing to the file and line |
-| `.bak` backup file | Single-slot backup: each write overwrites the previous `.bak`; no timestamped history is kept |
 
 ### R5: Non-Goals (Explicit Exclusions)
 
@@ -158,13 +151,8 @@ Five new subcommands under `lazyai-cli sidecar`:
 - **No multi-sidecar.** One sidecar per scope level. No chaining or fallback lists.
 - **No sidecar for other artifact types.** Only docs, specs, and plans. Not for code, config, or cache.
 - **No automatic sidecar discovery.** Sidecars are explicitly configured, not auto-detected from parent directories or environment variables.
-- **`linked_projects` is reserved.** This version ignores the field if present in YAML and does not validate, merge, or manage it. A future cross-project feature may define it.
 
 ---
-
-## Durability Policy
-
-All workspace registry mutations use a locked read-modify-write path and atomic file replacement. Project and global sidecar file writes use atomic replacement. The lock file sits beside `workspaces.yaml` (as `workspaces.yaml.lock`) and protects concurrent mutating CLI invocations from lost updates. Atomic replacement means: write to a temp file in the same directory, `fsync` the temp file, then `os.Rename` over the target. Existing files are backed up to a single-slot `.bak` before replacement.
 
 ## Dependencies
 

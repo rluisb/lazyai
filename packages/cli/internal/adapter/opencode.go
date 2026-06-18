@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,11 +17,11 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// OpenCodeConfigFilename is the canonical root opencode config filename.
-const OpenCodeConfigFilename = "opencode.json"
-
-// OpenCodeRuntimeMCPFilename is the secondary LazyAI-only MCP-only config payload.
-const OpenCodeRuntimeMCPFilename = "lazyai.mcp.jsonc"
+// OpenCodeConfigFilename is the canonical opencode config filename. Both the
+// install-time default-config writer and the compile-time MCP writer target
+// this single file so users never end up with both opencode.json and
+// opencode.jsonc side-by-side.
+const OpenCodeConfigFilename = "opencode.jsonc"
 
 // OpenCodeAdapter implements ToolAdapter for OpenCode (opencode CLI).
 type OpenCodeAdapter struct{}
@@ -40,121 +41,265 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	_ = files.EnsureDir(filepath.Join(ocDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "commands"))
 	_ = files.EnsureDir(filepath.Join(ocDir, "modes"))
-	_ = files.EnsureDir(filepath.Join(ocDir, "plugins"))
 
 	adapterLog.Info("installing tools", "adapter", "opencode")
 
-	configRoot, err := openCodeConfigRoot(ctx)
-	if err != nil {
-		return nil, err
+	jsonPath := filepath.Join(ocDir, "opencode.json")
+	jsoncPath := filepath.Join(ocDir, OpenCodeConfigFilename)
+
+	// One-shot migration: collapse any pre-existing opencode.json onto
+	// opencode.jsonc. The original .json is preserved as a .bak sidecar so
+	// users can recover if the rename surprises them. If both files exist
+	// (rare), .jsonc is authoritative.
+	if files.FileExists(jsonPath) {
+		bakPath := jsonPath + ".bak"
+		if !files.FileExists(bakPath) {
+			if err := files.CopyFile(jsonPath, bakPath); err != nil {
+				return nil, fmt.Errorf("backup opencode.json: %w", err)
+			}
+		}
+		if !files.FileExists(jsoncPath) {
+			if err := files.CopyFile(jsonPath, jsoncPath); err != nil {
+				return nil, fmt.Errorf("migrate opencode.json to opencode.jsonc: %w", err)
+			}
+		}
+		if err := os.Remove(jsonPath); err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("remove opencode.json after migration: %w", err)
+		}
 	}
-	configPath := filepath.Join(configRoot, OpenCodeConfigFilename)
 
 	// Install the default config only when no config is present. Skipping the
 	// merge on pre-existing configs preserves user customizations (e.g., a
-	// hand-tuned permissions object) across re-runs.
-	if !files.FileExists(configPath) {
-		instructions := openCodeInstructionsPath(ctx)
+	// hand-tuned `permission.edit` value) across re-runs.
+	if !files.FileExists(jsoncPath) {
+		instructions := []any{openCodeInstructionsPath(ctx)}
+		defaultAgent := "orchestrator"
+		if ctx.FortniteMode {
+			instructions = []any{"AGENTS.md", "STARTUP.md"}
+			defaultAgent = "loop-driver"
+		}
 		defaultConfig := map[string]any{
-			"$schema": "https://opencode.ai/config.json",
-			"share":   "disabled",
-			"instructions": []any{
-				instructions,
-			},
-			"skills": map[string]any{
-				"paths": []any{".opencode/skills"},
-			},
+			"$schema":       "https://opencode.ai/config.json",
+			"default_agent": defaultAgent,
+			"instructions":  instructions,
 			"permission": map[string]any{
-				"skill": map[string]any{
-					"*": "allow",
-				},
-			},
-			"agent": map[string]any{
-				"plan": map[string]any{
-					"permission": map[string]any{
-						"edit": "deny",
-						"bash": "ask",
-						"skill": map[string]any{
-							"*": "allow",
-						},
-					},
-				},
-				"build": map[string]any{
-					"permission": map[string]any{
-						"edit": "ask",
-						"bash": "ask",
-						"skill": map[string]any{
-							"*": "allow",
-						},
-					},
-				},
-				"explore": map[string]any{
-					"permission": map[string]any{
-						"edit": "deny",
-						"bash": "deny",
-						"skill": map[string]any{
-							"*": "allow",
-						},
-					},
-				},
+				"edit": "ask",
+				"bash": "ask",
 			},
 		}
-		if _, err := configmerge.MergeJSONFile(configPath, defaultConfig); err != nil {
+		if _, err := configmerge.MergeJSONFile(jsoncPath, defaultConfig); err != nil {
 			return nil, err
 		}
-		hash, _ := files.FileHash(configPath)
+		hash, _ := files.FileHash(jsoncPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path:   configPath,
+			Path:   jsoncPath,
 			Hash:   hash,
 			Source: "generated",
 			Owner:  types.FileOwnerLibrary,
 		})
 	}
 
-	if err := copyCanonicalDefaultAgent(ctx,
-		filepath.Join(ocDir, "agents", defaultAgentID+".md"),
-		openCodeDefaultAgentContent,
-	); err != nil {
-		return nil, err
-	}
+	if ctx.FortniteMode {
+		// --- Fortnite mode: install Fortnite agents, skills, scripts, workflows ---
 
-	// Copy canonical baseline-facing agents. The default guide is sourced above
-	// only to guarantee the default file exists even with narrow selections.
-	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-		Ctx:          ctx,
-		SourceSubdir: "canonical/agents",
-		SelectionKey: "agents",
-		ToDestPath: func(file string) string {
-			return filepath.Join(ocDir, "agents", file)
-		},
-		WarnOnSkip: true,
-		Transform: func(content []byte) []byte {
-			out, err := RewriteAgentForOpenCode(content, ctx, "")
+		// Merge Fortnite AGENTS.md into project root via managed block.
+		// This preserves any existing root AGENTS.md content while ensuring
+		// the Fortnite agent registry is present.
+		rootAgentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
+		var fortniteAgentsContent []byte
+		if ctx.LibraryFS != nil {
+			data, err := fs.ReadFile(ctx.LibraryFS, "fortnite/AGENTS.md")
 			if err != nil {
-				adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
-				return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+				return nil, fmt.Errorf("read fortnite AGENTS.md: %w", err)
 			}
-			return out
-		},
-		IncludeFile: func(file string) bool {
-			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
-		},
-	}); err != nil {
-		return nil, err
-	}
+			fortniteAgentsContent = data
+		} else {
+			data, err := files.ReadFile(filepath.Join(ctx.LibraryDir, "fortnite", "AGENTS.md"))
+			if err != nil {
+				return nil, fmt.Errorf("read fortnite AGENTS.md: %w", err)
+			}
+			fortniteAgentsContent = data
+		}
 
-	// Copy skills (directory-per-skill layout).
-	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-		Ctx:          ctx,
-		SourceSubdir: "skills",
-		SelectionKey: "skills",
-		ToDestPath: func(file string) string {
-			name := fileID(file)
-			return filepath.Join(ocDir, "skills", name, "SKILL.md")
-		},
-		WarnOnSkip: true,
-	}); err != nil {
-		return nil, err
+		_, modified, err := WriteManagedBlockToFile(
+			rootAgentsPath,
+			fortniteAgentsContent,
+			ManagedBlockStartMarker,
+			ManagedBlockEndMarker,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("merge managed block into root AGENTS.md: %w", err)
+		}
+		if modified {
+			relPath, _ := filepath.Rel(ctx.TargetDir, rootAgentsPath)
+			if relPath == "" {
+				relPath = rootAgentsPath
+			}
+			hash, _ := files.FileHash(rootAgentsPath)
+			ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+				Path:   relPath,
+				Hash:   hash,
+				Source: "fortnite/AGENTS.md",
+				Owner:  types.FileOwnerLibrary,
+			})
+		}
+
+		// Copy Fortnite STARTUP.md to .opencode/STARTUP.md.
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "fortnite",
+			SelectionKey: "fortniteStartup",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, file)
+			},
+			IncludeFile: func(file string) bool {
+				return file == "STARTUP.md"
+			},
+			WarnOnSkip: true,
+		}); err != nil {
+			return nil, err
+		}
+
+		// Recursively copy Fortnite scripts to .opencode/scripts/.
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "fortnite/scripts",
+			SelectionKey: "fortniteScripts",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, "scripts", file)
+			},
+			Recursive:  true,
+			WarnOnSkip: true,
+		}); err != nil {
+			return nil, err
+		}
+		if err := ChmodScriptsExecutable(filepath.Join(ocDir, "scripts")); err != nil {
+			adapterLog.Warn("chmod scripts failed", "adapter", "opencode", "error", err)
+		}
+
+		// Recursively copy Fortnite workflows to .opencode/workflows/.
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "fortnite/workflows",
+			SelectionKey: "fortniteWorkflows",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, "workflows", file)
+			},
+			Recursive:  true,
+			WarnOnSkip: true,
+		}); err != nil {
+			return nil, err
+		}
+
+		// Copy Fortnite agents (flat).
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "fortnite/agents",
+			SelectionKey: "fortniteAgents",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, "agents", file)
+			},
+			WarnOnSkip: true,
+			IncludeFile: func(file string) bool {
+				// Only copy actual agent definition files, not reference docs.
+				if filepath.Ext(file) != ".md" {
+					return false
+				}
+				name := fileID(file)
+				switch name {
+				case "DISPATCH-MATRIX", "FALLBACK-CHAINS", "OUTPUT-SCHEMAS",
+					"REPO-PROFILES", "SAFETY-BOUNDARIES", "TOOL-SCHEMAS", "_TEMPLATE":
+					return false
+				}
+				return true
+			},
+			Transform: func(content []byte) []byte {
+				out, err := RewriteAgentForOpenCode(content, ctx, "")
+				if err != nil {
+					adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
+					return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+				}
+				return out
+			},
+		}); err != nil {
+			return nil, err
+		}
+
+		// Copy Fortnite skills (recursive, nested dirs).
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "fortnite/skills",
+			SelectionKey: "fortniteSkills",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, "skills", file)
+			},
+			Recursive:  true,
+			WarnOnSkip: true,
+		}); err != nil {
+			return nil, err
+		}
+	} else {
+		// --- Legacy mode: copy generic agents and skills ---
+
+		// Copy agents (excluding orchestrator unless enabled). The transform
+		// rewrites each source agent with opencode-schema frontmatter so
+		// `opencode debug agent <name>` can parse it.
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "agents",
+			SelectionKey: "agents",
+			ToDestPath: func(file string) string {
+				return filepath.Join(ocDir, "agents", file)
+			},
+			WarnOnSkip: true,
+			Transform: func(content []byte) []byte {
+				out, err := RewriteAgentForOpenCode(content, ctx, "")
+				if err != nil {
+					adapterLog.Warn("opencode agent rewrite fell back to baseline frontmatter", "adapter", "opencode", "error", err)
+					return BuildOpenCodeAgentFrontmatter(content, OpenCodeAgentOpts{})
+				}
+				return out
+			},
+			IncludeFile: func(file string) bool {
+				name := fileID(file)
+				return name != "orchestrator"
+			},
+		}); err != nil {
+			return nil, err
+		}
+
+		// Orchestrator agent if enabled. It is the primary entry point
+		// (opencode's default_agent typically points here), so mode=primary.
+		if IsOrchestratorEnabled(ctx) {
+			raw := GetOrchestratorAgentContent(ctx)
+			content, err := RewriteAgentForOpenCode(raw, ctx, "primary")
+			if err != nil {
+				adapterLog.Warn("opencode orchestrator rewrite fell back to baseline", "adapter", "opencode", "error", err)
+				content = BuildOpenCodeAgentFrontmatter(raw, OpenCodeAgentOpts{Mode: "primary"})
+			}
+			if err := CopyWithRecord("agents/orchestrator.md",
+				filepath.Join(ocDir, "agents", "orchestrator.md"),
+				ctx, true,
+				func([]byte) []byte { return content },
+				0o644,
+			); err != nil {
+				return nil, err
+			}
+		}
+
+		// Copy skills (directory-per-skill layout).
+		if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+			Ctx:          ctx,
+			SourceSubdir: "skills",
+			SelectionKey: "skills",
+			ToDestPath: func(file string) string {
+				name := fileID(file)
+				return filepath.Join(ocDir, "skills", name, "SKILL.md")
+			},
+			WarnOnSkip: true,
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	// Copy opencode-native slash commands from library/opencode/commands/.
@@ -174,17 +319,6 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 	}
 
 	// Copy opencode chat modes from library/opencode/modes/.
-
-	// Copy the managed OpenCode hook runtime plugin.
-	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
-		Ctx:          ctx,
-		SourceSubdir: "opencode/plugins",
-		ToDestPath: func(file string) string {
-			return filepath.Join(ocDir, "plugins", file)
-		},
-	}); err != nil {
-		return nil, err
-	}
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "opencode/modes",
@@ -197,38 +331,19 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		return nil, err
 	}
 
-	if err := normalizeOpenCodePackageJSON(ocDir); err != nil {
-		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
-	}
-
 	// Install selected plugins via the opencode CLI if the binary is present.
 	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
 		adapterLog.Warn("plugin install failed", "adapter", "opencode", "error", err)
 	}
-	if err := normalizeOpenCodePackageJSON(ocDir); err != nil {
-		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
-	}
 
 	return ctx.FileRecords, nil
 }
-func openCodeConfigRoot(ctx *AdapterContext) (string, error) {
-	switch ctx.SetupScope {
-	case types.SetupScopeProject:
-		return ctx.TargetDir, nil
-	case types.SetupScopeWorkspace:
-		if ctx.WorkspaceRoot != "" {
-			return ctx.WorkspaceRoot, nil
-		}
-		return ctx.TargetDir, nil
-	case types.SetupScopeGlobal:
-		return ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx)
-	default:
-		return "", fmt.Errorf("unsupported opencode config scope %q", ctx.SetupScope)
-	}
-}
 
-func openCodeInstructionsPath(_ *AdapterContext) string {
-	return "AGENTS.md"
+func openCodeInstructionsPath(ctx *AdapterContext) string {
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		return "AGENTS.md"
+	}
+	return "../AGENTS.md"
 }
 
 func (a *OpenCodeAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
@@ -299,34 +414,6 @@ func installOpenCodePlugins(ctx *AdapterContext, run CmdRunner) error {
 		if out, err := run("opencode", args...); err != nil {
 			adapterLog.Warn("opencode plugin failed", "adapter", "opencode", "plugin", module, "error", err, "output", out)
 		}
-	}
-	return nil
-}
-
-func normalizeOpenCodePackageJSON(ocDir string) error {
-	packagePath := filepath.Join(ocDir, "package.json")
-	data, err := os.ReadFile(packagePath)
-	pkg := map[string]any{}
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("read opencode package.json: %w", err)
-		}
-	} else {
-		if err := json.Unmarshal(data, &pkg); err != nil {
-			return fmt.Errorf("parse opencode package.json: %w", err)
-		}
-	}
-	if current, ok := pkg["type"].(string); ok && current == "module" {
-		return nil
-	}
-	pkg["type"] = "module"
-	out, err := MarshalJSON(pkg)
-	if err != nil {
-		return fmt.Errorf("marshal opencode package.json: %w", err)
-	}
-	out = append(out, '\n')
-	if err := os.WriteFile(packagePath, out, 0o644); err != nil {
-		return fmt.Errorf("write opencode package.json: %w", err)
 	}
 	return nil
 }

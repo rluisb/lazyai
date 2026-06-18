@@ -23,7 +23,11 @@ func NewRegistry() *Registry {
 	r.register(&CommandGenerator{})
 	r.register(&PromptGenerator{})
 	r.register(&TemplateGenerator{})
-	r.register(&HookGenerator{})
+	r.register(&WorkflowGenerator{})
+	r.register(&ChainGenerator{})
+	r.register(&TeamGenerator{})
+	r.register(&DomainGenerator{})
+	r.register(&ModeGenerator{})
 
 	return r
 }

@@ -20,14 +20,11 @@ func TestBuildOpenCodeAgentFrontmatter_InheritsNameAsDescription(t *testing.T) {
 	if fm["description"] != "Builder agent" {
 		t.Errorf("description: want %q, got %v", "Builder agent", fm["description"])
 	}
-	if _, ok := fm["name"]; ok {
-		t.Errorf("name should not be emitted by default OpenCode output: %v", fm["name"])
-	}
-	if _, ok := fm["model"]; ok {
-		t.Errorf("model should not be emitted by default OpenCode output: %v", fm["model"])
-	}
-	if _, ok := fm["mode"]; ok {
-		t.Errorf("mode should not be emitted by default OpenCode output: %v", fm["mode"])
+	// Default mode changed from "all" to "subagent" in #199 Bug 1 fix —
+	// matches what real-world OpenCode subagent configs use. Orchestrator
+	// agents pass `mode: "primary"` explicitly to override.
+	if fm["mode"] != "subagent" {
+		t.Errorf("mode: want %q, got %v", "subagent", fm["mode"])
 	}
 	if !strings.Contains(string(body), "# Builder") {
 		t.Errorf("body was dropped:\n%s", body)

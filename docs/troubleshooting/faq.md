@@ -71,21 +71,29 @@ You must re-run `lazyai-cli init` with the desired scope. The previous `.ai-setu
 
 No. Referenced repos are scanned for stack detection but are **never** modified. All generated files live in the planning repo.
 
-## Retired orchestration runtime
+## Orchestration
 
-### Where did the old orchestration runtime go?
+### Does enabling orchestration change my existing setup?
 
-The dedicated workflow/task runtime was removed from the active product surface. Current setup uses OpenCode, Claude Code, and Copilot adapters with `guide` as the front-door default and `implementer` as a specialist.
+No. Orchestration is opt-in. If you never enable `orchestrator`, nothing changes.
 
-See [Migration: Fortnite / orchestrator removal](../migration/fortnite-orchestrator-removal.md) for replacements and rollback guidance.
+### What runs the orchestrator?
+
+The orchestrator is a Go runtime (`lazyai-orchestrator`) invoked via `connect` as an MCP server. Your host CLI tool (Claude Code, OpenCode, Copilot) remains the execution surface.
+
+Install it with:
+
+```bash
+go install github.com/rluisb/lazyai/packages/orchestrator/cmd/lazyai-orchestrator@latest
+```
 
 ### Is A2A remote execution enabled by default?
 
-No. A2A is not part of the active default setup.
+No. A2A is a config/seam only. The default execution model uses the native host CLI directly.
 
-### Where does runtime state live now?
+### Where does orchestration state live?
 
-`lazyai-cli` owns the active local setup and managed-file state. Session database migration is covered by the runtime refactor plan before V2 schema changes land.
+Runtime state, persistence, and handoff artifacts are managed by the `lazyai-orchestrator` MCP server, not by `lazyai-cli` itself.
 
 ## MCP
 
@@ -124,7 +132,7 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 
 ### `lazyai-cli init` fails with "unsupported tool"
 
-Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`, `pi`, `antigravity`. IDs are case-sensitive.
+Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`. IDs are case-sensitive.
 
 ### `lazyai-cli compile` does not generate files for a tool
 

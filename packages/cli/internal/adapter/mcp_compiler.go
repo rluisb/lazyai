@@ -410,6 +410,7 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 		Owner:  types.FileOwnerLibrary,
 	}), nil
 }
+
 // ---------------------------------------------------------------------------
 // Copilot MCP compilation
 // ---------------------------------------------------------------------------

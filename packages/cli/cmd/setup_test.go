@@ -153,7 +153,7 @@ func TestRunSetupListOutputsDeterministicJSON(t *testing.T) {
 	for _, target := range result.Targets {
 		gotTargets = append(gotTargets, target.ID)
 	}
-	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,omp,opencode,pi"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,kiro,omp,opencode,pi"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 	if len(result.Agents) != 1 || result.Agents[0].ID != "test-agent" {
@@ -168,6 +168,7 @@ func TestRunSetupListGlobalFiltersUnsupportedTargets(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 	_ = os.MkdirAll(filepath.Join(homeDir, ".omp", "agent"), 0755)
+	_ = os.MkdirAll(filepath.Join(homeDir, ".kiro"), 0755)
 
 	cmd := newSetupTestCommand(t)
 	_ = cmd.Flags().Set("list", "true")
@@ -271,6 +272,8 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
+	_ = os.MkdirAll(filepath.Join(homeDir, ".omp", "agent"), 0755)
+	_ = os.MkdirAll(filepath.Join(homeDir, ".kiro"), 0755)
 
 	cmd := newSetupTestCommand(t)
 	_ = cmd.Flags().Set("dry-run", "true")
@@ -303,7 +306,7 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 		gotTargets = append(gotTargets, target.ID)
 	}
 	sort.Strings(gotTargets)
-	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,omp,opencode"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,kiro,omp,opencode"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 }

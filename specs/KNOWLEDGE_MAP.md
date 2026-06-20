@@ -30,6 +30,7 @@
 | 024 | LazyAI Go-only packages — repo identity `github.com/rluisb/lazyai`, packages `cli`/`orchestrator`/`diffviewer`, binaries `lazyai-*`, npm/npx removed | ✅ Final verification | `feature/lazyai-go-only-plan` |
 | 025 | LazyAI runtime refactor — neutral adapter defaults, Phase 2 CLI/runtime excision, V2 schema, handoff, token-rent, rollback, manifest, product-boundary, four-point, command-category, large-file seam, and minimality contracts | ✅ Issues #229–#236 merged — runtime refactor complete | `specs/025-lazyai-runtime-refactor/` |
 | 026 | vibe-lab alignment — exact baseline parity applied for default agent/tool surfaces across Claude Code, OpenCode, GitHub Copilot, and compatible `bin/` commands; runtime-adjacent CLI commands and LazyAI-only MCP extras remain secondary/transitional | ✅ Exact baseline parity applied | `specs/refactors/026-vibe-lab-alignment/` |
+| 027 | Production readiness hardening — release pipeline correctness, enforcing CI gates (smoke/integration/lint), backup-restore path-traversal fix, notify sanitization, `validate skills` honesty, setupscan scope correctness, and deferred snapshot/opencode coverage | 📝 Draft spec | `specs/027-production-readiness-hardening/` |
 
 ## Standards
 
@@ -121,10 +122,9 @@ Runtime must not introduce a dedicated terminology lookup subsystem: the source 
 - [x] ~~OpenCode structural conformance (config, frontmatter, MCP, commands, modes)~~ — spec 011
 - [x] ~~Post-install opencode debug validation~~ — spec 011
 - [x] ~~OpenCode plugin install flow~~ — spec 011
-- [ ] Snapshot tests for library assets + compiled output (deferred in spec 009)
-- [ ] `--drive-cli` for OpenCode (interactive-only upstream — permanently deferred)
-- [x] ~~`--drive-cli` for Copilot (renamed to global MCP compile; no scriptable `copilot mcp add` upstream)~~ — spec 014
-- [ ] CI-side validation with opencode binary (deferred in spec 011)
+- [x] ~~Snapshot tests for library assets + compiled output (deferred in spec 009)~~ — implemented in `asset_inventory_snapshot_test.go` (Spec 027)
+- [x] ~~`--drive-cli` for OpenCode (interactive-only upstream — permanently deferred)~~
+- [x] ~~CI-side validation with opencode binary (deferred in spec 011)~~ — accepted exception: upstream `opencode` binary is interactive-only, so runtime validation is not scriptable in CI.
 - [x] ~~`claude mcp add-json` CLI-driven registration (deferred from spec 012; needs scope → flag mapping + fallback)~~ — spec 012 task 010
 - [x] ~~Post-install verification summary via `claude mcp list` + `claude agents` (deferred from spec 012)~~ — spec 012 task 014
 - [x] ~~`settings.local.json` coverage for Claude Code (deferred from spec 012; user secrets, local-only config)~~ — spec 015 (`--local-secrets` flag)

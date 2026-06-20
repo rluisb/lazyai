@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -112,16 +113,21 @@ var notifyTestCmd = &cobra.Command{
 	},
 }
 
-// sendDesktopNotification sends a desktop notification
+// sendDesktopNotification sends a desktop notification. User-provided title and
+// message are escaped for the target platform's command interpreter so that
+// quotes or other metacharacters cannot break or inject into the command.
 func sendDesktopNotification(title, message string) error {
 	switch runtime.GOOS {
 	case "darwin":
-		// macOS notification
-		cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s" with title "%s"`, message, title))
+		// macOS notification via AppleScript double-quoted string literals.
+		script := fmt.Sprintf(`display notification "%s" with title "%s"`,
+			escapeAppleScript(message), escapeAppleScript(title))
+		cmd := exec.Command("osascript", "-e", script)
 		return cmd.Run()
 
 	case "linux":
-		// Try notify-send first
+		// notify-send / zenity receive title+message as separate argv entries,
+		// so no shell interpolation occurs.
 		cmd := exec.Command("notify-send", title, message)
 		if err := cmd.Run(); err != nil {
 			// Fallback to zenity
@@ -131,8 +137,9 @@ func sendDesktopNotification(title, message string) error {
 		return nil
 
 	case "windows":
-		// Windows notification via PowerShell
-		psScript := fmt.Sprintf(`Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show("%s", "%s")`, message, title)
+		// Windows notification via PowerShell double-quoted string literals.
+		psScript := fmt.Sprintf(`Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show("%s", "%s")`,
+			escapePowerShell(message), escapePowerShell(title))
 		cmd := exec.Command("powershell", "-Command", psScript)
 		return cmd.Run()
 
@@ -141,11 +148,34 @@ func sendDesktopNotification(title, message string) error {
 	}
 }
 
-// sendWebhookNotification sends a notification via webhook
+// escapeAppleScript escapes a string for use inside an AppleScript
+// double-quoted literal.
+func escapeAppleScript(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
+}
+
+// escapePowerShell escapes a string for use inside a PowerShell double-quoted
+// literal, neutralizing quotes and variable/subexpression expansion.
+func escapePowerShell(s string) string {
+	s = strings.ReplaceAll(s, "`", "``")
+	s = strings.ReplaceAll(s, `"`, "`\"")
+	s = strings.ReplaceAll(s, "$", "`$")
+	return s
+}
+
+// sendWebhookNotification sends a notification via webhook. The JSON body is
+// built with encoding/json so title/message content is correctly escaped.
 func sendWebhookNotification(webhook, title, message string) error {
-	// Simple webhook implementation using curl
-	payload := fmt.Sprintf(`{"title":"%s","message":"%s"}`, title, message)
-	cmd := exec.Command("curl", "-X", "POST", "-H", "Content-Type: application/json", "-d", payload, webhook)
+	body, err := json.Marshal(map[string]string{
+		"title":   title,
+		"message": message,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to encode webhook payload: %w", err)
+	}
+	cmd := exec.Command("curl", "-X", "POST", "-H", "Content-Type: application/json", "-d", string(body), webhook)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

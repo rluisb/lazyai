@@ -1,0 +1,42 @@
+name: Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq sqlite3
+
+      - name: Build CLI
+        run: cd packages/cli && go build -o lazyai-cli ./cmd/lazyai-cli
+
+      - name: Run integration tests
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          scripts=(tests/integration/*.sh)
+          if [ ${#scripts[@]} -eq 0 ]; then
+            echo "::error::No scripts found under tests/integration/"
+            exit 1
+          fi
+          for script in "${scripts[@]}"; do
+            echo "═══ Running $script ═══"
+            chmod +x "$script"
+            bash "$script"
+          done

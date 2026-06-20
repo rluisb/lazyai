@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -119,6 +120,11 @@ var backupRestoreCmd = &cobra.Command{
 
 		tarReader := tar.NewReader(gzipReader)
 
+		restoreRoot, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("error resolving restore directory: %w", err)
+		}
+
 		restored := 0
 		for {
 			header, err := tarReader.Next()
@@ -129,15 +135,23 @@ var backupRestoreCmd = &cobra.Command{
 				return fmt.Errorf("error reading tar: %w", err)
 			}
 
-			// Create directory if needed
-			dir := filepath.Dir(header.Name)
+			// Reject archive entries that would escape the restore root
+			// (path traversal via "..", absolute paths, etc.) before any write.
+			destPath, err := safeRestorePath(restoreRoot, header.Name)
+			if err != nil {
+				fmt.Printf("  ⚠️  Skipping unsafe entry %s: %v\n", header.Name, err)
+				continue
+			}
+
+			// Create parent directory if needed
+			dir := filepath.Dir(destPath)
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				fmt.Printf("  ⚠️  Error creating directory %s: %v\n", dir, err)
 				continue
 			}
 
 			// Write file
-			outFile, err := os.Create(header.Name)
+			outFile, err := os.Create(destPath)
 			if err != nil {
 				fmt.Printf("  ⚠️  Error creating file %s: %v\n", header.Name, err)
 				continue
@@ -195,6 +209,23 @@ func addFileToTar(tw *tar.Writer, filePath string) error {
 	}
 
 	return nil
+}
+
+// safeRestorePath joins a tar entry name under restoreRoot and rejects any
+// entry that would escape that root via absolute paths or ".." traversal.
+func safeRestorePath(restoreRoot, name string) (string, error) {
+	if filepath.IsAbs(name) {
+		return "", fmt.Errorf("absolute paths are not allowed")
+	}
+	dest := filepath.Join(restoreRoot, name)
+	rel, err := filepath.Rel(restoreRoot, dest)
+	if err != nil {
+		return "", err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path escapes restore root")
+	}
+	return dest, nil
 }
 
 func init() {

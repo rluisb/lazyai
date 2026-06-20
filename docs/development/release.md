@@ -39,10 +39,11 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 
 ## GitHub release assets
 
-Release assets should use the LazyAI binary names:
+GoReleaser (`packages/<module>/.goreleaser.yaml`) publishes one archive per OS/arch plus a checksum file. `<Os>` is title-cased and `amd64` renders as `x86_64`:
 
-- `lazyai-cli-<os>-<arch>[.exe]`
-- `lazyai-diffviewer-<os>-<arch>[.exe]`
+- `lazyai-cli_<Os>_<Arch>.tar.gz` — e.g. `lazyai-cli_Linux_x86_64.tar.gz`, `lazyai-cli_Darwin_arm64.tar.gz`
+- `lazyai-diffviewer_<Os>_<Arch>.tar.gz` — e.g. `lazyai-diffviewer_Linux_x86_64.tar.gz`
+- Windows archives use `.zip` — e.g. `lazyai-cli_Windows_x86_64.zip`
 - `checksums.txt`
 
 ## Upgrading commands

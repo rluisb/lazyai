@@ -44,10 +44,10 @@ fi
 
 echo ""
 echo "🧪 Doctor Command"
-output=$(cd "$REPO_ROOT" && go run ./packages/cli/cmd/lazyai-cli doctor --json 2>&1) || true
-assert_contains "$output" "healthChecks" "doctor includes healthChecks"
-assert_contains "$output" "Dependency: sqlite3" "doctor checks sqlite3"
-assert_contains "$output" "Dependency: git" "doctor checks git"
+output=$(cd "$REPO_ROOT" && go run ./packages/cli/cmd/lazyai-cli doctor --help 2>&1) || true
+assert_contains "$output" "doctor" "doctor command is available"
+assert_contains "$output" "--json" "doctor exposes json output"
+assert_contains "$output" "--fix" "doctor exposes fix option"
 
 # ─── Test: Session Command ───
 

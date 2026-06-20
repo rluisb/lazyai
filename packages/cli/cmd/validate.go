@@ -170,13 +170,135 @@ func runValidateSkills(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("skills directory not found: %s", skillsDir)
 	}
 
+	entries, err := os.ReadDir(skillsDir)
+	if err != nil {
+		return err
+	}
+
+	var results []ValidationResult
+	var passCount, failCount int
+
+	for _, entry := range entries {
+		// Skills may be flat "<name>.md" files or "<name>/SKILL.md" directories.
+		var path, fileName string
+		if entry.IsDir() {
+			candidate := filepath.Join(skillsDir, entry.Name(), "SKILL.md")
+			if _, statErr := os.Stat(candidate); statErr != nil {
+				continue
+			}
+			path = candidate
+			fileName = filepath.Join(entry.Name(), "SKILL.md")
+		} else if strings.HasSuffix(entry.Name(), ".md") {
+			path = filepath.Join(skillsDir, entry.Name())
+			fileName = entry.Name()
+		} else {
+			continue
+		}
+
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			continue
+		}
+
+		contentStr := string(content)
+		hasError := false
+
+		// Check for frontmatter
+		if !strings.HasPrefix(contentStr, "---\n") {
+			results = append(results, ValidationResult{
+				File:     fileName,
+				Severity: "error",
+				Message:  "Missing YAML frontmatter",
+			})
+			failCount++
+			hasError = true
+		} else {
+			// Frontmatter must declare name + description (Agent Skills contract).
+			fm := frontmatterBlock(contentStr)
+			if !strings.Contains(fm, "name:") {
+				results = append(results, ValidationResult{
+					File:     fileName,
+					Severity: "error",
+					Message:  "Frontmatter missing 'name' field",
+				})
+				failCount++
+				hasError = true
+			}
+			if !strings.Contains(fm, "description:") {
+				results = append(results, ValidationResult{
+					File:     fileName,
+					Severity: "error",
+					Message:  "Frontmatter missing 'description' field",
+				})
+				failCount++
+				hasError = true
+			}
+		}
+
+		// Check for body content (at least one top-level Markdown heading).
+		if !strings.Contains(contentStr, "\n# ") && !strings.HasPrefix(contentStr, "# ") {
+			results = append(results, ValidationResult{
+				File:     fileName,
+				Severity: "warning",
+				Message:  "Missing a top-level '# ' heading in body",
+			})
+		}
+
+		if !hasError {
+			passCount++
+		}
+	}
+
+	// Output results
 	fmt.Println("🔍 Skill Validation Results")
 	fmt.Println()
-	fmt.Println("  ℹ️  Skill validation not yet implemented")
-	fmt.Println("  Future checks will include:")
-	fmt.Println("    - Quick Reference section presence")
-	fmt.Println("    - Proper frontmatter format")
-	fmt.Println("    - Script references validity")
+
+	if len(results) == 0 {
+		fmt.Println("✅ All skills pass validation")
+		fmt.Printf("   Checked: %d files\n", passCount)
+		return nil
+	}
+
+	for _, result := range results {
+		var emoji string
+		if result.Severity == "error" {
+			emoji = "❌"
+		} else {
+			emoji = "⚠️"
+		}
+		fmt.Printf("  %s %s: %s\n", emoji, result.File, result.Message)
+	}
+
+	fmt.Println()
+	fmt.Printf("  Summary: %d passed, %d issues found\n", passCount, len(results))
+
+	status := "pass"
+	if failCount > 0 {
+		status = "fail"
+	}
+	_ = appendToLedger("validate_skills", map[string]string{
+		"status":         status,
+		"skills_checked": fmt.Sprintf("%d", passCount+failCount),
+		"issues_found":   fmt.Sprintf("%d", len(results)),
+	})
+
+	if failCount > 0 {
+		return fmt.Errorf("validation failed: %d errors", failCount)
+	}
 
 	return nil
+}
+
+// frontmatterBlock returns the YAML frontmatter block (between the leading
+// "---" fences) of a markdown document, or "" if none is present.
+func frontmatterBlock(content string) string {
+	if !strings.HasPrefix(content, "---\n") {
+		return ""
+	}
+	rest := content[len("---\n"):]
+	end := strings.Index(rest, "\n---")
+	if end == -1 {
+		return rest
+	}
+	return rest[:end]
 }

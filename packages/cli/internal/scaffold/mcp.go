@@ -56,22 +56,24 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 		return err
 	}
 
+	// When --enable-servers is provided it acts as a strict allowlist: only the
+	// named servers plus the always-on filesystem floor stay enabled; every
+	// other catalog server is disabled, including servers that merely share a
+	// name with a selected CLI tool. Without --enable-servers the catalog
+	// defaults are preserved and CLI-tool selections additively imply their
+	// matching servers.
+	allowlist := len(enableServers) > 0
+
 	enabledServerNames := make(map[string]struct{})
-	for _, toolName := range cliTools {
-		enabledServerNames[toolName] = struct{}{}
+	if allowlist {
+		enabledServerNames["filesystem"] = struct{}{}
+	} else {
+		for _, toolName := range cliTools {
+			enabledServerNames[toolName] = struct{}{}
+		}
 	}
 	for _, serverName := range enableServers {
 		enabledServerNames[serverName] = struct{}{}
-	}
-
-	// When --enable-servers is provided it acts as an explicit allowlist:
-	// only the named servers (plus those implied by selected CLI tools and the
-	// always-on filesystem floor) stay enabled; every other catalog server is
-	// disabled. Without --enable-servers the catalog defaults are preserved and
-	// selections are purely additive.
-	allowlist := len(enableServers) > 0
-	if allowlist {
-		enabledServerNames["filesystem"] = struct{}{}
 	}
 	for serverName := range catalog.Servers {
 		server := catalog.Servers[serverName]

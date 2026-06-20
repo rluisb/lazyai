@@ -78,8 +78,10 @@ func TestScaffoldMcp_EnableServersActsAsAllowlist(t *testing.T) {
   }
 }`)
 
+	// obsidian is selected as a CLI tool but NOT named in --enable-servers; under
+	// the strict allowlist it must stay disabled (CLI-tool implication ignored).
 	var records []types.TrackedFile
-	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"codegraph"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), []string{"obsidian"}, []string{"codegraph"}, &records, types.ConflictStrategyAlign, nil); err != nil {
 		t.Fatalf("ScaffoldMcp: %v", err)
 	}
 
@@ -91,7 +93,7 @@ func TestScaffoldMcp_EnableServersActsAsAllowlist(t *testing.T) {
 		t.Error("filesystem should stay enabled (always-on floor)")
 	}
 	if enabledValue(t, catalog.Servers["obsidian"].Enabled) {
-		t.Error("obsidian should be disabled (not in allowlist)")
+		t.Error("obsidian should be disabled (CLI-tool implication ignored in strict allowlist)")
 	}
 
 	// The root .mcp.json is consumed natively, so disabled servers must be absent.

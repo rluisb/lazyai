@@ -286,10 +286,12 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 	}
 
 	var result struct {
-		Scope   string `json:"scope"`
-		Targets []struct {
-			ID string `json:"id"`
-		} `json:"targets"`
+		Scope string `json:"scope"`
+		Plan  struct {
+			Targets []struct {
+				Tool string `json:"tool"`
+			} `json:"targets"`
+		} `json:"plan"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatalf("unmarshal stdout: %v\nstdout:\n%s", err, stdout)
@@ -297,11 +299,12 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 	if result.Scope != "global" {
 		t.Fatalf("scope = %q, want global", result.Scope)
 	}
-	gotTargets := make([]string, 0, len(result.Targets))
-	for _, target := range result.Targets {
-		gotTargets = append(gotTargets, target.ID)
+	gotTargets := make([]string, 0, len(result.Plan.Targets))
+	for _, target := range result.Plan.Targets {
+		gotTargets = append(gotTargets, target.Tool)
 	}
-	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,opencode"; got != want {
+	sort.Strings(gotTargets)
+	if got, want := strings.Join(gotTargets, ","), "claude-code,copilot,omp,opencode"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 }

@@ -7,6 +7,7 @@ packages/ai-setup-ts/library/
 # Build output
 dist/
 ai-setup
+packages/cli/lazyai-cli
 *.exe
 coverage.out
 coverage.html

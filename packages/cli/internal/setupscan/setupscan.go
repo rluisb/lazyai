@@ -380,6 +380,12 @@ func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"skills"}, []string{"AGENTS.md"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"skills"}, []string{"AGENTS.md"}),
 		}
+	case types.ToolIdKiro:
+		return []rootSpec{
+			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"skills"}, []string{"AGENTS.md", "settings"}),
+			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"skills"}, []string{"AGENTS.md", "settings"}),
+			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"skills"}, []string{"AGENTS.md", "settings"}),
+		}
 	}
 	return nil
 }

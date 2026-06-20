@@ -297,6 +297,43 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Notes: "OMP has no prompt surface",
 			},
 		},
+		types.ToolIdKiro: {
+			AssetKindAgents: {
+				Tool: types.ToolIdKiro, Kind: AssetKindAgents,
+				Shape: ShapeNone,
+				Notes: "Kiro is skills-only; no agent surface is emitted",
+			},
+			AssetKindSkills: {
+				Tool: types.ToolIdKiro, Kind: AssetKindSkills,
+				SourceSubdir: "skills", DestSubdir: "skills",
+				Shape: ShapeDirPerItem,
+				Notes: "Kiro reads skills as .kiro/skills/<name>/SKILL.md",
+			},
+			AssetKindTemplates: {
+				Tool: types.ToolIdKiro, Kind: AssetKindTemplates,
+				Shape: ShapeNone,
+				Notes: "Kiro has no template surface",
+			},
+			AssetKindCommands: {
+				Tool: types.ToolIdKiro, Kind: AssetKindCommands,
+				Shape: ShapeNone,
+				Notes: "Kiro has no slash command surface",
+			},
+			AssetKindChatModes: {
+				Tool: types.ToolIdKiro, Kind: AssetKindChatModes,
+				Shape: ShapeNone,
+				Notes: "Kiro has no chat mode surface",
+			},
+			AssetKindOutputStyles: {
+				Tool: types.ToolIdKiro, Kind: AssetKindOutputStyles,
+				Shape: ShapeNone,
+			},
+			AssetKindPrompts: {
+				Tool: types.ToolIdKiro, Kind: AssetKindPrompts,
+				Shape: ShapeNone,
+				Notes: "Kiro has no prompt surface",
+			},
+		},
 		types.ToolIdAntigravity: {
 			AssetKindAgents: {
 				Tool: types.ToolIdAntigravity, Kind: AssetKindAgents,
@@ -371,7 +408,7 @@ func OutputTargetsForTool(tool types.ToolId) (map[AssetKind]OutputTarget, error)
 func ValidateOutputCoverage() error {
 	per := buildOutputMappings()
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity,
 	} {
 		entries, ok := per[tool]
 		if !ok {

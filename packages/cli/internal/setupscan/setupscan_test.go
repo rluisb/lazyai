@@ -160,7 +160,7 @@ func TestScanProducesDeterministicTargetOrdering(t *testing.T) {
 	for _, target := range inventory.CurrentState.Targets {
 		got = append(got, target.ID)
 	}
-	want := []string{"antigravity", "claude-code", "copilot", "omp", "opencode", "pi"}
+	want := []string{"antigravity", "claude-code", "copilot", "kiro", "omp", "opencode", "pi"}
 	if len(got) != len(want) {
 		t.Fatalf("target count = %d, want %d", len(got), len(want))
 	}
@@ -527,7 +527,7 @@ func TestSupportedScopesExcludesUnsupportedGlobal(t *testing.T) {
 }
 
 func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
-	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp} {
+	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp, types.ToolIdKiro} {
 		scopes := supportedScopesForTool(tool)
 		hasGlobal := false
 		for _, s := range scopes {

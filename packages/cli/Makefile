@@ -24,8 +24,12 @@ vet:
 	$(GO) vet ./...
 
 lint: vet
-	@echo "Linting Go files..."
-
+	@echo "Linting Go files (staticcheck)..."
+	@if ! command -v staticcheck >/dev/null; then \
+		echo "Installing staticcheck..."; \
+		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+	fi
+	staticcheck ./...
 fmt:
 	gofmt -w .
 	goimports -w .

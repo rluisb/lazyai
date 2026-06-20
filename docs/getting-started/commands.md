@@ -223,11 +223,11 @@ Checks:
 lazyai-cli validate skills
 ```
 
-Current behavior:
-- Confirms `.opencode/skills/` exists
-- Prints `Skill validation not yet implemented`
-- Lists planned checks for quick reference, frontmatter, and script references
-
+Checks:
+- Confirm SKILL.md directory structure
+- Verify required YAML frontmatter fields (`name`, `description`)
+- Verify quick reference sections are present and non-empty where required
+- Validate referenced scripts for skills with command actions are resolvable
 ## Workspace
 
 Manage multi-project workspaces.

@@ -27,6 +27,10 @@ All notable changes to this project will be documented in this file.
 - `ValidateAgentResolutions` now tolerates the missing `tier` field for canonical
   baseline agents while still reporting malformed frontmatter.
 - Removed a stray `XXXX CONFIG_PATH` debug print from OpenCode adapter output.
+- Fixed path traversal vulnerability in `backup restore`.
+- Escaped AppleScript/PowerShell payloads in `notify`.
+- Enforced smoke and integration CI gates.
+- Made `validate skills` structurally valid.
 ### Added (Plan C parity follow-up)
 - `packages/cli/library/skills/evidence-verifier.md` added as a setup-library skill; the canonical `evidence-verifier` agent was already emitted by adapters and the duplicate name is avoided by keeping only the canonical agent.
 - `packages/cli/library/skills/issue-triage.md` and `packages/cli/library/skills/task-to-issues.md` are now curated and tracked in `curation.yaml` as adapter-support skills.

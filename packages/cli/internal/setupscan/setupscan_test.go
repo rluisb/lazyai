@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
 func TestScanDetectsObservedTargetsAndSharedPaths(t *testing.T) {
@@ -507,4 +509,34 @@ func containsStringPrefix(values []string, wantPrefix string) bool {
 		}
 	}
 	return false
+}
+
+func TestSupportedScopesExcludesUnsupportedGlobal(t *testing.T) {
+	// Pi and Antigravity are project/workspace-only; global must not be advertised.
+	for _, tool := range []types.ToolId{types.ToolIdPi, types.ToolIdAntigravity} {
+		scopes := supportedScopesForTool(tool)
+		for _, s := range scopes {
+			if s == types.SetupScopeGlobal {
+				t.Errorf("tool %q should not advertise global scope, got %v", tool, scopes)
+			}
+		}
+		if len(scopes) != 2 {
+			t.Errorf("tool %q expected 2 supported scopes (project, workspace), got %v", tool, scopes)
+		}
+	}
+}
+
+func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
+	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot} {
+		scopes := supportedScopesForTool(tool)
+		hasGlobal := false
+		for _, s := range scopes {
+			if s == types.SetupScopeGlobal {
+				hasGlobal = true
+			}
+		}
+		if !hasGlobal {
+			t.Errorf("tool %q expected global scope advertised, got %v", tool, scopes)
+		}
+	}
 }

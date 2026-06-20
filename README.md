@@ -177,7 +177,7 @@ flowchart TD
     E -->|present| O["PASS"]
 ```
 
-`validate skills` is a compatibility stub in this release and returns `not yet implemented`.
+`validate skills` validates SKILL.md structure and required frontmatter fields (`name`, `description`), including quick-reference and script checks mirroring agent validation patterns.
 
 ## MCP servers
 

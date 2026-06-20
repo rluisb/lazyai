@@ -73,9 +73,10 @@ The docs site deploys to GitHub Pages at <https://rluisb.github.io/lazyai/>.
 
 ## CI
 
-- `.github/workflows/go-ci.yml` — Go tests, vet, and builds
+- `.github/workflows/ci-cli.yml`, `.github/workflows/ci-diffviewer.yml` — per-module Go tests, vet, and builds
+- `.github/workflows/test.yml` — combined test suite, coverage, and smoke test
 - `.github/workflows/docs.yml` — MkDocs strict build and GitHub Pages deploy
-- `.github/workflows/release.yml` — Go release automation
+- `.github/workflows/release-cli.yml`, `.github/workflows/release-diffviewer.yml` — GoReleaser automation triggered by `packages/<module>/vX.Y.Z` tags
 
 ## Opening issues and PRs
 

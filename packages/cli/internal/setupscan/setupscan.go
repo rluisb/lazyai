@@ -344,7 +344,14 @@ func supportedTargets(opts Options) []targetSpec {
 }
 
 func supportedScopesForTool(tool types.ToolId) []types.SetupScope {
-	return []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace}
+	all := []types.SetupScope{types.SetupScopeGlobal, types.SetupScopeProject, types.SetupScopeWorkspace}
+	scopes := make([]types.SetupScope, 0, len(all))
+	for _, scope := range all {
+		if adapter.IsScopeSupported(tool, scope) {
+			scopes = append(scopes, scope)
+		}
+	}
+	return scopes
 }
 
 func rootsForTool(tool types.ToolId, opts Options) []rootSpec {

@@ -33,15 +33,29 @@ jobs:
           cd packages/cli
           go vet ./...
 
+  staticcheck-advisory:
+    name: Staticcheck advisory
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
       - name: Install staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
-      - name: Run staticcheck
+      - name: Run staticcheck (advisory)
         run: |
           cd packages/cli
-          staticcheck ./...
-        continue-on-error: true
-
+          staticcheck ./... || {
+            echo "::warning::staticcheck has pre-existing findings; advisory only"
+            exit 0
+          }
   drift-scan:
     name: Banned-token drift scan
     runs-on: ubuntu-latest
@@ -67,5 +81,5 @@ jobs:
 
       - name: Lint YAML files
         run: |
-          yamllint -d relaxed .opencode/workflows/ || true
-          yamllint -d relaxed .github/workflows/ || true
+          yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" .opencode/workflows/
+          yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" .github/workflows/

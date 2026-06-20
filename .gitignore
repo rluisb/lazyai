@@ -77,3 +77,5 @@ graphify-out/
 # OS
 .DS_Store
 PROJECT_UNDERSTANDING.md
+# CocoIndex Code (ccc)
+/.cocoindex_code/

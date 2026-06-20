@@ -63,13 +63,27 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	for _, serverName := range enableServers {
 		enabledServerNames[serverName] = struct{}{}
 	}
-	for serverName := range enabledServerNames {
-		server, ok := catalog.Servers[serverName]
-		if !ok {
-			continue
+
+	// When --enable-servers is provided it acts as an explicit allowlist:
+	// only the named servers (plus those implied by selected CLI tools and the
+	// always-on filesystem floor) stay enabled; every other catalog server is
+	// disabled. Without --enable-servers the catalog defaults are preserved and
+	// selections are purely additive.
+	allowlist := len(enableServers) > 0
+	if allowlist {
+		enabledServerNames["filesystem"] = struct{}{}
+	}
+	for serverName := range catalog.Servers {
+		server := catalog.Servers[serverName]
+		_, selected := enabledServerNames[serverName]
+		switch {
+		case selected:
+			enabled := true
+			server.Enabled = &enabled
+		case allowlist:
+			disabled := false
+			server.Enabled = &disabled
 		}
-		enabled := true
-		server.Enabled = &enabled
 		catalog.Servers[serverName] = server
 	}
 
@@ -93,9 +107,18 @@ func writeManagedMcpFile(targetDir, dest string, catalog mcpCatalog, source stri
 
 	var content []byte
 	if wrapRoot {
+		// The root .mcp.json is consumed natively (no enabled flag), so emit
+		// only the enabled servers. The canonical .ai/mcp.json keeps the full
+		// registry with explicit enabled flags.
+		servers := make(map[string]mcpServer, len(catalog.Servers))
+		for name, server := range catalog.Servers {
+			if server.Enabled == nil || *server.Enabled {
+				servers[name] = server
+			}
+		}
 		content, err = json.MarshalIndent(struct {
 			MCPServers map[string]mcpServer `json:"mcpServers"`
-		}{MCPServers: catalog.Servers}, "", "  ")
+		}{MCPServers: servers}, "", "  ")
 	} else {
 		content, err = json.MarshalIndent(catalog, "", "  ")
 	}

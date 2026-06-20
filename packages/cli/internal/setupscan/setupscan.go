@@ -18,8 +18,12 @@ import (
 type Options struct {
 	HomeDir   string
 	TargetDir string
-	Adopt     bool
-	Import    bool
+	// WorkspaceRoot, when set, is the canonical workspace root used to resolve
+	// workspace-scope tool roots. It lets `setup --scan` rediscover a workspace
+	// install from a nested directory instead of resolving against the cwd.
+	WorkspaceRoot string
+	Adopt         bool
+	Import        bool
 }
 
 type Inventory struct {
@@ -391,7 +395,11 @@ func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
 }
 
 func toolRootSpec(tool types.ToolId, scope types.SetupScope, origin string, opts Options, expectedFiles, optionalPaths []string) rootSpec {
-	ctx := &adapter.AdapterContext{TargetDir: opts.TargetDir, HomeDir: opts.HomeDir, SetupScope: scope}
+	targetDir := opts.TargetDir
+	if scope == types.SetupScopeWorkspace && opts.WorkspaceRoot != "" {
+		targetDir = opts.WorkspaceRoot
+	}
+	ctx := &adapter.AdapterContext{TargetDir: targetDir, HomeDir: opts.HomeDir, SetupScope: scope, WorkspaceRoot: opts.WorkspaceRoot}
 	return rootSpec{
 		Scope:         scope,
 		Origin:        origin,

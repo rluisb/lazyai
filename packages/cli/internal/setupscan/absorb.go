@@ -133,7 +133,7 @@ func Run(opts Options) (*Inventory, error) {
 		return nil, err
 	}
 
-	rescan, err := Scan(Options{HomeDir: opts.HomeDir, TargetDir: opts.TargetDir})
+	rescan, err := Scan(Options{HomeDir: opts.HomeDir, TargetDir: opts.TargetDir, WorkspaceRoot: opts.WorkspaceRoot})
 	if err != nil {
 		return nil, err
 	}

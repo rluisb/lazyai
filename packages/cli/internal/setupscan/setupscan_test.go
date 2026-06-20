@@ -540,3 +540,33 @@ func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
 		}
 	}
 }
+
+func TestScanResolvesWorkspaceRootForWorkspaceScope(t *testing.T) {
+	homeDir := t.TempDir()
+	workspaceRoot := t.TempDir()
+	nestedDir := filepath.Join(workspaceRoot, "app")
+	mustMkdir(t, nestedDir)
+
+	// A workspace install writes tool configs to the workspace root, not the
+	// nested planning-repo directory the user invokes commands from.
+	mustWriteFile(t, filepath.Join(workspaceRoot, ".kiro", "skills", "diagnose", "SKILL.md"), "# diagnose\n")
+
+	// Scanning from the nested dir without the workspace root misses the install.
+	bare, err := Scan(Options{HomeDir: homeDir, TargetDir: nestedDir})
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	assertDetectionStatus(t, findTarget(t, bare.CurrentState.Targets, "kiro"), "workspace", "missing")
+
+	// Supplying the workspace root makes the workspace-scope detection resolve
+	// against it, rediscovering the install.
+	aware, err := Scan(Options{HomeDir: homeDir, TargetDir: nestedDir, WorkspaceRoot: workspaceRoot})
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	kiro := findTarget(t, aware.CurrentState.Targets, "kiro")
+	assertDetectionStatus(t, kiro, "workspace", "detected")
+	if rootPath := detectionForScope(t, kiro, "workspace").RootPath; !strings.HasPrefix(rootPath, workspaceRoot) {
+		t.Fatalf("workspace rootPath = %q, want under %q", rootPath, workspaceRoot)
+	}
+}

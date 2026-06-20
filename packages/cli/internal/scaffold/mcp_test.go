@@ -65,6 +65,55 @@ func TestScaffoldMcp_EnablesSelectedServersAndWritesSchemas(t *testing.T) {
 	}
 }
 
+func TestScaffoldMcp_EnableServersActsAsAllowlist(t *testing.T) {
+	repoRoot := t.TempDir()
+	libraryDir := filepath.Join(repoRoot, "library")
+	targetDir := t.TempDir()
+
+	mustWriteTestFile(t, filepath.Join(libraryDir, "mcp", "catalog.json"), `{
+  "servers": {
+    "filesystem": { "description": "filesystem", "command": "fs", "enabled": true },
+    "codegraph": { "description": "codegraph", "command": "cg", "enabled": true },
+    "obsidian": { "description": "obsidian", "command": "ob", "enabled": true }
+  }
+}`)
+
+	var records []types.TrackedFile
+	if err := ScaffoldMcp(targetDir, libraryDir, os.DirFS(libraryDir), nil, []string{"codegraph"}, &records, types.ConflictStrategyAlign, nil); err != nil {
+		t.Fatalf("ScaffoldMcp: %v", err)
+	}
+
+	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
+	if !enabledValue(t, catalog.Servers["codegraph"].Enabled) {
+		t.Error("codegraph should stay enabled (named in allowlist)")
+	}
+	if !enabledValue(t, catalog.Servers["filesystem"].Enabled) {
+		t.Error("filesystem should stay enabled (always-on floor)")
+	}
+	if enabledValue(t, catalog.Servers["obsidian"].Enabled) {
+		t.Error("obsidian should be disabled (not in allowlist)")
+	}
+
+	// The root .mcp.json is consumed natively, so disabled servers must be absent.
+	rootPath := filepath.Join(targetDir, ".mcp.json")
+	data, err := os.ReadFile(rootPath)
+	if err != nil {
+		t.Fatalf("read .mcp.json: %v", err)
+	}
+	var root struct {
+		MCPServers map[string]mcpServer `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("parse .mcp.json: %v", err)
+	}
+	if _, ok := root.MCPServers["obsidian"]; ok {
+		t.Error("root .mcp.json should omit disabled obsidian server")
+	}
+	if len(root.MCPServers) != 2 {
+		t.Fatalf("root mcpServers = %d, want 2 (codegraph + filesystem)", len(root.MCPServers))
+	}
+}
+
 func TestScaffoldMcp_PreservesRemoteServerShape(t *testing.T) {
 	repoRoot := t.TempDir()
 	libraryDir := filepath.Join(repoRoot, "library")
@@ -143,8 +192,13 @@ func TestScaffoldMcp_IgnoresUnknownServers(t *testing.T) {
 	}
 
 	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
-	if catalog.Servers["filesystem"].Enabled != nil {
-		t.Fatal("filesystem server should remain unselected")
+	if _, ok := catalog.Servers["unknown"]; ok {
+		t.Fatal("unknown server should not be added to the catalog")
+	}
+	// --enable-servers is non-empty, so allowlist mode applies: the unknown name
+	// matches nothing, leaving only the always-on filesystem floor enabled.
+	if !enabledValue(t, catalog.Servers["filesystem"].Enabled) {
+		t.Fatal("filesystem floor should be enabled under allowlist mode")
 	}
 }
 

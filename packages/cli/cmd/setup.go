@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
+	"github.com/rluisb/lazyai/packages/cli/internal/db"
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/setupscan"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
@@ -104,7 +107,8 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("determine home directory: %w", err)
 	}
-	baseOpts := setupscan.Options{HomeDir: homeDir, TargetDir: targetDir}
+	workspaceRoot := discoverWorkspaceRoot(targetDir)
+	baseOpts := setupscan.Options{HomeDir: homeDir, TargetDir: targetDir, WorkspaceRoot: workspaceRoot}
 
 	if list || dryRun {
 		selection, err := resolveSetupSelection(selectedTools)
@@ -133,11 +137,50 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return writeSetupJSON(result)
 	}
 
-	inventory, err := setupscan.Run(setupscan.Options{HomeDir: homeDir, TargetDir: targetDir, Adopt: adopt, Import: importConfigs})
+	inventory, err := setupscan.Run(setupscan.Options{HomeDir: homeDir, TargetDir: targetDir, WorkspaceRoot: workspaceRoot, Adopt: adopt, Import: importConfigs})
 	if err != nil {
 		return err
 	}
 	return writeSetupJSON(inventory)
+}
+
+// discoverWorkspaceRoot walks up from startDir looking for the nearest LazyAI
+// state database (.ai-setup.db). When that install recorded a workspace scope
+// with a workspace root, it returns that root so `setup` can resolve
+// workspace-scope tool configs even when invoked from a nested directory. It
+// returns "" when no workspace install is found.
+func discoverWorkspaceRoot(startDir string) string {
+	dir := startDir
+	for {
+		dbPath := db.DefaultDBPath(dir)
+		if files.FileExists(dbPath) {
+			return workspaceRootFromStore(dbPath)
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+// workspaceRootFromStore opens an existing state database read-only and returns
+// the recorded workspace root when the install is workspace-scoped. Any error
+// degrades to "" so scanning never fails on a stale or unreadable store.
+func workspaceRootFromStore(dbPath string) string {
+	database, err := db.Open(dbPath)
+	if err != nil {
+		return ""
+	}
+	defer database.Close()
+	data, err := db.NewStore(database).ReadStoreData()
+	if err != nil {
+		return ""
+	}
+	if data.Config.SetupScope == types.SetupScopeWorkspace {
+		return data.Config.WorkspaceRoot
+	}
+	return ""
 }
 
 type setupToolSelection struct {

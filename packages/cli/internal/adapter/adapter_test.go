@@ -582,6 +582,29 @@ func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
 	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
 }
 
+func TestKiroAdapter_Install_SkillsOnly(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Skills: []types.SkillId{types.SkillIdDiagnose, types.SkillIdIssueTriage},
+	}
+
+	adapter := &KiroAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Kiro Install failed: %v", err)
+	}
+
+	for _, rel := range []string{
+		".kiro/skills/diagnose/SKILL.md",
+		".kiro/skills/issue-triage/SKILL.md",
+	} {
+		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
+			t.Fatalf("expected %s: %v", rel, err)
+		}
+	}
+	assertMissing(t, filepath.Join(targetDir, ".kiro", "agents"))
+	assertMissing(t, filepath.Join(targetDir, ".kiro", "hooks"))
+}
+
 func TestAntigravityAdapter_Install_MinimalSurface(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 

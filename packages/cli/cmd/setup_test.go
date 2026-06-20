@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/db"
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
 func newSetupTestCommand(t *testing.T) *cobra.Command {
@@ -346,5 +349,64 @@ func mustWriteSetupTestFile(t *testing.T, path, content string) {
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func TestDiscoverWorkspaceRoot(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	nested := filepath.Join(workspaceRoot, "app", "src")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("mkdir nested: %v", err)
+	}
+
+	// State DB lives at the planning-repo dir (workspaceRoot/app) and records a
+	// workspace-scope install pointing back at the workspace root.
+	stateDir := filepath.Join(workspaceRoot, "app")
+	database, err := db.Open(db.DefaultDBPath(stateDir))
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := db.RunMigrations(database); err != nil {
+		database.Close()
+		t.Fatalf("migrate db: %v", err)
+	}
+	store := db.NewStore(database)
+	data := types.DefaultStoreData()
+	data.Config.SetupScope = types.SetupScopeWorkspace
+	data.Config.WorkspaceRoot = workspaceRoot
+	if err := store.WriteStoreData(&data); err != nil {
+		database.Close()
+		t.Fatalf("write store: %v", err)
+	}
+	database.Close()
+
+	if got := discoverWorkspaceRoot(nested); got != workspaceRoot {
+		t.Fatalf("discoverWorkspaceRoot(nested) = %q, want %q", got, workspaceRoot)
+	}
+
+	// A directory with no LazyAI state yields no workspace root.
+	if got := discoverWorkspaceRoot(t.TempDir()); got != "" {
+		t.Fatalf("discoverWorkspaceRoot(empty) = %q, want \"\"", got)
+	}
+
+	// A project-scope install yields no workspace root.
+	projectDir := t.TempDir()
+	pdb, err := db.Open(db.DefaultDBPath(projectDir))
+	if err != nil {
+		t.Fatalf("open project db: %v", err)
+	}
+	if err := db.RunMigrations(pdb); err != nil {
+		pdb.Close()
+		t.Fatalf("migrate project db: %v", err)
+	}
+	pdata := types.DefaultStoreData()
+	pdata.Config.SetupScope = types.SetupScopeProject
+	if err := db.NewStore(pdb).WriteStoreData(&pdata); err != nil {
+		pdb.Close()
+		t.Fatalf("write project store: %v", err)
+	}
+	pdb.Close()
+	if got := discoverWorkspaceRoot(projectDir); got != "" {
+		t.Fatalf("discoverWorkspaceRoot(project) = %q, want \"\"", got)
 	}
 }

@@ -15,7 +15,7 @@ func TestOutputCoverageIsExhaustive(t *testing.T) {
 
 func TestOutputTargetsAllKnownTools(t *testing.T) {
 	tools := []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity,
 	}
 	for _, tool := range tools {
 		entries, err := OutputTargetsForTool(tool)
@@ -130,6 +130,19 @@ func TestOutputMappingOmpSkillsDirPerItem(t *testing.T) {
 	}
 	if target.SourceSubdir != "skills" {
 		t.Errorf("omp skills SourceSubdir=%q, want skills", target.SourceSubdir)
+	}
+}
+
+func TestOutputMappingKiroSkillsDirPerItem(t *testing.T) {
+	target, ok := LookupOutputTarget(types.ToolIdKiro, AssetKindSkills)
+	if !ok {
+		t.Fatal("kiro has no skills target")
+	}
+	if target.Shape != ShapeDirPerItem {
+		t.Errorf("kiro skills Shape=%q, want %q", target.Shape, ShapeDirPerItem)
+	}
+	if target.SourceSubdir != "skills" {
+		t.Errorf("kiro skills SourceSubdir=%q, want skills", target.SourceSubdir)
 	}
 }
 

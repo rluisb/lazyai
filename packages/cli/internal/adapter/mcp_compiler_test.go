@@ -359,6 +359,69 @@ func TestCompileMCPForTool_ClaudeGlobalSkips(t *testing.T) {
 	}
 }
 
+func TestCompileKiroMCP_ProjectScope(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdKiro, CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool failed: %v", err)
+	}
+
+	configPath := filepath.Join(targetDir, ".kiro", "settings", "mcp.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("expected %s: %v", configPath, err)
+	}
+	if !strings.Contains(string(data), `"mcpServers"`) {
+		t.Fatalf("kiro mcp config missing mcpServers: %s", string(data))
+	}
+	if len(records) != 1 {
+		t.Fatalf("records len = %d, want 1", len(records))
+	}
+	if got := records[0].Path; got != configPath {
+		t.Fatalf("record path = %q, want %q", got, configPath)
+	}
+}
+
+func TestCompileKiroMCP_GlobalScope(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdKiro, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool failed: %v", err)
+	}
+
+	configPath := filepath.Join(homeDir, ".kiro", "settings", "mcp.json")
+	if _, err := os.Stat(configPath); err != nil {
+		t.Fatalf("expected %s: %v", configPath, err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("records len = %d, want 1", len(records))
+	}
+}
+
 // TestAIMemoryCatalogEntryUsesRemoteURL verifies the retained ai-memory entry
 // stays URL-backed and compiles to the native remote MCP shape.
 func TestAIMemoryCatalogEntryUsesRemoteURL(t *testing.T) {

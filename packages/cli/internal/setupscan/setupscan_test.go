@@ -160,7 +160,7 @@ func TestScanProducesDeterministicTargetOrdering(t *testing.T) {
 	for _, target := range inventory.CurrentState.Targets {
 		got = append(got, target.ID)
 	}
-	want := []string{"antigravity", "claude-code", "copilot", "omp", "opencode", "pi"}
+	want := []string{"antigravity", "claude-code", "copilot", "kiro", "omp", "opencode", "pi"}
 	if len(got) != len(want) {
 		t.Fatalf("target count = %d, want %d", len(got), len(want))
 	}
@@ -527,7 +527,7 @@ func TestSupportedScopesExcludesUnsupportedGlobal(t *testing.T) {
 }
 
 func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
-	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp} {
+	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp, types.ToolIdKiro} {
 		scopes := supportedScopesForTool(tool)
 		hasGlobal := false
 		for _, s := range scopes {
@@ -538,5 +538,35 @@ func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
 		if !hasGlobal {
 			t.Errorf("tool %q expected global scope advertised, got %v", tool, scopes)
 		}
+	}
+}
+
+func TestScanResolvesWorkspaceRootForWorkspaceScope(t *testing.T) {
+	homeDir := t.TempDir()
+	workspaceRoot := t.TempDir()
+	nestedDir := filepath.Join(workspaceRoot, "app")
+	mustMkdir(t, nestedDir)
+
+	// A workspace install writes tool configs to the workspace root, not the
+	// nested planning-repo directory the user invokes commands from.
+	mustWriteFile(t, filepath.Join(workspaceRoot, ".kiro", "skills", "diagnose", "SKILL.md"), "# diagnose\n")
+
+	// Scanning from the nested dir without the workspace root misses the install.
+	bare, err := Scan(Options{HomeDir: homeDir, TargetDir: nestedDir})
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	assertDetectionStatus(t, findTarget(t, bare.CurrentState.Targets, "kiro"), "workspace", "missing")
+
+	// Supplying the workspace root makes the workspace-scope detection resolve
+	// against it, rediscovering the install.
+	aware, err := Scan(Options{HomeDir: homeDir, TargetDir: nestedDir, WorkspaceRoot: workspaceRoot})
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	kiro := findTarget(t, aware.CurrentState.Targets, "kiro")
+	assertDetectionStatus(t, kiro, "workspace", "detected")
+	if rootPath := detectionForScope(t, kiro, "workspace").RootPath; !strings.HasPrefix(rootPath, workspaceRoot) {
+		t.Fatalf("workspace rootPath = %q, want under %q", rootPath, workspaceRoot)
 	}
 }

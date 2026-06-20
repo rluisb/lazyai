@@ -136,6 +136,9 @@ func TestTypeConstants(t *testing.T) {
 	if ToolIdOmp != "omp" {
 		t.Errorf("ToolIdOmp = %q, want omp", ToolIdOmp)
 	}
+	if ToolIdKiro != "kiro" {
+		t.Errorf("ToolIdKiro = %q, want kiro", ToolIdKiro)
+	}
 	if ToolIdAntigravity != "antigravity" {
 		t.Errorf("ToolIdAntigravity = %q, want antigravity", ToolIdAntigravity)
 	}
@@ -205,7 +208,7 @@ func TestIsValidExistingSetupPolicy(t *testing.T) {
 func TestIsValidToolId(t *testing.T) {
 	t.Parallel()
 
-	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdOmp, ToolIdAntigravity} {
+	for _, id := range []ToolId{ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdOmp, ToolIdAntigravity, ToolIdKiro} {
 		if !IsValidToolId(id) {
 			t.Errorf("IsValidToolId(%q) = false, want true", id)
 		}

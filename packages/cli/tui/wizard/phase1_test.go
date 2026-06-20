@@ -239,18 +239,18 @@ func TestToolOptionsForScope_ReturnsSupportedTools(t *testing.T) {
 	t.Parallel()
 
 	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	if len(globalOpts) != 4 {
-		t.Errorf("global options count = %d, want 4", len(globalOpts))
+	if len(globalOpts) != 5 {
+		t.Errorf("global options count = %d, want 5", len(globalOpts))
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)
-	if len(projectOpts) != 6 {
-		t.Errorf("project options count = %d, want 6", len(projectOpts))
+	if len(projectOpts) != 7 {
+		t.Errorf("project options count = %d, want 7", len(projectOpts))
 	}
 
 	workspaceOpts := toolOptionsForScope(types.SetupScopeWorkspace)
-	if len(workspaceOpts) != 6 {
-		t.Errorf("workspace options count = %d, want 6", len(workspaceOpts))
+	if len(workspaceOpts) != 7 {
+		t.Errorf("workspace options count = %d, want 7", len(workspaceOpts))
 	}
 }
 

@@ -92,10 +92,12 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileClaudeCodeMCP(ctx, enabledServers)
 	case types.ToolIdCopilot:
 		return compileCopilotMCP(ctx, enabledServers)
+	case types.ToolIdKiro:
+		return compileKiroMCP(ctx, enabledServers)
 	case types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity:
 		return ctx.FileRecords, nil
 	default:
-		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, antigravity)", toolId)
+		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, kiro, antigravity)", toolId)
 	}
 }
 
@@ -376,6 +378,37 @@ func toClaudeCodeMcpInner(servers map[string]McpServer) map[string]any {
 
 func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 	return map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
+}
+
+// ---------------------------------------------------------------------------
+// Kiro MCP compilation
+// ---------------------------------------------------------------------------
+
+func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	ctxAdapter := &AdapterContext{
+		TargetDir:     ctx.TargetDir,
+		HomeDir:       ctx.HomeDir,
+		WorkspaceRoot: ctx.WorkspaceRoot,
+		SetupScope:    ctx.SetupScope,
+	}
+	kiroRoot, err := ResolveToolRoot(types.ToolIdKiro, ctx.SetupScope, ctxAdapter)
+	if err != nil {
+		return nil, err
+	}
+	settingsDir := filepath.Join(kiroRoot, "settings")
+	_ = files.EnsureDir(settingsDir)
+	mcpPath := filepath.Join(settingsDir, "mcp.json")
+	content := toClaudeCodeMcp(servers) // reuse identical format
+	if err := WriteJSONFile(mcpPath, content); err != nil {
+		return ctx.FileRecords, err
+	}
+	hash, _ := files.FileHash(mcpPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path:   mcpPath,
+		Hash:   hash,
+		Source: "compiled:mcp",
+		Owner:  types.FileOwnerLibrary,
+	}), nil
 }
 
 // ---------------------------------------------------------------------------

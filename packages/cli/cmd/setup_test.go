@@ -7,8 +7,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/rluisb/lazyai/packages/cli/internal/types"
 	"github.com/spf13/cobra"
 )
 

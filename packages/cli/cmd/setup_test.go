@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
+	"github.com/spf13/cobra"
 )
 
 func newSetupTestCommand(t *testing.T) *cobra.Command {

@@ -23,6 +23,7 @@ func NewRegistry() *Registry {
 	r.register(&ClaudeCodeAdapter{})
 	r.register(&CopilotAdapter{})
 	r.register(&PiAdapter{})
+	r.register(&OmpAdapter{})
 	r.register(&AntigravityAdapter{})
 
 	return r

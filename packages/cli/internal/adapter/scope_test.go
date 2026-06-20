@@ -26,6 +26,9 @@ func TestIsScopeSupported(t *testing.T) {
 		{types.ToolIdPi, types.SetupScopeProject, true},
 		{types.ToolIdPi, types.SetupScopeWorkspace, true},
 		{types.ToolIdPi, types.SetupScopeGlobal, false},
+		{types.ToolIdOmp, types.SetupScopeProject, true},
+		{types.ToolIdOmp, types.SetupScopeWorkspace, true},
+		{types.ToolIdOmp, types.SetupScopeGlobal, true},
 		{types.ToolIdAntigravity, types.SetupScopeProject, true},
 		{types.ToolIdAntigravity, types.SetupScopeWorkspace, true},
 		{types.ToolIdAntigravity, types.SetupScopeGlobal, false},
@@ -70,6 +73,10 @@ func TestResolveToolRoot_AllPairs(t *testing.T) {
 		{types.ToolIdPi, types.SetupScopeProject, want{filepath.Join(target, ".pi"), false}},
 		{types.ToolIdPi, types.SetupScopeWorkspace, want{filepath.Join(target, ".pi"), false}},
 		{types.ToolIdPi, types.SetupScopeGlobal, want{"", true}},
+		// omp
+		{types.ToolIdOmp, types.SetupScopeProject, want{filepath.Join(target, ".omp"), false}},
+		{types.ToolIdOmp, types.SetupScopeWorkspace, want{filepath.Join(target, ".omp"), false}},
+		{types.ToolIdOmp, types.SetupScopeGlobal, want{filepath.Join(home, ".omp", "agent"), false}},
 		// antigravity
 		{types.ToolIdAntigravity, types.SetupScopeProject, want{filepath.Join(target, ".gemini"), false}},
 		{types.ToolIdAntigravity, types.SetupScopeWorkspace, want{filepath.Join(target, ".gemini"), false}},

@@ -527,7 +527,7 @@ func TestSupportedScopesExcludesUnsupportedGlobal(t *testing.T) {
 }
 
 func TestSupportedScopesIncludesGlobalForFullSupportTools(t *testing.T) {
-	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot} {
+	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp} {
 		scopes := supportedScopesForTool(tool)
 		hasGlobal := false
 		for _, s := range scopes {

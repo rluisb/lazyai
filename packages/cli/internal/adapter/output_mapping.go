@@ -260,6 +260,43 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Notes: "Pi has no prompt surface",
 			},
 		},
+		types.ToolIdOmp: {
+			AssetKindAgents: {
+				Tool: types.ToolIdOmp, Kind: AssetKindAgents,
+				Shape: ShapeNone,
+				Notes: "OMP is skills-only; no agent surface is emitted",
+			},
+			AssetKindSkills: {
+				Tool: types.ToolIdOmp, Kind: AssetKindSkills,
+				SourceSubdir: "skills", DestSubdir: "skills",
+				Shape: ShapeDirPerItem,
+				Notes: "OMP reads skills as .omp/skills/<name>/SKILL.md",
+			},
+			AssetKindTemplates: {
+				Tool: types.ToolIdOmp, Kind: AssetKindTemplates,
+				Shape: ShapeNone,
+				Notes: "OMP has no template surface",
+			},
+			AssetKindCommands: {
+				Tool: types.ToolIdOmp, Kind: AssetKindCommands,
+				Shape: ShapeNone,
+				Notes: "OMP has no slash command surface",
+			},
+			AssetKindChatModes: {
+				Tool: types.ToolIdOmp, Kind: AssetKindChatModes,
+				Shape: ShapeNone,
+				Notes: "OMP has no chat mode surface",
+			},
+			AssetKindOutputStyles: {
+				Tool: types.ToolIdOmp, Kind: AssetKindOutputStyles,
+				Shape: ShapeNone,
+			},
+			AssetKindPrompts: {
+				Tool: types.ToolIdOmp, Kind: AssetKindPrompts,
+				Shape: ShapeNone,
+				Notes: "OMP has no prompt surface",
+			},
+		},
 		types.ToolIdAntigravity: {
 			AssetKindAgents: {
 				Tool: types.ToolIdAntigravity, Kind: AssetKindAgents,
@@ -334,7 +371,7 @@ func OutputTargetsForTool(tool types.ToolId) (map[AssetKind]OutputTarget, error)
 func ValidateOutputCoverage() error {
 	per := buildOutputMappings()
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdAntigravity,
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity,
 	} {
 		entries, ok := per[tool]
 		if !ok {

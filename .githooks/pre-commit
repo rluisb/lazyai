@@ -1,4 +1,9 @@
 #!/bin/sh
 set -eu
 
+if ! command -v go >/dev/null 2>&1; then
+  echo "pre-commit: 'go' not found, skipping token-rent-check"
+  exit 0
+fi
+
 go run ./packages/cli/internal/tokenrent/cmd/token-rent-check

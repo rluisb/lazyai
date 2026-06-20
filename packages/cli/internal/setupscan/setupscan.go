@@ -374,6 +374,12 @@ func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"opencode.json"}, []string{"lazyai.mcp.jsonc", "agents", "skills", "commands", "modes", "AGENTS.md"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"opencode.json"}, []string{"lazyai.mcp.jsonc", "agents", "skills", "commands", "modes", "AGENTS.md"}),
 		}
+	case types.ToolIdOmp:
+		return []rootSpec{
+			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"skills"}, []string{"AGENTS.md"}),
+			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"skills"}, []string{"AGENTS.md"}),
+			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"skills"}, []string{"AGENTS.md"}),
+		}
 	}
 	return nil
 }

@@ -49,6 +49,7 @@ const (
 	ToolIdClaudeCode  ToolId = "claude-code"
 	ToolIdCopilot     ToolId = "copilot"
 	ToolIdPi          ToolId = "pi"
+	ToolIdOmp         ToolId = "omp"
 	ToolIdAntigravity ToolId = "antigravity"
 )
 
@@ -800,7 +801,7 @@ func IsValidSetupScope(s SetupScope) bool {
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
 	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdAntigravity:
+	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdOmp, ToolIdAntigravity:
 		return true
 	default:
 		return false

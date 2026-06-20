@@ -9,5 +9,6 @@ var RootFileByTool = map[types.ToolId]string{
 	types.ToolIdClaudeCode:  "AGENTS.md",
 	types.ToolIdCopilot:     ".github/copilot-instructions.md",
 	types.ToolIdPi:          "AGENTS.md",
+	types.ToolIdOmp:         "AGENTS.md",
 	types.ToolIdAntigravity: "AGENTS.md",
 }

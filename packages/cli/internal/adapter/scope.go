@@ -87,6 +87,8 @@ func projectSubdir(tool types.ToolId) string {
 		return ".github"
 	case types.ToolIdPi:
 		return ".pi"
+	case types.ToolIdOmp:
+		return ".omp"
 	case types.ToolIdAntigravity:
 		return ".gemini"
 	}

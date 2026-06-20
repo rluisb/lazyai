@@ -50,6 +50,8 @@ func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, erro
 	switch tool {
 	case types.ToolIdOpenCode:
 		return filepath.Join(homeDir, ".config", "opencode"), nil
+	case types.ToolIdOmp:
+		return filepath.Join(homeDir, ".omp", "agent"), nil
 	case types.ToolIdClaudeCode:
 		return filepath.Join(homeDir, ".claude"), nil
 	case types.ToolIdCopilot:
@@ -64,7 +66,7 @@ func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, erro
 // probe-aware gating (e.g., Copilot requires the copilot CLI or ~/.copilot/ presence).
 func IsGlobalSupportedTool(tool types.ToolId) bool {
 	switch tool {
-	case types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot:
+	case types.ToolIdOpenCode, types.ToolIdClaudeCode, types.ToolIdCopilot, types.ToolIdOmp:
 		return true
 	default:
 		return false

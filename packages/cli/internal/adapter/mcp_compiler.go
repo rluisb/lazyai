@@ -380,7 +380,6 @@ func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 	return map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
 }
 
-
 // ---------------------------------------------------------------------------
 // Kiro MCP compilation
 // ---------------------------------------------------------------------------

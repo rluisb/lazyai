@@ -94,8 +94,10 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileCopilotMCP(ctx, enabledServers)
 	case types.ToolIdKiro:
 		return compileKiroMCP(ctx, enabledServers)
-	case types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity:
+	case types.ToolIdPi, types.ToolIdAntigravity:
 		return ctx.FileRecords, nil
+	case types.ToolIdOmp:
+		return compileOmpMCP(ctx, enabledServers)
 	default:
 		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, kiro, antigravity)", toolId)
 	}
@@ -407,6 +409,30 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 		Path:   mcpPath,
 		Hash:   hash,
 		Source: "compiled:mcp",
+		Owner:  types.FileOwnerLibrary,
+	}), nil
+}
+
+// ---------------------------------------------------------------------------
+// OMP MCP compilation
+// ---------------------------------------------------------------------------
+func compileOmpMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	ompRoot, err := ResolveToolRoot(types.ToolIdOmp, ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return nil, err
+	}
+
+	mcpPath := filepath.Join(ompRoot, "mcp.json")
+	_ = files.EnsureDir(ompRoot)
+	content := toClaudeCodeMcp(servers) // reuse identical format
+	if err := WriteJSONFile(mcpPath, content); err != nil {
+		return ctx.FileRecords, err
+	}
+	hash, _ := files.FileHash(mcpPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path:   mcpPath,
+		Hash:   hash,
+		Source: "compiled:mcp:omp",
 		Owner:  types.FileOwnerLibrary,
 	}), nil
 }

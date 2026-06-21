@@ -1,3 +1,7 @@
+> **HISTORICAL (2026-06-20) — parts of this plan target the removed `packages/ai-setup-ts` package; the CLI is now Go-only (`packages/cli`). Retained for historical context.**
+>
+> This document is historical; `packages/ai-setup-ts` is no longer present.
+
 # Task 011: `red-team-plan` Skill + Soft-Fail Tests
 
 **Phase:** W1.B — Plan Quality + Adversarial Design Review  

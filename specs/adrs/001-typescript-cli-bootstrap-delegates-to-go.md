@@ -1,7 +1,11 @@
+> **SUPERSEDED (2026-06-20) — the `packages/ai-setup-ts` TypeScript bootstrap package was removed; the CLI is now Go-only (`packages/cli`). Retained for historical context.**
+>
+> This document is historical; `packages/ai-setup-ts` is no longer present.
+
 # ADR-001: TypeScript CLI Bootstrap Delegates to Go Binary
 
 **Date:** 2026-05-02
-**Status:** Accepted
+**Status:** Superseded (originally Accepted)
 **Deciders:** ai-setup maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 

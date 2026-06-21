@@ -724,13 +724,3 @@ func mcpServerOptionsForSelect() []huh.Option[string] {
 	}
 	return mcpServerOptionsFromCatalog(catalog)
 }
-
-// containsTool reports whether the given tool ID is present in the list.
-func containsTool(tools []types.ToolId, id string) bool {
-	for _, t := range tools {
-		if string(t) == id {
-			return true
-		}
-	}
-	return false
-}

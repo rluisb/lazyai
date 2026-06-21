@@ -79,30 +79,3 @@ func ScaffoldRootFiles(targetDir string, libFS fs.FS, projectName string, tools 
 
 	return nil
 }
-
-// writeRootFile is an internal helper to write a root file with conflict resolution.
-func writeRootFile(dest, content, targetDir, source string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) {
-	relPath, err := filepath.Rel(targetDir, dest)
-	if err != nil {
-		relPath = dest
-	}
-
-	action, err := conflict.ApplyStrategy(dest, strategy, perFileOverrides, targetDir)
-	if err != nil || action == "skip" {
-		scaffoldLog.Info("skipping root file", "path", relPath)
-		return
-	}
-
-	if err := files.WriteFile(dest, []byte(content), 0o644); err != nil {
-		scaffoldLog.Error("error writing root file", "path", dest, "error", err)
-		return
-	}
-
-	hash, _ := files.FileHash(dest)
-	*fileRecords = append(*fileRecords, types.TrackedFile{
-		Path:   relPath,
-		Hash:   hash,
-		Source: source,
-		Owner:  types.FileOwnerLibrary,
-	})
-}

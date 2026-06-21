@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
@@ -210,9 +209,4 @@ func countCreated(files []generator.GeneratedFile, force bool, targetDir string)
 		return len(files)
 	}
 	return count
-}
-
-// slugify converts a name to a filesystem-safe slug.
-func slugify(name string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(name, " ", "-"), "_", "-"))
 }

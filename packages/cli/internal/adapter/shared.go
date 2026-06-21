@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
@@ -98,31 +97,6 @@ func claudeDefaultAgentContent(source []byte) []byte {
 	b.WriteString(managedAgentMarker("claude", defaultAgentID))
 	b.WriteString("\n\n")
 	b.Write(body)
-	return []byte(b.String())
-}
-
-func copilotDefaultAgentContent(source []byte) []byte {
-	fm, body, _ := frontmatter.ExtractFrontmatter(source)
-	description := inheritedDescription(fm)
-	if description == "Agent" {
-		description = defaultAgentDescription
-	}
-	body = trimLeadingNewlines([]byte(strings.TrimRight(string(body), "\n")))
-	var b strings.Builder
-	b.WriteString("---\n")
-	b.WriteString("name: ")
-	b.WriteString(defaultAgentID)
-	b.WriteByte('\n')
-	b.WriteString("description: ")
-	b.WriteString(strconv.Quote(description))
-	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
-	b.WriteString(managedAgentMarker("copilot", defaultAgentID))
-	b.WriteString("\n\n")
-	b.Write(body)
-	if !strings.HasSuffix(string(body), "\n") {
-		b.WriteByte('\n')
-	}
-	b.WriteByte('\n')
 	return []byte(b.String())
 }
 

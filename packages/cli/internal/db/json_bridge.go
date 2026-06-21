@@ -38,23 +38,21 @@ func HasExistingDB(targetDir string) bool {
 	return err == nil
 }
 
-// AutoImportJSON imports from .ai-setup.json if it exists and the SQLite DB
-// doesn't yet exist. If both exist, it prefers SQLite. If neither exists, it
-// does nothing.
+// AutoImportJSON imports from .ai-setup.json when it exists and the SQLite DB
+// did not exist before this run. Callers MUST capture DB existence BEFORE
+// opening the database (dbPreexisted), because db.Open creates the DB file —
+// re-checking existence here would always report the freshly-created file.
 //
 // Returns true if an import was performed, false otherwise.
-func AutoImportJSON(targetDir string, db *DB) (bool, error) {
-	jsonExists := HasExistingJSON(targetDir)
-	dbExists := HasExistingDB(targetDir)
-
-	if !jsonExists {
+func AutoImportJSON(targetDir string, db *DB, dbPreexisted bool) (bool, error) {
+	if !HasExistingJSON(targetDir) {
 		// No JSON to import from.
 		return false, nil
 	}
 
-	if dbExists {
-		// Both exist; prefer SQLite. The JSON file is left in place
-		// for backward compatibility / manual inspection.
+	if dbPreexisted {
+		// DB already existed before this run; prefer SQLite. The JSON file is
+		// left in place for backward compatibility / manual inspection.
 		return false, nil
 	}
 

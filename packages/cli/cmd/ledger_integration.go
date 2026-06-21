@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/runtime/ledger"
 )
@@ -87,10 +86,4 @@ func readLedgerEntries(path string) ([]LedgerEvent, error) {
 	}
 
 	return result, nil
-}
-
-// ledgerExists returns true if the ledger file exists at the expected path.
-func ledgerExists() bool {
-	_, err := os.Stat(getLedgerPath())
-	return err == nil
 }

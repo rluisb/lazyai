@@ -239,6 +239,23 @@ func TestDiffViewerPreviousFromSummaryReopensLastFile(t *testing.T) {
 	}
 }
 
+func TestDiffViewerRenderSummaryUsesRemainingAsTotalMinusResolved(t *testing.T) {
+	t.Parallel()
+
+	viewer := NewDiffViewer([]ConflictView{
+		{FilePath: "file-0.md"},
+		{FilePath: "file-1.md"},
+		{FilePath: "file-2.md"},
+	})
+
+	viewer.currentIndex = 2
+	viewer.resolveCurrent(ActionAccept)
+
+	if got, want := viewer.renderSummary(), "Conflicts: 3 | Resolved: 1 | Remaining: 2"; got != want {
+		t.Fatalf("expected out-of-order summary %q, got %q", want, got)
+	}
+}
+
 func TestDiffViewerDoesNotIntroduceFileWrites(t *testing.T) {
 	t.Parallel()
 

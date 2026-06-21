@@ -573,7 +573,10 @@ func (d *DiffViewer) renderActionBar() string {
 func (d *DiffViewer) renderSummary() string {
 	total := len(d.conflicts)
 	resolved := len(d.decisions)
-	remaining := total - d.currentIndex
+	remaining := total - resolved
+	if remaining < 0 {
+		remaining = 0
+	}
 	return fmt.Sprintf("Conflicts: %d | Resolved: %d | Remaining: %d", total, resolved, remaining)
 }
 

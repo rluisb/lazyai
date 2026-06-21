@@ -204,49 +204,6 @@ func opencodeStepsFor(tier string) int {
 	return 0
 }
 
-// rewriteAgentForTarget is the shared core for all targets that emit a YAML
-// frontmatter block. The emit callback is responsible for the per-target
-// field set (Claude Code drops `thinking`/`risk`; OpenCode keeps a richer
-// subset; Copilot uses a different file format and bypasses this helper).
-func rewriteAgentForTarget(
-	source []byte,
-	tool types.ToolId,
-	ctx *AdapterContext,
-	emit func(spec frontmatter.AgentSpecRaw, modelField string, fallback []string, body []byte) []byte,
-) ([]byte, error) {
-	raw, err := frontmatter.ParseAgentSpec(source)
-	if err != nil {
-		return nil, err
-	}
-	rc := resolveCtxFor(tool, ctx)
-	res, err := models.Resolve(agentSpecToModelsSpec(raw), rc)
-	if err != nil {
-		return nil, fmt.Errorf("%s resolve %s: %w", tool, raw.Name, err)
-	}
-	_, body, err := frontmatter.ExtractFrontmatter(source)
-	if err != nil {
-		return nil, err
-	}
-	return emit(raw, res.Field, res.FallbackChain, body), nil
-}
-
-// claudeCodeFrontmatter writes the minimal frontmatter Claude Code's agent
-// loader honours for generated agents: name and description. Other source fields
-// are dropped to keep generated frontmatter to baseline shape.
-func claudeCodeFrontmatter(spec frontmatter.AgentSpecRaw, _ string, _ []string, body []byte) []byte {
-	var b strings.Builder
-	b.WriteString("---\n")
-	if spec.Name != "" {
-		fmt.Fprintf(&b, "name: %s\n", spec.Name)
-	}
-	if spec.Description != "" {
-		fmt.Fprintf(&b, "description: %s\n", spec.Description)
-	}
-	b.WriteString("---\n\n")
-	b.Write(trimLeadingNewlines(body))
-	return []byte(b.String())
-}
-
 // prependFallbackComment inserts a fallback-chain comment between the
 // closing frontmatter delimiter and the body. None of the supported CLIs
 // read it; it serves humans reviewing the compiled file.

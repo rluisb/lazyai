@@ -2,7 +2,6 @@ package wizard
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"charm.land/huh/v2"
@@ -360,14 +359,6 @@ func normalizeCoverageThreshold(value int) int {
 		return value
 	}
 	return defaultCoverageThreshold()
-}
-
-func parseCoverageThreshold(value string) int {
-	parsed, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil {
-		return defaultCoverageThreshold()
-	}
-	return normalizeCoverageThreshold(parsed)
 }
 
 func askPreset(current types.PresetLevel, info phase2StepInfo) (types.PresetLevel, PhaseAction, error) {

@@ -78,9 +78,6 @@ var (
 	dimStyle = lipgloss.NewStyle().
 			Foreground(Dimmed)
 
-	highlightStyle = lipgloss.NewStyle().
-			Foreground(Highlight)
-
 	keyStyle = lipgloss.NewStyle().
 			Foreground(Highlight).
 			Bold(true)

@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
@@ -35,6 +33,9 @@ func validateToolFlag(tool string) error {
 // It also auto-imports from .ai-setup.json if the DB doesn't exist yet.
 func openStore(targetDir string) (*db.DB, error) {
 	dbPath := filepath.Join(targetDir, ".ai-setup.db")
+	// Capture DB existence BEFORE opening: db.Open creates the file, so the
+	// legacy-JSON import decision must be made against the pre-open state.
+	dbPreexisted := db.HasExistingDB(targetDir)
 	database, err := db.Open(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
@@ -47,9 +48,10 @@ func openStore(targetDir string) (*db.DB, error) {
 	}
 
 	// Auto-import from JSON if DB is new.
-	imported, err := db.AutoImportJSON(targetDir, database)
+	imported, err := db.AutoImportJSON(targetDir, database, dbPreexisted)
 	if err != nil {
-		cmdLog.Warn("JSON import failed", "error", err)
+		database.Close()
+		return nil, fmt.Errorf("import legacy .ai-setup.json: %w", err)
 	}
 	if imported {
 		fmt.Println("  Imported existing .ai-setup.json → SQLite")
@@ -414,15 +416,6 @@ func housekeepingFromResult(result *wizard.WizardResult) *types.HousekeepingConf
 	}
 }
 
-// projectNameFromDir returns the directory name as a project name fallback.
-func projectNameFromDir(dir string) string {
-	base := filepath.Base(dir)
-	if base == "" || base == "." || base == "/" {
-		return "my-project"
-	}
-	return strings.ReplaceAll(strings.ReplaceAll(base, " ", "-"), "_", "-")
-}
-
 // firstNonEmpty returns the first non-empty string from values.
 func firstNonEmpty(values ...string) string {
 	for _, v := range values {
@@ -438,96 +431,4 @@ func normalizeCoverageThreshold(value int) int {
 		return value
 	}
 	return 80
-}
-
-// buildPopulatePrompt constructs the headless populate prompt from the scaffold context.
-// Scout-detected values are injected so the AI knows what's already filled (Pass 1).
-func buildPopulatePrompt(ctx *scaffold.ScaffoldContext, projectName string) string {
-	return fmt.Sprintf(`You are the Populate agent. Fill EVERY <!-- fill-in: hint --> marker
-in AGENTS.md at the project root with the best concrete value you detect
-from the codebase.
-
-Project: %s
-
-RULES:
-1. For each placeholder, fill with a concrete value — not a question, not
-   "add your X here".
-2. Tag your confidence: 🟢 (config file or README confirms it), 🟡
-   (observed pattern, no config evidence), 🔴 (can't determine —
-   leave the marker as-is).
-3. Do NOT modify any other content in AGENTS.md — only replace
-   <!-- fill-in: hint --> markers with filled values.
-4. Do NOT ask for confirmation. Just fill and report results:
-   how many filled, how many left as-is, and what you're most
-   uncertain about.
-5. When in doubt, leave the marker ALONE rather than guessing.
-6. Do NOT use bullet points or markdown formatting in filled values
-   — just plain text values.
-
-Already detected by build tools (these markers should already be filled;
-focus on the remaining markers about conventions, patterns, and workflow):
-  Language: %s
-  Framework: %s
-  Package manager: %s
-  Database: %s
-  ORM: %s
-  Test framework: %s
-  Install command: %s
-  Test command: %s
-  Lint command: %s
-  Build command: %s`,
-		projectName,
-		ctx.PrimaryLanguage, ctx.Framework, ctx.PackageManager,
-		ctx.Database, ctx.ORM, ctx.TestFramework,
-		ctx.InstallCommand, ctx.TestCommand, ctx.LintCommand, ctx.BuildCommand)
-}
-
-// mechanicalFill replaces Scout-detected placeholders in AGENTS.md.
-// Reads the file, replaces matching <!-- fill-in: hint --> markers with
-// Scout-detected values tagged 🟢, and writes back. Skipped markers are
-// left for the AI headless pass or manual /populate.
-func mechanicalFill(ctx *scaffold.ScaffoldContext) {
-	agentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
-	data, err := os.ReadFile(agentsPath)
-	if err != nil {
-		return
-	}
-	content := string(data)
-
-	type replacement struct {
-		hint  string
-		value string
-	}
-	replacements := []replacement{
-		{"language", ctx.PrimaryLanguage},
-		{"framework", ctx.Framework},
-		{"package_manager", ctx.PackageManager},
-		{"database", ctx.Database},
-		{"orm", ctx.ORM},
-		{"test_framework", ctx.TestFramework},
-		{"install_command", ctx.InstallCommand},
-		{"test_command", ctx.TestCommand},
-		{"lint_command", ctx.LintCommand},
-		{"build_command", ctx.BuildCommand},
-	}
-
-	filled := 0
-	for _, r := range replacements {
-		if r.value == "" {
-			continue
-		}
-		marker := fmt.Sprintf("<!-- fill-in: %s -->", r.hint)
-		if !strings.Contains(content, marker) {
-			continue
-		}
-		filledText := r.value + " 🟢"
-		content = strings.Replace(content, marker, filledText, 1)
-		filled++
-	}
-
-	if filled > 0 {
-		if err := os.WriteFile(agentsPath, []byte(content), 0644); err == nil {
-			cmdLog.Info("mechanical fill completed", "filled", filled)
-		}
-	}
 }

@@ -80,28 +80,12 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Open the store database (similar to helpers.go openStore)
-	dbPath := filepath.Join(dir, ".ai-setup.db")
-	database, err := db.Open(dbPath)
+	// Open store database via shared logic.
+	database, err := openStore(dir)
 	if err != nil {
-		return fmt.Errorf("opening database: %w", err)
+		return fmt.Errorf("opening store: %w", err)
 	}
 	defer database.Close()
-
-	// Run migrations.
-	if err := db.RunMigrations(database); err != nil {
-		database.Close()
-		return fmt.Errorf("running migrations: %w", err)
-	}
-
-	// Auto-import from JSON if DB is new.
-	imported, err := db.AutoImportJSON(dir, database)
-	if err != nil {
-		cmdLog.Warn("JSON import failed", "error", err)
-	}
-	if imported {
-		fmt.Println("  Imported existing .ai-setup.json → SQLite")
-	}
 
 	store := db.NewStore(database)
 	storeData, err := store.ReadStoreData()

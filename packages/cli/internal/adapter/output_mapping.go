@@ -282,8 +282,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindCommands: {
 				Tool: types.ToolIdOmp, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-				Notes: "OMP has no slash command surface",
+				SourceSubdir: "canonical/commands", DestSubdir: "commands",
+				Shape: ShapeFlat,
+				Notes: "OMP reads slash commands from .omp/commands/<name>.md",
 			},
 			AssetKindChatModes: {
 				Tool: types.ToolIdOmp, Kind: AssetKindChatModes,
@@ -296,8 +297,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdOmp, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "OMP has no prompt surface",
+				SourceSubdir: "prompts", DestSubdir: "prompts",
+				Shape: ShapeFlat,
+				Notes: "OMP loads prompt templates from .omp/prompts/<name>.md",
 			},
 		},
 		types.ToolIdKiro: {

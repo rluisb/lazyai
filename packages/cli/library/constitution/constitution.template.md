@@ -1,4 +1,4 @@
-# [YOUR_PROJECT_NAME] Constitution
+# LazyAI Constitution
 
 > **Purpose.** This document is the governing contract for every workflow, agent, and skill in this project. AI agents MUST read this file before specifying, planning, implementing, or reviewing any change. Violations are blocking findings, not suggestions.
 
@@ -97,10 +97,10 @@ This article is **non-negotiable**.
 The technology constraints define the boundary fence for the project. Anything outside is forbidden without an ADR.
 
 ### Approved
-- **Languages:** [YOUR_APPROVED_LANGUAGES]
-- **Frameworks:** [YOUR_APPROVED_FRAMEWORKS]
-- **Runtimes:** [YOUR_APPROVED_RUNTIMES]
-- **Test stacks:** [YOUR_APPROVED_TEST_STACKS]
+- **Languages:** Go, Bash
+- **Frameworks:** Cobra, Charm/BubbleTea, Charm/Huh
+- **Runtimes:** Go CLI runtime; POSIX-like shells for helper scripts
+- **Test stacks:** `go test` (unit + package integration), `tests/integration/*.sh`
 
 ### Forbidden
 - No secrets committed to source control. Ever.
@@ -121,7 +121,6 @@ Low-confidence items MUST be resolved (upgraded or abandoned) before merging to 
 ---
 
 ## Quality Gates — The 5-Gate Ladder
-
 Every change passes through five gates, in order. A failure at any gate blocks promotion to the next.
 
 ### Gate 1 — Static Integrity
@@ -160,11 +159,9 @@ Every change passes through five gates, in order. A failure at any gate blocks p
 ### Coverage Thresholds
 | Metric | Target | Minimum |
 |--------|--------|---------|
-| Line coverage | [YOUR_LINE_COVERAGE_TARGET] | [YOUR_LINE_COVERAGE_MINIMUM] |
-| Branch coverage | [YOUR_BRANCH_COVERAGE_TARGET] | [YOUR_BRANCH_COVERAGE_MINIMUM] |
-| Build time | [YOUR_BUILD_TIME_TARGET] | [YOUR_BUILD_TIME_MAXIMUM] |
-
----
+| Line coverage | 90% | 80% |
+| Branch coverage | 85% | 75% |
+| Build time | 2s | 5s |
 
 ## Governance
 
@@ -174,4 +171,4 @@ Every change passes through five gates, in order. A failure at any gate blocks p
 - **Living document.** The constitution evolves with the project. Stale articles are a defect — flag them for amendment.
 
 **Version:** 1.0.0
-**Ratified:** [DATE]
+**Ratified:** 2026-06-21

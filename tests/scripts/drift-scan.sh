@@ -41,6 +41,19 @@ BANNED_TOKENS=(
   'vibe-lab generated'
 )
 
+PLACEHOLDER_TOKENS=(
+  '\[YOUR_APPROVED_LANGUAGES\]'
+  '\[YOUR_APPROVED_FRAMEWORKS\]'
+  '\[YOUR_APPROVED_RUNTIMES\]'
+  '\[YOUR_APPROVED_TEST_STACKS\]'
+  '\[YOUR_LINE_COVERAGE_TARGET\]'
+  '\[YOUR_LINE_COVERAGE_MINIMUM\]'
+  '\[YOUR_BRANCH_COVERAGE_TARGET\]'
+  '\[YOUR_BRANCH_COVERAGE_MINIMUM\]'
+  '\[YOUR_BUILD_TIME_TARGET\]'
+  '\[YOUR_BUILD_TIME_MAXIMUM\]'
+)
+
 EXCLUDE_DIRS=(
   --exclude-dir=.git
   --exclude-dir=node_modules
@@ -90,6 +103,20 @@ for token in "${BANNED_TOKENS[@]}"; do
         "${EXCLUDE_FILES[@]}" \
         -- "$token" "$scope" 2>/dev/null; then
       echo "drift-scan: banned token '${token}' found in scope '$scope'" >&2
+      FAIL=1
+    fi
+  done
+done
+
+for token in "${PLACEHOLDER_TOKENS[@]}"; do
+  for scope in "${SCOPES[@]}"; do
+    [ -e "$scope" ] || continue
+    if grep -rEn \
+        "${INCLUDES[@]}" \
+        "${EXCLUDE_DIRS[@]}" \
+        "${EXCLUDE_FILES[@]}" \
+        -- "$token" "$scope" 2>/dev/null; then
+      echo "drift-scan: unresolved template placeholder '${token}' found in scope '$scope'" >&2
       FAIL=1
     fi
   done

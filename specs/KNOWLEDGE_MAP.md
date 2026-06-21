@@ -46,7 +46,7 @@
 | Scope resolver as single source of truth for tool paths | — | Eliminates per-adapter `isGlobal` branching; easy to extend for new tools |
 | Deep-merge with backup-on-first-touch for config files | — | Preserves user-authored keys across re-runs; one `.bak` sidecar only |
 | Copilot global scope is probe-gated, not forbidden | — | `copilot` CLI or `~/.copilot/` must exist before user-scope files are emitted |
-| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts such as Copilot `.agent.yaml` and exact OpenCode baseline surface shape (`opencode.json`, with LazyAI-only MCP extras isolated in `.opencode/lazyai.mcp.jsonc`). |
+| Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts; Copilot selected skills now use Agent Skills directories instead of legacy `.agent.yaml` skill output, and OpenCode MCP placement remains under active review. |
 | Pi is skills-only; Antigravity is minimal `.gemini` settings + hooks | `specs/adrs/004-vibe-lab-alignment-contract.md` | Matches verified baseline breadth without reviving unsupported agents or workflow runtime behavior |
 | LazyAI defaults to setup-core; runtime-adjacent commands are optional modules | `specs/adrs/005-core-vs-optional-modules.md` | Maximizes vibe-lab philosophy alignment while preserving retained runtime-adjacent capabilities behind a documented future opt-in boundary |
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |

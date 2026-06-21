@@ -5,11 +5,6 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
-	"github.com/rluisb/lazyai/packages/cli/internal/files"
-	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
-	"github.com/rluisb/lazyai/packages/cli/internal/models"
-	"github.com/rluisb/lazyai/packages/cli/internal/types"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -17,6 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
+	"github.com/rluisb/lazyai/packages/cli/internal/models"
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
 // CopilotAdapter implements ToolAdapter for GitHub Copilot.
@@ -402,10 +403,10 @@ func (a *CopilotAdapter) isLikelyLegacySkillAgentFile(content string, skillID st
 		if !ok {
 			return true
 		}
-		// Best-effort check: when skill body is embedded as prompt YAML, we keep
-		// it only if the converted output still contains the skill's source heading.
-		_, sourceBody := frontmatter.ExtractFrontmatter(string(sourceContent))
-		return strings.Contains(content, strings.TrimSpace(strings.TrimPrefix(string(sourceBody), "\n")))
+		// Best-effort check: legacy YAML embeds the skill body as an indented prompt.
+		_, sourceBody, err := frontmatter.ExtractFrontmatter(sourceContent)
+		heading := "# " + skillID
+		return err == nil && strings.Contains(string(sourceBody), heading) && strings.Contains(content, heading)
 	default:
 		return false
 	}
@@ -429,7 +430,6 @@ func (a *CopilotAdapter) readLibrarySkillSource(ctx *AdapterContext, skillID str
 	}
 	return data, true
 }
-
 
 // skillToCopilotAgentMarkdown transforms a skill markdown file into Copilot
 // custom-agent Markdown format. The model field is resolved against

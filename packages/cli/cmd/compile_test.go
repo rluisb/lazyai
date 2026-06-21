@@ -36,6 +36,7 @@ func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 		t.Fatal("expected .mcp.json to be tracked")
 	}
 }
+
 func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *testing.T) {
 	workspaceRoot := t.TempDir()
 	planningRepo := t.TempDir()
@@ -58,7 +59,7 @@ func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *
 	}
 
 	for _, path := range []string{
-		filepath.Join(workspaceRoot, ".opencode", "opencode.json"),
+		filepath.Join(workspaceRoot, "opencode.json"),
 		filepath.Join(workspaceRoot, ".mcp.json"),
 		filepath.Join(workspaceRoot, ".vscode", "mcp.json"),
 	} {
@@ -67,7 +68,7 @@ func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *
 		}
 	}
 	for _, path := range []string{
-		filepath.Join(planningRepo, ".opencode", "opencode.json"),
+		filepath.Join(planningRepo, "opencode.json"),
 		filepath.Join(planningRepo, ".mcp.json"),
 		filepath.Join(planningRepo, ".vscode", "mcp.json"),
 	} {

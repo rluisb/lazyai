@@ -144,6 +144,7 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}
 	// OpenCode MCP merges into the actual config file at opencode.json.
 	configPath := filepath.Join(configRoot, OpenCodeConfigFilename)
+	root := mcpWorkspaceRoot(ctx)
 	ocMcp := toOpenCodeMcp(catalog.Servers)
 
 	// Read existing config and merge managed MCP entries with preserved user keys.
@@ -178,7 +179,7 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 }
 
 func readLegacyOpenCodeMcpEntries(root string) map[string]any {
-	legacyPath := filepath.Join(root, OpenCodeLegacyMCPFilename)
+	legacyPath := filepath.Join(root, ".opencode", OpenCodeLegacyMCPFilename)
 	if !files.FileExists(legacyPath) {
 		return nil
 	}
@@ -198,6 +199,7 @@ func readLegacyOpenCodeMcpEntries(root string) map[string]any {
 
 	return legacyMcp
 }
+
 // mergeOpenCodeMcpServers merges managed MCP servers into the existing MCP map
 // while preserving all non-managed entries. Existing entries win over legacy
 // entries, and managed entries always win over existing configuration.

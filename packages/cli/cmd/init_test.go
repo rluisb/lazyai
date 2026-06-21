@@ -61,8 +61,8 @@ func TestInitNonInteractiveHappyPath(t *testing.T) {
 	if _, ok := parsed["default_agent"]; ok {
 		t.Fatalf("did not expect default_agent in baseline OpenCode config")
 	}
-	if _, ok := parsed["mcp"].(map[string]any); ok {
-		t.Fatalf("expected init to avoid baseline MCP in %s; got %s", opencodeConfigPath, string(opencodeConfig))
+	if _, ok := parsed["mcp"].(map[string]any); !ok {
+		t.Fatalf("expected init to compile MCP into %s; got %s", opencodeConfigPath, string(opencodeConfig))
 	}
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist")
@@ -157,7 +157,6 @@ func TestInitRemovedFlagsNotRegistered(t *testing.T) {
 		}
 	}
 }
-
 
 func TestRunInitExpressCustomMutuallyExclusive(t *testing.T) {
 	cmd := initCmd

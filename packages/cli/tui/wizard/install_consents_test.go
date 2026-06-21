@@ -7,7 +7,6 @@ import (
 )
 
 func TestMissingInstallConsentsUsesCatalogInstallHints(t *testing.T) {
-
 	originalLookPath := cliToolLookPath
 	defer func() { cliToolLookPath = originalLookPath }()
 
@@ -21,7 +20,8 @@ func TestMissingInstallConsentsUsesCatalogInstallHints(t *testing.T) {
 	}
 
 	consents := missingInstallConsents([]string{"filesystem", "ai-memory", "codegraph", "unknown"})
-	if want := []string{"ai-memory", "codegraph"}; len(consents) != len(want) {
+	want := []string{"ai-memory", "codegraph"}
+	if len(consents) != len(want) {
 		t.Fatalf("missingInstallConsents() = %d items, want %d", len(consents), len(want))
 	}
 	if got := []string{consents[0].Server, consents[1].Server}; !reflect.DeepEqual(got, want) {
@@ -33,7 +33,6 @@ func TestMissingInstallConsentsUsesCatalogInstallHints(t *testing.T) {
 }
 
 func TestMissingInstallConsentsSkipsInstalledTools(t *testing.T) {
-
 	originalLookPath := cliToolLookPath
 	defer func() { cliToolLookPath = originalLookPath }()
 
@@ -48,7 +47,6 @@ func TestMissingInstallConsentsSkipsInstalledTools(t *testing.T) {
 }
 
 func TestFormatInstallConsentsDeterministic(t *testing.T) {
-
 	got := formatInstallConsents([]installConsentHint{{
 		Server: "ai-memory",
 		Hint:   "curl install",
@@ -64,8 +62,7 @@ func TestFormatInstallConsentsDeterministic(t *testing.T) {
 }
 
 func TestRunPhase4NonInteractiveAllowsDefaults(t *testing.T) {
-
-	plan := &InstallPlan{FilesToInstall: []InstallFile{}}
+	plan := &InstallPlan{FilesToInstall: []PlannedFile{}}
 	result, action, err := RunPhase4(plan, true, []string{"ai-memory: curl install"})
 	if err != nil {
 		t.Fatalf("RunPhase4() returned error: %v", err)

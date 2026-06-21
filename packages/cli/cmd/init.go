@@ -95,7 +95,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if expressMode && customMode {
-		return nil, fmt.Errorf("--express and --custom cannot be used together")
+		return fmt.Errorf("--express and --custom cannot be used together")
 	}
 
 	var wizardMode wizard.WizardMode

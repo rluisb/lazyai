@@ -340,10 +340,10 @@ ALTER TABLE selections DROP COLUMN opencode_providers;
 
 const migrationUp009 = `
 -- Migration 009 carries compatibility tables for historical runtime migration/restore paths.
--- Active CLI runtime now persists core session telemetry in runtime/schema.go; this
--- block is retained to support older runtime DB states when upgrading.
+-- Active CLI runtime now persists core session telemetry in runtime/schema.go.
+-- This block is retained to support older runtime DB states when upgrading.
 
--- Session tracking tables (compatibility-only; legacy runtime residue)
+-- Session tracking tables (compatibility-only legacy runtime residue)
 
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
@@ -396,7 +396,7 @@ DROP TABLE IF EXISTS sessions;
 
 const migrationUp010 = `
 -- Migration 010 carries compatibility-only workflow/task queue artifacts from removed runtime surfaces.
--- Kept to migrate and restore legacy runtime data; not part of active LazyAI command surfaces.
+-- Kept to migrate and restore legacy runtime data, not part of active LazyAI command surfaces.
 
 -- Task queue tables (legacy runtime residue)
 
@@ -450,7 +450,7 @@ DROP TABLE IF EXISTS tasks;
 
 const migrationUp011 = `
 -- Migration 011 remains for optional-module internals (agent message bus).
--- The `message` command depends on these tables as an explicitly optional runtime module.
+-- The message command depends on these tables as an explicitly optional runtime module.
 
 -- Agent message bus tables
 

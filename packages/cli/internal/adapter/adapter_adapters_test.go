@@ -11,6 +11,7 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
 func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
@@ -31,7 +32,10 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("construct legacy copilot skill content failed: %v", err)
 	}
-	_, legacyBody := frontmatter.ExtractFrontmatter(string(legacySkillSource))
+	_, legacyBody, err := frontmatter.ExtractFrontmatter(legacySkillSource)
+	if err != nil {
+		t.Fatalf("extracting legacy skill frontmatter failed: %v", err)
+	}
 	legacyYaml := "name: diagnose\nmodel: claude-sonnet-4.6\nprompt: |\n" + indentLines(string(legacyBody), "  ")
 	if err := files.EnsureDir(agentsDir); err != nil {
 		t.Fatalf("creating agent output dir for legacy cleanup fixture failed: %v", err)

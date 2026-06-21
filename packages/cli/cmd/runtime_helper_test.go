@@ -162,8 +162,8 @@ func TestOpenRuntimeDBMigrationFailureKeepsBackupAndLegacyDB(t *testing.T) {
 	}
 	defer legacyDB.Close()
 
-+	// On migration failure, compatibility-restore path intentionally preserves legacy tables to avoid data loss.
-+	// (legacy runtime residue is kept as rollback-compatible state; migration to V2 did not commit.)
+	// On migration failure, compatibility-restore path intentionally preserves legacy tables to avoid data loss.
+	// (legacy runtime residue is kept as rollback-compatible state; migration to V2 did not commit.)
 	assertRuntimeTableExists(t, legacyDB, "task_queue")
 	assertRuntimeTableMissing(t, legacyDB, "handoff")
 
@@ -208,7 +208,7 @@ func TestRuntimeDBRestoreRoundTripFromBackup(t *testing.T) {
 		t.Fatalf("open restored database: %v", err)
 	}
 	defer restoredDB.Close()
-+	// Restore round-trip preserves compatibility backup artifacts before migration is re-applied.
+	// Restore round-trip preserves compatibility backup artifacts before migration is re-applied.
 	assertRuntimeTableExists(t, restoredDB, "task_queue")
 	assertRuntimeTableMissing(t, restoredDB, "handoff")
 
@@ -226,7 +226,7 @@ func TestRuntimeDBRestoreRoundTripFromBackup(t *testing.T) {
 	}
 	defer preRestoreDB.Close()
 	assertRuntimeTableExists(t, preRestoreDB, "handoff")
-+	// Post-restore `.pre-restore` DB should contain migrated core runtime schema, not legacy queue/message tables.
+	// Post-restore `.pre-restore` DB should contain migrated core runtime schema, not legacy queue/message tables.
 	assertRuntimeTableMissing(t, preRestoreDB, "task_queue")
 }
 

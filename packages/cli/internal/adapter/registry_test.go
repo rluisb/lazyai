@@ -21,8 +21,8 @@ func TestRegistryGet_UnsupportedToolListsRegisteredToolsDeterministically(t *tes
 		types.ToolIdClaudeCode,
 		types.ToolIdCopilot,
 		types.ToolIdKiro,
-		types.ToolIdOpenCode,
 		types.ToolIdOmp,
+		types.ToolIdOpenCode,
 		types.ToolIdPi,
 	}
 

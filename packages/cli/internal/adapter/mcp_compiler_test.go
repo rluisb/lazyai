@@ -255,7 +255,7 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 		"opencode": toOpenCodeMcp(servers),
 		"claude":   toClaudeCodeMcpInner(servers),
 		"copilot": func() any {
-			entries, _ := toCopilotServerEntries(servers)
+			entries, _ := toCopilotServerEntries(servers, "sse")
 			return entries
 		}(),
 	} {

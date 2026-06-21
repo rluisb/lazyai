@@ -598,14 +598,19 @@ func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]t
 // per-server shape shared by both the VS Code extension and the standalone
 // Copilot CLI. It also returns the set of ${VAR} placeholder IDs discovered
 // in env values (used by VS Code for its "inputs" prompt UI).
-func toCopilotServerEntries(servers map[string]McpServer) (entries map[string]any, placeholderIDs map[string]bool) {
+// remoteType selects the transport type for URL-backed servers ("sse" for CLI,
+// "http" for VS Code workspace generation).
+func toCopilotServerEntries(servers map[string]McpServer, remoteType string) (entries map[string]any, placeholderIDs map[string]bool) {
 	entries = make(map[string]any)
 	placeholderIDs = make(map[string]bool)
+	if remoteType == "" {
+		remoteType = "sse"
+	}
 
 	for name, server := range servers {
 		if server.URL != "" {
 			entry := map[string]any{
-				"type": "sse",
+				"type": remoteType,
 				"url":  server.URL,
 			}
 			if server.Headers != nil {
@@ -638,7 +643,7 @@ func toCopilotServerEntries(servers map[string]McpServer) (entries map[string]an
 // toCopilotVSCodeMcp builds the .vscode/mcp.json payload: uses the "servers"
 // top-level key and adds an "inputs" prompt array for each placeholder.
 func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
-	entries, placeholderIDs := toCopilotServerEntries(servers)
+	entries, placeholderIDs := toCopilotServerEntries(servers, "http")
 	output := map[string]any{"servers": entries}
 
 	if len(placeholderIDs) > 0 {
@@ -666,7 +671,7 @@ func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
 // "mcpServers" top-level key. Unlike VS Code, the standalone CLI reads
 // env variables from the process environment directly — no "inputs" prompts.
 func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
-	entries, _ := toCopilotServerEntries(servers)
+	entries, _ := toCopilotServerEntries(servers, "sse")
 	return map[string]any{"mcpServers": entries}
 }
 

@@ -86,11 +86,11 @@ Before starting work, identify the task type and follow the appropriate guide:
 | Bugfix | [specs/bugfixes/AGENTS.md](specs/bugfixes/AGENTS.md) | Reproduce → Root-cause → Fix → Regression test |
 | Refactor | [specs/refactors/AGENTS.md](specs/refactors/AGENTS.md) | ADR → Plan → Phased implementation |
 | Tech Debt | [specs/tech-debt/AGENTS.md](specs/tech-debt/AGENTS.md) | Risk assessment → Prioritize → Incremental fix |
-| Architecture Decision | [specs/adrs/AGENTS.md](specs/adrs/AGENTS.md) | Context → Options → Decision → Record |
+| Architecture Decision | [specs/adrs/](specs/adrs/) | Context → Options → Decision → Record |
 | Standards/Rules | [specs/standards/AGENTS.md](specs/standards/AGENTS.md) | Review existing → Propose → Document |
-| Documentation | [specs/AGENTS.md](specs/AGENTS.md) | Structure → Write → Cross-reference |
+| Documentation | [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) | Structure → Write → Cross-reference |
 
-> **Don't know where to start?** Read [specs/AGENTS.md](specs/AGENTS.md) first for the full documentation map.
+> **Don't know where to start?** Read [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) first for the full documentation map.
 
 ## Rules
 
@@ -279,7 +279,7 @@ Prevent context bloat and preserve high-signal working memory:
 ## Documentation References
 
 Key guides for task execution:
-- `specs/AGENTS.md` — Documentation structure and navigation
+- [specs/KNOWLEDGE_MAP.md](specs/KNOWLEDGE_MAP.md) — Documentation structure and navigation
 - `specs/features/AGENTS.md` — Feature development workflow
 - `specs/bugfixes/AGENTS.md` — Bug fix workflow
 - `specs/standards/AGENTS.md` — Coding standards reference

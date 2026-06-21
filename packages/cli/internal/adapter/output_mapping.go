@@ -342,8 +342,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdAntigravity, Kind: AssetKindSkills,
-				Shape: ShapeNone,
-				Notes: "Antigravity uses root context plus settings/hooks, not skills directories",
+				SourceSubdir: "skills", DestSubdir: "../.agents/skills",
+				Shape: ShapeDirPerItem,
+				Notes: "Antigravity CLI discovers local Agent Skills at .agents/skills/<name>/SKILL.md while LazyAI keeps settings/hooks under .gemini.",
 			},
 			AssetKindTemplates: {
 				Tool: types.ToolIdAntigravity, Kind: AssetKindTemplates,

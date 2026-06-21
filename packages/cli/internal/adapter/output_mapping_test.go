@@ -146,13 +146,19 @@ func TestOutputMappingKiroSkillsDirPerItem(t *testing.T) {
 	}
 }
 
-func TestOutputMappingAntigravitySkillsNone(t *testing.T) {
+func TestOutputMappingAntigravitySkillsDirPerItem(t *testing.T) {
 	target, ok := LookupOutputTarget(types.ToolIdAntigravity, AssetKindSkills)
 	if !ok {
 		t.Fatal("antigravity has no skills target")
 	}
-	if target.Shape != ShapeNone {
-		t.Errorf("antigravity skills Shape=%q, want %q", target.Shape, ShapeNone)
+	if target.Shape != ShapeDirPerItem {
+		t.Errorf("antigravity skills Shape=%q, want %q", target.Shape, ShapeDirPerItem)
+	}
+	if target.SourceSubdir != "skills" {
+		t.Errorf("antigravity skills SourceSubdir=%q, want skills", target.SourceSubdir)
+	}
+	if target.DestSubdir != "../.agents/skills" {
+		t.Errorf("antigravity skills DestSubdir=%q, want ../.agents/skills", target.DestSubdir)
 	}
 }
 

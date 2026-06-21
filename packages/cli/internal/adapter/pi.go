@@ -7,7 +7,8 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// PiAdapter installs the verified OMP/Pi skills-only surface.
+// PiAdapter installs only OMP/Pi skill surfaces under .pi/skills/<name>/SKILL.md.
+// Pi intentionally has no agent surface, so we never emit ".pi/agents".
 type PiAdapter struct{}
 
 func (a *PiAdapter) ID() types.ToolId  { return types.ToolIdPi }
@@ -24,6 +25,7 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	}
 
 	_ = files.EnsureDir(piDir)
+	// Pi/O.M.P. exposes only the skills surface today; do not create ".pi/agents".
 	_ = files.EnsureDir(filepath.Join(piDir, "skills"))
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{

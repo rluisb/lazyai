@@ -582,9 +582,10 @@ func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
 	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
 }
 
-func TestKiroAdapter_Install_SkillsOnly(t *testing.T) {
+func TestKiroAdapter_Install_AgentsAndSkills(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{types.AgentIdReviewer},
 		Skills: []types.SkillId{types.SkillIdDiagnose, types.SkillIdIssueTriage},
 	}
 
@@ -594,6 +595,8 @@ func TestKiroAdapter_Install_SkillsOnly(t *testing.T) {
 	}
 
 	for _, rel := range []string{
+		".kiro/agents/guide.md",
+		".kiro/agents/reviewer.md",
 		".kiro/skills/diagnose/SKILL.md",
 		".kiro/skills/issue-triage/SKILL.md",
 	} {
@@ -601,7 +604,6 @@ func TestKiroAdapter_Install_SkillsOnly(t *testing.T) {
 			t.Fatalf("expected %s: %v", rel, err)
 		}
 	}
-	assertMissing(t, filepath.Join(targetDir, ".kiro", "agents"))
 	assertMissing(t, filepath.Join(targetDir, ".kiro", "hooks"))
 }
 

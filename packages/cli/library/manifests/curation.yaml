@@ -986,6 +986,14 @@ entries:
     reason_kept: Antigravity settings surface retained for minimal .gemini hook wiring.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks.json
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity hook registration manifest emitted to
+      .agents/hooks.json so hook scripts are discoverable.
+    reason_compressed_or_changed: Derived from confirmed Antigravity hooks.json registration format.
+    token_rent_relevant: false
   - path: packages/cli/library/antigravity/hooks/lazyai/block-destructive-shell.sh
     kind: hook
     category: adapter-support

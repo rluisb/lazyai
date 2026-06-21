@@ -94,8 +94,10 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileCopilotMCP(ctx, enabledServers)
 	case types.ToolIdKiro:
 		return compileKiroMCP(ctx, enabledServers)
-	case types.ToolIdPi, types.ToolIdOmp:
+	case types.ToolIdPi:
 		return ctx.FileRecords, nil
+	case types.ToolIdOmp:
+		return compileOmpMCP(ctx, enabledServers)
 	case types.ToolIdAntigravity:
 		return compileAntigravityMCP(ctx, enabledServers)
 	default:
@@ -414,6 +416,30 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 }
 
 // ---------------------------------------------------------------------------
+// OMP MCP compilation
+// ---------------------------------------------------------------------------
+func compileOmpMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	ompRoot, err := ResolveToolRoot(types.ToolIdOmp, ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return nil, err
+	}
+
+	mcpPath := filepath.Join(ompRoot, "mcp.json")
+	_ = files.EnsureDir(ompRoot)
+	content := toClaudeCodeMcp(servers) // reuse identical format
+	if err := WriteJSONFile(mcpPath, content); err != nil {
+		return ctx.FileRecords, err
+	}
+	hash, _ := files.FileHash(mcpPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path:   mcpPath,
+		Hash:   hash,
+		Source: "compiled:mcp:omp",
+		Owner:  types.FileOwnerUser,
+	}), nil
+}
+
+// ---------------------------------------------------------------------------
 // Antigravity MCP compilation
 // ---------------------------------------------------------------------------
 
@@ -446,7 +472,7 @@ func compileAntigravityMCP(ctx CompileContext, servers map[string]McpServer) ([]
 		Path:   recordPath,
 		Hash:   hash,
 		Source: "compiled:mcp:antigravity",
-		Owner:  types.FileOwnerLibrary,
+		Owner:  types.FileOwnerUser,
 	}), nil
 }
 

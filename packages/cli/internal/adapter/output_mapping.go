@@ -257,8 +257,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdPi, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Pi has no prompt surface",
+				SourceSubdir: "prompts", DestSubdir: "prompts",
+				Shape: ShapeFlat,
+				Notes: "Pi loads prompt templates from .pi/prompts/<name>.md",
 			},
 		},
 		types.ToolIdOmp: {
@@ -281,8 +282,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindCommands: {
 				Tool: types.ToolIdOmp, Kind: AssetKindCommands,
-				Shape: ShapeNone,
-				Notes: "OMP has no slash command surface",
+				SourceSubdir: "canonical/commands", DestSubdir: "commands",
+				Shape: ShapeFlat,
+				Notes: "OMP reads slash commands from .omp/commands/<name>.md",
 			},
 			AssetKindChatModes: {
 				Tool: types.ToolIdOmp, Kind: AssetKindChatModes,
@@ -295,8 +297,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdOmp, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "OMP has no prompt surface",
+				SourceSubdir: "prompts", DestSubdir: "prompts",
+				Shape: ShapeFlat,
+				Notes: "OMP loads prompt templates from .omp/prompts/<name>.md",
 			},
 		},
 		types.ToolIdKiro: {
@@ -333,8 +336,10 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdKiro, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Kiro has no prompt surface",
+				SourceSubdir: "prompts",
+				DestSubdir:   "prompts",
+				Shape:        ShapeFlat,
+				Notes:        "Kiro CLI reads prompts from .kiro/prompts/<name>.md",
 			},
 		},
 		types.ToolIdAntigravity: {

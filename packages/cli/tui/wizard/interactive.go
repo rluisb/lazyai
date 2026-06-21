@@ -34,8 +34,10 @@ type WizardState struct {
 	OpenCodeModes       []string
 	AnalyzeExistingCode bool
 
-	// Phase 5
 	MemoryPath        string
+	EnableObsidian    bool
+	EnableCodegraph   bool
+	CodegraphDataPath string
 	OpenCodePlugins   []string
 	OpenCodeProviders []string
 }
@@ -127,10 +129,21 @@ func initWizardState(defaults *WizardResult) *WizardState {
 
 	// Set Phase 5 Defaults
 	s.MemoryPath = ".specify/memory"
-
+	s.EnableObsidian = true
+	s.EnableCodegraph = true
+	s.CodegraphDataPath = ".codegraph/"
 	if defaults != nil && defaults.Phase5 != nil {
 		if defaults.Phase5.MemoryPath != "" {
 			s.MemoryPath = defaults.Phase5.MemoryPath
+		}
+		if defaults.Phase5.EnableObsidian {
+			s.EnableObsidian = defaults.Phase5.EnableObsidian
+		}
+		if defaults.Phase5.EnableCodegraph {
+			s.EnableCodegraph = defaults.Phase5.EnableCodegraph
+		}
+		if defaults.Phase5.CodegraphDataPath != "" {
+			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
@@ -148,6 +161,9 @@ func initExpressWizardState(defaults *WizardResult) *WizardState {
 	state := initWizardState(defaults)
 	state.McpPreset = string(McpPresetRecommended)
 	state.McpServers = []string{"filesystem", "ripgrep", "ai-memory", "codegraph"}
+	state.EnableObsidian = false
+	state.EnableCodegraph = true
+	state.CodegraphDataPath = ".codegraph/"
 	return state
 }
 
@@ -426,10 +442,10 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	// Phase 5
 	p5 := buildPhase5Result(
 		state.MemoryPath,
-		true,
+		state.EnableObsidian,
 		"",
-		true,
-		".codegraph/",
+		state.EnableCodegraph,
+		state.CodegraphDataPath,
 		state.OpenCodePlugins,
 	)
 	p5.OpenCodeProviders = state.OpenCodeProviders

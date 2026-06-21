@@ -1,8 +1,8 @@
 # ADR-003: LazyAI Owns Runtime, Vibe-Lab Supplies Principles
 
 **Date:** 2026-06-13  
-**Status:** Accepted — maintainer approved 2026-06-21  
-**Deciders:** LazyAI maintainers  
+**Status:** Accepted — maintainer approved 2026-06-21
+**Deciders:** LazyAI maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 
 > **Purpose.** Capture the runtime-boundary decision required before the LazyAI runtime refactor can be planned or implemented.

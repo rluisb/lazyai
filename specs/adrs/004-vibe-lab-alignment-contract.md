@@ -1,8 +1,8 @@
 # ADR-004: Capability-First Vibe-Lab Alignment
 
 **Date:** 2026-06-15  
-**Status:** Accepted — maintainer approved 2026-06-21  
-**Deciders:** LazyAI maintainers  
+**Status:** Accepted — maintainer approved 2026-06-21
+**Deciders:** LazyAI maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 
 > **Purpose.** Record how LazyAI should close the remaining vibe-lab parity gaps without regressing verified tool-native contracts or reviving retired runtime surfaces.

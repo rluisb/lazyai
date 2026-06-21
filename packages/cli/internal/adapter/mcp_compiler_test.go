@@ -422,6 +422,63 @@ func TestCompileKiroMCP_GlobalScope(t *testing.T) {
 	}
 }
 
+func TestCompileAntigravityMCP_ProjectScopeWritesGlobalConfig(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{
+  "servers": {
+    "stdio-server": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    "http-server": {
+      "url": "https://example.com/mcp",
+      "headers": {"Authorization": "Bearer token"}
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("failed to write mcp.json: %v", err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdAntigravity, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool failed: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 tracked file record, got %d", len(records))
+	}
+
+	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("expected %s: %v", configPath, err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		t.Fatalf("unmarshal mcp_config.json: %v", err)
+	}
+
+	servers, ok := payload["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatalf("payload missing mcpServers map: %#v", payload["mcpServers"])
+	}
+	httpEntryRaw, ok := servers["http-server"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing http-server entry: %#v", servers)
+	}
+	if got, ok := httpEntryRaw["serverUrl"].(string); !ok || got != "https://example.com/mcp" {
+		t.Fatalf("http-server missing serverUrl; got=%v", httpEntryRaw["serverUrl"])
+	}
+}
+
 // TestAIMemoryCatalogEntryUsesRemoteURL verifies the retained ai-memory entry
 // stays URL-backed and compiles to the native remote MCP shape.
 func TestAIMemoryCatalogEntryUsesRemoteURL(t *testing.T) {

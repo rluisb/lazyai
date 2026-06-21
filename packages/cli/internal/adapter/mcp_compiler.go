@@ -94,8 +94,10 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileCopilotMCP(ctx, enabledServers)
 	case types.ToolIdKiro:
 		return compileKiroMCP(ctx, enabledServers)
-	case types.ToolIdPi, types.ToolIdOmp, types.ToolIdAntigravity:
+	case types.ToolIdPi, types.ToolIdOmp:
 		return ctx.FileRecords, nil
+	case types.ToolIdAntigravity:
+		return compileAntigravityMCP(ctx, enabledServers)
 	default:
 		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, kiro, antigravity)", toolId)
 	}
@@ -409,6 +411,71 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 		Source: "compiled:mcp",
 		Owner:  types.FileOwnerLibrary,
 	}), nil
+}
+
+// ---------------------------------------------------------------------------
+// Antigravity MCP compilation
+// ---------------------------------------------------------------------------
+
+func compileAntigravityMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	home := ctx.HomeDir
+	if home == "" {
+		var err error
+		home, err = os.UserHomeDir()
+		if err != nil {
+			return ctx.FileRecords, fmt.Errorf("resolve home dir: %w", err)
+		}
+	}
+
+	cfgDir := filepath.Join(home, ".gemini", "config")
+	_ = files.EnsureDir(cfgDir)
+	cfgPath := filepath.Join(cfgDir, "mcp_config.json")
+
+	patch := toAntigravityMcp(servers)
+	if _, err := configmerge.MergeJSONFile(cfgPath, patch); err != nil {
+		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
+	}
+
+	relPath, _ := filepath.Rel(mcpWorkspaceRoot(ctx), cfgPath)
+	recordPath := relPath
+	if recordPath == "" || recordPath == "." {
+		recordPath = cfgPath
+	}
+	hash, _ := files.FileHash(cfgPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path:   recordPath,
+		Hash:   hash,
+		Source: "compiled:mcp:antigravity",
+		Owner:  types.FileOwnerLibrary,
+	}), nil
+}
+
+func toAntigravityMcp(servers map[string]McpServer) map[string]any {
+	mcpServers := make(map[string]any)
+
+	for name, server := range servers {
+		if server.URL != "" {
+			entry := map[string]any{
+				"serverUrl": server.URL,
+			}
+			if server.Headers != nil {
+				entry["headers"] = server.Headers
+			}
+			mcpServers[name] = entry
+			continue
+		}
+
+		entry := map[string]any{
+			"command": server.Command,
+			"args":    server.Args,
+		}
+		if server.Env != nil {
+			entry["env"] = server.Env
+		}
+		mcpServers[name] = entry
+	}
+
+	return map[string]any{"mcpServers": mcpServers}
 }
 
 // ---------------------------------------------------------------------------

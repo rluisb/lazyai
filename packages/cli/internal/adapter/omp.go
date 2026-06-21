@@ -7,9 +7,9 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// OmpAdapter installs the verified OMP skills-only surface.
-// OMP official surface is: .omp/skills/<skill>/SKILL.md plus AGENTS/context docs;
-// no custom .omp/agents directory is emitted.
+// OmpAdapter installs OMP's native project/user surfaces.
+// OMP task agents are markdown definitions in .omp/agents/<name>.md; skills are
+// Agent Skills-compatible directories in .omp/skills/<skill>/SKILL.md.
 type OmpAdapter struct{}
 
 func (a *OmpAdapter) ID() types.ToolId  { return types.ToolIdOmp }
@@ -27,6 +27,19 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 
 	_ = files.EnsureDir(ompDir)
 	_ = files.EnsureDir(filepath.Join(ompDir, "skills"))
+	_ = files.EnsureDir(filepath.Join(ompDir, "agents"))
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/agents",
+		SelectionKey: "agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ompDir, "agents", filepath.Base(file))
+		},
+		IncludeFile: isCanonicalAgentFile,
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

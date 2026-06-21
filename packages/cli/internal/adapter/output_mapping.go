@@ -226,8 +226,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdPi: {
 			AssetKindAgents: {
 				Tool: types.ToolIdPi, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "Pi is skills-only; no agent surface is emitted",
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: canonicalAgents,
+				Notes: "Pi subagent extension reads markdown agent definitions from .pi/agents/<name>.md",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdPi, Kind: AssetKindSkills,
@@ -263,8 +264,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 		types.ToolIdOmp: {
 			AssetKindAgents: {
 				Tool: types.ToolIdOmp, Kind: AssetKindAgents,
-				Shape: ShapeNone,
-				Notes: "OMP is skills-only; no agent surface is emitted",
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeFlat, IncludeFile: canonicalAgents,
+				Notes: "OMP reads task agents from .omp/agents/<name>.md",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdOmp, Kind: AssetKindSkills,

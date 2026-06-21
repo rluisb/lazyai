@@ -7,8 +7,9 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// PiAdapter installs only OMP/Pi skill surfaces under .pi/skills/<name>/SKILL.md.
-// Pi intentionally has no agent surface, so we never emit ".pi/agents".
+// PiAdapter installs Pi's native project/user surfaces.
+// Pi subagent definitions are markdown files under .pi/agents/<name>.md when
+// loaded by Pi's subagent extension; skills stay in .pi/skills/<name>/SKILL.md.
 type PiAdapter struct{}
 
 func (a *PiAdapter) ID() types.ToolId  { return types.ToolIdPi }
@@ -25,8 +26,19 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	}
 
 	_ = files.EnsureDir(piDir)
-	// Pi/O.M.P. exposes only the skills surface today; do not create ".pi/agents".
 	_ = files.EnsureDir(filepath.Join(piDir, "skills"))
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/agents",
+		SelectionKey: "agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(piDir, "agents", filepath.Base(file))
+		},
+		IncludeFile: isCanonicalAgentFile,
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

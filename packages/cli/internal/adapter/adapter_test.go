@@ -559,18 +559,19 @@ func TestOpenCodeAdapter_Install_CopiesHookPlugin(t *testing.T) {
 	}
 }
 
-func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
+func TestPiAdapter_Install_AgentsAndSkills(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
 		Skills: []types.SkillId{types.SkillIdDiagnose, types.SkillIdIssueTriage},
+		Agents: []types.AgentId{types.AgentIdResearcher},
 	}
 
 	adapter := &PiAdapter{}
 	if _, err := adapter.Install(ctx); err != nil {
 		t.Fatalf("Pi Install failed: %v", err)
 	}
-
 	for _, rel := range []string{
+		".pi/agents/researcher.md",
 		".pi/skills/diagnose/SKILL.md",
 		".pi/skills/issue-triage/SKILL.md",
 	} {
@@ -578,7 +579,7 @@ func TestPiAdapter_Install_SkillsOnly(t *testing.T) {
 			t.Fatalf("expected %s: %v", rel, err)
 		}
 	}
-	assertMissing(t, filepath.Join(targetDir, ".pi", "agents"))
+	assertMissing(t, filepath.Join(targetDir, ".pi", "extensions"))
 	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
 }
 

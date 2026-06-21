@@ -8,8 +8,8 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-func TestPiAdapter_Install_IntentionalSkillsOnlySurface(t *testing.T) {
-	targets := []string{".pi/agents", ".pi/hooks"}
+func TestPiAdapter_Install_EmitsAgentsAndSkills(t *testing.T) {
+	targets := []string{".pi/extensions", ".pi/hooks"}
 
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
@@ -22,8 +22,13 @@ func TestPiAdapter_Install_IntentionalSkillsOnlySurface(t *testing.T) {
 		t.Fatalf("Pi Install failed: %v", err)
 	}
 
-	issueTriagePath := filepath.Join(targetDir, ".pi", "skills", "issue-triage", "SKILL.md")
-	assertExists(t, issueTriagePath)
+	for _, rel := range []string{
+		".pi/agents/researcher.md",
+		".pi/agents/implementer.md",
+		".pi/skills/issue-triage/SKILL.md",
+	} {
+		assertExists(t, filepath.Join(targetDir, rel))
+	}
 	for _, rel := range targets {
 		assertMissing(t, filepath.Join(targetDir, rel))
 	}

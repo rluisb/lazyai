@@ -1,7 +1,9 @@
 // Package runtime provides the Go-native runtime for LazyAI multi-agent execution.
 package runtime
 
-// SchemaV2 is the reduced runtime schema introduced by Spec 025 Phase 3.
+// SchemaV2 is the compatibility boundary for active LazyAI runtime state.
+// It intentionally excludes removed workflow/task/eval surfaces and keeps only
+// core session/dispatch/handoff/ledger tables used by supported runtime-adjacent commands.
 const SchemaV2 = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,

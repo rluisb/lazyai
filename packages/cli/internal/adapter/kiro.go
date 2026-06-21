@@ -25,8 +25,8 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		return nil, err
 	}
 
-	_ = files.EnsureDir(kiroDir)
 	_ = files.EnsureDir(filepath.Join(kiroDir, "agents"))
+	_ = files.EnsureDir(filepath.Join(kiroDir, "prompts"))
 	_ = files.EnsureDir(filepath.Join(kiroDir, "skills"))
 
 	if err := copyCanonicalDefaultAgent(ctx,
@@ -57,6 +57,17 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		ToDestPath: func(file string) string {
 			name := fileID(file)
 			return filepath.Join(kiroDir, "skills", name, "SKILL.md")
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "prompts",
+		SelectionKey: "prompts",
+		ToDestPath: func(file string) string {
+			return filepath.Join(kiroDir, "prompts", filepath.Base(file))
 		},
 	}); err != nil {
 		return nil, err

@@ -336,8 +336,10 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdKiro, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Kiro has no prompt surface",
+				SourceSubdir: "prompts",
+				DestSubdir:   "prompts",
+				Shape:        ShapeFlat,
+				Notes:        "Kiro CLI reads prompts from .kiro/prompts/<name>.md",
 			},
 		},
 		types.ToolIdAntigravity: {

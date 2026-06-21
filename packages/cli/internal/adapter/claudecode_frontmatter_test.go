@@ -266,3 +266,92 @@ func validateOutputStylesSchemas(t *testing.T, dir string) {
 		}
 	}
 }
+func TestClaudeCode_InstalledCanonicalAgentsHaveRequiredFields(t *testing.T) {
+	cases := []struct {
+		name      string
+		scope     types.SetupScope
+		root      func(target, home string) string
+		selection []types.AgentId
+		expected  []string
+	}{
+		{
+			name:      "default_plus_selected",
+			scope:     types.SetupScopeProject,
+			root:      func(t, _ string) string { return filepath.Join(t, ".claude") },
+			selection: []types.AgentId{types.AgentIdResearcher},
+			expected:  []string{defaultAgentID, string(types.AgentIdResearcher)},
+		},
+		{
+			name:      "all_when_unset_selection",
+			scope:     types.SetupScopeProject,
+			root:      func(t, _ string) string { return filepath.Join(t, ".claude") },
+			selection: nil,
+			expected:  []string{"guide", "implementer", "researcher", "deployer", "responder", "planner", "reviewer", "evidence-verifier"},
+		},
+		{
+			name:      "all_scopes_selected_default",
+			scope:     types.SetupScopeWorkspace,
+			root:      func(t, _ string) string { return filepath.Join(t, ".claude") },
+			selection: []types.AgentId{types.AgentIdResearcher},
+			expected:  []string{defaultAgentID, string(types.AgentIdResearcher)},
+		},
+		{
+			name:      "all_scopes_selected_global_default",
+			scope:     types.SetupScopeGlobal,
+			root:      func(_, h string) string { return filepath.Join(h, ".claude") },
+			selection: []types.AgentId{types.AgentIdResearcher},
+			expected:  []string{defaultAgentID, string(types.AgentIdResearcher)},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+			ctx.Selections.Agents = c.selection
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			root := c.root(target, home)
+			agentsDir := filepath.Join(root, "agents")
+
+			seen := map[string]bool{}
+			for _, id := range c.expected {
+				if seen[id] {
+					continue
+				}
+				seen[id] = true
+
+				agentPath := filepath.Join(agentsDir, id+".md")
+				if !files.FileExists(agentPath) {
+					t.Errorf("expected agent %q at %q", id, agentPath)
+					continue
+				}
+
+				content, err := files.ReadFile(agentPath)
+				if err != nil {
+					t.Errorf("read agent %q: %v", agentPath, err)
+					continue
+				}
+
+				fm, _, err := frontmatter.ExtractFrontmatter(content)
+				if err != nil {
+					t.Errorf("agent %q parse frontmatter: %v", id, err)
+					continue
+				}
+
+				for _, field := range []string{"name", "description"} {
+					v, ok := fm[field]
+					if !ok {
+						t.Errorf("agent %q missing required '%s' field", id, field)
+						continue
+					}
+					if strings.TrimSpace(v.(string)) == "" {
+						t.Errorf("agent %q has empty '%s' field", id, field)
+					}
+				}
+			}
+		})
+	}
+}

@@ -11,7 +11,8 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// AntigravityAdapter installs the verified minimal .gemini surface.
+// AntigravityAdapter installs the verified minimal .gemini surface plus
+// official local Agent Skills at .agents/skills/<name>/SKILL.md.
 type AntigravityAdapter struct{}
 
 func (a *AntigravityAdapter) ID() types.ToolId  { return types.ToolIdAntigravity }
@@ -29,8 +30,11 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 
 	settingsPath := filepath.Join(geminiDir, "settings.json")
 	hooksDir := filepath.Join(geminiDir, "hooks", "lazyai")
+	agentsRoot := filepath.Join(filepath.Dir(geminiDir), ".agents")
+	skillsDir := filepath.Join(agentsRoot, "skills")
 	_ = files.EnsureDir(geminiDir)
 	_ = files.EnsureDir(hooksDir)
+	_ = files.EnsureDir(skillsDir)
 
 	defaultSettings, err := readJSONAsset(ctx, "antigravity/settings.json")
 	if err != nil {
@@ -54,6 +58,18 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 			return filepath.Join(geminiDir, "hooks", file)
 		},
 		Mode: 0o755,
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "skills",
+		SelectionKey: "skills",
+		ToDestPath: func(file string) string {
+			name := fileID(file)
+			return filepath.Join(skillsDir, name, "SKILL.md")
+		},
 	}); err != nil {
 		return nil, err
 	}

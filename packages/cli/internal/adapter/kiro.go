@@ -7,7 +7,9 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// KiroAdapter installs the Kiro IDE setup surface.
+// KiroAdapter installs the Kiro IDE/CLI setup surface. Kiro CLI v3 discovers
+// custom agent profiles from .kiro/agents/<name>.md and skills from
+// .kiro/skills/<name>/SKILL.md.
 type KiroAdapter struct{}
 
 func (a *KiroAdapter) ID() types.ToolId  { return types.ToolIdKiro }
@@ -24,7 +26,29 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 	}
 
 	_ = files.EnsureDir(kiroDir)
+	_ = files.EnsureDir(filepath.Join(kiroDir, "agents"))
 	_ = files.EnsureDir(filepath.Join(kiroDir, "skills"))
+
+	if err := copyCanonicalDefaultAgent(ctx,
+		filepath.Join(kiroDir, "agents", defaultAgentID+".md"),
+		nil,
+	); err != nil {
+		return nil, err
+	}
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/agents",
+		SelectionKey: "agents",
+		ToDestPath: func(file string) string {
+			return filepath.Join(kiroDir, "agents", file)
+		},
+		IncludeFile: func(file string) bool {
+			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
+		},
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

@@ -81,8 +81,17 @@ func createTestFS() fstest.MapFS {
 		"prompts/preflight-task-framing.md": &fstest.MapFile{
 			Data: []byte("---\nname: preflight-task-framing\n---\n\n# Task Framing\n\nFrame tasks before starting."),
 		},
+		"prompts/plan.md": &fstest.MapFile{
+			Data: []byte("# Plan\n"),
+		},
+		"prompts/research.md": &fstest.MapFile{
+			Data: []byte("# Research\n"),
+		},
 		"rules/typescript.md": &fstest.MapFile{
 			Data: []byte("---\npaths:\n  - \"src/**/*.ts\"\n---\n\n# TypeScript Rules\n\n- Use strict TypeScript\n- Prefer interfaces over types for objects\n"),
+		},
+		"pi/extensions/block-destructive-shell.ts": &fstest.MapFile{
+			Data: []byte("import type { ExtensionAPI } from \"@earendil-works/pi-coding-agent\";\n\nexport default function blockDestructiveShell(pi: ExtensionAPI): void {\n  pi.on(\"tool_call\", async (event, ctx) => {\n    if (event.toolName !== \"bash\") return;\n    const cmd = String(event.input.command ?? \"\");\n    if (!/\\brm\\s+-rf\\s+\\//.test(cmd)) return;\n    if (ctx.hasUI) {\n      const allow = await ctx.ui.confirm(\"Dangerous command\", `This deletes from root:\\n${cmd}\\n\\nProceed?`);\n      if (allow) return;\n    }\n    return { block: true, reason: \"rm -rf / blocked by safety policy\" };\n  });\n}\n"),
 		},
 		"commands/rpi.toml": &fstest.MapFile{
 			Data: []byte("name = \"rpi\"\ndescription = \"Start RPI\"\nprompt = \"Begin RPI\"\n"),
@@ -574,12 +583,13 @@ func TestPiAdapter_Install_AgentsAndSkills(t *testing.T) {
 		".pi/agents/researcher.md",
 		".pi/skills/diagnose/SKILL.md",
 		".pi/skills/issue-triage/SKILL.md",
+		".pi/extensions/block-destructive-shell.ts",
 	} {
 		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
 			t.Fatalf("expected %s: %v", rel, err)
 		}
 	}
-	assertMissing(t, filepath.Join(targetDir, ".pi", "extensions"))
+	// Pi has no .pi/hooks path.
 	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
 }
 

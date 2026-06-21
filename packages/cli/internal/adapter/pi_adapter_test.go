@@ -10,7 +10,6 @@ import (
 )
 
 func TestPiAdapter_Install_EmitsAgentsSkillsAndPrompts(t *testing.T) {
-	targets := []string{".pi/extensions", ".pi/hooks"}
 
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.Selections = AdapterSelections{
@@ -33,12 +32,13 @@ func TestPiAdapter_Install_EmitsAgentsSkillsAndPrompts(t *testing.T) {
 		".pi/skills/issue-triage/SKILL.md",
 		".pi/prompts/plan.md",
 		".pi/prompts/research.md",
+		".pi/extensions/block-destructive-shell.ts",
 	} {
 		assertExists(t, filepath.Join(targetDir, rel))
 	}
-	for _, rel := range targets {
-		assertMissing(t, filepath.Join(targetDir, rel))
-	}
+
+	// Pi has no .pi/hooks path.
+	assertMissing(t, filepath.Join(targetDir, ".pi", "hooks"))
 
 	skillsDir := filepath.Join(targetDir, ".pi", "skills")
 	entries, err := os.ReadDir(skillsDir)

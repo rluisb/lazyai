@@ -30,7 +30,8 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	_ = files.EnsureDir(filepath.Join(ompDir, "agents"))
 	_ = files.EnsureDir(filepath.Join(ompDir, "commands"))
 	_ = files.EnsureDir(filepath.Join(ompDir, "prompts"))
-
+	// OMP discovers TypeScript hook factories from .omp/hooks/pre/*.ts.
+	_ = files.EnsureDir(filepath.Join(ompDir, "hooks", "pre"))
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",
@@ -72,6 +73,17 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		SourceSubdir: "prompts",
 		ToDestPath: func(file string) string {
 			return filepath.Join(ompDir, "prompts", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy TypeScript hook factories for OMP.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "omp/hooks",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ompDir, "hooks", "pre", filepath.Base(file))
 		},
 	}); err != nil {
 		return nil, err

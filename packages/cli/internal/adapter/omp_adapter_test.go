@@ -58,6 +58,39 @@ func TestOmpAdapter_Install_CommandsAndPrompts(t *testing.T) {
 		assertExists(t, filepath.Join(targetDir, rel))
 	}
 }
+func TestOmpAdapter_Install_Hooks(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	libDir, err := library.FindLibraryDir()
+	if err != nil {
+		t.Fatalf("FindLibraryDir: %v", err)
+	}
+	ctx.LibraryDir = libDir
+	ctx.LibraryFS = nil
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{types.AgentIdResearcher},
+		Skills: []types.SkillId{types.SkillIdDiagnose},
+	}
+
+	adapter := &OmpAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OMP Install failed: %v", err)
+	}
+
+	hookPath := filepath.Join(targetDir, ".omp", "hooks", "pre", "block-destructive-shell.ts")
+	assertExists(t, hookPath)
+
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		t.Fatalf("read hook file: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "export default") {
+		t.Fatalf("hook file missing export default: %q", hookPath)
+	}
+	if !strings.Contains(content, "tool_call") {
+		t.Fatalf("hook file missing tool_call: %q", hookPath)
+	}
+}
 
 func TestOmpAdapter_GlobalScope_InstallsAgentsAndSkills(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)

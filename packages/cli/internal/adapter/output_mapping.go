@@ -257,8 +257,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindPrompts: {
 				Tool: types.ToolIdPi, Kind: AssetKindPrompts,
-				Shape: ShapeNone,
-				Notes: "Pi has no prompt surface",
+				SourceSubdir: "prompts", DestSubdir: "prompts",
+				Shape: ShapeFlat,
+				Notes: "Pi loads prompt templates from .pi/prompts/<name>.md",
 			},
 		},
 		types.ToolIdOmp: {

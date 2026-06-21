@@ -27,6 +27,18 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 
 	_ = files.EnsureDir(piDir)
 	_ = files.EnsureDir(filepath.Join(piDir, "skills"))
+	_ = files.EnsureDir(filepath.Join(piDir, "prompts"))
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "prompts",
+		SelectionKey: "prompts",
+		ToDestPath: func(file string) string {
+			return filepath.Join(piDir, "prompts", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

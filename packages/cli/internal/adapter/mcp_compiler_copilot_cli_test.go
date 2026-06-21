@@ -155,7 +155,6 @@ func TestToCopilotVSCodeMcp_RemoteURLUsesHttpType(t *testing.T) {
 	}
 }
 
-
 func TestCompileCopilotVSCodeMcp_RemoteURL_UsesHTTPType(t *testing.T) {
 	targetDir := t.TempDir()
 	home := t.TempDir()

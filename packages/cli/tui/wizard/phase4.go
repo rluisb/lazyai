@@ -11,7 +11,7 @@ import (
 
 // Phase4Result holds the confirmation outcome from the final wizard phase.
 type Phase4Result struct {
-	Confirmed              bool
+	Confirmed               bool
 	InstallConsentsAccepted bool
 }
 

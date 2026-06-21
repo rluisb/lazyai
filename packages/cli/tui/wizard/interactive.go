@@ -156,7 +156,6 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	return s
 }
 
-
 func initExpressWizardState(defaults *WizardResult) *WizardState {
 	state := initWizardState(defaults)
 	state.McpPreset = string(McpPresetRecommended)

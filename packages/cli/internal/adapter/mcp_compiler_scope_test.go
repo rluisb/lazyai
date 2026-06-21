@@ -147,7 +147,7 @@ func TestCompileMCPForTool_WorkspaceUsesWorkspaceRootForCanonicalAndToolOutputs(
 		leakRel  string
 		recordID string
 	}{
-			{name: "opencode", tool: types.ToolIdOpenCode, wantRel: "opencode.json", leakRel: ".opencode/opencode.json", recordID: "opencode.json"},
+		{name: "opencode", tool: types.ToolIdOpenCode, wantRel: "opencode.json", leakRel: ".opencode/opencode.json", recordID: "opencode.json"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			records, err := CompileMCPForTool(tc.tool, CompileContext{

@@ -31,6 +31,7 @@ const (
 	// PhaseCancel means the user cancelled the wizard.
 	PhaseCancel
 )
+
 // WizardMode controls how many interactive prompts are shown.
 type WizardMode string
 
@@ -42,7 +43,6 @@ const (
 	// WizardModePersonalized uses the existing full interactive flow.
 	WizardModePersonalized WizardMode = "personalized"
 )
-
 
 // WizardConfig holds all inputs needed to run the wizard.
 type WizardConfig struct {

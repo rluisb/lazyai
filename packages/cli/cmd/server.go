@@ -826,6 +826,6 @@ func boldStyle() lipgloss.Style {
 // perToolMCPConfig maps each tool ID to its per-tool MCP config file path.
 // An empty string means the tool uses a global config (no project-local file).
 var perToolMCPConfig = map[string]string{
-	"opencode":    "opencode.json",
-	"copilot":     ".vscode/mcp.json",
+	"opencode": "opencode.json",
+	"copilot":  ".vscode/mcp.json",
 }

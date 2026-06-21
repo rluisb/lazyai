@@ -274,7 +274,6 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 	}
 }
 
-
 // TestToClaudeCodeMcpInner_RemoteHasType verifies remote MCP entries carry type: http.
 func TestToClaudeCodeMcpInner_RemoteHasType(t *testing.T) {
 	servers := map[string]McpServer{

@@ -155,9 +155,9 @@ func TestInstallToolContextFiles_FromFS(t *testing.T) {
 	err := InstallToolContextFiles(InstallToolContextFilesOption{
 		Ctx:             ctx,
 		ToolDir:         toolDir,
-		ContextFileName:  "AGENTS.md",
-		AgentsDestDir:    "agents",
-		SkillsDestDir:    "skills",
+		ContextFileName: "AGENTS.md",
+		AgentsDestDir:   "agents",
+		SkillsDestDir:   "skills",
 	})
 	if err != nil {
 		t.Fatalf("InstallToolContextFiles failed: %v", err)

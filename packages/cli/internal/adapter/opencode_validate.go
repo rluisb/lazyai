@@ -46,7 +46,6 @@ func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWa
 		return nil, nil
 	}
 
-
 	var warnings []ValidationWarning
 
 	// Validate config.

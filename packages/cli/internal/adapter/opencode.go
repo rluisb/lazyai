@@ -22,6 +22,7 @@ const OpenCodeConfigFilename = "opencode.json"
 // OpenCodeLegacyMCPFilename keeps compatibility with the old LazyAI MCP-only output
 // location (`.opencode/lazyai.mcp.jsonc`) while migration is active.
 const OpenCodeLegacyMCPFilename = "lazyai.mcp.jsonc"
+
 // OpenCodeAdapter implements ToolAdapter for OpenCode (opencode CLI).
 type OpenCodeAdapter struct{}
 

@@ -1,3 +1,7 @@
+> **SUPERSEDED — Go/TS parity is moot; the TS CLI was removed. Retained for historical context.**
+>
+> This document is historical; `packages/ai-setup-ts` is no longer present.
+
 # Tasks: Go/TS Setup Engine Parity
 
 ## Phase 1 — Contracts

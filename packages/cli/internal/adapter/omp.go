@@ -8,6 +8,8 @@ import (
 )
 
 // OmpAdapter installs the verified OMP skills-only surface.
+// OMP official surface is: .omp/skills/<skill>/SKILL.md plus AGENTS/context docs;
+// no custom .omp/agents directory is emitted.
 type OmpAdapter struct{}
 
 func (a *OmpAdapter) ID() types.ToolId  { return types.ToolIdOmp }

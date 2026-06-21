@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# Temporary library copy for npm publish (created by prepublishOnly, cleaned by postpublish)
-packages/ai-setup-ts/library/
-
 # Build output
 dist/
 ai-setup
@@ -42,7 +39,6 @@ GEMINI.md
 # git worktrees
 .worktrees/
 AGENTS.md
-!packages/cli/library/fortnite/AGENTS.md
 INSTRUCTIONS.md
 
 # Scaffold-generated docs (copies from library/)

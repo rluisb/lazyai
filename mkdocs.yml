@@ -86,6 +86,7 @@ nav:
   - Getting Started:
       - Quick Start: getting-started/quick-start.md
       - Installation: getting-started/installation.md
+      - Commands: getting-started/commands.md
   - Concepts:
       - How It Works: concepts/how-it-works.md
       - Package Layout: concepts/package-layout.md

@@ -50,6 +50,8 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		Path: relPath, Hash: hash, Source: "antigravity/settings.json", Owner: types.FileOwnerLibrary,
 	})
 
+	hooksJSONPath := filepath.Join(agentsRoot, "hooks.json")
+
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "antigravity/hooks",
@@ -62,6 +64,24 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		return nil, err
 	}
 
+	hooksConfig, err := readJSONAsset(ctx, "antigravity/hooks.json")
+	if err != nil {
+		return nil, err
+	}
+	hooksPayload, err := json.MarshalIndent(hooksConfig, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal antigravity/hooks.json: %w", err)
+	}
+	if err := files.WriteFile(hooksJSONPath, hooksPayload, 0o644); err != nil {
+		return nil, err
+	}
+
+	relHooksPath, _ := filepath.Rel(ctx.TargetDir, hooksJSONPath)
+	hash, _ = files.FileHash(hooksJSONPath)
+	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+		Path: relHooksPath, Hash: hash, Source: "antigravity/hooks.json", Owner: types.FileOwnerLibrary,
+	})
+
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "skills",
@@ -73,7 +93,6 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	}); err != nil {
 		return nil, err
 	}
-
 	return ctx.FileRecords, nil
 }
 

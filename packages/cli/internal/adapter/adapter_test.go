@@ -159,6 +159,32 @@ func createTestFS() fstest.MapFS {
 		"antigravity/hooks/lazyai/objective-workflow-gate.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},
+		"antigravity/hooks.json": &fstest.MapFile{
+			Data: []byte(`{
+  "lazyai-block-destructive-shell": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".gemini/hooks/lazyai/block-destructive-shell.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "lazyai-objective-workflow-gate": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": ".gemini/hooks/lazyai/objective-workflow-gate.sh"
+      }
+    ]
+  }
+}`),
+		},
 	}
 }
 

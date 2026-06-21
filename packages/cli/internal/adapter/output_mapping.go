@@ -192,8 +192,8 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			AssetKindSkills: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindSkills,
 				SourceSubdir: "skills", DestSubdir: "agents",
-				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.yaml",
-				Notes: "Copilot has no native skills; library skills are converted to .agent.yaml",
+				Shape: ShapeRewriteExt, RewriteSuffix: ".agent.md",
+				Notes: "Copilot has no native skills; selected library skills are converted to documented .agent.md custom agents",
 			},
 			AssetKindTemplates: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindTemplates,

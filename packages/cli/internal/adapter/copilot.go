@@ -317,9 +317,9 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 	})
 }
 
-// copySkillsAsAgents converts explicitly selected skill files to .agent.yaml
-// format in the agents directory. No .agent.yaml files are emitted unless the
-// user selected the corresponding skill.
+// copySkillsAsAgents converts explicitly selected skill files to Copilot custom
+// agent Markdown profiles. Copilot has no native skill surface, so selected
+// skills become .agent.md files under .github/agents.
 func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
 	if selected == nil || len(selected) == 0 {
 		return nil
@@ -342,7 +342,7 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 		if !selected[types.SkillId(fileIDVal)] {
 			continue
 		}
-		destFile := fileIDVal + ".agent.yaml"
+		destFile := fileIDVal + ".agent.md"
 		dest := filepath.Join(agentsDir, destFile)
 		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
 		if err := a.copySkillAsAgentWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
@@ -352,7 +352,7 @@ func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir strin
 	return nil
 }
 
-// copySkillsAsAgentsFromFS copies skills from the library FS as agent YAML files.
+// copySkillsAsAgentsFromFS copies skills from the library FS as Copilot custom agent Markdown files.
 func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.FS, agentsDir string, selected map[types.SkillId]bool) error {
 	entries, err := fs.ReadDir(libFS, "skills")
 	if err != nil {
@@ -367,7 +367,7 @@ func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.
 		if selected != nil && !selected[types.SkillId(fileIDVal)] {
 			continue
 		}
-		destFile := fileIDVal + ".agent.yaml"
+		destFile := fileIDVal + ".agent.md"
 		dest := filepath.Join(agentsDir, destFile)
 		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
 		if err := a.copySkillAsAgentFromFS(ctx, libFS, libRelPath, dest); err != nil {
@@ -377,7 +377,7 @@ func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.
 	return nil
 }
 
-// copySkillAsAgentWithRecord reads a skill from disk and converts it to agent YAML format.
+// copySkillAsAgentWithRecord reads a skill from disk and converts it to Copilot custom agent Markdown.
 func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, dest string, sourcePath string) error {
 	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
 
@@ -407,8 +407,8 @@ func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, de
 		return err
 	}
 
-	// Transform skill to agent YAML format
-	transformed, err := skillToAgentYAML(ctx, src, string(data))
+	// Transform skill to Copilot custom agent Markdown.
+	transformed, err := skillToCopilotAgentMarkdown(ctx, src, string(data))
 	if err != nil {
 		return err
 	}
@@ -427,7 +427,7 @@ func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, de
 	return nil
 }
 
-// copySkillAsAgentFromFS reads a skill from the library FS and converts it to agent YAML.
+// copySkillAsAgentFromFS reads a skill from the library FS and converts it to Copilot custom agent Markdown.
 func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS, src, dest string) error {
 	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
 
@@ -457,8 +457,8 @@ func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS
 		return fmt.Errorf("read FS %s: %w", src, err)
 	}
 
-	// Transform skill to agent YAML format
-	transformed, err := skillToAgentYAML(ctx, src, string(data))
+	// Transform skill to Copilot custom agent Markdown.
+	transformed, err := skillToCopilotAgentMarkdown(ctx, src, string(data))
 	if err != nil {
 		return err
 	}
@@ -477,28 +477,35 @@ func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS
 	return nil
 }
 
-// skillToAgentYAML transforms a skill markdown file into Copilot agent YAML
-// format. The model field is resolved against `CopilotCatalog` based on the
-// skill's optional tier annotation (defaults to Balanced if absent),
-// replacing the hardcoded `model: claude-sonnet-*` value that previously
-// required a manual bulk-edit on every Anthropic version bump (#199 Bug 2
-// long-term fix).
+// skillToCopilotAgentMarkdown transforms a skill markdown file into Copilot
+// custom-agent Markdown format. The model field is resolved against
+// `CopilotCatalog` based on the skill's optional tier annotation (defaults to
+// Balanced if absent), replacing the hardcoded `model: claude-sonnet-*` value
+// that previously required a manual bulk-edit on every Anthropic version bump
+// (#199 Bug 2 long-term fix).
 //
-// Skills opt into Frontier or Speed tier by adding `tier: frontier`
-// (and optional `risk:`/`temperature:`/`thinking:`) to their frontmatter.
-// Skills with no tier annotation get Balanced — which currently resolves
-// to `claude-sonnet-4.6` via `CopilotCatalog.Balanced[0]`.
-func skillToAgentYAML(ctx *AdapterContext, skillName string, skillContent string) (string, error) {
-	_, body := frontmatter.SplitYamlFrontmatter(skillContent)
+// Skills opt into Frontier or Speed tier by adding `tier: frontier` (and
+// optional `risk:`/`temperature:`/`thinking:`) to their frontmatter. Skills
+// with no tier annotation get Balanced — which currently resolves to
+// `claude-sonnet-4.6` via `CopilotCatalog.Balanced[0]`.
+func skillToCopilotAgentMarkdown(ctx *AdapterContext, skillName string, skillContent string) (string, error) {
+	fm, body, err := frontmatter.ParseYamlFrontmatter(skillContent)
+	if err != nil {
+		return "", fmt.Errorf("parse skill frontmatter %s: %w", skillName, err)
+	}
 	body = strings.TrimSpace(body)
 	if body == "" {
 		return "", fmt.Errorf("skill %s has no content", skillName)
 	}
 
-	// Extract skill ID from filename (e.g., "skills/review.md" → "review")
-	// First get just the basename in case skillName includes path components
+	// Extract skill ID from filename (e.g., "skills/review.md" → "review").
 	basename := filepath.Base(skillName)
 	skillID := strings.TrimSuffix(basename, filepath.Ext(basename))
+
+	description := frontmatter.ExtractField(fm, "description")
+	if strings.TrimSpace(description) == "" {
+		description = fmt.Sprintf("%s skill for the LazyAI runtime.", skillID)
+	}
 
 	spec := skillSpecOrDefault([]byte(skillContent), skillID)
 	rc := resolveCtxFor(types.ToolIdCopilot, ctx)
@@ -507,24 +514,16 @@ func skillToAgentYAML(ctx *AdapterContext, skillName string, skillContent string
 		return "", fmt.Errorf("copilot skill %s resolve: %w", skillID, err)
 	}
 
-	// Build agent YAML
-	yaml := fmt.Sprintf(`name: %s
-displayName: %s
-description: >
-  %s skill for the LazyAI runtime.
+	return fmt.Sprintf(`---
+name: %s
+description: %s
 model: %s
 tools:
   - "*"
-promptParts:
-  includeAISafety: true
-  includeToolInstructions: true
-  includeParallelToolCalling: true
-  includeCustomAgentInstructions: false
-prompt: |
-%s
-`, skillID, toDisplayName(skillID), skillID, res.Field, indentLines(body, "  "))
+---
 
-	return yaml, nil
+%s
+`, skillID, yamlBlockScalar(description, "  "), res.Field, body), nil
 }
 
 // skillSpecOrDefault parses tier metadata from a skill's frontmatter, or
@@ -558,15 +557,12 @@ func skillSpecOrDefault(content []byte, skillID string) models.AgentSpec {
 	}
 }
 
-// toDisplayName converts "foo-bar" to "Foo Bar".
-func toDisplayName(s string) string {
-	parts := strings.Split(s, "-")
-	for i, part := range parts {
-		if len(part) > 0 {
-			parts[i] = strings.ToUpper(part[:1]) + part[1:]
-		}
+func yamlBlockScalar(text, indent string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "|-\n" + indent + "LazyAI skill."
 	}
-	return strings.Join(parts, " ")
+	return "|-\n" + indentLines(text, indent)
 }
 
 // indentLines prefixes each line of text with the given indent string.

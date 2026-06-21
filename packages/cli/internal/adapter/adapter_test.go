@@ -486,9 +486,9 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("prompt .prompt.md was not created in .github/prompts/")
 	}
 
-	// --- Skill transformed to agent YAML format ---
+	// --- Selected skill transformed to documented Copilot custom-agent Markdown ---
 	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
+	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.md")
 	// --- Default agents are compiled as Markdown files ---
 	defaultAgentFile := filepath.Join(agentsDir, "guide.agent.md")
 	if _, err := os.Stat(defaultAgentFile); os.IsNotExist(err) {
@@ -500,12 +500,19 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 	}
 
 	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
-		t.Error("skill agent .agent.yaml was not created")
+		t.Error("skill fallback .agent.md was not created")
+	}
+	legacySkillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
+	if _, err := os.Stat(legacySkillAgentFile); err == nil {
+		t.Error("diagnose.agent.yaml should not be emitted for selected Copilot skills")
 	}
 	data, _ := os.ReadFile(skillAgentFile)
 	content := string(data)
-	if !strings.Contains(content, "name: diagnose") {
-		t.Error("skill agent missing 'name: diagnose' in YAML")
+	if !strings.Contains(content, "---\nname: diagnose\n") {
+		t.Error("skill fallback missing Copilot agent frontmatter name")
+	}
+	if !strings.Contains(content, "\n# diagnose\n\nSkill body.") {
+		t.Error("skill fallback missing skill body as Markdown prompt")
 	}
 
 	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
@@ -522,7 +529,7 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
-		case ".github/agents/diagnose.agent.yaml":
+		case ".github/agents/diagnose.agent.md":
 			hasDiagnose = true
 		}
 	}
@@ -530,7 +537,7 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("no tracked record for preflight-task-framing.prompt.md")
 	}
 	if !hasDiagnose {
-		t.Error("no tracked record for diagnose.agent.yaml")
+		t.Error("no tracked record for diagnose.agent.md")
 	}
 }
 

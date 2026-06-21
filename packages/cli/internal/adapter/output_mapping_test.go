@@ -94,7 +94,7 @@ func TestOutputMappingCopilotAgentsWritesMd(t *testing.T) {
 	}
 }
 
-func TestOutputMappingCopilotSkillsRewritesExt(t *testing.T) {
+func TestOutputMappingCopilotSkillsRewritesToAgentMarkdown(t *testing.T) {
 	target, ok := LookupOutputTarget(types.ToolIdCopilot, AssetKindSkills)
 	if !ok {
 		t.Fatal("copilot has no skills target")
@@ -102,8 +102,8 @@ func TestOutputMappingCopilotSkillsRewritesExt(t *testing.T) {
 	if target.Shape != ShapeRewriteExt {
 		t.Errorf("copilot skills Shape=%q, want %q", target.Shape, ShapeRewriteExt)
 	}
-	if target.RewriteSuffix != ".agent.yaml" {
-		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, ".agent.yaml")
+	if target.RewriteSuffix != ".agent.md" {
+		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, ".agent.md")
 	}
 }
 

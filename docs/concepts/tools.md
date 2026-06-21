@@ -21,12 +21,12 @@
 
 ## GitHub Copilot
 
-- **Description:** repo or user instructions, agent YAML files, prompts, chatmodes, MCP config, and project/workspace hook assets
+- **Description:** repo or user instructions, canonical agent markdown files, prompts, chatmodes, MCP config, and project/workspace hook assets
 - **Root files:** `.github/copilot-instructions.md` and `AGENTS.md`
 - **Config directory:** `.github/`
 - **Global scope support:** Yes — probe-gated on `copilot` CLI or `~/.copilot/`
 - **MCP config:** `.vscode/mcp.json` at project/workspace scope; `~/.copilot/mcp-config.json` at global scope when probe passes
-- **Special behavior:** skills are converted into `.github/agents/<name>.agent.yaml`; prompts remain `.prompt.md`; project/workspace hook assets land under `.github/hooks/`
+- **Special behavior:** skills are emitted to `.github/skills/<name>/SKILL.md` (global `~/.copilot/skills/<name>/SKILL.md`); prompts remain `.prompt.md`; project/workspace hook assets land under `.github/hooks/`
 
 ## OMP/Pi
 
@@ -54,8 +54,7 @@
 | Workspace scope | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | — |
-| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
+| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | MCP output | `opencode.json` + `.opencode/lazyai.mcp.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 
 

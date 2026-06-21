@@ -12,14 +12,13 @@
 - Rule or policy: one markdown file unless runtime enforcement is needed.
 - Agent: one canonical agent file under `packages/cli/library/canonical/agents/<name>.md`.
 - Skill: `packages/cli/library/skills/<name>.md` with skill frontmatter; emitted per-tool as `<tool-dir>/skills/<name>/SKILL.md`.
-- Hook: `packages/cli/library/hooks/<name>.md` with hook frontmatter; emitted per-tool as native hook config plus scripts.
-- Command: `packages/cli/library/opencode/commands/<name>.md` or `claudecode/commands/<name>.md` depending on the originating tool surface.
+  - Copilot project/workspace emits to `.github/skills/<name>/SKILL.md`, global to `~/.copilot/skills/<name>/SKILL.md`.
+  - Antigravity project/workspace emits to `.agents/skills/<name>/SKILL.md`.
 
 ## Compatibility
 
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
 - OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
-- Copilot uses `.github/agents/*.agent.yaml` and `.github/copilot-instructions.md`.
+- Copilot uses `.github/agents/<name>.agent.md` for canonical agents; selected LazyAI skills use Agent Skills directories instead of legacy `.github/agents/<name>.agent.yaml` or `.github/agents/<name>.agent.md` outputs.
 - OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
-- Antigravity emits selected Agent Skills under `.agents/skills/<name>/SKILL.md` for project/workspace setup, does not emit custom agent files, and keeps a settings/hooks surface under `.gemini/settings.json` plus `.gemini/hooks/lazyai/*.sh`.
 - If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.

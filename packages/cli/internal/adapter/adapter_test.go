@@ -469,6 +469,30 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		Prompts: []types.PromptId{"preflight-task-framing"},
 	}
 
+	agentsDir := filepath.Join(targetDir, ".github", "agents")
+	skillsDir := filepath.Join(targetDir, ".github", "skills", "diagnose")
+	legacyMarkdownPath := filepath.Join(agentsDir, "diagnose.agent.md")
+	legacyYamlPath := filepath.Join(agentsDir, "diagnose.agent.yaml")
+	legacySkillSource, err := fs.ReadFile(ctx.LibraryFS, filepath.ToSlash(filepath.Join("skills", "diagnose.md")))
+	if err != nil {
+		t.Fatalf("reading legacy skill source fixture failed: %v", err)
+	}
+	legacyMarkdown, err := skillToCopilotAgentMarkdown(ctx, filepath.ToSlash(filepath.Join("skills", "diagnose.md")), string(legacySkillSource))
+	if err != nil {
+		t.Fatalf("construct legacy copilot skill content failed: %v", err)
+	}
+	_, legacyBody := frontmatter.ExtractFrontmatter(string(legacySkillSource))
+	legacyYaml := "name: diagnose\nmodel: claude-sonnet-4.6\nprompt: |\n" + indentLines(string(legacyBody), "  ")
+	if err := files.EnsureDir(agentsDir); err != nil {
+		t.Fatalf("creating agent output dir for legacy cleanup fixture failed: %v", err)
+	}
+	if err := os.WriteFile(legacyMarkdownPath, []byte(legacyMarkdown), 0o644); err != nil {
+		t.Fatalf("writing legacy markdown fixture failed: %v", err)
+	}
+	if err := os.WriteFile(legacyYamlPath, []byte(legacyYaml), 0o644); err != nil {
+		t.Fatalf("writing legacy yaml fixture failed: %v", err)
+	}
+
 	adapter := &CopilotAdapter{}
 	records, err := adapter.Install(ctx)
 	if err != nil {
@@ -486,9 +510,28 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("prompt .prompt.md was not created in .github/prompts/")
 	}
 
-	// --- Selected skill transformed to documented Copilot custom-agent Markdown ---
-	agentsDir := filepath.Join(targetDir, ".github", "agents")
-	skillAgentFile := filepath.Join(agentsDir, "diagnose.agent.md")
+	// --- Selected skills are emitted to Agent Skills directories ---
+	skillDir := filepath.Join(skillsDir, "SKILL.md")
+	if _, err := os.Stat(skillDir); os.IsNotExist(err) {
+		t.Error("selected skill was not created at .github/skills/diagnose/SKILL.md")
+	}
+	data, _ := os.ReadFile(skillDir)
+	content := string(data)
+	if !strings.Contains(content, "---\nname: diagnose\n") {
+		t.Error("skill output missing canonical source frontmatter")
+	}
+	if !strings.Contains(content, "# diagnose") {
+		t.Error("skill output missing canonical skill body")
+	}
+
+	// Migration cleanup removed legacy skill-as-agent artifacts.
+	if _, err := os.Stat(legacyMarkdownPath); err == nil {
+		t.Error("legacy diagnose.agent.md should be removed during migration")
+	}
+	if _, err := os.Stat(legacyYamlPath); err == nil {
+		t.Error("legacy diagnose.agent.yaml should be removed during migration")
+	}
+
 	// --- Default agents are compiled as Markdown files ---
 	defaultAgentFile := filepath.Join(agentsDir, "guide.agent.md")
 	if _, err := os.Stat(defaultAgentFile); os.IsNotExist(err) {
@@ -499,45 +542,31 @@ func TestCopilotAdapter_Install_FromFS(t *testing.T) {
 		t.Error("guide.agent.yaml should not be emitted for default copilot agents")
 	}
 
-	if _, err := os.Stat(skillAgentFile); os.IsNotExist(err) {
-		t.Error("skill fallback .agent.md was not created")
-	}
-	legacySkillAgentFile := filepath.Join(agentsDir, "diagnose.agent.yaml")
-	if _, err := os.Stat(legacySkillAgentFile); err == nil {
-		t.Error("diagnose.agent.yaml should not be emitted for selected Copilot skills")
-	}
-	data, _ := os.ReadFile(skillAgentFile)
-	content := string(data)
-	if !strings.Contains(content, "---\nname: diagnose\n") {
-		t.Error("skill fallback missing Copilot agent frontmatter name")
-	}
-	if !strings.Contains(content, "\n# diagnose\n\nSkill body.") {
-		t.Error("skill fallback missing skill body as Markdown prompt")
-	}
-
 	// Root AGENTS.md and .github/copilot-instructions.md are emitted by
 	// scaffold.ScaffoldCompiledRoot (scope-aware) rather than the adapter;
 	// asserting them here would test the wrong layer.
 
-	// --- Tracked file records created (prompts + agents) ---
-	if len(ctx.FileRecords) < 2 {
-		t.Errorf("expected at least 2 tracked file records, got %d", len(ctx.FileRecords))
+	// --- Tracked file records created (prompts + agents + skills) ---
+	if len(ctx.FileRecords) < 3 {
+		t.Errorf("expected at least 3 tracked file records, got %d", len(ctx.FileRecords))
 	}
 	hasPreFlight := false
 	hasDiagnose := false
+	hasSkillDir := false
 	for _, rec := range ctx.FileRecords {
 		switch rec.Path {
 		case ".github/prompts/preflight-task-framing.prompt.md":
 			hasPreFlight = true
-		case ".github/agents/diagnose.agent.md":
+		case ".github/skills/diagnose/SKILL.md":
 			hasDiagnose = true
+			hasSkillDir = true
 		}
 	}
 	if !hasPreFlight {
 		t.Error("no tracked record for preflight-task-framing.prompt.md")
 	}
-	if !hasDiagnose {
-		t.Error("no tracked record for diagnose.agent.md")
+	if !hasDiagnose || !hasSkillDir {
+		t.Error("no tracked record for diagnose skill output at .github/skills/diagnose/SKILL.md")
 	}
 }
 

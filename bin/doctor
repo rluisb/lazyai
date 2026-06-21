@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Standalone/unwired maintenance helper:
+# - Not invoked by repository build/test/CI runtime.
+# - Run manually as an on-demand maintainer utility.
+
 # bin/doctor — Health check for vibe-lab generated adapters and guardrails.
 
 set -euo pipefail

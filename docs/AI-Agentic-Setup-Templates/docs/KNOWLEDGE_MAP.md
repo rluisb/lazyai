@@ -1,3 +1,5 @@
+Authoritative knowledge map: specs/KNOWLEDGE_MAP.md. This file is scoped/secondary.
+
 # Project Knowledge Map
 
 > Navigable index of all project documentation.

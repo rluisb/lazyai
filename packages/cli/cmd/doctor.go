@@ -450,14 +450,3 @@ func writeManifestStore(dir string, data *types.StoreData) error {
 	// If neither store exists, we can't write
 	return nil
 }
-
-// hasPrefix checks if a string has one of the given prefixes.
-func hasPrefix(s string, prefixes []string) bool {
-	normalized := filepath.ToSlash(s)
-	for _, p := range prefixes {
-		if strings.HasPrefix(normalized, p) {
-			return true
-		}
-	}
-	return false
-}

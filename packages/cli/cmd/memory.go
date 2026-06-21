@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ var memorySaveCmd = &cobra.Command{
 
 		// Build memory content
 		var memoryContent strings.Builder
-		memoryContent.WriteString(fmt.Sprintf("# %s\n\n", strings.Title(memoryType)))
+		memoryContent.WriteString(fmt.Sprintf("# %s\n\n", titleCase(memoryType)))
 		memoryContent.WriteString(fmt.Sprintf("**Created:** %s\n\n", time.Now().Format(time.RFC3339)))
 
 		if len(tags) > 0 {
@@ -180,4 +181,19 @@ func init() {
 	memoryCmd.AddCommand(memorySearchCmd)
 	rootCmd.AddCommand(memoryCmd)
 	memoryCmd.GroupID = "workspace"
+}
+
+// titleCase capitalizes the first letter of each space-separated word. It
+// replaces the deprecated strings.Title for our simple single-token inputs
+// (memory type names like "lesson" or "decision").
+func titleCase(s string) string {
+	prevSpace := true
+	return strings.Map(func(r rune) rune {
+		if prevSpace && unicode.IsLetter(r) {
+			prevSpace = false
+			return unicode.ToUpper(r)
+		}
+		prevSpace = unicode.IsSpace(r)
+		return r
+	}, s)
 }

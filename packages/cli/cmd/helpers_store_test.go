@@ -1,12 +1,41 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+// TestOpenStore_FailsFastOnCorruptJSON guards against silent config loss:
+// when a legacy .ai-setup.json is present but cannot be imported, openStore
+// must return an error rather than proceeding with an empty database.
+func TestOpenStore_FailsFastOnCorruptJSON(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".ai-setup.json"), []byte("{ this is not valid json "), 0o644); err != nil {
+		t.Fatalf("write corrupt json: %v", err)
+	}
+
+	database, err := openStore(dir)
+	if err == nil {
+		database.Close()
+		t.Fatal("openStore succeeded on corrupt .ai-setup.json; expected fail-fast error")
+	}
+}
+
+// TestOpenStore_NoJSONIsNotAnError confirms the absent-JSON happy path is
+// preserved: a fresh directory opens cleanly.
+func TestOpenStore_NoJSONIsNotAnError(t *testing.T) {
+	dir := t.TempDir()
+	database, err := openStore(dir)
+	if err != nil {
+		t.Fatalf("openStore on fresh dir: %v", err)
+	}
+	database.Close()
+}
 
 func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testing.T) {
 	dir := t.TempDir()

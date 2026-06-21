@@ -216,9 +216,3 @@ func copyStarterStandards(targetDir string, libFS fs.FS, fileRecords *[]types.Tr
 
 	return nil
 }
-
-// osDirFS wraps os.DirFS so scaffold helpers can swap in a fake FS in tests
-// without touching the real filesystem.
-var osDirFS = func(path string) fs.FS {
-	return os.DirFS(path)
-}

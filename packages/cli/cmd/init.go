@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -227,73 +226,6 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 	printInitNextSteps(ctx)
 
 	return nil
-}
-
-// runHeadlessInit attempts headless AGENTS.md placeholder filling for each
-// selected tool. Three-pass: (1) mechanical fill from Scout data, (2) deep
-// headless populate per tool if binary is available, (3) signal update.
-// Non-blocking — logs progress and never fails the init command.
-func runHeadlessInit(config *wizard.WizardConfig, ctx *scaffold.ScaffoldContext) {
-	if config.DryRun {
-		return
-	}
-
-	// Skip headless init in test environments to avoid slow binary lookups.
-	if os.Getenv("AI_SETUP_SKIP_HEADLESS_INIT") != "" {
-		cmdLog.Info("skipping headless init", "reason", "AI_SETUP_SKIP_HEADLESS_INIT set")
-		return
-	}
-
-	// Pass 1: Mechanical fill from Scout data already in ctx.
-	mechanicalFill(ctx)
-
-	// Pass 2: Deep headless init per tool.
-	prompt := buildPopulatePrompt(ctx, ctx.ProjectName)
-	reg := adapter.NewRegistry()
-
-	var wg sync.WaitGroup
-	for _, tool := range ctx.Tools {
-		wg.Add(1)
-		go func(tool types.ToolId) {
-			defer wg.Done()
-			adapt, err := reg.Get(tool)
-			if err != nil {
-				return
-			}
-
-			adapterCtx := &adapter.AdapterContext{
-				TargetDir:     ctx.TargetDir,
-				HomeDir:       ctx.HomeDir,
-				SetupScope:    ctx.SetupScope,
-				WorkspaceRoot: ctx.WorkspaceRoot,
-				LibraryFS:     ctx.LibraryFS,
-			}
-
-			cmdLog.Info("running headless populate", "tool", tool)
-			if err := adapt.RunHeadlessInit(adapterCtx, prompt); err != nil {
-				cmdLog.Warn("headless init failed", "tool", tool, "error", err)
-			}
-		}(tool)
-	}
-	wg.Wait()
-
-	// Pass 3: Update populate-needed signal after Pass 1+2.
-	updatePopulateNeeded(ctx)
-}
-
-// updatePopulateNeeded checks AGENTS.md for remaining placeholders and
-// updates the .ai/populate-needed signal accordingly.
-func updatePopulateNeeded(ctx *scaffold.ScaffoldContext) {
-	agentsPath := filepath.Join(ctx.TargetDir, "AGENTS.md")
-	data, err := os.ReadFile(agentsPath)
-	if err != nil {
-		return
-	}
-
-	remaining := strings.Count(string(data), "<!-- fill-in:")
-	if remaining > 0 {
-		cmdLog.Info("placeholders remain", "count", remaining)
-	}
 }
 
 func runInitNonInteractive(config *wizard.WizardConfig) error {

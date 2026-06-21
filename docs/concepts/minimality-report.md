@@ -40,3 +40,12 @@ go run ./packages/cli/internal/tokenrent/cmd/token-rent-check
 ```
 
 If token-rent fails, fix the canonical library size or add the documented `.lazyai/token-rent-override` with a non-empty `reason:`. Do not treat the minimality report as a replacement for token-rent enforcement.
+## Issue #305 split report
+
+The following files still exceed 500 lines after this split and are explicit exceptions for this issue:
+
+- `packages/cli/internal/adapter/copilot.go` (~570 lines, adapter implementation boundary)
+- `packages/cli/internal/adapter/claudecode.go` (~546 lines, adapter implementation boundary)
+- `packages/cli/internal/adapter/mcp_compiler.go` (~720 lines, implementation-heavy compiler orchestration)
+- `packages/cli/internal/adapter/mcp_compiler_test.go` (~574 lines, existing integration-style test scope)
+- `packages/cli/internal/adapter/opencode_adapter_test.go` (~598 lines, integration surface for external plugin behavior)

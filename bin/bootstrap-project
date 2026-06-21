@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Standalone/unwired maintenance helper:
+# - Not invoked by repository build/test/CI runtime.
+# - Run manually as an on-demand maintainer utility.
+
 # bin/bootstrap-project — Install lazyai into a target git repo.
 #
 # Usage: bin/bootstrap-project [TARGET_DIR] [OPTIONS]

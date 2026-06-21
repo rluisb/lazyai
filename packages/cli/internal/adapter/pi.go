@@ -13,7 +13,7 @@ import (
 type PiAdapter struct{}
 
 func (a *PiAdapter) ID() types.ToolId  { return types.ToolIdPi }
-func (a *PiAdapter) Name() string      { return "OMP/Pi" }
+func (a *PiAdapter) Name() string      { return "Pi" }
 func (a *PiAdapter) ConfigDir() string { return ".pi" }
 
 func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {

@@ -69,7 +69,9 @@ lazyai-cli compile
 | `opencode` | Neutral OpenCode scaffold with tool-native config, hook plugin, agents, and skills. |
 | `claude-code` | CLAUDE/Claude Code root config, hooks, commands, and settings output. |
 | `copilot` | Copilot repo/user instruction surfaces and managed hook/assets. |
-| `pi` | OMP/Pi skill-first surface (`.pi/skills/*`). |
+| `pi` | Pi skill-first surface (`.pi/skills/*`) plus agent profiles (`.pi/agents/*`). |
+| `omp` | OMP task-agent surface (`.omp/agents/*`) and skills (`.omp/skills/*`). |
+| `kiro` | Kiro CLI agent profiles (`.kiro/agents/*`), skills, and `.kiro/settings/mcp.json`. |
 | `antigravity` | `.gemini` configuration and hook surface (`.gemini/hooks/...`). |
 
 ## Command reference (all shipped commands)

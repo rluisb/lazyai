@@ -30,8 +30,8 @@ harness:
   anti_slope: [version-and-amendment-trail]
 workspace:
   scope: [workspace, project]
-  reads: [.specify/memory/constitution.md]
-  writes: [.specify/memory/constitution.md]
+  reads: [".specify/memory/constitution.md"]
+  writes: [".specify/memory/constitution.md"]
   cross_repo: false
 ---
 

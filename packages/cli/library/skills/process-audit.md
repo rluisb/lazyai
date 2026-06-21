@@ -12,7 +12,7 @@ output_schema:
     - Workflow Adherence (RPI phases completed, gates attested, checkpoints present)
     - Constitutional Conformance (all 6 articles verified across workflows)
     - Harness Engineering Adherence (Feed Forward, Contract, Sensors, Memory, Anti-Slope)
-    - Findings (🔴 Critical: process violation, 🟡 Major: missed opportunity, 🟢 Minor: improvement idea)
+    - "Findings (🔴 Critical: process violation, 🟡 Major: missed opportunity, 🟢 Minor: improvement idea)"
     - Corrective Actions (for 🔴/🟡 findings)
     - Standards & Constitution Amendments (if audit reveals need for new rules)
     - Trend (improving, stable, or degrading?)
@@ -35,8 +35,8 @@ harness:
   anti_slope: [audit-findings-tracked, process-improvements-captured]
 workspace:
   scope: [project, workspace]
-  reads: [ledger.md, memory entities, spec/plan/tasks files, recent commits]
-  writes: [specs/audits/{YYYY-MM-DD}-audit.md, memory updates]
+  reads: ["ledger.md", "memory entities", "spec/plan/tasks files", "recent commits"]
+  writes: ["specs/audits/{YYYY-MM-DD}-audit.md", "memory updates"]
   cross_repo: false
 ---
 

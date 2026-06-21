@@ -31,8 +31,8 @@ harness:
   anti_slope: [no-incomplete-checklists, all-gates-attested]
 workspace:
   scope: [project, workspace]
-  reads: [specs/{NNN-slug}/checklists/, .specify/memory/constitution.md]
-  writes: [specs/{NNN-slug}/checklists/gate-5.md]
+  reads: ["specs/{NNN-slug}/checklists/", ".specify/memory/constitution.md"]
+  writes: ["specs/{NNN-slug}/checklists/gate-5.md"]
   cross_repo: false
 ---
 

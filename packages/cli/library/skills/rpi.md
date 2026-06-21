@@ -24,15 +24,15 @@ produces_for:
 mcp_tools: [filesystem, ripgrep]
 harness:
   feed_forward: [constitution.md]
-  contract: [human gates at Research, Plan, Implement]
-  sensors: [human approval, ledger]
-  memory: [.specify/memory/repos/{active}/rpi-execution.md, ledger.md]
+  contract: ["human gates at Research", "Plan", "Implement"]
+  sensors: ["human approval", "ledger"]
+  memory: [".specify/memory/repos/{active}/rpi-execution.md", "ledger.md"]
   anti_slope: [no-phase-skip, all-gates-attested, decisions-recorded]
 workspace:
   scope: [project, workspace, repo]
-  reads: [.specify/memory/constitution.md, specs/]
-  writes: [.specify/memory/repos/{active}/rpi-execution.md, per-phase spec.md/plan.md/tasks.md]
-  cross_repo: true (coordinates per-repo execution)
+  reads: [".specify/memory/constitution.md", "specs/"]
+  writes: [".specify/memory/repos/{active}/rpi-execution.md", "per-phase spec.md/plan.md/tasks.md"]
+  cross_repo: true
 ---
 
 # 1. IDENTITY AND ROLE

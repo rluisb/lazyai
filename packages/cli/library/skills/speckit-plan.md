@@ -36,8 +36,8 @@ harness:
   anti_slope: [no-design-docs, independently-reviewable-phases]
 workspace:
   scope: [project, workspace]
-  reads: [specs/{NNN-slug}/spec.md, .specify/memory/constitution.md, .specify/memory/repos/{active}/last-known-state.md]
-  writes: [specs/{NNN-slug}/plan.md]
+  reads: ["specs/{NNN-slug}/spec.md", ".specify/memory/constitution.md", ".specify/memory/repos/{active}/last-known-state.md"]
+  writes: ["specs/{NNN-slug}/plan.md"]
   cross_repo: false
 ---
 

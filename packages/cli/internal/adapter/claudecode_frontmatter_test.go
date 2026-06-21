@@ -76,6 +76,39 @@ func TestLibraryCanonicalAgentsHaveDescription(t *testing.T) {
 	}
 }
 
+// TestLibrarySkillsFrontmatterParses asserts every source skill frontmatter
+// block is valid YAML. Pi, Claude Code, and other adapters copy these files
+// into tool-native SKILL.md surfaces, so invalid source YAML breaks agent
+// startup after install. This catches unquoted flow-sequence scalars like
+// specs/{NNN-slug}/ or [T001-T005].
+func TestLibrarySkillsFrontmatterParses(t *testing.T) {
+	libFS := library.GetLibraryFS()
+	if libFS == nil {
+		t.Fatal("library.GetLibraryFS returned nil")
+	}
+
+	if err := fs.WalkDir(libFS, "skills", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			t.Errorf("walk %q: %v", path, err)
+			return nil
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+		data, err := fs.ReadFile(libFS, path)
+		if err != nil {
+			t.Errorf("read %q: %v", path, err)
+			return nil
+		}
+		if _, _, err := frontmatter.ExtractFrontmatter(data); err != nil {
+			t.Errorf("%s: parse frontmatter: %v", path, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("walk skills: %v", err)
+	}
+}
+
 // TestClaudeCodeFrontmatterSchemas verifies that all Claude Code artifacts
 // emitted by Install conform to their required frontmatter schemas (spec 012 task 011).
 func TestClaudeCodeFrontmatterSchemas(t *testing.T) {

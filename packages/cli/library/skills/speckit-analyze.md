@@ -35,8 +35,8 @@ harness:
   anti_slope: [no-silent-traceability-gaps, reflexion-required]
 workspace:
   scope: [project, workspace]
-  reads: [specs/{NNN-slug}/, .specify/memory/constitution.md]
-  writes: [specs/{NNN-slug}/analysis.md]
+  reads: ["specs/{NNN-slug}/", ".specify/memory/constitution.md"]
+  writes: ["specs/{NNN-slug}/analysis.md"]
   cross_repo: false
 ---
 

@@ -33,8 +33,8 @@ harness:
   anti_slope: [never-degrade-skill-quality, always-justify-changes]
 workspace:
   scope: [project, workspace]
-  reads: [handoffs, ledgers, git history, library files]
-  writes: [.specify/memory/improvements/, library/skills, library/agents, constitution.md]
+  reads: ["handoffs", "ledgers", "git history", "library files"]
+  writes: [".specify/memory/improvements/", "library/skills", "library/agents", "constitution.md"]
   cross_repo: false
 ---
 

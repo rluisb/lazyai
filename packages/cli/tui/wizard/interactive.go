@@ -143,6 +143,48 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	return s
 }
 
+
+func initExpressWizardState(defaults *WizardResult) *WizardState {
+	state := initWizardState(defaults)
+	state.McpPreset = string(McpPresetRecommended)
+	state.McpServers = []string{"filesystem", "ripgrep", "ai-memory", "codegraph"}
+	return state
+}
+
+func buildExpressInteractiveForm(state *WizardState) *huh.Form {
+	groups := []*huh.Group{
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Scope").
+				Options(
+					huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
+					huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
+					huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
+				).
+				Value(&state.Scope),
+		),
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("AI Tools").
+				OptionsFunc(func() []huh.Option[string] {
+					return toolOptionsForScope(types.SetupScope(state.Scope))
+				}, &state.Scope).
+				Value(&state.Tools),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Project Name").
+				Placeholder(defaultPhase1ProjectName()).
+				Value(&state.ProjectName).
+				Validate(validateProjectName),
+		).WithHideFunc(func() bool {
+			return state.Scope == "global"
+		}),
+	}
+
+	return theme.NewForm(groups...)
+}
+
 func buildInteractiveForm(state *WizardState) *huh.Form {
 	groups := []*huh.Group{
 		// Phase 1
@@ -393,4 +435,23 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	p5.OpenCodeProviders = state.OpenCodeProviders
 
 	return p1, p2, p5
+}
+
+func askWizardMode() (WizardMode, error) {
+	mode := string(WizardModePersonalized)
+	group := huh.NewGroup(
+		huh.NewSelect[string]().
+			Title("Setup mode").
+			Description("Choose an initialization flow").
+			Options(
+				huh.NewOption("Express", string(WizardModeExpress)),
+				huh.NewOption("Personalized", string(WizardModePersonalized)),
+			).
+			Value(&mode),
+	)
+
+	if err := theme.NewForm(group).Run(); err != nil {
+		return "", err
+	}
+	return WizardMode(mode), nil
 }

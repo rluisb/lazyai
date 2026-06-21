@@ -31,6 +31,18 @@ const (
 	// PhaseCancel means the user cancelled the wizard.
 	PhaseCancel
 )
+// WizardMode controls how many interactive prompts are shown.
+type WizardMode string
+
+const (
+	// WizardModeAuto asks the user which interactive flow to use.
+	WizardModeAuto WizardMode = ""
+	// WizardModeExpress uses a compact flow for faster setup.
+	WizardModeExpress WizardMode = "express"
+	// WizardModePersonalized uses the existing full interactive flow.
+	WizardModePersonalized WizardMode = "personalized"
+)
+
 
 // WizardConfig holds all inputs needed to run the wizard.
 type WizardConfig struct {
@@ -68,6 +80,7 @@ type WizardConfig struct {
 	CLICodegraphDataPath   string
 	CLIExistingSetupPolicy types.SetupPolicy
 	CLIUseReversa          *bool
+	CLIWizardMode          WizardMode
 
 	// CLIDriveCLI, when true, asks Gemini (and future adapters) to delegate
 	// scaffolding to the tool's own CLI instead of direct-write.
@@ -157,11 +170,35 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 			result.Phase5 = p5
 		}
 	} else {
+		mode := config.CLIWizardMode
+		if mode == WizardModeAuto {
+			selection, err := askWizardMode()
+			if err != nil {
+				return nil, ErrUserCancelled
+			}
+			mode = selection
+		}
+		if mode == "" {
+			mode = WizardModePersonalized
+		}
+
 		state := initWizardState(defaults)
+		switch mode {
+		case WizardModeExpress:
+			state = initExpressWizardState(defaults)
+		case WizardModePersonalized:
+			// Keep the existing full interactive defaults.
+		default:
+			return nil, fmt.Errorf("invalid wizard mode %q", mode)
+		}
 		if config.CLIUseReversa != nil {
 			state.AnalyzeExistingCode = *config.CLIUseReversa
 		}
-		form := buildInteractiveForm(state).WithAccessible(!config.Interactive)
+
+		form := buildInteractiveForm(state)
+		if mode == WizardModeExpress {
+			form = buildExpressInteractiveForm(state)
+		}
 
 		if err := form.Run(); err != nil {
 			return nil, ErrUserCancelled

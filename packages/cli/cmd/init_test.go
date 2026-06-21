@@ -151,10 +151,25 @@ func TestInitRemovedFlagsNotRegistered(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{"memory-path", "reversa", "no-reversa"} {
+	for _, name := range []string{"memory-path", "reversa", "no-reversa", "express", "custom"} {
 		if initCmd.Flags().Lookup(name) == nil {
 			t.Fatalf("expected flag %q to remain registered", name)
 		}
+	}
+}
+
+
+func TestRunInitExpressCustomMutuallyExclusive(t *testing.T) {
+	cmd := initCmd
+	cmd.SetArgs([]string{"init", "--express", "--custom"})
+	if err := cmd.Flags().Set("express", "true"); err != nil {
+		t.Fatalf("set express: %v", err)
+	}
+	if err := cmd.Flags().Set("custom", "true"); err != nil {
+		t.Fatalf("set custom: %v", err)
+	}
+	if err := runInit(cmd, nil); err == nil {
+		t.Fatal("expected conflict error when both --express and --custom are set")
 	}
 }
 

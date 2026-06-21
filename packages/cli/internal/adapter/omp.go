@@ -28,7 +28,10 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	_ = files.EnsureDir(ompDir)
 	_ = files.EnsureDir(filepath.Join(ompDir, "skills"))
 	_ = files.EnsureDir(filepath.Join(ompDir, "agents"))
-
+	_ = files.EnsureDir(filepath.Join(ompDir, "commands"))
+	_ = files.EnsureDir(filepath.Join(ompDir, "prompts"))
+	// OMP discovers TypeScript hook factories from .omp/hooks/pre/*.ts.
+	_ = files.EnsureDir(filepath.Join(ompDir, "hooks", "pre"))
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",
@@ -48,6 +51,39 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		ToDestPath: func(file string) string {
 			name := fileID(file)
 			return filepath.Join(ompDir, "skills", name, "SKILL.md")
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy canonical slash commands.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "canonical/commands",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ompDir, "commands", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy prompt templates.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "prompts",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ompDir, "prompts", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Copy TypeScript hook factories for OMP.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "omp/hooks",
+		ToDestPath: func(file string) string {
+			return filepath.Join(ompDir, "hooks", "pre", filepath.Base(file))
 		},
 	}); err != nil {
 		return nil, err

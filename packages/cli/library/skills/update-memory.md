@@ -29,9 +29,9 @@ harness:
   anti_slope: [no-silent-discoveries, confidence-leveled]
 workspace:
   scope: [project, workspace]
-  reads: [decisions, learnings, discoveries]
-  writes: [.specify/memory/repos/{repo}/entities/, .specify/memory/repos/{repo}/lessons/]
-  cross_repo: true (workspace memory shared)
+  reads: ["decisions", "learnings", "discoveries"]
+  writes: [".specify/memory/repos/{repo}/entities/", ".specify/memory/repos/{repo}/lessons/"]
+  cross_repo: true
 ---
 
 # 1. IDENTITY AND ROLE

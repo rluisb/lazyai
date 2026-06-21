@@ -1,6 +1,6 @@
 ---
 name: tdd-loop
-description: Execute test-driven development loop: red, green, refactor.
+description: "Execute test-driven development loop: red, green, refactor."
 argument-hint: "[test-or-behavior]"
 trigger: /tdd-loop
 phase: implement

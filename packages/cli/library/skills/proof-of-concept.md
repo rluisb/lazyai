@@ -31,8 +31,8 @@ harness:
   anti_slope: [poc-discard-mandatory, no-production-code, lessons-extracted-required]
 workspace:
   scope: [project]
-  reads: [codebase, relevant docs]
-  writes: [specs/poc/{NNN-name}/, temporary code (discarded)]
+  reads: ["codebase", "relevant docs"]
+  writes: ["specs/poc/{NNN-name}/", "temporary code (discarded)"]
   cross_repo: false
 ---
 

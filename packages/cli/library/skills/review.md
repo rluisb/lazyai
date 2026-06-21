@@ -33,8 +33,8 @@ harness:
   anti_slope: [article-vi-audit-mandatory, no-style-comments, evidence-required]
 workspace:
   scope: [project]
-  reads: [PR diff, ticket, affected code, standards]
-  writes: [specs/code-reviews/{NNN-pr-name}/review.md]
+  reads: ["PR diff", "ticket", "affected code", "standards"]
+  writes: ["specs/code-reviews/{NNN-pr-name}/review.md"]
   cross_repo: false
 ---
 

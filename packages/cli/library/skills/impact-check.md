@@ -32,8 +32,8 @@ harness:
   anti_slope: [no-silent-knowledge-drift, standards-updates-tracked]
 workspace:
   scope: [project]
-  reads: [recent git history, changed files, existing standards, CLAUDE.md]
-  writes: [.specify/memory/repos/{repo}/impact-check.md, proposed CLAUDE.md/standards/constitution updates]
+  reads: ["recent git history", "changed files", "existing standards", "CLAUDE.md"]
+  writes: [".specify/memory/repos/{repo}/impact-check.md", "proposed CLAUDE.md/standards/constitution updates"]
   cross_repo: false
 ---
 

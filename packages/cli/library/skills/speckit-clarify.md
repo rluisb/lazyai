@@ -25,8 +25,8 @@ harness:
   anti_slope: [no-silent-spec-edits]
 workspace:
   scope: [project, workspace]
-  reads: [specs/{NNN-slug}/spec.md, .specify/memory/constitution.md]
-  writes: [specs/{NNN-slug}/spec.md]
+  reads: ["specs/{NNN-slug}/spec.md", ".specify/memory/constitution.md"]
+  writes: ["specs/{NNN-slug}/spec.md"]
   cross_repo: false
 ---
 

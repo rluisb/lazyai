@@ -30,8 +30,8 @@ harness:
   anti_slope: [inventory-scope-locked, regression-tests-present, standards-updated]
 workspace:
   scope: [project]
-  reads: [affected code, package.json / go.mod]
-  writes: [code changes, test updates, standards updates]
+  reads: ["affected code", "package.json / go.mod"]
+  writes: ["code changes", "test updates", "standards updates"]
   cross_repo: false
 ---
 

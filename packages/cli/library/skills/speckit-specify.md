@@ -37,7 +37,7 @@ workspace:
     - .specify/memory/constitution.md
     - .specify/memory/repos/{active}/last-known-state.md
     - existing specs/* (for numbering)
-  writes: [specs/{NNN-slug}/spec.md]
+  writes: ["specs/{NNN-slug}/spec.md"]
   cross_repo: false
 ---
 

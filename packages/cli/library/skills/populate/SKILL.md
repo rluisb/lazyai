@@ -1,9 +1,10 @@
 ---
 name: populate
-description: Index the codebase with codegraph + qmd, build a knowledge
-  graph with graphify, and fill remaining <!-- fill-in: --> placeholders
-  in AGENTS.md with detected architecture, conventions, patterns, and rules.
-  Every filled value is tagged with confidence (🟢🟡🔴).
+description: >-
+  Index the codebase with codegraph + qmd, build a knowledge graph with graphify,
+  and fill remaining <!-- fill-in: --> placeholders in AGENTS.md with detected
+  architecture, conventions, patterns, and rules. Every filled value is tagged
+  with confidence (🟢🟡🔴).
 trigger: /populate
 compatibility: Claude Code, OpenCode, Codex, Cursor, Gemini CLI
 ---

@@ -35,8 +35,8 @@ harness:
   anti_slope: [no-silent-standard-duplication, scope-cascade-enforced]
 workspace:
   scope: [project, workspace, global]
-  reads: [existing standards, codebase patterns]
-  writes: [specs/standards/{category}/ or workspace standards]
+  reads: ["existing standards", "codebase patterns"]
+  writes: ["specs/standards/{category}/ or workspace standards"]
   cross_repo: false
 ---
 

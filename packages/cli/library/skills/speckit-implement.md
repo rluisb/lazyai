@@ -33,8 +33,8 @@ harness:
   anti_slope: [red-green-refactor-discipline, harness-exit-on-skip]
 workspace:
   scope: [project]
-  reads: [specs/{NNN-slug}/tasks/, library/templates/]
-  writes: [source code, test files, task harness progress file]
+  reads: ["specs/{NNN-slug}/tasks/", "library/templates/"]
+  writes: ["source code", "test files", "task harness progress file"]
   cross_repo: false
 ---
 

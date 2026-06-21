@@ -22,8 +22,8 @@ harness:
   anti_slope: [no-interface-design-yet, no-forced-candidates]
 workspace:
   scope: [project]
-  reads: [relevant modules, CONTEXT.md, docs/adr/]
-  writes: [CONTEXT.md updates, ADR files if created]
+  reads: ["relevant modules", "CONTEXT.md", "docs/adr/"]
+  writes: ["CONTEXT.md updates", "ADR files if created"]
 ---
 
 # Improve Codebase Architecture Skill

@@ -11,7 +11,7 @@ output_schema:
     - Overview (phases summary, task count, parallelization potential)
     - Dependency Graph (directed acyclic graph: T### → [T###, T###])
     - Phases & Task Allocation (P1, P2, P3 with task counts)
-    - Parallelization Plan (batches: [T001-T005], [T006-T010] with independence justification)
+    - "Parallelization Plan (batches: [T001-T005], [T006-T010] with independence justification)"
     - Task Ledger (T### | US* | [P] marker | title | acceptance criteria | harness pointer)
 consumes:
   - specs/{NNN-slug}/plan.md
@@ -28,8 +28,8 @@ harness:
   anti_slope: [no-task-orphans, no-implicit-dependencies]
 workspace:
   scope: [project, workspace]
-  reads: [specs/{NNN-slug}/plan.md, library/templates/task-harness-template.md]
-  writes: [specs/{NNN-slug}/tasks.md, per-task harness files in tasks/ subdirectory]
+  reads: ["specs/{NNN-slug}/plan.md", "library/templates/task-harness-template.md"]
+  writes: ["specs/{NNN-slug}/tasks.md", "per-task harness files in tasks/ subdirectory"]
   cross_repo: false
 ---
 

@@ -29,8 +29,8 @@ harness:
   anti_slope: [fix-only-no-refactor, regression-test-mandatory]
 workspace:
   scope: [project]
-  reads: [issue description, affected code]
-  writes: [specs/bugfixes/{NNN-name}/, code changes, test changes]
+  reads: ["issue description", "affected code"]
+  writes: ["specs/bugfixes/{NNN-name}/", "code changes", "test changes"]
   cross_repo: false
 ---
 

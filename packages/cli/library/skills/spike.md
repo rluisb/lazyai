@@ -32,8 +32,8 @@ harness:
   anti_slope: [spike-discard-mandatory, throwaway-inventory-required]
 workspace:
   scope: [project]
-  reads: [codebase, relevant docs]
-  writes: [specs/spikes/{NNN-name}/, throwaway code (temporary)]
+  reads: ["codebase", "relevant docs"]
+  writes: ["specs/spikes/{NNN-name}/", "throwaway code (temporary)"]
   cross_repo: false
 ---
 

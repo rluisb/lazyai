@@ -1,3 +1,7 @@
+> **HISTORICAL (2026-06-20) — parts of this plan target the removed `packages/ai-setup-ts` package; the CLI is now Go-only (`packages/cli`). Retained for historical context.**
+>
+> This document is historical; `packages/ai-setup-ts` is no longer present.
+
 # Task 014: Wave 2 Baseline Capability + W1 Bake Audit
 
 **Phase:** W2.0 — Baseline + decision gates  

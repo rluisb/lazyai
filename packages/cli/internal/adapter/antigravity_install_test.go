@@ -3,10 +3,37 @@ package adapter
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+const antigravityHooksJSON = `{
+  "lazyai-block-destructive-shell": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".gemini/hooks/lazyai/block-destructive-shell.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "lazyai-objective-workflow-gate": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": ".gemini/hooks/lazyai/objective-workflow-gate.sh"
+      }
+    ]
+  }
+}
+`
 
 func TestAntigravityAdapter_Install_ProducesAgentSkillsSurfaceAtAgentsDir(t *testing.T) {
 	targetDir := t.TempDir()
@@ -15,6 +42,7 @@ func TestAntigravityAdapter_Install_ProducesAgentSkillsSurfaceAtAgentsDir(t *tes
 	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "block-destructive-shell.sh"), "#!/usr/bin/env bash\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "objective-workflow-gate.sh"), "#!/usr/bin/env bash\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
 	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
 	writeFile(t, filepath.Join(libDir, "skills", "issue-triage.md"), "# issue triage\n")
 
@@ -37,9 +65,17 @@ func TestAntigravityAdapter_Install_ProducesAgentSkillsSurfaceAtAgentsDir(t *tes
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "settings.json"))
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "block-destructive-shell.sh"))
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "objective-workflow-gate.sh"))
+	assertFileExists(t, filepath.Join(targetDir, ".agents", "hooks.json"))
 	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "diagnose", "SKILL.md"))
 	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "issue-triage", "SKILL.md"))
 
+	content, err := os.ReadFile(filepath.Join(targetDir, ".agents", "hooks.json"))
+	if err != nil {
+		t.Fatalf("read hooks.json failed: %v", err)
+	}
+	if !strings.Contains(string(content), ".gemini/hooks/lazyai/block-destructive-shell.sh") {
+		t.Fatalf("hooks.json missing block-destructive-shell hook command")
+	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".agents", "agents")); err == nil {
 		t.Fatalf("unexpected .agents/agents directory")
 	}
@@ -54,6 +90,7 @@ func TestAntigravityAdapter_Install_UsesWorkspaceRootForAgentsAndGemini(t *testi
 	libDir := t.TempDir()
 
 	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
 	writeFile(t, filepath.Join(libDir, "skills", "review.md"), "# review\n")
 
 	ctx := &AdapterContext{

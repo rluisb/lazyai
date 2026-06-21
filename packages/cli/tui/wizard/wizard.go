@@ -142,6 +142,7 @@ func RunWizard(config *WizardConfig) (*WizardResult, error) {
 // Phase ordering: 1, 2, 5 (interactive form) → 3 (conditional) → 4.
 func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*WizardResult, error) {
 	result := &WizardResult{}
+	var mode WizardMode
 
 	if !config.Interactive {
 		var err error
@@ -170,7 +171,7 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 			result.Phase5 = p5
 		}
 	} else {
-		mode := config.CLIWizardMode
+		mode = config.CLIWizardMode
 		if mode == WizardModeAuto {
 			selection, err := askWizardMode()
 			if err != nil {
@@ -210,12 +211,17 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 		result.Phase5 = p5
 	}
 
+	// Compute required install-consent hints (Express-only).
+	var installConsents []string
+	if mode == WizardModeExpress {
+		installConsents = formatInstallConsents(missingInstallConsents(result.Phase1.EnableServers))
+	}
+
 	// Compute the install plan from Phase 1+2 results.
 	plan, err := ComputePlan(config)
 	if err != nil {
 		return nil, fmt.Errorf("computing install plan: %w", err)
 	}
-
 	// Convert internal ConflictInfo to conflict.Conflict for Phase 3.
 	conflicts := BuildConflictList(plan)
 
@@ -237,7 +243,7 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 	}
 
 	// Phase 4: confirm
-	phase4, action, err := RunPhase4(plan, !config.Interactive)
+	phase4, action, err := RunPhase4(plan, !config.Interactive, installConsents)
 	if err != nil {
 		return nil, err
 	}

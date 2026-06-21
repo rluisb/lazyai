@@ -16,9 +16,9 @@ It contains managed server definitions, install hints, and environment-variable 
 
 | Tool | Compiled MCP output | Notes |
 |---|---|---|
-| OpenCode | `.opencode/lazyai.mcp.jsonc` | LazyAI-managed MCP entries live alongside the baseline OpenCode config |
-| Claude Code | `.mcp.json` or `.claude/settings.local.json` | Depends on scope and `--local-secrets` |
+| OpenCode | `opencode.json` | Managed MCP entries are merged into top-level `mcp` on OpenCode config |
 | Copilot | `.vscode/mcp.json` and optional `~/.copilot/mcp-config.json` | CLI probe decides whether the home config is emitted |
+| Claude Code | `.mcp.json` or `.claude/settings.local.json` | Depends on scope and `--local-secrets` |
 
 ## Enabling servers
 
@@ -37,8 +37,7 @@ lazyai-cli compile
 ```mermaid
 flowchart LR
     C[".ai/mcp.json<br/>(canonical source)"] --> M["lazyai-cli compile"]
-    M --> OC[".opencode/lazyai.mcp.jsonc"]
-    M --> CC[".mcp.json"]
+    M --> OC["opencode.json"]
     M --> CP[".vscode/mcp.json"]
 ```
 

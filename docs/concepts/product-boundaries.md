@@ -69,8 +69,8 @@ The CLI reference documents shipped `lazyai-cli` commands only. Repository scrip
 ### Default surface contract vs LazyAI extras
 
 - Default, shipped setup outputs emit eight canonical agents across supported tool surfaces: `guide` as the front-door default plus `implementer`, `researcher`, `planner`, `reviewer`, `deployer`, `responder`, and `evidence-verifier` as specialists.
-- OpenCode default setup writes a root `opencode.json` config with baseline shape only (schema, permissions, skill paths, instructions). It does not carry LazyAI runtime-only MCP content.
-- LazyAI runtime-adjacent MCP/runtime extras are isolated to `.opencode/lazyai.mcp.jsonc` so the default `opencode.json` stays baseline-compatible and replaceable.
+- OpenCode default setup writes a root `opencode.json` config with baseline shape plus managed MCP entries under top-level `mcp`.
+- Legacy `.opencode/lazyai.mcp.jsonc` entries are migrated into `opencode.json` during compile so the documented OpenCode config remains the active source.
 - Retired artifacts such as orchestrator/loop-driver/Startup surfaces are not part of default setup outputs and belong to explicit runtime/archival paths only.
 
 ## Top-level CLI command inventory

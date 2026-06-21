@@ -14,7 +14,7 @@ import (
 )
 
 // TestCompileOpenCodeMCP_ProjectScope verifies that at project scope, the MCP
-// config is written to <targetDir>/.opencode/lazyai.mcp.jsonc.
+// config is written to <targetDir>/opencode.json.
 func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 	targetDir := t.TempDir()
 
@@ -33,9 +33,9 @@ func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	configPath := filepath.Join(targetDir, ".opencode", OpenCodeRuntimeMCPFilename)
+	configPath := filepath.Join(targetDir, OpenCodeConfigFilename)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Fatal("expected .opencode/lazyai.mcp.jsonc was not created")
+		t.Fatal("expected opencode.json was not created")
 	}
 
 	if len(records) != 1 {
@@ -44,7 +44,7 @@ func TestCompileOpenCodeMCP_ProjectScope(t *testing.T) {
 }
 
 // TestCompileOpenCodeMCP_GlobalScope verifies that at global scope, the MCP
-// config is written to <home>/.config/opencode/lazyai.mcp.jsonc (via
+// config is written to <home>/.config/opencode/opencode.json (via
 // ResolveToolRoot), not <targetDir>/.opencode/.
 func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 	targetDir := t.TempDir()
@@ -66,10 +66,10 @@ func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
 
-	// Global scope: lazyai.mcp.jsonc should live under <home>/.config/opencode.
-	globalConfigPath := filepath.Join(homeDir, ".config", "opencode", OpenCodeRuntimeMCPFilename)
+	// Global scope: opencode.json should live under <home>/.config/opencode.
+	globalConfigPath := filepath.Join(homeDir, ".config", "opencode", OpenCodeConfigFilename)
 	if _, err := os.Stat(globalConfigPath); os.IsNotExist(err) {
-		t.Fatalf("expected lazyai.mcp.jsonc at %q, not found", globalConfigPath)
+		t.Fatalf("expected opencode.json at %q, not found", globalConfigPath)
 	}
 
 	// Must not write under the project target dir.
@@ -84,9 +84,8 @@ func TestCompileOpenCodeMCP_GlobalScope(t *testing.T) {
 }
 
 // TestCompileOpenCodeMCP_PreservesUserAuthoredServer verifies that a server
-// the user hand-added to opencode.jsonc (not present in .ai/mcp.json) is
-// preserved across an ai-setup compile cycle. This is the core per-server
-// deep-merge behavior introduced in spec 011 phase 2.
+// user-authored to legacy `.opencode/lazyai.mcp.jsonc` (not present in
+// `.ai/mcp.json`) is preserved across an `ai-setup` compile cycle.
 func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 	targetDir := t.TempDir()
 
@@ -97,7 +96,7 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 		t.Fatalf("write mcp.json: %v", err)
 	}
 
-	// Pre-seed lazyai.mcp.jsonc with a user-authored MCP entry under a name
+	// Pre-seed old lazyai.mcp.jsonc with a user-authored MCP entry under a name
 	// that ai-setup does not manage.
 	ocDir := filepath.Join(targetDir, ".opencode")
 	_ = files.EnsureDir(ocDir)
@@ -118,7 +117,7 @@ func TestCompileOpenCodeMCP_PreservesUserAuthoredServer(t *testing.T) {
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(targetDir, OpenCodeConfigFilename))
 	if err != nil {
 		t.Fatalf("read config: %v", err)
 	}
@@ -147,10 +146,12 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ocDir := filepath.Join(targetDir, ".opencode")
-	_ = files.EnsureDir(ocDir)
-	preExisting := `{"mcp":{"filesystem":{"type":"local","command":["user-override"]}}}`
-	if err := os.WriteFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"), []byte(preExisting), 0o644); err != nil {
+	preExisting := `{
+  "mcp": {
+    "filesystem": { "type": "local", "command": ["user-override"] }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(targetDir, OpenCodeConfigFilename), []byte(preExisting), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -161,7 +162,7 @@ func TestCompileOpenCodeMCP_ManagedWinsOnNameCollision(t *testing.T) {
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, _ := os.ReadFile(filepath.Join(ocDir, "lazyai.mcp.jsonc"))
+	data, _ := os.ReadFile(filepath.Join(targetDir, OpenCodeConfigFilename))
 	if strings.Contains(string(data), "user-override") {
 		t.Errorf("user-override survived; managed entry should have won:\n%s", data)
 	}
@@ -190,9 +191,9 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *tes
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(targetDir, OpenCodeConfigFilename))
 	if err != nil {
-		t.Fatalf("read lazyai.mcp.jsonc: %v", err)
+		t.Fatalf("read opencode.json: %v", err)
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"orchestrator"`) {
@@ -230,9 +231,9 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
 		t.Fatalf("CompileMCPForTool: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(targetDir, ".opencode", "lazyai.mcp.jsonc"))
+	data, err := os.ReadFile(filepath.Join(targetDir, OpenCodeConfigFilename))
 	if err != nil {
-		t.Fatalf("read lazyai.mcp.jsonc: %v", err)
+		t.Fatalf("read opencode.json: %v", err)
 	}
 	contents := string(data)
 	if !strings.Contains(contents, `"lazyai-orchestrator"`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
@@ -272,6 +273,7 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 		}
 	}
 }
+
 
 // TestToClaudeCodeMcpInner_RemoteHasType verifies remote MCP entries carry type: http.
 func TestToClaudeCodeMcpInner_RemoteHasType(t *testing.T) {

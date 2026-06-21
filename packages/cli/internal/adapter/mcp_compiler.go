@@ -138,15 +138,15 @@ func GetEnabledServers(catalog *McpCatalog) map[string]McpServer {
 // ---------------------------------------------------------------------------
 
 func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.TrackedFile, error) {
-	root, err := ResolveToolRoot(types.ToolIdOpenCode, ctx.SetupScope, ctx.toAdapterContext())
+	configRoot, err := openCodeConfigRoot(ctx.toAdapterContext())
 	if err != nil {
 		return ctx.FileRecords, err
 	}
-	// Global root is ~/.config/opencode — lazyai.mcp.jsonc lives directly in it.
-	// Project/workspace root is <target>/.opencode — same placement.
-	configPath := filepath.Join(root, OpenCodeRuntimeMCPFilename)
+	// OpenCode MCP merges into the actual config file at opencode.json.
+	configPath := filepath.Join(configRoot, OpenCodeConfigFilename)
 	ocMcp := toOpenCodeMcp(catalog.Servers)
-	// Read existing config and merge.
+
+	// Read existing config and merge managed MCP entries with preserved user keys.
 	var existingConfig map[string]any
 	if files.FileExists(configPath) {
 		parsed, err := jsonc.ReadJSONCFile(configPath)
@@ -159,7 +159,9 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}
 
 	existingConfig["$schema"] = "https://opencode.ai/config.json"
-	existingConfig["mcp"] = mergeOpenCodeMcpServers(existingConfig["mcp"], ocMcp)
+	existingMcp, _ := existingConfig["mcp"].(map[string]any)
+	legacyMcp := readLegacyOpenCodeMcpEntries(root)
+	existingConfig["mcp"] = mergeOpenCodeMcpServers(existingMcp, legacyMcp, ocMcp)
 
 	if err := WriteJSONFile(configPath, existingConfig); err != nil {
 		return ctx.FileRecords, err
@@ -175,20 +177,40 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}), nil
 }
 
-// mergeOpenCodeMcpServers merges the ai-setup-managed mcp map into whatever
-// the user currently has under `mcp` in their lazyai.mcp.jsonc. Managed
-// servers (those present in `managed`) are upserted; any existing entry
-// keyed by a name NOT in `managed` is preserved untouched — so a user who
-// hand-adds an MCP server directly keeps it on the next `ai-setup compile`.
-func mergeOpenCodeMcpServers(existingRaw any, managed map[string]any) map[string]any {
-	merged := make(map[string]any, len(managed))
-	if existing, ok := existingRaw.(map[string]any); ok {
-		for name, entry := range existing {
-			if _, isManaged := managed[name]; isManaged {
-				continue // skip; managed entry wins
-			}
-			merged[name] = entry
+func readLegacyOpenCodeMcpEntries(root string) map[string]any {
+	legacyPath := filepath.Join(root, OpenCodeLegacyMCPFilename)
+	if !files.FileExists(legacyPath) {
+		return nil
+	}
+
+	legacyConfig, err := jsonc.ReadJSONCFile(legacyPath)
+	if err != nil {
+		return nil
+	}
+	if legacyConfig == nil {
+		return nil
+	}
+
+	legacyMcp, ok := legacyConfig["mcp"].(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return legacyMcp
+}
+// mergeOpenCodeMcpServers merges managed MCP servers into the existing MCP map
+// while preserving all non-managed entries. Existing entries win over legacy
+// entries, and managed entries always win over existing configuration.
+func mergeOpenCodeMcpServers(existing map[string]any, legacy map[string]any, managed map[string]any) map[string]any {
+	merged := make(map[string]any, len(existing)+len(legacy)+len(managed))
+	for name, entry := range existing {
+		merged[name] = entry
+	}
+	for name, entry := range legacy {
+		if _, ok := merged[name]; ok {
+			continue
 		}
+		merged[name] = entry
 	}
 	for name, entry := range managed {
 		merged[name] = entry

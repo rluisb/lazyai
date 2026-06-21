@@ -8,9 +8,8 @@
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.opencode/`
 - **Project/workspace config:** `opencode.json`
-- **Global scope support:** Yes — `~/.config/opencode/`
-- **MCP config:** baseline root `opencode.json` carries no MCP servers; LazyAI-only MCP extras live in `.opencode/lazyai.mcp.jsonc`
-- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; managed hook runtime lands at `.opencode/plugins/vibe-lab-hooks.js`
+- **MCP output:** baseline root `opencode.json` includes managed MCP entries under top-level `mcp`.
+- **Special behavior:** canonical agent frontmatter is rewritten to OpenCode format; legacy `.opencode/lazyai.mcp.jsonc` entries are migrated into root `opencode.json`.
 
 - **Description:** root instructions plus agents, skills, rules scaffold, commands, output styles, and managed hook scripts
 - **Root file:** `AGENTS.md` (existing root `CLAUDE.md` is preserved and receives an `AGENTS.md` reference)
@@ -56,9 +55,7 @@
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
-| MCP output | `opencode.json` + `.opencode/lazyai.mcp.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
-
-
+| MCP output | `opencode.json` (managed MCP in top-level `mcp`; legacy source migrated from `lazyai.mcp.jsonc`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 ```bash
 lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity
 ```

@@ -25,12 +25,12 @@ func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 	}); false {
 	}
 
-	if !fileExists(filepath.Join(dir, ".opencode", "lazyai.mcp.jsonc")) {
-		t.Fatal("expected .opencode/lazyai.mcp.jsonc to be generated")
+	if !fileExists(filepath.Join(dir, "opencode.json")) {
+		t.Fatal("expected opencode.json to be generated")
 	}
 	storeData := readSeededStoreData(t, dir)
-	if !hasTrackedFile(storeData.Files, ".opencode/lazyai.mcp.jsonc") {
-		t.Fatal("expected .opencode/lazyai.mcp.jsonc to be tracked")
+	if !hasTrackedFile(storeData.Files, "opencode.json") {
+		t.Fatal("expected opencode.json to be tracked")
 	}
 	if !hasTrackedFile(storeData.Files, ".mcp.json") {
 		t.Fatal("expected .mcp.json to be tracked")
@@ -58,7 +58,7 @@ func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *
 	}
 
 	for _, path := range []string{
-		filepath.Join(workspaceRoot, ".opencode", "lazyai.mcp.jsonc"),
+		filepath.Join(workspaceRoot, ".opencode", "opencode.json"),
 		filepath.Join(workspaceRoot, ".mcp.json"),
 		filepath.Join(workspaceRoot, ".vscode", "mcp.json"),
 	} {
@@ -67,7 +67,7 @@ func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *
 		}
 	}
 	for _, path := range []string{
-		filepath.Join(planningRepo, ".opencode", "lazyai.mcp.jsonc"),
+		filepath.Join(planningRepo, ".opencode", "opencode.json"),
 		filepath.Join(planningRepo, ".mcp.json"),
 		filepath.Join(planningRepo, ".vscode", "mcp.json"),
 	} {
@@ -191,8 +191,8 @@ func TestCompileDryRunDoesNotWriteFilesOrStoreRecords(t *testing.T) {
 	if fileExists(filepath.Join(dir, "opencode.json")) {
 		t.Fatal("did not expect opencode.json in dry-run")
 	}
-	if fileExists(filepath.Join(dir, ".opencode", "lazyai.mcp.jsonc")) {
-		t.Fatal("did not expect .opencode/lazyai.mcp.jsonc in dry-run")
+	if fileExists(filepath.Join(dir, ".opencode", "opencode.json")) {
+		t.Fatal("did not expect .opencode/opencode.json in dry-run")
 	}
 	if fileExists(filepath.Join(dir, ".mcp.json")) {
 		t.Fatal("did not expect .mcp.json in dry-run")

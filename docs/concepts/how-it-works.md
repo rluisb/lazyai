@@ -26,9 +26,7 @@ These files are human-editable and version-controllable.
 From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 
 - `AGENTS.md` — root instructions for all tools
-- `.opencode/` — OpenCode agents, skills, commands, and MCP config
-- `.claude/` — Claude Code rules, agents, skills, and `.mcp.json`
-- `.github/` — Copilot instructions and prompt files
+- `opencode.json` — OpenCode agents, skills, commands, and MCP config (managed under top-level `mcp`)
 - `.pi/` — Pi-compatible skills-only surface
 - `.gemini/` — Antigravity settings and `hooks/lazyai/*`
 - `.vscode/` — VS Code MCP config
@@ -37,7 +35,7 @@ From `.ai/`, `lazyai-cli compile` generates tool-native files such as:
 ```mermaid
 flowchart TD
     A[Canonical .ai/mcp.json] --> B[lazyai-cli compile]
-    B --> C[OpenCode .opencode/lazyai.mcp.jsonc]
+    B --> C["OpenCode opencode.json"]
     B --> D[Claude Code .mcp.json or settings.local.json]
     B --> E[Copilot .vscode/mcp.json]
     B --> F[Pi skill-compatible output]

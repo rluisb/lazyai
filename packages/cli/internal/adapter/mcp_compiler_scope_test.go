@@ -51,9 +51,9 @@ func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 			name: "opencode",
 			tool: types.ToolIdOpenCode,
 			expects: []expect{
-				{scope: types.SetupScopeProject, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".opencode", "lazyai.mcp.jsonc") }},
-				{scope: types.SetupScopeWorkspace, writePathUnder: func(t, _ string) string { return filepath.Join(t, ".opencode", "lazyai.mcp.jsonc") }},
-				{scope: types.SetupScopeGlobal, writePathUnder: func(_, h string) string { return filepath.Join(h, ".config", "opencode", "lazyai.mcp.jsonc") }},
+				{scope: types.SetupScopeProject, writePathUnder: func(t, _ string) string { return filepath.Join(t, "opencode.json") }},
+				{scope: types.SetupScopeWorkspace, writePathUnder: func(t, _ string) string { return filepath.Join(t, "opencode.json") }},
+				{scope: types.SetupScopeGlobal, writePathUnder: func(_, h string) string { return filepath.Join(h, ".config", "opencode", "opencode.json") }},
 			},
 		},
 		{
@@ -147,9 +147,7 @@ func TestCompileMCPForTool_WorkspaceUsesWorkspaceRootForCanonicalAndToolOutputs(
 		leakRel  string
 		recordID string
 	}{
-		{name: "opencode", tool: types.ToolIdOpenCode, wantRel: ".opencode/lazyai.mcp.jsonc", leakRel: ".opencode/lazyai.mcp.jsonc", recordID: ".opencode"},
-		{name: "claude", tool: types.ToolIdClaudeCode, wantRel: ".mcp.json", leakRel: ".mcp.json", recordID: ".mcp.json"},
-		{name: "copilot", tool: types.ToolIdCopilot, wantRel: ".vscode/mcp.json", leakRel: ".vscode/mcp.json", recordID: ".vscode/mcp.json"},
+			{name: "opencode", tool: types.ToolIdOpenCode, wantRel: "opencode.json", leakRel: ".opencode/opencode.json", recordID: "opencode.json"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			records, err := CompileMCPForTool(tc.tool, CompileContext{

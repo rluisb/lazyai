@@ -19,9 +19,9 @@ import (
 // OpenCodeConfigFilename is the canonical root opencode config filename.
 const OpenCodeConfigFilename = "opencode.json"
 
-// OpenCodeRuntimeMCPFilename is the secondary LazyAI-only MCP-only config payload.
-const OpenCodeRuntimeMCPFilename = "lazyai.mcp.jsonc"
-
+// OpenCodeLegacyMCPFilename keeps compatibility with the old LazyAI MCP-only output
+// location (`.opencode/lazyai.mcp.jsonc`) while migration is active.
+const OpenCodeLegacyMCPFilename = "lazyai.mcp.jsonc"
 // OpenCodeAdapter implements ToolAdapter for OpenCode (opencode CLI).
 type OpenCodeAdapter struct{}
 

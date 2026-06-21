@@ -21,5 +21,5 @@
 - OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
 - Copilot uses `.github/agents/*.agent.yaml` and `.github/copilot-instructions.md`.
 - OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
-- Antigravity is minimal `.gemini/settings.json` plus `.gemini/hooks/` scripts; no separate skills or agents are emitted.
+- Antigravity emits selected Agent Skills under `.agents/skills/<name>/SKILL.md` for project/workspace setup, does not emit custom agent files, and keeps a settings/hooks surface under `.gemini/settings.json` plus `.gemini/hooks/lazyai/*.sh`.
 - If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.

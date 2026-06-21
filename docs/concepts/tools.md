@@ -39,12 +39,12 @@
 
 ## Antigravity
 
-- **Description:** shared root instructions plus minimal `.gemini` settings and hook surface
+- **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, and hook surface
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.gemini/`
 - **Project/workspace scope support:** Yes
 - **Global scope support:** No
-- **Special behavior:** emits `.gemini/settings.json` and `.gemini/hooks/lazyai/*.sh`; no Antigravity agent or skills directory is generated
+- **Special behavior:** emits `.gemini/settings.json`, `.gemini/hooks/lazyai/*.sh`, and selected Agent Skills at `.agents/skills/<name>/SKILL.md`; no custom agent files are emitted for Antigravity
 
 ## Comparison
 
@@ -54,9 +54,10 @@
 | Workspace scope | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | — |
-| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | — |
+| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/agents/<skill>.agent.yaml` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
 | MCP output | `opencode.json` + `.opencode/lazyai.mcp.jsonc` | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
+
 
 ```bash
 lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity

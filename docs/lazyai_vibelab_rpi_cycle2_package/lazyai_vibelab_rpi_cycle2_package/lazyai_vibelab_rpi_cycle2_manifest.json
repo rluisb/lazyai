@@ -1,0 +1,78 @@
+{
+  "package": "lazyai_vibelab_rpi_cycle2_package",
+  "title": "LazyAI / vibe-lab RPI Cycle 2 Prompt Package",
+  "cycle": 2,
+  "focus": "Semantic validation for skills and agent contracts",
+  "created_at": "2026-06-22T18:46:41.351888Z",
+  "files": [
+    {
+      "path": "00_README.md",
+      "purpose": "Package index and usage notes"
+    },
+    {
+      "path": "01_MASTER_RPI_CYCLE2_PROMPT.md",
+      "purpose": "Complete prompt for local AI agents"
+    },
+    {
+      "path": "02_BOUNDARIES_AND_SAFETY.md",
+      "purpose": "Product boundaries and safety rules"
+    },
+    {
+      "path": "03_RESEARCH_PHASE.md",
+      "purpose": "Research checklist"
+    },
+    {
+      "path": "04_PLAN_PHASE.md",
+      "purpose": "Planning checklist"
+    },
+    {
+      "path": "05_IMPLEMENTATION_SCOPE.md",
+      "purpose": "Detailed implementation scope"
+    },
+    {
+      "path": "06_VALIDATION_RULES.md",
+      "purpose": "Rule IDs and validation severity model"
+    },
+    {
+      "path": "07_DOCS_AND_TEMPLATES.md",
+      "purpose": "Docs and templates requirements"
+    },
+    {
+      "path": "08_TESTING_AND_FINAL_REPORT.md",
+      "purpose": "Testing commands and final report template"
+    },
+    {
+      "path": "09_SHORT_AGENT_PROMPT.md",
+      "purpose": "Short execution prompt"
+    },
+    {
+      "path": "10_PR_SEQUENCE.md",
+      "purpose": "Suggested PR breakdown"
+    },
+    {
+      "path": "lazyai_vibelab_rpi_cycle2_manifest.json",
+      "purpose": "Machine-readable package manifest"
+    }
+  ],
+  "non_goals": [
+    "runtime orchestration",
+    "workflow execution",
+    "autonomous task engine",
+    "judge/eval runner",
+    "mandatory trace daemon",
+    "mandatory RAG core",
+    "LangChain/LangGraph/CrewAI dependency",
+    "Codex adapter",
+    "old task/workflow/eval commands"
+  ],
+  "definition_of_done": [
+    "Skill semantic validation exists or is clearly improved",
+    "Agent contract validation exists or is clearly improved",
+    "Validation messages are actionable and include rule IDs",
+    "Tests cover valid and invalid skill/agent cases",
+    "Docs/templates explain skill and agent quality",
+    "Existing shipped assets are not broken",
+    "Targeted tests pass",
+    "LazyAI remains a compiler/asset manager, not a runtime"
+  ]
+}

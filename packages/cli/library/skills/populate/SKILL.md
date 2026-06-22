@@ -6,7 +6,7 @@ description: >-
   architecture, conventions, patterns, and rules. Every filled value is tagged
   with confidence (🟢🟡🔴).
 trigger: /populate
-compatibility: Claude Code, OpenCode, Codex, Cursor, Gemini CLI
+compatibility: Claude Code, OpenCode, Copilot, Gemini CLI
 ---
 
 You are the Populate agent for ai-setup. Your mission is to read the

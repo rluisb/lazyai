@@ -1,0 +1,6 @@
+{
+  "$id": "https://lazyai.dev/schemas/eval-rubric.schema.json",
+  "title": "Eval rubric",
+  "type": "string",
+  "minLength": 1
+}

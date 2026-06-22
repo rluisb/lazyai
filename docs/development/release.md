@@ -39,12 +39,11 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 
 ## GitHub release assets
 
-GoReleaser (`packages/<module>/.goreleaser.yaml`) publishes one archive per OS/arch plus a checksum file. `<Os>` is title-cased and `amd64` renders as `x86_64`:
+The release workflow (`.github/workflows/release-<module>.yml`) cross-compiles one raw binary per OS/arch with `go build` and publishes them with `softprops/action-gh-release`. Binaries are named `<command>-<os>-<arch>`; Windows binaries add `.exe`:
 
-- `lazyai-cli_<Os>_<Arch>.tar.gz` — e.g. `lazyai-cli_Linux_x86_64.tar.gz`, `lazyai-cli_Darwin_arm64.tar.gz`
-- `lazyai-diffviewer_<Os>_<Arch>.tar.gz` — e.g. `lazyai-diffviewer_Linux_x86_64.tar.gz`
-- Windows archives use `.zip` — e.g. `lazyai-cli_Windows_x86_64.zip`
-- `checksums.txt`
+- `lazyai-cli-darwin-arm64`, `lazyai-cli-darwin-amd64`, `lazyai-cli-linux-amd64`, `lazyai-cli-linux-arm64`, `lazyai-cli-windows-amd64.exe`
+- `lazyai-diffviewer-<os>-<arch>` for the diffviewer module (same OS/arch matrix)
+- `checksums.txt` (SHA-256 of every binary in the release)
 
 ## Upgrading commands
 

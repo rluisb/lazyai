@@ -1,6 +1,6 @@
 // Package configmerge provides deep-merge read-modify-write helpers for
-// shared config files (Claude/Gemini settings.json, opencode.json, Codex
-// config.toml). A .bak sidecar is created the first time a file is touched
+// shared config files (Claude/Gemini settings.json, opencode.json). A .bak
+// sidecar is created the first time a file is touched
 // so users can restore their original config; subsequent runs never overwrite
 // the existing .bak.
 //

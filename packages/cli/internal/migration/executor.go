@@ -305,6 +305,14 @@ func adapterToToolID(adapter string) (types.ToolId, bool) {
 		return types.ToolIdClaudeCode, true
 	case "copilot":
 		return types.ToolIdCopilot, true
+	case "pi":
+		return types.ToolIdPi, true
+	case "omp":
+		return types.ToolIdOmp, true
+	case "kiro":
+		return types.ToolIdKiro, true
+	case "antigravity":
+		return types.ToolIdAntigravity, true
 	default:
 		return "", false
 	}

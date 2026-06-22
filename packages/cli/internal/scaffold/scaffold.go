@@ -39,6 +39,10 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 		result.Errors = append(result.Errors, fmt.Errorf("mcp: %w", err))
 	}
 
+	// Step 2b: V2 canonical manifest (.ai/lazyai.json).
+	if err := ScaffoldManifest(toolRoot, ctx.Tools, fileRecords); err != nil {
+		result.Errors = append(result.Errors, fmt.Errorf("manifest: %w", err))
+	}
 	// Step 3: Specs directory structure.
 	if planningPath != "" {
 		if err := ScaffoldSpecs(planningPath, ctx.SetupScope, libFS, ctx.SpecsDirs, fileRecords, ctx.Strategy, ctx.PerFileOverrides); err != nil {

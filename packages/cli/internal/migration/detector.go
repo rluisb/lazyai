@@ -19,6 +19,7 @@ import (
 var DetectionPatterns = map[string][]string{
 	"opencode": {
 		".opencode",
+		"opencode.json",
 		"AGENTS.md",
 	},
 	"claude-code": {
@@ -27,6 +28,20 @@ var DetectionPatterns = map[string][]string{
 	},
 	"copilot": {
 		".github/copilot-instructions.md",
+		".github/instructions",
+		".github/skills",
+	},
+	"pi": {
+		".pi",
+	},
+	"omp": {
+		".omp",
+	},
+	"kiro": {
+		".kiro",
+	},
+	"antigravity": {
+		".agents",
 	},
 }
 
@@ -35,6 +50,10 @@ var AdapterNames = map[string]string{
 	"opencode":    "OpenCode",
 	"claude-code": "Claude Code",
 	"copilot":     "GitHub Copilot",
+	"pi":          "Pi",
+	"omp":         "OMP",
+	"kiro":        "Kiro",
+	"antigravity": "Antigravity",
 }
 
 // fileTypePatterns categorizes files by their path/name.

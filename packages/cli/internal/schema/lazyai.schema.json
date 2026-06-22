@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lazyai.dev/schemas/lazyai.schema.json",
+  "title": "LazyAI manifest",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema declaration URI"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "personal",
+        "team"
+      ]
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "opencode",
+          "claude",
+          "copilot",
+          "pi",
+          "omp",
+          "antigravity",
+          "kiro"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "version",
+    "targets"
+  ],
+  "additionalProperties": true
+}

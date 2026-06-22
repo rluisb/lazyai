@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
@@ -262,6 +263,32 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+
+	// Surface beta/experimental adapters among the configured tools (EC-006):
+	// these targets are not yet fully docs-snapshot verified.
+	if betaReg := adapter.NewRegistry(); len(storeData.Config.Tools) > 0 {
+		var betaTools []string
+		for _, toolId := range storeData.Config.Tools {
+			if adapt, err := betaReg.Get(toolId); err == nil {
+				if cap := adapt.Capabilities(); cap.IsBeta() {
+					betaTools = append(betaTools, fmt.Sprintf("%s (%s)", adapt.Name(), cap.Support))
+				}
+			}
+		}
+		if len(betaTools) > 0 {
+			sort.Strings(betaTools)
+			fmt.Println()
+			fmt.Printf("  %s %s\n", yellowStyle.Render("!"), yellowStyle.Render("Beta adapters (not yet fully docs-verified):"))
+			for _, bt := range betaTools {
+				fmt.Printf("    %s %s\n", yellowStyle.Render("!"), bt)
+			}
+		}
+	}
+
+	// FR-011 security report: MCP inventory, hook/secret/path risks, and
+	// trust/sandbox caveats for configured tools (Pi/Kiro have no sandbox).
+	secReport := buildSecurityReport(dir, storeData.Config.Tools, resolveValidateProfile(dir))
+	printSecurityReport(secReport, yellowStyle, headerStyle)
 
 	// Fix recommendations or instructions
 	if !isHealthy {

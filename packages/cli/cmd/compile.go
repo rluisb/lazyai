@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
+	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
 	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
+	"github.com/rluisb/lazyai/packages/cli/internal/lockfile"
 	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
@@ -103,6 +106,26 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	if storeData.Config.SetupScope == types.SetupScopeWorkspace && storeData.Config.WorkspaceRoot != "" {
 		mcpRoot = storeData.Config.WorkspaceRoot
 	}
+
+	// V2: the canonical manifest (.ai/lazyai.json), when present, is the source
+	// of truth for which targets to compile. It is validated up front so an
+	// invalid manifest fails fast. (Full manifest-required compilation and
+	// asset routing through the plan/writer pipeline land with the adapter
+	// capabilities model in Phase B.)
+	aiDir := filepath.Join(mcpRoot, ".ai")
+	var manifestTargets []types.ToolId
+	if mf, mErr := aimanifest.Load(aiDir); mErr == nil {
+		if err := mf.Validate(); err != nil {
+			return fmt.Errorf("invalid .ai/lazyai.json: %w", err)
+		}
+		enabled, err := mf.EnabledTargets()
+		if err != nil {
+			return fmt.Errorf("invalid .ai/lazyai.json targets: %w", err)
+		}
+		manifestTargets = enabled
+	} else if !errors.Is(mErr, aimanifest.ErrNotFound) {
+		return fmt.Errorf("loading .ai/lazyai.json: %w", mErr)
+	}
 	mcpConfigPath := filepath.Join(mcpRoot, ".ai", "mcp.json")
 	if !fileExists(mcpConfigPath) {
 		// Also try .ai/mcp.jsonc
@@ -117,6 +140,9 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	if toolFilter != "" {
 		// Single tool requested via flag
 		tools = []types.ToolId{types.ToolId(toolFilter)}
+	} else if len(manifestTargets) > 0 {
+		// V2: manifest is authoritative for target selection when present.
+		tools = manifestTargets
 	} else {
 		// Use tools from store configuration
 		tools = storeData.Config.Tools
@@ -209,8 +235,12 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Get adapter name for display
+		// Get adapter name for display, annotating beta/experimental adapters
+		// so users know those targets are not yet fully docs-verified (EC-006).
 		toolName := adapt.Name()
+		if cap := adapt.Capabilities(); cap.IsBeta() {
+			toolName = fmt.Sprintf("%s %s", toolName, dimStyle.Render(fmt.Sprintf("(%s)", cap.Support)))
+		}
 
 		// Compile MCP config for this tool
 		var toolRecords []types.TrackedFile
@@ -301,6 +331,13 @@ func runCompile(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("writing updated store: %w", err)
 			}
 		}
+
+		// V2 (FR-003): record generated outputs in .ai/lock.json so future
+		// compiles can detect drift and skip unchanged files. Best-effort: a
+		// lockfile failure warns but does not fail the compile.
+		if err := writeCompileLock(aiDir, mcpRoot, mcpData, newFileRecords); err != nil {
+			cmdLog.Warn("writing .ai/lock.json failed", "error", err)
+		}
 		fmt.Printf("  %s Compiled %d tool(s).\n", greenStyle.Render("✓"), compiledCount)
 	}
 	fmt.Println()
@@ -312,6 +349,39 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// writeCompileLock records compiled outputs in <aiDir>/lock.json. Output paths
+// are resolved relative to mcpRoot when not absolute; unreadable outputs are
+// skipped. The source hash for every MCP-derived output is the canonical
+// .ai/mcp.json content hash.
+func writeCompileLock(aiDir, mcpRoot string, mcpSource []byte, records []types.TrackedFile) error {
+	lock, err := lockfile.Load(aiDir)
+	if err != nil {
+		return err
+	}
+	srcHash := lockfile.HashBytes(mcpSource)
+	for _, rec := range records {
+		p := rec.Path
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(mcpRoot, p)
+		}
+		data, readErr := os.ReadFile(p)
+		if readErr != nil {
+			continue
+		}
+		lock.Upsert(lockfile.Generated{
+			Path:       rec.Path,
+			Target:     "mcp",
+			SourceHash: srcHash,
+			OutputHash: lockfile.HashBytes(data),
+			Managed:    false,
+		})
+	}
+	lock.Version = lockfile.SchemaVersion
+	lock.LazyaiVersion = Version
+	lock.CompiledAt = time.Now().UTC().Format(time.RFC3339)
+	return lock.Save(aiDir)
 }
 
 // printKV is a helper for printing key-value pairs with styling

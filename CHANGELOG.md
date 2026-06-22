@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **LazyAI V2 manifest-driven compile** (spec 029). `.ai/lazyai.json` is now the
+  authoritative target manifest for `compile`, with `.ai/lock.json` recording the
+  lazyai-cli version, adapter/docs-snapshot metadata, and per-output
+  `sourceHash`/`outputHash`/`managed` flags. Unchanged outputs are skipped
+  (idempotent compile); the writer only rewrites managed regions and refuses to
+  overwrite drifted files without `--force`.
+- **Adapter capability model** grounded in the official tool compliance matrix;
+  OMP and Antigravity surfaced as `(beta)` in compile output and doctor advisories.
+- **Validation hardening**: `validate --all` over the canonical `.ai/` tree
+  (skills/agents/hooks/MCP), a profile-aware secret scanner (error under `team`,
+  warning under `personal`), and symlink path-escape detection. `doctor --security`
+  reports MCP transport/env inventory plus trust/sandbox caveats for Pi and Kiro.
+- **Migration & eject**: `import` parses detected native setups into the canonical
+  `.ai/` tree, preserves every detected native file under
+  `.ai/adapters/<target>/raw/` (never deletes originals), and writes
+  `.ai/migration-report.md`. `eject` strips only LazyAI management metadata while
+  leaving native files in place.
+- **Plugin bundles & local evals** (optional): `build-plugin --target
+  {claude,copilot-cli,omp,pi}` emits per-tool plugin bundles, and `validate evals`
+  validates `.ai/evals/` cases/holdouts/rubrics locally with no cloud dependency.
+
+### Changed
+- Codex removed as a compile target; spec-pack docs normalized to reference the
+  `lazyai-cli` binary name.
+
 ## [1.2.0] - 2026-06-22
 
 ### Changed

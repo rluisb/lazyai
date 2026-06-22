@@ -52,22 +52,30 @@ This block is AUTHORITATIVE. Overrides execution-mode instructions.
 
 ## Project Overview
 
-<!-- fill-in: project description -->
+LazyAI is a Go CLI that keeps a canonical `.ai/` source tree and compiles it into tool-native AI setup surfaces. The current V2 contract is manifest-driven: `.ai/lazyai.json` selects targets, `.ai/mcp.json` is the canonical MCP catalog, and `.ai/lock.json` records generated-output hashes for idempotent writes. Supported compile targets are exactly `opencode`, `claude`, `copilot`, `pi`, `omp`, `antigravity`, and `kiro`; Codex is not a target.
 
 ## Tech Stack
 
-- <!-- fill-in: tech stack -->
+- Go (Cobra CLI; stdlib-heavy internal packages)
+- Embedded library assets under `packages/cli/library/`
+- MkDocs for docs/spec publishing
+- Go tests plus `make build` / `mkdocs build --strict` verification
 
 ## Codebase Map
 
 | Component | Responsibility | Path |
 |-----------|---------------|------|
-| <!-- fill-in: component --> | <!-- fill-in: responsibility --> | <!-- fill-in: path --> |
-| <!-- fill-in: component --> | <!-- fill-in: responsibility --> | <!-- fill-in: path --> |
+| CLI commands | User-facing command wiring, build/version injection, compile/init/validate/doctor entrypoints | `packages/cli/cmd/` |
+| Setup-core engine | Manifest/lock/scaffold/writer/adapter/validate/migration/plugin/evals internals | `packages/cli/internal/` |
+| Embedded asset library | Canonical agents, skills, prompts, hooks, MCP catalog, adapter assets | `packages/cli/library/` |
+| Product docs/specs | README, MkDocs pages, feature specs, ADRs, knowledge maps | `docs/`, `specs/` |
 
 ## Architecture & Patterns
 
-<!-- fill-in: architecture and key patterns -->
+- Canonical-first: edit `.ai/` sources, then compile to tool-native outputs.
+- Manifest-driven compile: `.ai/lazyai.json` is authoritative for target selection; `.ai/lock.json` records output hashes for idempotent writes.
+- Managed-region writes: generated files preserve user-owned content outside managed blocks and refuse drift without explicit force.
+- Adapter contract: direct-write adapters emit native layouts for the 7 supported targets; OMP and Antigravity remain beta-labeled surfaces.
 
 ## Conventions
 

@@ -75,7 +75,7 @@ func TestMemoryDocDestPath(t *testing.T) {
 	}
 }
 
-func TestScaffoldCompiledRootClaudeUsesAgentsWithoutCreatingClaude(t *testing.T) {
+func TestScaffoldCompiledRootClaudeGeneratesClaudeMd(t *testing.T) {
 	targetDir := t.TempDir()
 	records := []types.TrackedFile{}
 
@@ -95,8 +95,23 @@ func TestScaffoldCompiledRootClaudeUsesAgentsWithoutCreatingClaude(t *testing.T)
 	if _, err := os.Stat(filepath.Join(targetDir, "AGENTS.md")); err != nil {
 		t.Fatalf("expected AGENTS.md: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(targetDir, "CLAUDE.md")); !os.IsNotExist(err) {
-		t.Fatalf("CLAUDE.md should not be created, stat err=%v", err)
+	// FR-012: Claude Code target must get a native CLAUDE.md (AGENTS.md alone
+	// is not enough). It single-sources via the @AGENTS.md import.
+	claudeBytes, err := os.ReadFile(filepath.Join(targetDir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("expected generated CLAUDE.md: %v", err)
+	}
+	if !strings.Contains(string(claudeBytes), "@AGENTS.md") {
+		t.Fatalf("CLAUDE.md must import AGENTS.md; got:\n%s", claudeBytes)
+	}
+	tracked := false
+	for _, f := range records {
+		if f.Path == "CLAUDE.md" {
+			tracked = true
+		}
+	}
+	if !tracked {
+		t.Fatalf("generated CLAUDE.md must be tracked; records=%v", records)
 	}
 }
 

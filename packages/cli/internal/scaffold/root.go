@@ -21,6 +21,17 @@ var errMemoryDocScopeUnsupported = errors.New("memory doc not supported at this 
 
 const claudeAgentsReference = "<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file."
 
+// claudeContextDoc is the body written to a generated CLAUDE.md when the Claude
+// Code target is selected and no CLAUDE.md exists yet. Claude Code reads
+// CLAUDE.md natively (AGENTS.md alone is not sufficient — see FR-012); the
+// `@AGENTS.md` import pulls in the canonical instructions so there is a single
+// source of truth.
+const claudeContextDoc = "# CLAUDE.md\n\n" +
+	"Claude Code reads this file as the canonical project instruction file.\n" +
+	"The full agent instructions for this project live in AGENTS.md and are\n" +
+	"imported below.\n\n" +
+	"@AGENTS.md\n"
+
 // memoryDocDestPath returns the absolute path where the tool's memory doc
 // (AGENTS.md / GEMINI.md / .github/copilot-instructions.md, or existing
 // CLAUDE.md compatibility reference updates) should land for the given scope.
@@ -148,7 +159,7 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 	// Compile for each tool.
 	for _, tool := range opts.Tools {
 		if tool == types.ToolIdClaudeCode {
-			if err := appendClaudeAgentsReference(opts); err != nil {
+			if err := ensureClaudeContextDoc(opts); err != nil {
 				return err
 			}
 		}
@@ -263,13 +274,40 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 	return nil
 }
 
-func appendClaudeAgentsReference(opts ScaffoldCompiledRootOptions) error {
+// ensureClaudeContextDoc guarantees a native CLAUDE.md exists for the Claude
+// Code target (FR-012): AGENTS.md alone is not sufficient for Claude Code. When
+// no CLAUDE.md exists, a minimal one importing AGENTS.md (`@AGENTS.md`) is
+// generated and tracked. When the user already has a CLAUDE.md, an AGENTS.md
+// reference is appended (idempotently) instead of clobbering their content.
+// Only project/workspace scopes are touched — the user's personal
+// ~/.claude/CLAUDE.md at global scope is never created or modified.
+func ensureClaudeContextDoc(opts ScaffoldCompiledRootOptions) error {
 	if opts.SetupScope != types.SetupScopeProject && opts.SetupScope != types.SetupScopeWorkspace && opts.SetupScope != "" {
 		return nil
 	}
 
-	claudePath := filepath.Join(opts.recordRoot(), "CLAUDE.md")
+	recordRoot := opts.recordRoot()
+	claudePath := filepath.Join(recordRoot, "CLAUDE.md")
 	if !files.FileExists(claudePath) {
+		if err := files.EnsureDir(filepath.Dir(claudePath)); err != nil {
+			return err
+		}
+		if err := files.WriteFile(claudePath, []byte(claudeContextDoc), 0o644); err != nil {
+			return err
+		}
+		if opts.FileRecords != nil {
+			hash, _ := files.FileHash(claudePath)
+			relPath, _ := filepath.Rel(recordRoot, claudePath)
+			if relPath == "" || strings.HasPrefix(relPath, "..") {
+				relPath = claudePath
+			}
+			*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
+				Path:   relPath,
+				Hash:   hash,
+				Source: "compiled:" + string(types.ToolIdClaudeCode),
+				Owner:  types.FileOwnerLibrary,
+			})
+		}
 		return nil
 	}
 

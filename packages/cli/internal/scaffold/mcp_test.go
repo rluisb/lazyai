@@ -35,6 +35,9 @@ func TestScaffoldMcp_EnablesSelectedServersAndWritesSchemas(t *testing.T) {
 	}
 
 	catalog := readScaffoldedMcpCatalog(t, filepath.Join(targetDir, ".ai", "mcp.json"))
+	if catalog.Version != mcpCatalogVersion {
+		t.Fatalf("catalog version = %q, want %q", catalog.Version, mcpCatalogVersion)
+	}
 	if got := enabledValue(t, catalog.Servers["filesystem"].Enabled); !got {
 		t.Fatal("filesystem server should be enabled")
 	}

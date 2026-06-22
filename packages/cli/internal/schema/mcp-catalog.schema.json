@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lazyai.dev/schemas/mcp-catalog.schema.json",
+  "title": "LazyAI MCP catalog",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema declaration URI"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "servers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote",
+              "stdio",
+              "http",
+              "disabled"
+            ]
+          },
+          "command": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preferredUse": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "safety": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "version",
+    "servers"
+  ],
+  "additionalProperties": true
+}

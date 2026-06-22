@@ -11,8 +11,11 @@ import (
 )
 
 type mcpCatalog struct {
+	Version string               `json:"version,omitempty"`
 	Servers map[string]mcpServer `json:"servers"`
 }
+
+const mcpCatalogVersion = "1.0"
 
 type mcpServer struct {
 	Description        string            `json:"description,omitempty"`
@@ -54,6 +57,9 @@ func ScaffoldMcp(targetDir, libraryDir string, libFS fs.FS, cliTools, enableServ
 	var catalog mcpCatalog
 	if err := json.Unmarshal(catalogData, &catalog); err != nil {
 		return err
+	}
+	if catalog.Version == "" {
+		catalog.Version = mcpCatalogVersion
 	}
 
 	// When --enable-servers is provided it acts as a strict allowlist: only the

@@ -56,7 +56,11 @@ exclude_docs: |
   rules/**
   templates/**
   .build/**
+  README.md
 
+validation:
+  nav:
+    omitted_files: info
 extra:
   social:
     - icon: fontawesome/brands/github

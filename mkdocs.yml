@@ -98,6 +98,8 @@ nav:
       - Presets: concepts/presets.md
       - Tools: concepts/tools.md
       - Product Boundaries: concepts/product-boundaries.md
+      - Skill Quality: concepts/skill-quality.md
+      - Agent Contracts: concepts/agent-contracts.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md

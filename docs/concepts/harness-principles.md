@@ -49,3 +49,10 @@ The system is strictly divided into two layers:
 - **Handoff and memory hygiene:** Agents must summarize state and leave clear context before exiting, ensuring the next session starts effectively.
 - **Evidence-verifier behavior:** Any validation step must check concrete evidence (tests, command outputs), not just read the diff and say "looks good."
 - **Trace/eval improvement thinking:** Failures lead to invariant captures and tests, constantly improving the baseline.
+
+## Related Documents
+
+These documents define the quality standards that the principles above reference:
+
+- [Skill Quality Guidelines](skill-quality.md) — structural and semantic quality requirements for skills, referenced by the "Anti-slop rules" and "Skill/hook/rubric discipline" principles.
+- [Agent Contracts](agent-contracts.md) — contract boundaries for agent definitions, referenced by the "Evidence-verifier behavior" and "Human-gated quality" principles.

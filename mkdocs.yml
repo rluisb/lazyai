@@ -101,6 +101,7 @@ nav:
       - Skill Quality: concepts/skill-quality.md
       - Agent Contracts: concepts/agent-contracts.md
       - Hook Lifecycle: concepts/hook-lifecycle.md
+      - Trace/Eval Improvement Loop: concepts/trace-eval-improvement-loop.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md
@@ -108,6 +109,7 @@ nav:
       - Hooks: reference/hooks.md
       - MCP Servers: reference/mcp-servers.md
       - CLI Tools: reference/cli-tools.md
+      - Trace Taxonomy: templates/trace-taxonomy.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

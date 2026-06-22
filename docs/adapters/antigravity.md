@@ -1,0 +1,80 @@
+# Antigravity / Gemini Adapter
+
+**Adapter ID:** `antigravity`  
+**Source:** `packages/cli/internal/adapter/antigravity.go`  
+**Status:** **beta**  
+**Config directory:** `.gemini`
+
+## Overview
+
+The Antigravity adapter generates native configuration for the [Antigravity CLI](https://github.com/antigravity) (Gemini-based coding agent). It emits skills, hooks, MCP configuration, and settings into `.gemini/` and `.agents/`.
+
+**Beta status:** Antigravity is marked beta because its partially JS-rendered official documentation has not been fully snapshot-verified (matrix §1, EC-006). The adapter is functional and tested, but the compliance surface may shift as official docs are fully captured.
+
+## Generated Files
+
+| Path | Description |
+|---|---|
+| `.gemini/settings.json` | CLI settings (permissions, sandbox, MCP servers) |
+| `.gemini/hooks/lazyai/<name>.sh` | Hook scripts |
+| `.agents/skills/<name>/SKILL.md` | Agent Skills (at `.agents/` root, not `.gemini/`) |
+| `.agents/hooks.json` | Hook event configuration |
+| `AGENTS.md` | Root instructions |
+
+## Supported Asset Types
+
+| Asset kind | Shape | Destination |
+|---|---|---|
+| Agents | **none** | — |
+| Skills | dir-per-item | `.agents/skills/<name>/SKILL.md` |
+| Templates | none | — |
+| Commands | none | — |
+| Chat modes | none | — |
+| Output styles | none | — |
+| Prompts | none | — |
+
+**Note:** Antigravity does not emit agent files (`output_mapping.go:346-350`: `ShapeNone` for agents). Skills are written to `.agents/skills/` (not `.gemini/skills/`).
+
+## MCP Behavior
+
+Antigravity MCP is compiled via `CompileMCPForTool`. MCP servers are merged into `.gemini/settings.json`.
+
+## Hook Behavior
+
+Hook scripts are copied to `.gemini/hooks/lazyai/`. Hook event configuration is written to `.agents/hooks.json` with references to the `.gemini/hooks/lazyai/` script paths. The adapter copies hooks from `antigravity/hooks/` in the library.
+
+## Skill Behavior
+
+Skills are written as Agent Skills-compatible directories at `.agents/skills/<name>/SKILL.md` (not under `.gemini/`). The adapter copies selected skills from the canonical library.
+
+## Agent Behavior
+
+Antigravity does not emit agent files. The adapter has no agents surface.
+
+## Scope Support
+
+| Scope | Supported |
+|---|---|
+| Project | yes |
+| Workspace | yes |
+| Global | **no** |
+
+Antigravity is a project/workspace-only surface (`scope.go` line 32).
+
+## Headless Support
+
+No (`CanRunHeadless() = false`).
+
+## Known Limitations
+
+- **Beta status** — compliance surface may shift as official docs are fully snapshot-verified
+- **No agents** — the adapter does not emit agent files
+- No templates, commands, chat modes, output styles, or prompts
+- No global scope support
+- Skills written to `.agents/skills/` (shared location), not `.gemini/skills/`
+
+## Test Coverage
+
+| Test file | What it verifies |
+|---|---|
+| `antigravity_install_test.go` | Skills at `.agents/skills/`, hooks at `.agents/hooks.json`, settings at `.gemini/settings.json`, workspace root resolution, minimal surface |

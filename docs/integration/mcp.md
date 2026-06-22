@@ -72,3 +72,11 @@ LazyAI does not create, manage, or commit `.env` files. Put real values in your 
 ## Removed runtime note
 
 The old orchestration runtime and its MCP server were removed from the active product surface during the runtime refactor. Use [the migration note](../migration/fortnite-orchestrator-removal.md) for compatibility and rollback guidance.
+
+## L1 vs L3 validation
+
+`lazyai-cli server doctor` performs **L1 config checks** only: it verifies that the server entry exists in `.ai/mcp.json`, is enabled, and is present in each per-tool compiled MCP config file.
+
+**L3 stdio handshake** (spawning the server process and performing a `tools/list` JSON-RPC exchange) is not performed. The Go binary does not bundle an MCP client library for the handshake protocol. A TypeScript wrapper using `@modelcontextprotocol/sdk` could perform L3 checks; this is future work.
+
+The `server doctor` output includes a `stdio handshake` check that is always skipped, with a message explaining the limitation.

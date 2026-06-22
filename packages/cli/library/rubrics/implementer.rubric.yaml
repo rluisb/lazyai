@@ -1,0 +1,113 @@
+# implementer.rubric.yaml
+# Human-gated rubric for evaluating implementation quality.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, implementation, verification, human-gate
+
+id: implementer-quality
+title: Implementer Quality Rubric
+description: >
+  Evaluates whether an implementation is correct, minimal, tested, and follows
+  project conventions. Used to gate PR submission and merge readiness.
+
+tags:
+  - quality
+  - implementation
+  - verification
+  - human-gate
+  - correctness
+  - minimality
+
+criteria:
+  - id: correctness
+    label: Correctness
+    weight: 30
+    description: >
+      Does the implementation satisfy the stated requirements and handle edge
+      cases?
+    pass: >
+      All acceptance criteria are met. Edge cases (empty input, error states,
+      boundary values) are handled. No regressions in existing behavior.
+    fail: >
+      A stated requirement is not met, or an obvious edge case causes incorrect
+      behavior.
+
+  - id: test-evidence
+    label: Test Evidence
+    weight: 20
+    description: >
+      Is the implementation backed by tests that cover the new behavior and
+      verify no regressions?
+    pass: >
+      Tests exist for every new behavior path. Existing tests still pass. Tests
+      are meaningful (not tautological).
+    fail: >
+      New behavior has no tests, or existing tests are broken without
+      explanation.
+
+  - id: minimality
+    label: Minimality
+    weight: 15
+    description: >
+      Does the change include only what is necessary, without speculative
+      abstraction, dead code, or scope creep?
+    pass: >
+      Every line of the diff serves a stated requirement. No unused functions,
+      no "while you're at it" additions.
+    fail: >
+      Diff includes code not required by the spec, or introduces abstractions
+      that are not yet needed.
+
+  - id: convention-fit
+    label: Convention Fit
+    weight: 15
+    description: >
+      Does the code follow project conventions for style, naming, error
+      handling, and structure?
+    pass: >
+      Code matches the project's established patterns. No new conventions are
+      introduced without discussion.
+    fail: >
+      Code introduces a different style or pattern than the surrounding codebase
+      without justification.
+
+  - id: build-lint-clean
+    label: Build and Lint
+    weight: 10
+    description: >
+      Does the code compile without errors and pass lint checks?
+    pass: >
+      Build succeeds. Lint produces no new warnings or errors.
+    fail: >
+      Build fails or lint introduces new warnings/errors.
+
+  - id: security-awareness
+    label: Security Awareness
+    weight: 10
+    description: >
+      Does the implementation avoid introducing security vulnerabilities
+      (injection, path traversal, secret exposure)?
+    pass: >
+      Input is validated. Secrets are not hardcoded. File paths are sanitized.
+      No obvious injection vectors.
+    fail: >
+      A clear security concern is present (hardcoded secret, unsanitized input,
+      path traversal).
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores. Each criterion scores 0-10, multiplied by weight/10.
+    Below 60: implementation needs revision before PR.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "A correctness issue is unresolved"
+    - "Build or tests fail"
+    - "A security concern is present"
+    - "Scope has drifted from the approved plan"

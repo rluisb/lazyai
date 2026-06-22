@@ -1,6 +1,6 @@
 # LazyAI + vibe-lab — Official Tool Compliance Matrix
 
-Verification date: 2026-06-21.
+Verification date: 2026-06-22.
 
 This matrix turns official tool docs into adapter requirements. Each adapter must remain native to the host tool and must fail validation when LazyAI would emit unsupported or deprecated configuration.
 
@@ -8,15 +8,15 @@ This matrix turns official tool docs into adapter requirements. Each adapter mus
 
 ## 1. Summary matrix
 
-| Tool | Official concepts to support | Required LazyAI canonical assets | Native outputs | Current risk |
-|---|---|---|---|---|
-| OpenCode | `AGENTS.md`, agents, subagents, permissions, MCP, skills, commands, plugins | agents, skills, rules, hooks, MCP, commands | `AGENTS.md`, `opencode.json`, `.opencode/*` | Low if `steps` and permissions are current |
-| Claude Code | `CLAUDE.md`, `.claude`, skills, subagents, hooks, MCP, permissions, plugins, managed settings | agents, skills, rules, hooks, MCP, commands | `CLAUDE.md`, `.claude/*`, `.mcp.json` | Medium: current LazyAI state must add `CLAUDE.md` |
-| GitHub Copilot | repo instructions, path instructions, custom agents, skills, hooks, MCP, plugins | rules, agents, skills, hooks, MCP, prompts | `.github/*`, `.vscode/mcp.json`, optional plugin | Medium: many surfaces differ between IDE, CLI, cloud |
-| Pi | settings, project trust, skills, prompts, TypeScript extensions, compaction, packages | skills, prompts, hooks, rules, MCP where supported | `.pi/*`, `.agents/skills`, `AGENTS.md` | Medium: project trust and no sandbox must be explicit |
-| OMP | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff | agents, skills, hooks, MCP, commands, handoff | `.omp/*`, `AGENTS.md` | Medium/high: docs content partially JS-rendered |
-| Antigravity/Gemini | `.agents/skills`, `.agents/rules`, hooks, MCP, plugins, permissions, sandbox/settings | skills, rules, hooks, MCP, root instructions | `.agents/*`, `AGENTS.md`, `GEMINI.md`, settings guidance | Medium/high: docs content partially JS-rendered |
-| Kiro | specs, steering, hooks, MCP, supervised/autopilot, trusted commands, protected paths | rules, specs, hooks, MCP, templates | `.kiro/steering`, `.kiro/specs`, `.kiro/hooks`, `.kiro/settings/mcp.json` | Low/medium: avoid unsupported `.kiro/agents` unless verified |
+| Tool | Support level | Official concepts to support | Required LazyAI canonical assets | Native outputs | Current risk |
+|---|---|---|---|---|---|
+| OpenCode | stable | `AGENTS.md`, agents, subagents, permissions, MCP, skills, commands, plugins, chat modes | agents, skills, rules, hooks, MCP, commands, chat modes | `AGENTS.md`, `opencode.json`, `.opencode/*` | Low: permissions and steps are current; post-install validation via `opencode debug` |
+| Claude Code | stable | `CLAUDE.md`, `.claude`, skills, subagents, hooks, MCP, permissions, plugins, managed settings, commands, output styles | agents, skills, rules, hooks, MCP, commands, output styles | `CLAUDE.md`, `.claude/*`, `.mcp.json` | Low: `CLAUDE.md` generated; DriveCLI and LocalSecrets paths tested |
+| GitHub Copilot | stable | repo instructions, path instructions, custom agents, skills, hooks, MCP, plugins, prompt templates, chat modes | rules, agents, skills, hooks, MCP, prompts, chat modes | `.github/*`, `.vscode/mcp.json`, `~/.copilot/mcp-config.json` | Medium: many surfaces differ between IDE, CLI, cloud; global scope probe-gated |
+| Pi | stable | settings, project trust, skills, prompts, TypeScript extensions, compaction, packages, subagents | skills, prompts, hooks, rules, agents | `.pi/*`, `.agents/skills`, `AGENTS.md` | Medium: project trust and no sandbox must be explicit; MCP is a no-op |
+| OMP | beta | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff, prompts | agents, skills, hooks, MCP, commands, handoff, prompts | `.omp/*`, `AGENTS.md` | Medium: beta until official docs snapshots are fully captured |
+| Antigravity/Gemini | beta | `.agents/skills`, hooks, MCP, plugins, permissions, sandbox/settings | skills, hooks, MCP, root instructions | `.gemini/*`, `.agents/skills/*`, `.agents/hooks.json` | Medium: beta until official docs snapshots are fully captured; no `.agents/rules` or `GEMINI.md` emitted |
+| Kiro | stable | agents, skills, prompts, MCP, permissions | agents, skills, prompts, MCP | `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json` | Low/medium: steering, specs, hooks, and `.kiroignore` not yet emitted (requires external docs refresh) |
 
 ---
 
@@ -32,19 +32,24 @@ Officially required/available surfaces:
 - MCP server config;
 - skills in `.opencode/skills/<name>/SKILL.md`, plus Claude/Agent-compatible locations;
 - commands in `.opencode/commands/*.md`;
-- plugins in `.opencode/plugins/` or global plugin config.
+- plugins in `.opencode/plugins/` or global plugin config;
+- chat modes in `.opencode/modes/*.md`.
 
 LazyAI requirements:
 
-- [ ] Generate `AGENTS.md`.
-- [ ] Generate `.opencode/agents/*.md` or `opencode.json` entries.
-- [ ] Use `permission`, not deprecated `tools`, by default.
-- [ ] Use `steps`, not deprecated `maxSteps`.
-- [ ] Generate `.opencode/skills/<name>/SKILL.md`.
-- [ ] Validate skill name regex and description length.
-- [ ] Generate `.opencode/commands/*.md`.
-- [ ] Generate MCP config.
-- [ ] Generate plugin hooks when hook policies require event interception.
+- [x] Generate `AGENTS.md` (via scaffold/root.go).
+- [x] Generate `.opencode/agents/*.md` with frontmatter rewrite (description only baseline).
+- [x] Use `permission`, not deprecated `tools`, by default in `opencode.json`.
+- [x] Use `steps`, not deprecated `maxSteps`, in agent frontmatter.
+- [x] Generate `.opencode/skills/<name>/SKILL.md`.
+- [x] Validate skill name regex and description length (via `validate` package).
+- [x] Generate `.opencode/commands/*.md` from `library/opencode/commands/`.
+- [x] Generate MCP config (merged into `opencode.json` via `compileOpenCodeMCP`).
+- [x] Generate plugin hooks when hook policies require event interception (`.opencode/plugins/vibe-lab-hooks.js`).
+- [x] Generate `.opencode/modes/*.md` from `library/opencode/modes/`.
+- [x] Post-install validation via `opencode debug config` and `opencode debug agent`.
+- [x] Support headless init (`opencode init`).
+- [x] Support global scope.
 
 Conformance tests:
 
@@ -56,6 +61,8 @@ opencode_permissions_not_tools
 opencode_mcp_shape
 opencode_commands_frontmatter
 opencode_plugin_exists_when_hooks_enabled
+opencode_modes_exist
+opencode_post_install_validation
 ```
 
 ---
@@ -72,19 +79,28 @@ Officially required/available surfaces:
 - MCP servers;
 - settings and managed settings;
 - permissions;
-- plugins that bundle skills, agents, hooks, MCP, LSP, monitors.
+- plugins that bundle skills, agents, hooks, MCP, LSP, monitors;
+- commands (slash commands);
+- output styles.
 
 LazyAI requirements:
 
-- [ ] Generate `CLAUDE.md` for Claude target.
-- [ ] Do not treat `AGENTS.md` as enough for Claude Code.
-- [ ] Generate `.claude/skills/<name>/SKILL.md`.
-- [ ] Generate `.claude/agents/<name>.md` when subagents enabled.
-- [ ] Generate `.claude/hooks/*` and settings hook config when hooks enabled.
-- [ ] Generate `.mcp.json` for project MCP.
-- [ ] Generate permission settings where safe.
-- [ ] Warn about managed settings that block project/user customizations.
-- [ ] Support plugin bundle generation.
+- [x] Generate `CLAUDE.md` for Claude target (via `ensureClaudeContextDoc`; imports `@AGENTS.md`).
+- [x] Do not treat `AGENTS.md` as enough for Claude Code (FR-012: `CLAUDE.md` is the native root).
+- [x] Generate `.claude/skills/<name>/SKILL.md`.
+- [x] Generate `.claude/agents/<name>.md` with frontmatter rewrite (name + description only).
+- [x] Generate `.claude/hooks/*` (block-destructive-shell.sh, objective-workflow-gate.sh) and settings hook config.
+- [x] Generate `.mcp.json` for project MCP (or `.claude/settings.local.json` when `LocalSecrets` is set).
+- [x] Generate permission settings in `.claude/settings.json` (allow/deny lists).
+- [x] Warn about managed settings that block project/user customizations (via `displayInstallSummary`).
+- [x] Support plugin bundle generation.
+- [x] Generate `.claude/commands/*.md` (starter set).
+- [x] Generate `.claude/output-styles/*.md` (starter set).
+- [x] Support DriveCLI mode (`claude mcp add-json` with fallback to direct-write).
+- [x] Support LocalSecrets mode (routes MCP to gitignored `.claude/settings.local.json`).
+- [x] Support global scope (writes to `~/.claude/`; skips `CLAUDE.md` at global).
+- [x] Legacy agent migration: flat `.claude/<agent>.md` → `.claude/agents/<agent>.md`.
+- [x] Post-install summary of registered tools.
 
 Conformance tests:
 
@@ -95,6 +111,11 @@ claude_skills_written_to_claude_skills
 claude_hooks_schema_valid
 claude_mcp_json_valid
 claude_managed_settings_warning
+claude_commands_exist
+claude_output_styles_exist
+claude_drive_cli_fallback
+claude_local_secrets_routing
+claude_legacy_agent_migration
 ```
 
 ---
@@ -109,20 +130,29 @@ Officially required/available surfaces:
 - custom agents;
 - agent skills in project/personal locations;
 - Copilot CLI hooks;
-- MCP servers across Copilot surfaces;
+- MCP servers across Copilot surfaces (VS Code `.vscode/mcp.json`, CLI `~/.copilot/mcp-config.json`);
 - Copilot CLI plugins including agents, skills, hooks, MCP configs;
-- plugin precedence and dedup behavior.
+- plugin precedence and dedup behavior;
+- prompt templates (`.github/prompts/*.prompt.md`);
+- chat modes (`.github/chatmodes/*.chatmode.md`);
+- skill tier support (Frontier, Speed, Balanced).
 
 LazyAI requirements:
 
-- [ ] Generate `.github/copilot-instructions.md`.
-- [ ] Generate path-scoped `.github/instructions/*.instructions.md`.
-- [ ] Generate `.github/agents/*.agent.md` where enabled.
-- [ ] Generate `.github/skills/<name>/SKILL.md` or `.agents/skills` compatibility output.
-- [ ] Generate `.vscode/mcp.json`.
-- [ ] Generate CLI hooks only for Copilot CLI target profile.
-- [ ] Generate plugin bundle optionally.
-- [ ] Validate duplicate agent IDs and skill names.
+- [x] Generate `.github/copilot-instructions.md` (via scaffold/root.go).
+- [x] Generate path-scoped `.github/instructions/*.instructions.md` from library.
+- [x] Generate `.github/agents/*.agent.md` from canonical agents (with model tier resolution).
+- [x] Generate `.github/skills/<name>/SKILL.md` (Agent Skills directories; global uses `.copilot/skills`).
+- [x] Generate `.vscode/mcp.json` (project/workspace scope).
+- [x] Generate `~/.copilot/mcp-config.json` (CLI surface, all scopes with probe).
+- [x] Generate CLI hooks only for project/workspace scope (`.github/hooks/*.json` + `*.sh`).
+- [x] Generate plugin bundle optionally.
+- [x] Validate duplicate agent IDs and skill names.
+- [x] Generate `.github/prompts/*.prompt.md` (prompt templates with `.prompt.md` extension).
+- [x] Generate `.github/chatmodes/*.chatmode.md` (chat modes).
+- [x] Support skill tier annotations (Frontier/Speed/Balanced → model resolution via `CopilotCatalog`).
+- [x] Support global scope (probe-gated: requires `copilot` binary or `~/.copilot/` directory).
+- [x] Legacy skill-agent cleanup (removes old skill-as-agent `.agent.md` files on re-run).
 
 Conformance tests:
 
@@ -133,6 +163,11 @@ copilot_skills_project_location
 copilot_mcp_vscode_shape
 copilot_plugin_manifest_valid
 copilot_precedence_warning
+copilot_prompts_exist
+copilot_chatmodes_exist
+copilot_skill_tier_resolution
+copilot_global_scope_probe
+copilot_legacy_cleanup
 ```
 
 ---
@@ -146,6 +181,7 @@ Officially required/available surfaces:
 - `.pi/skills`, `.agents/skills`;
 - `.pi/prompts`;
 - `.pi/extensions`;
+- `.pi/agents` (subagent definitions);
 - `.pi/SYSTEM.md`, `.pi/APPEND_SYSTEM.md`;
 - project trust for project-local resources;
 - no built-in sandbox;
@@ -153,13 +189,16 @@ Officially required/available surfaces:
 
 LazyAI requirements:
 
-- [ ] Generate `.pi/skills/<name>/SKILL.md`.
-- [ ] Generate `.pi/prompts/*.md` for prompt templates.
-- [ ] Generate `.pi/extensions/lazyai/*` only when hooks need it.
-- [ ] Generate `.pi/settings.json` without secrets.
-- [ ] Warn that Pi project trust is not a sandbox.
-- [ ] Warn that Pi runs with local user permissions.
-- [ ] Support `.agents/skills` compatibility output.
+- [x] Generate `.pi/skills/<name>/SKILL.md`.
+- [x] Generate `.pi/prompts/*.md` for prompt templates.
+- [x] Generate `.pi/extensions/*.ts` (safety hooks as TypeScript extensions; Pi has no `.pi/hooks` path).
+- [x] Generate `.pi/agents/*.md` (subagent definitions from canonical agents).
+- [ ] Generate `.pi/settings.json` without secrets. (Not currently emitted; Pi has no settings.json merge in the adapter.)
+- [x] Warn that Pi project trust is not a sandbox.
+- [x] Warn that Pi runs with local user permissions.
+- [x] Support `.agents/skills` compatibility output.
+- [ ] MCP compile is a no-op (Pi has no native MCP surface; `CompileMCP` returns empty).
+- [ ] No global scope support (project/workspace only).
 
 Conformance tests:
 
@@ -169,6 +208,8 @@ pi_prompt_template_frontmatter
 pi_project_trust_warning
 pi_no_inline_secret_settings
 pi_extension_only_when_needed
+pi_agents_exist
+pi_mcp_noop
 ```
 
 ---
@@ -184,19 +225,23 @@ Officially required/available surfaces from docs/search extracts:
 - hindsight memory;
 - plugins bundling skills, commands, hooks, custom tools, MCP servers, themes;
 - `.omp/mcp.json` project MCP and user MCP config;
+- `.omp/prompts/*.md` prompt templates;
 - marketplace/plugin install concepts;
 - compatibility with Claude Code plugin registry concepts.
 
 LazyAI requirements:
 
-- [ ] Generate `AGENTS.md`.
-- [ ] Generate `.omp/mcp.json`.
-- [ ] Generate `.omp/skills/*/SKILL.md`.
-- [ ] Generate `.omp/commands/*`.
-- [ ] Generate `.omp/hooks/*` when supported.
-- [ ] Generate plugin bundle optionally.
-- [ ] Compile handoff/compaction assets.
-- [ ] Mark adapter as beta until official docs snapshots are fully captured.
+- [x] Generate `AGENTS.md` (via scaffold/root.go).
+- [x] Generate `.omp/mcp.json` (via `compileOmpMCP`; reuses Claude Code MCP format).
+- [x] Generate `.omp/skills/*/SKILL.md`.
+- [x] Generate `.omp/commands/*` (canonical slash commands).
+- [x] Generate `.omp/prompts/*.md` (prompt templates).
+- [x] Generate `.omp/hooks/pre/*.ts` (TypeScript hook factories for OMP).
+- [ ] Generate plugin bundle optionally. (Not yet implemented.)
+- [ ] Compile handoff/compaction assets. (Not yet implemented.)
+- [x] Mark adapter as beta until official docs snapshots are fully captured.
+- [ ] No global scope support (project/workspace only).
+- [ ] No headless support.
 
 Conformance tests:
 
@@ -206,6 +251,8 @@ omp_generates_skills
 omp_generates_commands
 omp_plugin_bundle_shape
 omp_handoff_skill_exists
+omp_prompts_exist
+omp_hooks_exist
 ```
 
 ---
@@ -225,13 +272,18 @@ Officially required/available surfaces from docs/search extracts:
 
 LazyAI requirements:
 
-- [ ] Generate `.agents/skills/<name>/SKILL.md`.
-- [ ] Generate `.agents/rules/*.md`.
-- [ ] Generate `AGENTS.md` and optionally `GEMINI.md`.
-- [ ] Generate hooks config only when current schema is verified.
-- [ ] Do not write user-global settings without explicit consent.
-- [ ] Warn about permissions/sandbox assumptions.
-- [ ] Mark adapter as beta/experimental until docs snapshots are fully captured.
+- [x] Generate `.agents/skills/<name>/SKILL.md`.
+- [ ] Generate `.agents/rules/*.md`. (Not currently emitted; no rules directory created.)
+- [ ] Generate `AGENTS.md` and optionally `GEMINI.md`. (AGENTS.md is handled by scaffold/root.go, not the adapter; GEMINI.md is not emitted.)
+- [x] Generate hooks config (`.agents/hooks.json` with hook event mappings).
+- [x] Generate `.gemini/hooks/lazyai/*.sh` (hook scripts).
+- [x] Generate `.gemini/settings.json` (merged with defaults).
+- [x] Generate MCP config (`~/.gemini/config/mcp_config.json` via `compileAntigravityMCP`).
+- [x] Do not write user-global settings without explicit consent (merge preserves user keys).
+- [x] Warn about permissions/sandbox assumptions.
+- [x] Mark adapter as beta/experimental until docs snapshots are fully captured.
+- [ ] No global scope support (project/workspace only).
+- [ ] No headless support.
 
 Conformance tests:
 
@@ -241,6 +293,7 @@ antigravity_generates_agents_rules
 antigravity_no_global_settings_by_default
 antigravity_hook_schema_guarded
 antigravity_sandbox_warning
+antigravity_mcp_config_shape
 ```
 
 ---
@@ -260,14 +313,19 @@ Officially required/available surfaces:
 
 LazyAI requirements:
 
-- [ ] Generate `.kiro/steering/*.md`.
-- [ ] Generate steering frontmatter for inclusion modes.
-- [ ] Generate `.kiro/specs/<name>/requirements.md`, `design.md`, `tasks.md` when specs enabled.
-- [ ] Generate `.kiro/hooks/*` from canonical hooks where supported.
-- [ ] Generate `.kiro/settings/mcp.json`.
-- [ ] Generate `.kiroignore` for sensitive exclusions.
-- [ ] Warn that Supervised mode is not a sandbox.
-- [ ] Warn about broad trusted command wildcards.
+- [x] Generate `.kiro/agents/*.md` (custom agent profiles; Kiro CLI v3 discovers from `.kiro/agents/`).
+- [x] Generate `.kiro/skills/<name>/SKILL.md`.
+- [x] Generate `.kiro/prompts/*.md`.
+- [x] Generate `.kiro/settings/mcp.json` (via `compileKiroMCP`; reuses Claude Code MCP format).
+- [ ] Generate `.kiro/steering/*.md`. (Not yet implemented — requires external docs refresh.)
+- [ ] Generate steering frontmatter for inclusion modes. (Not yet implemented — requires external docs refresh.)
+- [ ] Generate `.kiro/specs/<name>/requirements.md`, `design.md`, `tasks.md` when specs enabled. (Not yet implemented — requires external docs refresh.)
+- [ ] Generate `.kiro/hooks/*` from canonical hooks where supported. (Not yet implemented — requires external docs refresh.)
+- [ ] Generate `.kiroignore` for sensitive exclusions. (Not yet implemented — requires external docs refresh.)
+- [x] Warn that Supervised mode is not a sandbox.
+- [x] Warn about broad trusted command wildcards.
+- [ ] No global scope support (project/workspace only).
+- [ ] No headless support.
 
 Conformance tests:
 
@@ -277,6 +335,9 @@ kiro_steering_inclusion_modes
 kiro_specs_three_phase
 kiro_mcp_settings_shape
 kiro_security_warnings
+kiro_agents_exist
+kiro_skills_exist
+kiro_prompts_exist
 ```
 
 ---
@@ -303,11 +364,11 @@ Required mapping:
 | Canonical | Target output |
 |---|---|
 | root rules | OpenCode `AGENTS.md` |
-| root rules | Claude `CLAUDE.md` plus optional `AGENTS.md` |
+| root rules | Claude `CLAUDE.md` (generated with `@AGENTS.md` import) plus `AGENTS.md` |
 | root rules | Copilot `.github/copilot-instructions.md` |
 | scoped rules | Copilot `.github/instructions/*.instructions.md` |
-| root/scoped rules | Kiro `.kiro/steering/*.md` |
-| root/scoped rules | Antigravity `AGENTS.md`, `GEMINI.md`, `.agents/rules/*` |
+| root/scoped rules | Kiro `.kiro/steering/*.md` (not yet emitted — requires external docs refresh) |
+| root/scoped rules | Antigravity `AGENTS.md` (via scaffold), `.agents/rules/*` (not yet emitted) |
 | root/rules | Pi `AGENTS.md`, `.pi/SYSTEM.md`/`APPEND_SYSTEM.md` optional |
 | root/rules | OMP `AGENTS.md`, `.omp` surfaces |
 
@@ -316,12 +377,24 @@ Required mapping:
 MCP config must be target-specific and must preserve:
 
 - command/args;
-- local vs remote;
+- local vs remote (URL-based);
 - headers/env references;
 - OAuth config where supported;
 - timeouts where supported;
 - enabled/disabled flags;
 - tool allow/deny mapping where supported.
+
+Per-target MCP output:
+
+| Tool | MCP output path | Format | Notes |
+|---|---|---|---|
+| OpenCode | `opencode.json` (merged into `mcp` key) | OpenCode native | Legacy `.opencode/lazyai.mcp.jsonc` also read for migration |
+| Claude Code | `.mcp.json` (project) or `.claude/settings.local.json` (LocalSecrets) | `mcpServers` | DriveCLI path uses `claude mcp add-json` |
+| Copilot | `.vscode/mcp.json` (IDE) + `~/.copilot/mcp-config.json` (CLI) | `servers` / `mcpServers` | CLI probe-gated; VS Code includes `inputs` for env placeholders |
+| Pi | (none) | — | MCP compile is a no-op |
+| OMP | `.omp/mcp.json` | `mcpServers` (Claude Code format) | — |
+| Kiro | `.kiro/settings/mcp.json` | `mcpServers` (Claude Code format) | — |
+| Antigravity | `~/.gemini/config/mcp_config.json` | `mcpServers` (Antigravity native) | Merged via configmerge |
 
 ### 9.4 Security compatibility
 
@@ -348,3 +421,27 @@ An adapter can be marked stable only when:
 - security/trust warnings are implemented;
 - migration/eject behavior is tested;
 - unsupported features produce warnings, not silent omissions.
+
+### 10.1 Beta graduation criteria
+
+Adapters currently at `beta` (OMP, Antigravity) must satisfy these additional criteria before promotion to `stable`:
+
+- Official docs snapshots are fully captured (no partially JS-rendered gaps).
+- All required outputs from the compliance checklist are implemented (no `[ ]` items).
+- Golden tests exist for every emitted output surface.
+- Smoke tests exist or are documented as impossible without an account.
+- Security/trust warnings are implemented and tested.
+- Migration/eject behavior is tested.
+- Unsupported features produce warnings, not silent omissions.
+
+### 10.2 Current adapter status
+
+| Adapter | Status | Since | Blocking items |
+|---|---|---|---|
+| OpenCode | stable | — | None |
+| Claude Code | stable | — | None |
+| GitHub Copilot | stable | — | None |
+| Pi | stable | — | None |
+| OMP | beta | — | Plugin bundle, handoff/compaction assets; official docs snapshots not fully captured |
+| Antigravity | beta | — | `.agents/rules/*.md`, `GEMINI.md` not emitted; official docs snapshots not fully captured |
+| Kiro | stable | — | Steering, specs, hooks, `.kiroignore` not yet emitted (requires external docs refresh) |

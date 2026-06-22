@@ -40,6 +40,8 @@
 |----------|------|--------|-------------|
 | Harness Principles & Boundary | `docs/concepts/harness-principles.md` | Active | Single source of truth for LazyAI/vibe-lab architecture, boundaries, and principles. |
 | Reversa Confidence Scale | `specs/standards/confidence-scale.md` | Active | 🟢🟡🔴 confidence scale for `/populate` and AI-inferred content — meaning, evidence rules, write behavior, and human-escalation criteria |
+| Skill Quality Guidelines | `docs/concepts/skill-quality.md` | Active | Structural and semantic quality requirements for skill definitions — trigger guidance, misuse guidance, evidence requirements, output format. |
+| Agent Contracts | `docs/concepts/agent-contracts.md` | Active | Contract boundaries for agent definitions — role/purpose, trigger/misuse, workflow, evidence requirements, human gates, handoff, output. |
 
 ## Key Architecture Decisions
 

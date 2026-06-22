@@ -1,0 +1,91 @@
+# evidence-verifier.rubric.yaml
+# Human-gated rubric for evaluating evidence quality in agent outputs.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, evidence, verification, human-gate
+
+id: evidence-verifier-quality
+title: Evidence Verifier Rubric
+description: >
+  Evaluates whether an agent's output is grounded in verifiable evidence rather
+  than speculation. Used to gate handoffs, review findings, and implementation
+  claims.
+
+tags:
+  - quality
+  - evidence
+  - verification
+  - human-gate
+  - correctness
+
+criteria:
+  - id: claim-grounding
+    label: Claim Grounding
+    weight: 30
+    description: >
+      Are all factual claims supported by directly observable evidence (tool
+      output, file contents, test results, spec text)?
+    pass: >
+      Every claim is traceable to a specific source. No unsupported assertions.
+    fail: >
+      One or more claims are presented as fact without supporting evidence.
+
+  - id: speculation-labeling
+    label: Speculation Labeling
+    weight: 20
+    description: >
+      Are inferences and guesses explicitly labeled as such?
+    pass: >
+      All non-observed statements are prefixed with [INFERENCE] or equivalent.
+      Confidence levels are stated.
+    fail: >
+      Speculation is presented as fact without labeling.
+
+  - id: evidence-sufficiency
+    label: Evidence Sufficiency
+    weight: 20
+    description: >
+      Is the evidence sufficient to support the conclusion, or would a
+      reasonable person need more?
+    pass: >
+      Evidence directly supports the conclusion. A skeptic would be convinced.
+    fail: >
+      Evidence is thin, circumstantial, or could support multiple contradictory
+      conclusions.
+
+  - id: negative-evidence
+    label: Negative Evidence Handling
+    weight: 15
+    description: >
+      Does the output acknowledge evidence that contradicts its conclusion?
+    pass: >
+      Contradictory evidence is surfaced and addressed, not hidden.
+    fail: >
+      Contradictory evidence is ignored or suppressed.
+
+  - id: reproducibility
+    label: Reproducibility
+    weight: 15
+    description: >
+      Could another agent reproduce the evidence by following the same steps?
+    pass: >
+      Commands, queries, and lookups are specified precisely enough to reproduce.
+    fail: >
+      Evidence sources are vague or unreproducible.
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores. Each criterion scores 0-10, multiplied by weight/10.
+    Below 60: output needs more evidence before it can be trusted.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "Any unlabeled speculation is present in a blocking finding"
+    - "Evidence cannot be reproduced from the described steps"
+    - "Contradictory evidence is known but not addressed"

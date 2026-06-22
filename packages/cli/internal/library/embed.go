@@ -176,3 +176,6 @@ func CopilotAgentsDir() string { return filepath.Join(Root(), "copilot", "agents
 
 // CopilotInstructionsDir returns the path to the copilot instructions directory.
 func CopilotInstructionsDir() string { return filepath.Join(Root(), "copilot", "instructions") }
+
+// HooksDir returns the path to the hooks directory.
+func HooksDir() string { return filepath.Join(Root(), "hooks") }

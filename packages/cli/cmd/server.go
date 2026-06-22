@@ -106,7 +106,7 @@ var serverRemoveCmd = &cobra.Command{
 var serverDoctorCmd = &cobra.Command{
 	Use:   "doctor [name]",
 	Short: "Validate MCP server configurations",
-	Long:  "Validate that enabled MCP servers have correct configuration in .ai/mcp.json and per-tool config files.",
+	Long:  "Validate that enabled MCP servers have correct configuration in .ai/mcp.json and per-tool config files (L1 config check). L3 stdio handshake (spawning the server process and verifying it responds to tools/list) is not performed — the Go binary does not bundle an MCP client library for the handshake protocol.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runServerDoctor,
 }
@@ -619,7 +619,12 @@ func runServerDoctor(cmd *cobra.Command, args []string) error {
 }
 
 // runServerHealthChecks performs L1 config checks for a single server.
-// L3 stdio handshake is not implemented in Go (requires Node.js MCP SDK).
+// L1 checks verify that the server entry exists in .ai/mcp.json, is enabled,
+// and is present in each per-tool compiled MCP config file.
+// L3 stdio handshake (spawning the server process and performing a tools/list
+// exchange) is not implemented — the Go binary does not bundle an MCP client
+// library for the JSON-RPC handshake protocol. A TypeScript wrapper using the
+// @modelcontextprotocol/sdk could perform L3 checks; this is future work.
 func runServerHealthChecks(dir string, name string, catalog *Catalog, tools []string) ServerHealthReport {
 	var checks []CheckResult
 
@@ -760,20 +765,21 @@ func runServerHealthChecks(dir string, name string, catalog *Catalog, tools []st
 		}
 	}
 
-	// Note: L3 stdio handshake is skipped in the Go implementation.
-	// The TypeScript version spawns the MCP server process and performs a
-	// tools/list handshake, but this requires the Node.js MCP SDK.
+	// L3 stdio handshake is skipped in the Go implementation.
+	// Performing a tools/list exchange requires an MCP client library
+	// (e.g. @modelcontextprotocol/sdk for TypeScript), which the Go
+	// binary does not bundle. This is future work.
 	if entry.Command != "" {
 		checks = append(checks, CheckResult{
 			Name:    "stdio handshake",
 			Status:  CheckSkip,
-			Message: "stdio handshake not available in Go binary (requires Node.js MCP SDK)",
+			Message: "L3 stdio handshake skipped (no MCP client library in Go binary)",
 		})
 	} else {
 		checks = append(checks, CheckResult{
 			Name:    "stdio handshake",
 			Status:  CheckSkip,
-			Message: "server has no stdio command (remote or url-based)",
+			Message: "L3 stdio handshake skipped (no stdio command — remote/url-based server)",
 		})
 	}
 

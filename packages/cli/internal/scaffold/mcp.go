@@ -31,6 +31,12 @@ type mcpServer struct {
 	PreferredInterface string            `json:"preferred_interface,omitempty"`
 	CliEquivalent      string            `json:"cli_equivalent,omitempty"`
 	TokenPolicy        string            `json:"token_policy,omitempty"`
+	Purpose            string            `json:"purpose,omitempty"`
+	PreferredUse       string            `json:"preferredUse,omitempty"`
+	Examples           []string          `json:"examples,omitempty"`
+	AntiExamples       []string          `json:"antiExamples,omitempty"`
+	SecurityNotes      string            `json:"securityNotes,omitempty"`
+	AdapterOutputDiffs string            `json:"adapterOutputDifferences,omitempty"`
 }
 
 // ScaffoldMcp scaffolds .ai/mcp.json from the library catalog, enabling

@@ -99,6 +99,21 @@ lazyai-cli init
 lazyai-cli init --tools opencode --preset standard --no-interactive
 ```
 
+**AGENTS.md placeholders (headless init):**
+
+`init` writes a canonical `AGENTS.md` that contains `<!-- fill-in: ... -->` markers for project-specific sections (organization, conventions, architecture, etc.). The CLI does not fill these markers itself because it cannot run your AI tool. After `init` finishes:
+
+- **Host tool path (recommended):** Open the project in your AI tool (Claude Code, OpenCode, etc.) and run `/init` or `/populate`. The AI tool indexes the codebase and replaces each marker with a value backed by code evidence.
+- **Manual path:** Edit `AGENTS.md` by hand and replace each `<!-- fill-in: ... -->` marker with a concrete value, or remove the marker if the section does not apply.
+- **Validate after populate:**
+
+  ```bash
+  lazyai-cli validate agents   # confirm agent frontmatter is still valid
+  lazyai-cli doctor            # full setup health check
+  ```
+
+Both `--no-interactive` and the interactive wizard leave markers unfilled on purpose; filling requires the AI tool to run.
+
 ---
 ## Add
 
@@ -275,6 +290,10 @@ lazyai-cli compile
 
 Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-tool MCP config files. Pass a server name to validate only one server.
 
+**L1 config check:** Verifies the server entry exists in `.ai/mcp.json`, is enabled, and is present in each per-tool compiled MCP config file.
+
+**L3 stdio handshake (not performed):** The Go binary does not bundle an MCP client library for the JSON-RPC handshake protocol. A TypeScript wrapper using `@modelcontextprotocol/sdk` could perform L3 checks; this is future work.
+
 **Arguments:**
 
 - `name` (optional): Catalog server name
@@ -290,8 +309,6 @@ Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-
 ```bash
 lazyai-cli server doctor ai-memory --json
 ```
-
----
 
 ## Config
 

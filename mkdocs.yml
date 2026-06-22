@@ -98,6 +98,15 @@ nav:
       - Presets: concepts/presets.md
       - Tools: concepts/tools.md
       - Product Boundaries: concepts/product-boundaries.md
+      - Skill Quality: concepts/skill-quality.md
+      - Agent Contracts: concepts/agent-contracts.md
+      - Context Discipline: concepts/context-discipline.md
+      - Multi-Agent Boundary: concepts/multi-agent-boundary.md
+      - Hook Lifecycle: concepts/hook-lifecycle.md
+      - Trace/Eval Improvement Loop: concepts/trace-eval-improvement-loop.md
+      - Token Rent: concepts/token-rent.md
+      - Minimality: concepts/minimality.md
+      - Minimality Report: concepts/minimality-report.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md
@@ -105,6 +114,15 @@ nav:
       - Hooks: reference/hooks.md
       - MCP Servers: reference/mcp-servers.md
       - CLI Tools: reference/cli-tools.md
+      - Adapters:
+          - Capability Matrix: adapters/capability-matrix.md
+          - OpenCode: adapters/opencode.md
+          - Claude Code: adapters/claude-code.md
+          - GitHub Copilot: adapters/copilot.md
+          - Pi: adapters/pi.md
+          - OMP: adapters/omp.md
+          - Antigravity: adapters/antigravity.md
+          - Kiro: adapters/kiro.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

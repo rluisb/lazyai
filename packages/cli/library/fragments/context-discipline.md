@@ -31,4 +31,8 @@ Minimize context to reduce cost and improve accuracy.
 - ❌ Re-reading unchanged files from earlier in the session
 - ❌ Loading full files when a function signature is enough
 
+
+**See also**:
+- [context-compaction](context-compaction.md) — what to keep after reading
+- [Context discipline concept](../../../../docs/concepts/context-discipline.md) — the three practices of context management
 </context-discipline>

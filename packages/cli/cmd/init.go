@@ -210,9 +210,11 @@ func runInitInteractive(config *wizard.WizardConfig) error {
 		return err
 	}
 
-	// Run headless init to fill AGENTS.md placeholders.
-	// Skipped: requires running AI tool. Run 'lazyai-cli doctor' to verify setup.
-	cmdLog.Info("headless init skipped; run AI tool to fill placeholders")
+	fmt.Println()
+	theme.Infof(os.Stdout, "AGENTS.md placeholders left for your AI tool to fill.")
+	theme.Infof(os.Stdout, "Headless init skipped: this CLI cannot run your AI tool to fill the placeholders automatically.")
+	theme.Infof(os.Stdout, "Next: open the project in your AI tool and run /init or /populate, or edit AGENTS.md directly to replace each <!-- fill-in: ... --> marker.")
+	theme.Infof(os.Stdout, "Validate after populate: lazyai-cli validate agents && lazyai-cli doctor")
 
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
@@ -387,9 +389,11 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return err
 	}
 
-	// Run headless init to fill AGENTS.md placeholders.
-	// Skipped: requires running AI tool. Run 'lazyai-cli doctor' to verify setup.
-	cmdLog.Info("headless init skipped; run AI tool to fill placeholders")
+	fmt.Println()
+	theme.Infof(os.Stdout, "AGENTS.md placeholders left for your AI tool to fill.")
+	theme.Infof(os.Stdout, "Headless init skipped: this CLI cannot run your AI tool to fill the placeholders automatically.")
+	theme.Infof(os.Stdout, "Next: open the project in your AI tool and run /init or /populate, or edit AGENTS.md directly to replace each <!-- fill-in: ... --> marker.")
+	theme.Infof(os.Stdout, "Validate after populate: lazyai-cli validate agents && lazyai-cli doctor")
 
 	// Persist results to the SQLite store.
 	database, err := openStore(config.TargetDir)
@@ -471,8 +475,28 @@ func printInitNextSteps(ctx *scaffold.ScaffoldContext) {
 	remaining := strings.Count(string(data), "\x3c!-- fill-in:")
 	if remaining > 0 {
 		theme.Successf(os.Stdout, "Next: Run /init or /populate in your AI tool to fill %d remaining placeholder(s).", remaining)
+		fmt.Println()
+		fmt.Println("Why placeholders remain:")
+		fmt.Println("  Headless init cannot run your AI tool, so <!-- fill-in: ... --> markers")
+		fmt.Println("  are left in AGENTS.md for the host tool or a human to complete.")
+		fmt.Println()
+		fmt.Println("What the host tool should do next:")
+		fmt.Println("  1. Open this project in your AI tool (Claude Code, OpenCode, etc.).")
+		fmt.Println("  2. Run /init or /populate so the AI tool fills the placeholders from code evidence.")
+		fmt.Println()
+		fmt.Println("To complete setup manually:")
+		fmt.Println("  Edit AGENTS.md and replace each <!-- fill-in: ... --> marker with a concrete")
+		fmt.Println("  value, or remove the marker if the section does not apply to this project.")
+		fmt.Println()
+		fmt.Println("Validate after populate:")
+		fmt.Println("  lazyai-cli validate agents   # confirm agent frontmatter is still valid")
+		fmt.Println("  lazyai-cli doctor            # full setup health check")
 	} else {
 		theme.Successf(os.Stdout, "All placeholders filled! Your AGENTS.md is ready.")
+		fmt.Println()
+		fmt.Println("Validate after populate:")
+		fmt.Println("  lazyai-cli validate agents   # confirm agent frontmatter is still valid")
+		fmt.Println("  lazyai-cli doctor            # full setup health check")
 	}
 
 	// Hint for workspace + sidecar flow

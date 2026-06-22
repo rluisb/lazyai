@@ -65,6 +65,19 @@ lazyai-cli server add filesystem
 lazyai-cli compile
 ```
 
+### After `init`: filling AGENTS.md placeholders
+
+`lazyai-cli init` writes a canonical `AGENTS.md` with `<!-- fill-in: ... -->` markers for project-specific sections. The CLI cannot run your AI tool, so it does not fill those markers itself. After init:
+
+1. Open the project in your AI tool (Claude Code, OpenCode, etc.) and run `/init` or `/populate` so the tool fills the markers from code evidence.
+2. Or edit `AGENTS.md` by hand and replace each `<!-- fill-in: ... -->` marker with a concrete value (or remove the marker if the section does not apply).
+3. Validate the result:
+
+   ```bash
+   lazyai-cli validate agents
+   lazyai-cli doctor
+   ```
+
 ## Supported tools
 
 | Tool | What it provides |
@@ -206,6 +219,14 @@ lazyai-cli server add ai-memory
 lazyai-cli compile
 ```
 
+### L1 vs L3 validation
+
+`lazyai-cli server doctor` performs **L1 config checks** only: it verifies that the server entry exists in `.ai/mcp.json`, is enabled, and is present in each per-tool compiled MCP config file.
+
+**L3 stdio handshake** (spawning the server process and performing a `tools/list` JSON-RPC exchange) is not performed. The Go binary does not bundle an MCP client library for the handshake protocol. A TypeScript wrapper using `@modelcontextprotocol/sdk` could perform L3 checks; this is future work.
+
+The `server doctor` output includes a `stdio handshake` check that is always skipped, with a message explaining the limitation.
+
 ## Presets
 
 | Preset | What it includes |
@@ -223,7 +244,7 @@ lazyai-cli init --preset full --disable-features all --features rpiWorkflow,qual
 
 - **Site:** <https://rluisb.github.io/lazyai/>
 - **Getting started:** [Quick Start](docs/getting-started/quick-start.md), [Installation](docs/getting-started/installation.md)
-- **Concepts:** [Harness Principles](docs/concepts/harness-principles.md), [How it Works](docs/concepts/how-it-works.md), [Product Boundaries](docs/concepts/product-boundaries.md), [Scopes](docs/concepts/scopes.md), [Presets](docs/concepts/presets.md), [Tools](docs/concepts/tools.md)
+- **Concepts:** [Harness Principles](docs/concepts/harness-principles.md), [How it Works](docs/concepts/how-it-works.md), [Product Boundaries](docs/concepts/product-boundaries.md), [Scopes](docs/concepts/scopes.md), [Presets](docs/concepts/presets.md), [Tools](docs/concepts/tools.md), [Skill Quality](docs/concepts/skill-quality.md), [Agent Contracts](docs/concepts/agent-contracts.md)
 - **CLI reference:** [CLI commands](docs/cli/reference.md)
 - **Integrations:** [MCP Integration](docs/integration/mcp.md), [Migration note](docs/migration/fortnite-orchestrator-removal.md)
 - **Troubleshooting:** [FAQ](docs/troubleshooting/faq.md)

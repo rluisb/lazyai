@@ -611,6 +611,135 @@ entries:
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
+  - path: packages/cli/library/templates/eval-promotion-checklist.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Harness improvement-loop template retained for human-gated eval
+      promotion decisions.
+    reason_compressed_or_changed: LazyAI-authored template that keeps eval promotion
+      as inspectable process guidance instead of a judge runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/evidence-report.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Evidence package template retained for human review of harness
+      changes and trace/eval outcomes.
+    reason_compressed_or_changed: LazyAI-authored template for evidence discipline without automated scoring.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/harness-change-report.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Targeted harness-change report retained for one-change improvement
+      loop discipline.
+    reason_compressed_or_changed: LazyAI-authored template that documents process
+      evidence without adding orchestration.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/holdout-review.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Holdout review template retained for human-gated regression checks
+      before asset promotion.
+    reason_compressed_or_changed: LazyAI-authored template for inspectable holdout
+      review instead of a scoring engine.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/trace-failure.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Trace failure template retained for classifying observed agent
+      failures into the trace taxonomy.
+    reason_compressed_or_changed: LazyAI-authored template that captures evidence without a trace daemon.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/trace-taxonomy.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Trace taxonomy template retained as the canonical vocabulary for
+      evidence-based harness improvement.
+    reason_compressed_or_changed: LazyAI-authored taxonomy file for progressive
+      disclosure without runtime instrumentation.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/context-handoff.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Context handoff template retained for evidence-backed transfer
+      between agents or sessions.
+    reason_compressed_or_changed: LazyAI-authored template for handoff discipline without runtime automation.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/multi-agent-decision.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Multi-agent decision template retained for scoped agent fan-out
+      planning and merge-risk review.
+    reason_compressed_or_changed: LazyAI-authored template documenting host-tool
+      agent use without LazyAI orchestration.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/recovery-handoff.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Recovery handoff template retained for failure-state transfer with
+      evidence and next-action requirements.
+    reason_compressed_or_changed: LazyAI-authored template for recovery guidance
+      without a scheduler or daemon.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/session-compaction.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Session compaction template retained for preserving decisions,
+      constraints, evidence, and pending gates.
+    reason_compressed_or_changed: LazyAI-authored template for context hygiene
+      without automated compaction runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/evidence-verifier.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for evidence-verifier quality review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no judge runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/hook-quality.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for hook policy quality review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no hook execution runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/implementer.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for implementer output review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no scoring engine.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/planner.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for planning quality review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no orchestration runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/reviewer.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for reviewer quality review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no judge runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/rubrics/skill-quality.rubric.yaml
+    kind: rubric
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Human-gated rubric retained for skill quality review.
+    reason_compressed_or_changed: LazyAI-authored rubric asset; no scoring runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/rules/access.md
     kind: rule
     category: setup-core
@@ -748,6 +877,15 @@ entries:
     reason_kept: Hook policy document retained for destructive shell command prevention.
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/hooks/catalog.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Neutral hook lifecycle and adapter capability catalog retained for
+      static hook classification and host-tool boundary documentation.
+    reason_compressed_or_changed: LazyAI-authored catalog that documents
+      compile-time hook asset management without adding runtime hook execution.
     token_rent_relevant: false
   - path: packages/cli/library/hooks/pre-commit
     kind: hook

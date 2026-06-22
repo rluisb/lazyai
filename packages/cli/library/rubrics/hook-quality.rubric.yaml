@@ -1,0 +1,108 @@
+# hook-quality.rubric.yaml
+# Human-gated rubric for evaluating hook asset quality.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, hook, workflow, human-gate
+
+id: hook-quality
+title: Hook Quality Rubric
+description: >
+  Evaluates whether a hook definition is correctly structured, safely scoped,
+  and provides clear lifecycle guidance without side effects or overreach.
+
+tags:
+  - quality
+  - hook
+  - workflow
+  - human-gate
+  - security
+
+criteria:
+  - id: lifecycle-clarity
+    label: Lifecycle Clarity
+    weight: 25
+    description: >
+      Does the hook clearly state which lifecycle event(s) it targets and what
+      triggers it?
+    pass: >
+      Hook event (PreToolUse, PostToolUse, Stop, SessionStart, etc.) is
+      explicitly named. Trigger conditions are precise.
+    fail: >
+      Hook event is ambiguous, missing, or the trigger condition is too broad.
+
+  - id: safety-gating
+    label: Safety Gating
+    weight: 25
+    description: >
+      Does the hook include appropriate safety checks to prevent unintended side
+      effects?
+    pass: >
+      Hook validates its inputs, checks preconditions, and fails safely (no-op
+      rather than crash or corrupt). Destructive actions are gated.
+    fail: >
+      Hook can fire in unexpected contexts, or lacks input validation that could
+      lead to data loss.
+
+  - id: scope-confinement
+    label: Scope Confinement
+    weight: 20
+    description: >
+      Does the hook do exactly one thing and stay within its declared
+      responsibility?
+    pass: >
+      Hook addresses a single concern. No side effects outside its stated
+      purpose.
+    fail: >
+      Hook performs multiple unrelated checks or has undocumented side effects.
+
+  - id: error-handling
+    label: Error Handling
+    weight: 15
+    description: >
+      Does the hook handle errors gracefully without breaking the host workflow?
+    pass: >
+      Errors are caught and logged. Hook failure does not block the user's
+      workflow.
+    fail: >
+      An unhandled error in the hook can crash or block the calling tool.
+
+  - id: documentation
+    label: Documentation
+    weight: 10
+    description: >
+      Is the hook documented with its purpose, configuration, and any side
+      effects?
+    pass: >
+      Hook file includes a clear description, configuration options, and notes
+      on side effects or dependencies.
+    fail: >
+      Hook is undocumented or the documentation is misleading.
+
+  - id: testability
+    label: Testability
+    weight: 5
+    description: >
+      Can the hook be tested in isolation without a full tool runtime?
+    pass: >
+      Hook logic is structured so it can be invoked and verified independently.
+    fail: >
+      Hook can only be tested by running the full tool, making regression
+      testing impractical.
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores. Each criterion scores 0-10, multiplied by weight/10.
+    Below 60: hook needs revision before inclusion.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "Hook event or trigger is ambiguous"
+    - "Hook can fire in unexpected contexts without a safety check"
+    - "Hook has undocumented side effects"
+    - "Hook error can crash the host workflow"

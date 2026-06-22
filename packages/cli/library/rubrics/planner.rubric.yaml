@@ -1,0 +1,108 @@
+# planner.rubric.yaml
+# Human-gated rubric for evaluating plan quality before implementation.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, planning, workflow, human-gate
+
+id: planner-quality
+title: Planner Quality Rubric
+description: >
+  Evaluates the quality of a plan or task breakdown before implementation
+  begins. Covers scope discipline, dependency ordering, evidence grounding, and
+  human-gate compliance.
+
+tags:
+  - quality
+  - planning
+  - workflow
+  - human-gate
+  - correctness
+
+criteria:
+  - id: scope-fidelity
+    label: Scope Fidelity
+    weight: 25
+    description: >
+      Does the plan address exactly the requested scope without adding
+      unrequested work or omitting required deliverables?
+    pass: >
+      Every task maps to a stated requirement. No extra tasks are invented. No
+      required tasks are missing.
+    fail: >
+      Plan adds out-of-scope work or omits a stated requirement.
+
+  - id: dependency-ordering
+    label: Dependency Ordering
+    weight: 20
+    description: >
+      Are tasks ordered so that no task depends on an uncompleted predecessor?
+    pass: >
+      Dependencies are explicit and the order is correct. Parallel work is
+      identified where possible.
+    fail: >
+      A task depends on output from a later task, or dependencies are
+      unspecified.
+
+  - id: evidence-before-planning
+    label: Evidence Before Planning
+    weight: 20
+    description: >
+      Does the plan cite research findings, codebase exploration results, or
+      spec clauses as the basis for its structure?
+    pass: >
+      Each major section of the plan references a research finding or spec
+      requirement.
+    fail: >
+      Plan is based on assumptions without cited evidence.
+
+  - id: task-granularity
+    label: Task Granularity
+    weight: 15
+    description: >
+      Are tasks sized for single focused work sessions (5-30 min each) with
+      clear completion criteria?
+    pass: >
+      Every task has a clear done-condition. No task is a multi-hour black box.
+    fail: >
+      Tasks are too large to estimate, or lack completion criteria.
+
+  - id: human-gate-placement
+    label: Human Gate Placement
+    weight: 10
+    description: >
+      Are human gates placed at appropriate decision points (scope confirmation,
+      research approval, plan approval, checkpoint per task)?
+    pass: >
+      Gates are at every natural decision boundary. No gate is missing where a
+      human should confirm.
+    fail: >
+      A critical decision point lacks a human gate, or gates are placed at
+      trivial steps.
+
+  - id: risk-identification
+    label: Risk Identification
+    weight: 10
+    description: >
+      Does the plan identify known risks, unknowns, and fallback strategies?
+    pass: >
+      Risks are listed with mitigation strategies. Unknowns are explicitly
+      called out.
+    fail: >
+      Plan proceeds as if no risks exist.
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores. Each criterion scores 0-10, multiplied by weight/10.
+    Below 60: plan needs revision before implementation can start.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "Scope is not confirmed by the requester"
+    - "Research phase was skipped or produced no findings"
+    - "A task has no clear completion criterion"

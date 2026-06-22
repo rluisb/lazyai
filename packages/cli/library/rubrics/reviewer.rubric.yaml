@@ -1,0 +1,110 @@
+# reviewer.rubric.yaml
+# Human-gated review rubric for code review quality assessment.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, workflow, human-gate
+
+id: reviewer-quality
+title: Reviewer Quality Rubric
+description: >
+  Evaluates the quality of a code review against project conventions, evidence
+  standards, and the four-point work contract. Used during pre-commit, pre-PR,
+  and post-feedback review stages.
+
+tags:
+  - quality
+  - workflow
+  - human-gate
+  - correctness
+  - evidence
+
+criteria:
+  - id: correctness-check
+    label: Correctness
+    weight: 30
+    description: >
+      Does the review identify actual correctness issues (logic errors, edge
+      cases, race conditions, type mismatches) rather than style preferences?
+    pass: >
+      Every identified issue is a genuine correctness or behavior concern. No
+      false positives from style-only complaints.
+    fail: >
+      Review misses a correctness bug that a competent reviewer should catch, or
+      flags only cosmetic/style issues.
+
+  - id: evidence-grounding
+    label: Evidence Grounding
+    weight: 25
+    description: >
+      Are findings backed by observable evidence from the diff, tests, specs, or
+      runtime behavior?
+    pass: >
+      Every non-trivial finding cites specific lines, test output, or spec
+      clauses. No unsubstantiated claims.
+    fail: >
+      Findings lack supporting evidence or rely on speculation.
+
+  - id: scope-discipline
+    label: Scope Discipline
+    weight: 15
+    description: >
+      Does the review stay within the declared scope and avoid scope creep?
+    pass: >
+      Review addresses only the changes under review. Out-of-scope observations
+      are explicitly flagged as such.
+    fail: >
+      Review introduces new requirements or expands scope without flagging the
+      expansion.
+
+  - id: action-clarity
+    label: Action Clarity
+    weight: 15
+    description: >
+      Are findings classified as questions vs. change requests, with clear next
+      actions?
+    pass: >
+      Every finding is labeled as question or change request. Change requests
+      include a concrete suggested fix or direction.
+    fail: >
+      Findings are ambiguous, unlabeled, or lack actionable guidance.
+
+  - id: tone-constructiveness
+    label: Constructive Tone
+    weight: 10
+    description: >
+      Is the review professional, specific, and focused on the code rather than
+      the author?
+    pass: >
+      Tone is neutral and specific. Feedback targets the code and its behavior,
+      not the author's skill.
+    fail: >
+      Tone is dismissive, vague, or personal.
+
+  - id: regression-awareness
+    label: Regression Awareness
+    weight: 5
+    description: >
+      Does the review consider regression risk and test coverage gaps?
+    pass: >
+      Review checks whether existing tests still pass and whether new behavior
+      has adequate coverage.
+    fail: >
+      Review ignores test coverage or regression risk entirely.
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores across all criteria. Each criterion scores 0-10,
+    multiplied by its weight/10. A score below 60 indicates the review should be
+    revised before being sent.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "Any correctness issue is identified but not confirmed by the author"
+    - "Review scope is unclear or was not agreed"
+    - "Evidence grounding is missing for a blocking finding"

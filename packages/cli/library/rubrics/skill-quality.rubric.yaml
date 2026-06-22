@@ -1,0 +1,106 @@
+# skill-quality.rubric.yaml
+# Human-gated rubric for evaluating skill asset quality.
+# Part of the LazyAI eval improvement loop (Cycle 4).
+# Tags: quality, skill, adapter, human-gate
+
+id: skill-quality
+title: Skill Quality Rubric
+description: >
+  Evaluates whether a skill definition is well-structured, correctly triggered,
+  and provides clear guidance without speculation or scope creep.
+
+tags:
+  - quality
+  - skill
+  - adapter
+  - human-gate
+  - minimality
+
+criteria:
+  - id: trigger-clarity
+    label: Trigger Clarity
+    weight: 25
+    description: >
+      Does the skill clearly state when to use it and when not to?
+    pass: >
+      "When to use" and "When not to use" sections are present and unambiguous.
+      A reader can decide in seconds whether this skill applies.
+    fail: >
+      Trigger conditions are vague, missing, or contradictory.
+
+  - id: evidence-requirements
+    label: Evidence Requirements
+    weight: 20
+    description: >
+      Does the skill specify what evidence the agent must produce before
+      finishing?
+    pass: >
+      "Required evidence" section lists concrete, verifiable outputs. Evidence
+      is specific enough to check programmatically.
+    fail: >
+      Evidence requirements are absent or too vague to verify.
+
+  - id: scope-discipline
+    label: Scope Discipline
+    weight: 20
+    description: >
+      Does the skill stay within its declared purpose without expanding into
+      adjacent concerns?
+    pass: >
+      Every instruction in the skill serves its stated purpose. No unrelated
+      guidance or "while you're at it" additions.
+    fail: >
+      Skill includes instructions for tasks outside its declared scope.
+
+  - id: output-contract
+    label: Output Contract
+    weight: 15
+    description: >
+      Does the skill define what the final deliverable should look like?
+    pass: >
+      "Expected output" section describes format, structure, and content of the
+      deliverable.
+    fail: >
+      Output expectations are absent or ambiguous.
+
+  - id: minimality
+    label: Minimality
+    weight: 10
+    description: >
+      Is the skill as short as it can be while still being complete?
+    pass: >
+      No redundant sections, no verbose explanations of obvious concepts. Every
+      paragraph adds value.
+    fail: >
+      Skill contains filler, repetition, or tutorial-style explanations that
+      belong in reference docs.
+
+  - id: adapter-compatibility
+    label: Adapter Compatibility
+    weight: 10
+    description: >
+      Does the skill account for differences across target tools (Claude Code,
+      OpenCode, Copilot, Pi, OMP)?
+    pass: >
+      Tool-specific notes are present where behavior differs. Generic skills
+      note they are tool-agnostic.
+    fail: >
+      Skill assumes a specific tool's capabilities without noting the assumption.
+
+scoring:
+  scale: 0-100
+  thresholds:
+    excellent: 90
+    good: 75
+    acceptable: 60
+    needs-improvement: 40
+  guidance: >
+    Sum weighted scores. Each criterion scores 0-10, multiplied by weight/10.
+    Below 60: skill needs revision before inclusion in the library.
+
+human_gate:
+  required: true
+  stop_conditions:
+    - "Trigger conditions are ambiguous or missing"
+    - "Evidence requirements are absent"
+    - "Skill scope has drifted from its declared purpose"

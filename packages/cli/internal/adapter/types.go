@@ -116,6 +116,9 @@ type ToolAdapter interface {
 	// ConfigDir returns the tool's config directory name (e.g., ".opencode", ".claude").
 	// Returns empty string if the tool has no single config directory.
 	ConfigDir() string
+	// Capabilities reports which canonical surfaces this adapter can emit and
+	// its support level (stable/beta/...). Declarative metadata; see TECHSPEC §5.2.
+	Capabilities() Capability
 	// Install copies agents, skills, and config files for this tool.
 	// Returns the list of tracked files that were created or modified.
 	Install(ctx *AdapterContext) ([]types.TrackedFile, error)

@@ -1,4 +1,5 @@
 {
+  "version": "1.0",
   "servers": {
     "ai-memory": {
       "description": "Long-term project memory, handoffs, and durable annotations for agent workflows",

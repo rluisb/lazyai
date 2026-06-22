@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,8 +42,13 @@ func TestAddNonInteractiveMergesIntoExistingSetup(t *testing.T) {
 	if !fileExists(filepath.Join(dir, "AGENTS.md")) {
 		t.Fatal("expected AGENTS.md to exist after adding claude-code")
 	}
-	if fileExists(filepath.Join(dir, "CLAUDE.md")) {
-		t.Fatal("did not expect CLAUDE.md to be created after adding claude-code")
+	// FR-012: adding the Claude Code target generates a native CLAUDE.md.
+	claudeBytes, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("expected CLAUDE.md after adding claude-code: %v", err)
+	}
+	if !strings.Contains(string(claudeBytes), "@AGENTS.md") {
+		t.Fatalf("CLAUDE.md must import AGENTS.md; got:\n%s", claudeBytes)
 	}
 }
 

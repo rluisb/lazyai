@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestPreflightOutDir_MissingIsOK(t *testing.T) {
@@ -57,5 +59,41 @@ func TestPreflightOutDir_RejectsFileAtPath(t *testing.T) {
 	err := preflightOutDir(outDir, true)
 	if err == nil {
 		t.Error("expected error when outDir path is a regular file")
+	}
+}
+
+func TestRunBuildPluginSupportsCopilotCliTarget(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "copilot-bundle")
+	cmd := &cobra.Command{}
+	cmd.Flags().String("out", "", "")
+	cmd.Flags().String("target", "claude", "")
+	cmd.Flags().Bool("force", false, "")
+	_ = cmd.Flags().Set("out", outDir)
+	_ = cmd.Flags().Set("target", "copilot-cli")
+
+	_, _ = captureOutput(t, func() {
+		if err := runBuildPlugin(cmd, nil); err != nil {
+			t.Fatalf("runBuildPlugin: %v", err)
+		}
+	})
+
+	for _, rel := range []string{"plugin.json", "agents/guide.agent.md", ".mcp.json"} {
+		if _, err := os.Stat(filepath.Join(outDir, rel)); err != nil {
+			t.Fatalf("expected %s: %v", rel, err)
+		}
+	}
+}
+
+func TestRunBuildPluginRejectsUnknownTarget(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().String("out", "", "")
+	cmd.Flags().String("target", "claude", "")
+	cmd.Flags().Bool("force", false, "")
+	_ = cmd.Flags().Set("out", filepath.Join(t.TempDir(), "bundle"))
+	_ = cmd.Flags().Set("target", "gemini")
+
+	err := runBuildPlugin(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "unsupported bundle target") {
+		t.Fatalf("expected unsupported-target error, got %v", err)
 	}
 }

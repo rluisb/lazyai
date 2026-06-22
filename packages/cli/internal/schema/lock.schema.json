@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lazyai.dev/schemas/lock.schema.json",
+  "title": "LazyAI lockfile",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "lazyaiVersion": {
+      "type": "string"
+    },
+    "compiledAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "docsSnapshot": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "generated": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "sourceHash": {
+            "type": "string"
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "managed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "target",
+          "sourceHash",
+          "outputHash",
+          "managed"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "version",
+    "lazyaiVersion",
+    "compiledAt",
+    "adapters",
+    "generated"
+  ],
+  "additionalProperties": true
+}

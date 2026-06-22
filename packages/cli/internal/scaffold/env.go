@@ -2,17 +2,17 @@ package scaffold
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
-	"strings"
+	"sort"
 
-	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
-// ScaffoldEnvExample generates a .env.example file listing required environment
-// variables from enabled MCP servers. Ported from src/scaffold/env-example.ts.
-func ScaffoldEnvExample(targetDir string, fileRecords *[]types.TrackedFile, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) error {
+// PrintMCPEnvGuidance prints required environment variables from enabled MCP
+// servers. LazyAI does not generate or manage .env files.
+func PrintMCPEnvGuidance(targetDir string, _ *[]types.TrackedFile, _ types.ConflictStrategy, _ map[string]types.ConflictStrategy) error {
 	mcpPath := filepath.Join(targetDir, ".ai", "mcp.json")
 	if !files.FileExists(mcpPath) {
 		return nil
@@ -51,29 +51,17 @@ func ScaffoldEnvExample(targetDir string, fileRecords *[]types.TrackedFile, stra
 		return nil
 	}
 
-	dest := filepath.Join(targetDir, ".env.example")
-	relPath, err := filepath.Rel(targetDir, dest)
-	if err != nil {
-		relPath = dest
-	}
+	sort.Slice(envVars, func(i, j int) bool {
+		if envVars[i].name == envVars[j].name {
+			return envVars[i].server < envVars[j].server
+		}
+		return envVars[i].name < envVars[j].name
+	})
 
-	action, err := conflict.ApplyStrategy(dest, strategy, perFileOverrides, targetDir)
-	if err != nil {
-		return err
-	}
-	if action == "skip" {
-		scaffoldLog.Info("skipping existing file", "path", relPath)
-		return nil
-	}
-
-	// Group by server for readability.
-	var lines []string
-	lines = append(lines,
-		"# Environment variables required by enabled MCP servers",
-		"# Copy this file to .env and fill in the values",
-		"# NEVER commit .env to version control",
-		"",
-	)
+	fmt.Println("\n💡 MCP environment variables required")
+	fmt.Println("   LazyAI does not create or manage .env files. Export these values in your shell,")
+	fmt.Println("   secret manager, or local env file before running tools that need these MCP servers:")
+	fmt.Println()
 
 	seen := make(map[string]bool)
 	for _, ev := range envVars {
@@ -81,24 +69,9 @@ func ScaffoldEnvExample(targetDir string, fileRecords *[]types.TrackedFile, stra
 			continue
 		}
 		seen[ev.name] = true
-		lines = append(lines,
-			"# Required by: "+ev.server,
-			ev.name+"=",
-			"",
-		)
+		fmt.Printf("   # Required by: %s\n", ev.server)
+		fmt.Printf("   export %s=\"\"\n\n", ev.name)
 	}
-
-	if err := files.WriteFile(dest, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
-		return err
-	}
-
-	hash, _ := files.FileHash(dest)
-	*fileRecords = append(*fileRecords, types.TrackedFile{
-		Path:   relPath,
-		Hash:   hash,
-		Source: "generated:env-example",
-		Owner:  types.FileOwnerLibrary,
-	})
 
 	return nil
 }

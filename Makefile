@@ -46,13 +46,27 @@ lint: vet
 clean:
 	rm -f $(CLI_DIR)/lazyai-cli $(CLI_DIR)/coverage.out $(CLI_DIR)/coverage.html
 	rm -f $(DIFFVIEWER_DIR)/lazyai-diffviewer
-	rm -f $(CLI_DIR)/dist $(DIFFVIEWER_DIR)/dist
+	rm -rf $(CLI_DIR)/$(DIST_DIR) $(DIFFVIEWER_DIR)/$(DIST_DIR)
 
 cli-snapshot:
-	cd $(CLI_DIR) && goreleaser build --snapshot --clean
+	rm -rf $(CLI_DIR)/$(DIST_DIR) && mkdir -p $(CLI_DIR)/$(DIST_DIR)
+	for target in $(PLATFORMS); do \
+		os=$${target%/*}; arch=$${target#*/}; ext=; \
+		if [ "$$os" = "windows" ]; then ext=.exe; fi; \
+		echo "Building lazyai-cli-$$os-$$arch$$ext"; \
+		(cd $(CLI_DIR) && GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 $(GO) build -ldflags "$(CLI_VERSION_LDFLAGS)" -o $(DIST_DIR)/lazyai-cli-$$os-$$arch$$ext ./cmd/lazyai-cli); \
+	done
+	cd $(CLI_DIR)/$(DIST_DIR) && shasum -a 256 lazyai-cli-* > checksums.txt
 
 diffviewer-snapshot:
-	cd $(DIFFVIEWER_DIR) && goreleaser build --snapshot --clean
+	rm -rf $(DIFFVIEWER_DIR)/$(DIST_DIR) && mkdir -p $(DIFFVIEWER_DIR)/$(DIST_DIR)
+	for target in $(PLATFORMS); do \
+		os=$${target%/*}; arch=$${target#*/}; ext=; \
+		if [ "$$os" = "windows" ]; then ext=.exe; fi; \
+		echo "Building lazyai-diffviewer-$$os-$$arch$$ext"; \
+		(cd $(DIFFVIEWER_DIR) && GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 $(GO) build -ldflags "-s -w" -o $(DIST_DIR)/lazyai-diffviewer-$$os-$$arch$$ext ./cmd/lazyai-diffviewer); \
+	done
+	cd $(DIFFVIEWER_DIR)/$(DIST_DIR) && shasum -a 256 lazyai-diffviewer-* > checksums.txt
 
 snapshot: cli-snapshot diffviewer-snapshot
 

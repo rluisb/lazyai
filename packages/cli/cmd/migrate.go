@@ -93,7 +93,7 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	printImportResult(result)
+	printImportResult(result, "", 0)
 	if !result.Success {
 		return fmt.Errorf("migration completed with errors")
 	}

@@ -64,3 +64,18 @@ func TestCheckGitignoreGuidance_WithoutLocalSecrets_NoAutoAppend(t *testing.T) {
 		t.Errorf(".gitignore mutated without --local-secrets:\ngot:  %q\nwant: %q", string(data), original)
 	}
 }
+
+func TestCheckGitignoreGuidance_DoesNotRecommendEnvFiles(t *testing.T) {
+	targetDir := t.TempDir()
+
+	output := captureStdout(t, func() {
+		CheckGitignoreGuidance(targetDir, false)
+	})
+
+	if strings.Contains(output, ".env") {
+		t.Fatalf("expected no generic .env recommendation, got:\n%s", output)
+	}
+	if !strings.Contains(output, ".ai/memory/") {
+		t.Fatalf("expected LazyAI memory recommendation, got:\n%s", output)
+	}
+}

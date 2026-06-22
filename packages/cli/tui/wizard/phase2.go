@@ -373,7 +373,9 @@ func askPreset(current types.PresetLevel, info phase2StepInfo) (types.PresetLeve
 		).
 		Value(&presetValue)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, presetDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -391,7 +393,9 @@ func askFeatures(current *types.FeatureFlags, info phase2StepInfo) ([]string, Ph
 		Options(appendPhase2BackOption(featureOptions)...).
 		Value(&selectedFeatures)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, featureDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if containsString(selectedFeatures, phase2BackValue) {
@@ -412,7 +416,9 @@ func askBranchPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Options(appendPhase2BackOption(branchPatternOptions)...).
 		Value(&branchPattern)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, branchPatternDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if branchPattern == phase2BackValue {
@@ -428,6 +434,7 @@ func askBranchPattern(current string, info phase2StepInfo) (string, PhaseAction,
 	}
 	input := huh.NewInput().
 		Title("Custom branch pattern (use {type}, {ticket}, {description}):").
+		Description("Template for new branch names; supported placeholders are shown in the title.").
 		Placeholder(types.DefaultGitConventions().BranchPattern).
 		Value(&customBranch)
 
@@ -452,7 +459,9 @@ func askCommitPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Options(appendPhase2BackOption(commitPatternOptions)...).
 		Value(&commitPattern)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, commitPatternDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if commitPattern == phase2BackValue {
@@ -468,6 +477,7 @@ func askCommitPattern(current string, info phase2StepInfo) (string, PhaseAction,
 	}
 	input := huh.NewInput().
 		Title("Custom commit pattern (use {type}, {scope}, {ticket}, {description}):").
+		Description("Template for commit messages; supported placeholders are shown in the title.").
 		Placeholder(types.DefaultGitConventions().CommitPattern).
 		Value(&customCommit)
 
@@ -485,6 +495,7 @@ func askRequireTicket(current bool, info phase2StepInfo) (bool, PhaseAction, err
 	requireTicket := current
 	field := huh.NewConfirm().
 		Title(info.Title()).
+		Description("When enabled, branch and commit guidance expects a ticket placeholder.").
 		Value(&requireTicket)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
@@ -507,11 +518,12 @@ func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.Chat
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select Copilot chat modes to install. Deselect to skip.").
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, chatModeDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -535,11 +547,12 @@ func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo)
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode slash commands to install. Deselect to skip.").
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodeCommandDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -562,11 +575,12 @@ func askOpenCodeModes(current []types.OpenCodeModeId, info phase2StepInfo) ([]ty
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode chat modes to install. Deselect to skip.").
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodeModeDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 

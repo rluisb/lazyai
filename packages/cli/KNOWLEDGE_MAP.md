@@ -2,8 +2,8 @@ Authoritative knowledge map: specs/KNOWLEDGE_MAP.md. This file is scoped/seconda
 
 # Project Knowledge Map
 
-> Navigable index of all project documentation.
-> The AI reads this for orientation. Update when creating new work items or ADRs.
+> Navigable index of the setup-core CLI implementation.
+> Update when a feature changes the compile contract, package seams, or durable terminology.
 
 ---
 
@@ -11,49 +11,41 @@ Authoritative knowledge map: specs/KNOWLEDGE_MAP.md. This file is scoped/seconda
 
 | ADR | Decision | Feature | Status |
 |-----|----------|---------|--------|
-| [specs/adrs/001-title.md] | [what was decided] | [NNN-feature — or "Cross-cutting"] | Accepted |
+| [specs/adrs/004-vibe-lab-alignment-contract.md](../../specs/adrs/004-vibe-lab-alignment-contract.md) | Capability-first conformance to vibe-lab-compatible tool surfaces | 026 | Accepted |
+| [specs/adrs/005-core-vs-optional-modules.md](../../specs/adrs/005-core-vs-optional-modules.md) | setup-core is the default product; runtime-adjacent commands are optional modules | 026 | Accepted |
+| [specs/adrs/006-manifest-driven-compile-and-seven-target-contract.md](../../specs/adrs/006-manifest-driven-compile-and-seven-target-contract.md) | `.ai/lazyai.json` + `.ai/lock.json` define the V2 compile contract; supported targets are exactly seven; binary stays `lazyai-cli` | 029 | Accepted |
 
 ## Active Features
 
 | ID | Name | Status | ADRs |
 |----|------|--------|------|
-| [specs/features/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN, NNN — or "None"] |
-
-## Active Bugfixes
-
-| ID | Name | Status |
-|----|------|--------|
-| [specs/bugfixes/001-name/] | [description] | [Research/Fix/Done] |
+| [specs/029-lazyai-v2/](../../specs/029-lazyai-v2/) | Manifest-driven compile, lockfile, consolidated validators, migration/eject, multi-target plugin bundles, local eval validation, and `.ai/` v1 schema freeze | Done | 004, 005, 006 |
 
 ## Active Refactors
 
 | ID | Name | Status | ADRs |
 |----|------|--------|------|
-| [specs/refactors/001-name/] | [description] | [Research/Plan/Implement/Done] | [NNN] |
-
-## Tech Debt
-
-| ID | Name | Priority | Status |
-|----|------|----------|--------|
-| [specs/tech-debt/001-name/] | [description] | [Low/Med/High/Critical] | [Identified/Planned/In Progress/Resolved] |
+| [specs/refactors/026-vibe-lab-alignment/](../../specs/refactors/026-vibe-lab-alignment/) | Exact vibe-lab baseline parity for setup-core surfaces; runtime extras demoted to optional modules | Done | 004, 005 |
 
 ## Rules & Standards
 
 | Type | Files | Purpose |
 |------|-------|---------|
-| Rules | specs/rules/*.md | Prescriptive — WHAT to do |
-| Standards | specs/standards/*.md | Descriptive — HOW we do it |
+| Rules | `specs/rules/*.md` | Prescriptive — WHAT to do |
+| Standards | `specs/standards/*.md` | Descriptive — HOW we do it |
 
 ## Key Modules
 
-<!-- Map your codebase's main modules for quick AI orientation. -->
-
 | Path | Responsibility | Owner |
 |------|---------------|-------|
-| [src/module-a/] | [what it does] | [team/person] |
-| [src/module-b/] | [what it does] | [team/person] |
-| [src/shared/] | Shared utilities (read-only for agents) | [team] |
-
+| `packages/cli/cmd/compile.go` | Manifest-driven compile entrypoint; resolves targets and writes `.ai/lock.json` | setup-core |
+| `packages/cli/internal/aimanifest/` | `.ai/lazyai.json` load/save/validate/target resolution | setup-core |
+| `packages/cli/internal/lockfile/` | `.ai/lock.json` model, hashing, and generated-output tracking | setup-core |
+| `packages/cli/internal/writer/` | Managed-region writes with drift detection and lock updates | setup-core |
+| `packages/cli/internal/validate/` | Canonical `.ai/` validators, secret scanning, path/symlink safety, doctor security inputs | setup-core |
+| `packages/cli/internal/migration/` + `internal/eject/` | Import from native setups, preserve raw source files, strip LazyAI management metadata on eject | setup-core |
+| `packages/cli/internal/plugin/` + `internal/evals/` | Multi-target plugin bundles and local eval validation | setup-core |
+| `packages/cli/library/` | Embedded canonical assets and MCP catalog | setup-core |
 
 ## Terminology
 
@@ -63,6 +55,8 @@ Authoritative knowledge map: specs/KNOWLEDGE_MAP.md. This file is scoped/seconda
 |------|---------|-----------------|
 | setup-core | The default lazyai-cli command set (init, compile, update, doctor, add, build-plugin, etc.) | `specs/adrs/005-core-vs-optional-modules.md` |
 | runtime-adjacent module | Optional command families (session, message, ledger, memory, auth, cost, metrics, notify, secret, backup, restore-runtime-db, git) | `specs/adrs/005-core-vs-optional-modules.md` |
+| manifest v1 | `.ai/lazyai.json` schema version `1.0` contract for targets, profile, source/library, adapter options, and safety | `packages/cli/internal/aimanifest/` |
+| compile lockfile | `.ai/lock.json` schema version `1.0` record of adapter metadata and generated-output hashes | `packages/cli/internal/lockfile/` |
 | artifact type | A category of generated asset: agent, skill, command, prompt, template, rule, infra, specs-dir | `packages/cli/internal/validation/validation.go` |
 | library | Embedded reference content used by lazyai-cli to populate target repos | `packages/cli/library/` |
 | curation manifest | YAML manifest of every embedded library asset with provenance metadata | `packages/cli/library/manifests/curation.yaml` |

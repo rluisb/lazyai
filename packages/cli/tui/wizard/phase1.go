@@ -285,7 +285,9 @@ func askScope(current types.SetupScope, info phase1StepInfo) (types.SetupScope, 
 		).
 		Value(&scopeValue)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, scopeDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 
@@ -299,7 +301,9 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 		Options(appendPhase1BackOption(toolOptionsForScope(scope))...).
 		Value(&selectedTools)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, toolDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selectedTools, phase1BackValue) {
@@ -316,7 +320,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 		huh.NewOption("OpenCode", string(types.ToolIdOpenCode)),
 		huh.NewOption("Claude Code", string(types.ToolIdClaudeCode)),
 		huh.NewOption("GitHub Copilot", string(types.ToolIdCopilot)),
-		huh.NewOption("OMP/Pi", string(types.ToolIdPi)),
+		huh.NewOption("Pi", string(types.ToolIdPi)),
 		huh.NewOption("OMP", string(types.ToolIdOmp)),
 		huh.NewOption("Kiro", string(types.ToolIdKiro)),
 		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),
@@ -365,6 +369,7 @@ func askProjectName(current string, defaults *Phase1Result, scope types.SetupSco
 
 	field := huh.NewInput().
 		Title(info.Title()).
+		Description("Used in generated project identity and local config names.").
 		Placeholder(placeholder).
 		Value(&nameValue).
 		Validate(validateProjectName)
@@ -388,7 +393,9 @@ func askCliTools(current []string, info phase1StepInfo) ([]string, PhaseAction, 
 	field.Value(&selected)
 	field.Options(appendPhase1BackOption(cliToolOptionsFromCatalogForSelect())...)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, catalogCliToolDescriptions(), defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -409,7 +416,9 @@ func askSkills(current []types.SkillId, info phase1StepInfo) ([]types.SkillId, P
 		Options(appendPhase1BackOption(skillOptions())...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, skillDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -430,7 +439,9 @@ func askAgents(current []types.AgentId, info phase1StepInfo) ([]types.AgentId, P
 		Options(appendPhase1BackOption(agentOptions())...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, agentDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -444,7 +455,6 @@ func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseActio
 	presetValue := string(normalizeMcpPreset(current))
 	field := huh.NewSelect[string]().
 		Title(info.Title()).
-		Description("Choose a starting MCP set, then refine individual servers next.").
 		Options(
 			huh.NewOption("Minimal — core local setup tools", string(McpPresetMinimal)),
 			huh.NewOption("Recommended — balanced default", string(McpPresetRecommended)),
@@ -453,7 +463,9 @@ func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseActio
 		).
 		Value(&presetValue)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, mcpPresetDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if presetValue == phase1BackValue {
@@ -471,7 +483,9 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 	field.Value(&selected)
 	field.Options(appendPhase1BackOption(mcpServerOptionsForSelect())...)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, catalogServerDescriptions(), defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if containsString(selected, phase1BackValue) {
@@ -505,7 +519,9 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 		).
 		Value(&decision)
 
-	if err := theme.NewForm(huh.NewGroup(orgField, teamField, decisionField)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(orgField, teamField, selectFooterDescription(decisionField, func() string {
+		return selectHoverDescription(decisionField, projectIdentityActionDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
 	}
 	if decision == phase1BackValue {

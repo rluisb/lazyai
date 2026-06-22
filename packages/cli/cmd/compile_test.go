@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -202,6 +206,87 @@ func TestCompileDryRunDoesNotWriteFilesOrStoreRecords(t *testing.T) {
 	storeData := readSeededStoreData(t, dir)
 	if len(storeData.Files) != 0 {
 		t.Fatalf("tracked files = %d, want 0", len(storeData.Files))
+	}
+}
+
+func TestCompileManifestDrivesTargetsAndWritesLock(t *testing.T) {
+	dir := t.TempDir()
+	// Store says claude only; manifest says opencode only. Manifest must win.
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdClaudeCode}
+	})
+	writeCanonicalMCPConfig(t, dir)
+	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"opencode"}}).Save(filepath.Join(dir, ".ai")); err != nil {
+		t.Fatalf("save manifest: %v", err)
+	}
+
+	cmd := newCompileCommand(dir, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	if _, _ = captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile: %v", err)
+		}
+	}); false {
+	}
+
+	if !fileExists(filepath.Join(dir, "opencode.json")) {
+		t.Fatal("expected opencode.json (manifest target) to be generated")
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".ai", "lock.json"))
+	if err != nil {
+		t.Fatalf("read lock: %v", err)
+	}
+	var lock struct {
+		CompiledAt string `json:"compiledAt"`
+	}
+	if err := json.Unmarshal(data, &lock); err != nil {
+		t.Fatalf("unmarshal lock: %v", err)
+	}
+	if _, err := time.Parse(time.RFC3339, lock.CompiledAt); err != nil {
+		t.Fatalf("compiledAt = %q, want RFC3339 timestamp: %v", lock.CompiledAt, err)
+	}
+	if !fileExists(filepath.Join(dir, ".ai", "lock.json")) {
+		t.Fatal("expected .ai/lock.json to be written")
+	}
+}
+
+func TestCompileRejectsInvalidManifest(t *testing.T) {
+	dir := t.TempDir()
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
+	})
+	writeCanonicalMCPConfig(t, dir)
+	// Codex is rejected in V2.
+	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"codex"}}).Save(filepath.Join(dir, ".ai")); err != nil {
+		t.Fatalf("save manifest: %v", err)
+	}
+	cmd := newCompileCommand(dir, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	err := runCompile(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "lazyai.json") {
+		t.Fatalf("want invalid-manifest error, got %v", err)
+	}
+}
+
+func TestCompileSurfacesBetaAdapters(t *testing.T) {
+	dir := t.TempDir()
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdOmp}
+	})
+	writeCanonicalMCPConfig(t, dir)
+	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"omp"}}).Save(filepath.Join(dir, ".ai")); err != nil {
+		t.Fatalf("save manifest: %v", err)
+	}
+	cmd := newCompileCommand(dir, "", true) // dry-run
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	stdout, _ := captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile: %v", err)
+		}
+	})
+	if !strings.Contains(stdout, "beta") {
+		t.Fatalf("expected beta label for OMP in compile output; got:\n%s", stdout)
 	}
 }
 

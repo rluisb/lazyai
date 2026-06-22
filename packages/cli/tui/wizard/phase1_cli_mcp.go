@@ -95,11 +95,11 @@ func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {
 	}
 
 	selected := defaults
-	return huh.NewMultiSelect[string]().
+	field := huh.NewMultiSelect[string]().
 		Title("Which MCP servers would you like to enable?").
-		Description("Start from the preset selection, then toggle individual setup resources.").
 		Options(mcpServerOptionsFromCatalog(catalog)...).
 		Value(&selected)
+	return field
 }
 
 func normalizeMcpPreset(preset McpPreset) McpPreset {

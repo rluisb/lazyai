@@ -11,7 +11,7 @@
 //     just because a repo wasn't checked out).
 //   - Reuses each adapter's existing CompileMCP function with TargetDir
 //     pointed at the repo, so all per-tool quirks (Claude settings.json
-//     merge, OpenCode jsonc, Codex TOML, etc.) come along for free.
+//     merge, OpenCode jsonc, Copilot mcp.json, etc.) come along for free.
 package adapter
 
 import (

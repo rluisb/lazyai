@@ -203,11 +203,12 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
 		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 
@@ -275,10 +276,11 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 
 	field := huh.NewMultiSelect[string]().
 		Title("OpenCode Providers").
-		Description("Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy.").
 		Options(options...).
 		Value(&selected)
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodeProviderDescriptions(eligible), defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 
@@ -319,6 +321,14 @@ func opencodeProviderLabel(p auth.ProviderID) string {
 		}
 	}
 	return string(p)
+}
+
+func opencodeProviderDescriptions(providers []auth.ProviderID) map[string]string {
+	descriptions := make(map[string]string, len(providers))
+	for _, p := range providers {
+		descriptions[string(p)] = fmt.Sprintf("Expose authenticated %s models to OpenCode config resolution.", opencodeProviderLabel(p))
+	}
+	return descriptions
 }
 
 // opencodeProviderHuhOptions runs auth.DetectAll, drops disallowed providers

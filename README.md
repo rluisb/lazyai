@@ -9,9 +9,10 @@ verify adapter correctness.
 
 `lazyai-cli` owns the canonical source workflow:
 
-- `.ai/` setup source (agents, skills, MCP catalog, specs)
+- `.ai/lazyai.json`, `.ai/mcp.json`, and canonical asset trees under `.ai/`
+- `.ai/lock.json` compile metadata for idempotent managed outputs
 - scoped installation state (`.ai-setup.json`)
-- compiler/adapters for tool-native output
+- compiler/adapters that emit tool-native output for the 7 supported targets
 - optional runtime-adjacent local state (sessions, metrics, ledger, memory, secrets)
 
 It is Go-only (`go install`), with no npm or npx dependency for normal usage.
@@ -20,19 +21,21 @@ It is Go-only (`go install`), with no npm or npx dependency for normal usage.
 
 ```mermaid
 flowchart TD
-    A["`lazyai-cli init`"] --> B["Canonical source in `.ai/` (AGENTS.md, specs, artifacts)"]
-    B --> C["Embedded library + manifest resolver"]
-    C --> D["Scaffold pipeline"]
-    D --> E["Adapters (opencode, claude-code, copilot, pi, antigravity)"]
+    A["`lazyai-cli init`"] --> B["Canonical `.ai/` source tree"]
+    B --> C["`.ai/lazyai.json` + `.ai/mcp.json`"]
+    C --> D["Embedded library + manifest resolver"]
+    D --> E["Managed-region writer + adapter pipeline"]
     E --> F["Tool-native outputs"]
     F --> G["`.opencode/`"]
     F --> H["`.claude/`"]
     F --> I["`.github/`"]
     F --> J["`.pi/`"]
-    F --> K["`.gemini/`"]
-    B --> L["`.ai-setup.json` + managed manifests"]
-    B --> M["`.ai/mcp.json`"] --> N["`lazyai-cli compile`"]
-    N --> F
+    F --> K["`.omp/`"]
+    F --> L["`.kiro/`"]
+    F --> M["`.gemini/`"]
+    E --> N["`.ai/lock.json`"]
+    B --> O["`.ai-setup.json` scoped state"]
+    N --> P["`lazyai-cli compile` idempotency"]
 ```
 
 ## Quick start (project + full preset)
@@ -85,17 +88,17 @@ Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are remov
 
 | Command | Description |
 |---|---|
-| `add` | Add artifacts to an existing setup (`--tools`, `--agents`, `--skills`). `--tools` accepts `opencode`, `claude-code`, `copilot`, `pi`, `antigravity`. |
-| `build-plugin` | Generate a Claude Code plugin directory from embedded library assets. |
-| `compile` | Compile `.ai/mcp.json` into per-tool MCP/config outputs (`--tool`, `--dry-run`, `--validate-contracts`). |
+| `add` | Add artifacts to an existing setup (`--tools`, `--agents`, `--skills`). `--tools` accepts `opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, `antigravity`. |
+| `build-plugin` | Generate plugin bundles from embedded library assets (`--target {claude,copilot-cli,omp,pi}`). |
+| `compile` | Compile canonical `.ai/` sources (`lazyai.json`, `mcp.json`, agents/skills/hooks/prompts) into tool-native outputs and refresh `.ai/lock.json` (`--tool`, `--dry-run`, `--validate-contracts`). |
 | `completion` | Generate shell completion scripts. |
 | `config` | Configuration management (`get`, `set`, `list`, `init`). |
 | `create` | Create setup artifacts (agent, skill, command, template, prompt, hook). |
-| `doctor` | Setup health checks: manifest/file integrity plus the current 6 required checks (`sqlite3`, `git`, `jq`, `bash`, `ollama`, disk space). |
+| `doctor` | Setup health checks: manifest/file integrity, beta/sandbox advisories, and optional MCP/security reporting plus the current required local checks. |
 | `eject` | Remove LazyAI library management while keeping files in place. |
 | `import` | Import from another AI-tool setup into LazyAI format. |
 | `info` | Show detailed artifact information. |
-| `init` | Initialize AI environment (scope, tools, preset, MCP servers, policies). |
+| `init` | Initialize AI environment and scaffold canonical `.ai/` sources (`lazyai.json`, `mcp.json`, assets) from selected tools/presets/policies. |
 | `list` | List installed or available artifacts. |
 | `migrate` | Migrate from prior setup format/version. |
 | `server` | Manage MCP entries (`server list/add/remove/doctor`). |
@@ -104,7 +107,7 @@ Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are remov
 | `status` | Show current setup state. |
 | `update` | Update managed files from current embedded library versions. |
 | `update-self` | Update `lazyai-cli` to latest GitHub Release. |
-| `validate` | Validate setup artifacts (`validate agents`, `validate skills`). |
+| `validate` | Validate setup artifacts (`validate agents`, `validate skills`, `validate --all`, `validate evals`). |
 | `workspace` | Manage multi-project workspaces (`add`, `list`, `switch`, `status`). |
 
 ### ops-runtime-extra (12 commands)

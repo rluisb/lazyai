@@ -41,8 +41,8 @@ func TestPrintMcpNextSteps(t *testing.T) {
 	if !strings.Contains(output, "Next Steps: MCP Server Configuration") {
 		t.Errorf("Expected 'Next Steps: MCP Server Configuration', got %s", output)
 	}
-	if !strings.Contains(output, "Fill in any required environment variables") {
-		t.Errorf("Expected 'Fill in any required environment variables', got %s", output)
+	if !strings.Contains(output, "Export required MCP environment variables") {
+		t.Errorf("Expected 'Export required MCP environment variables', got %s", output)
 	}
 	if !strings.Contains(output, "Hint for server1") {
 		t.Errorf("Expected 'Hint for server1', got %s", output)

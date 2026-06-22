@@ -8,18 +8,17 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 	"github.com/spf13/cobra"
 
-	"github.com/rluisb/lazyai/packages/cli/internal/db"
+	"github.com/rluisb/lazyai/packages/cli/internal/eject"
 	aierror "github.com/rluisb/lazyai/packages/cli/internal/error"
-	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/rluisb/lazyai/packages/cli/internal/theme"
 )
 
 var ejectCmd = &cobra.Command{
 	Use:   "eject",
 	Short: "Remove library management and keep files as-is",
-	Long:  "Eject from LazyAI management, converting all managed files to standalone copies that are no longer tracked or updated.",
+	Long:  "Eject from LazyAI management, removing LazyAI metadata while leaving native host-tool files in place.",
 	RunE:  runEject,
 }
 
@@ -36,26 +35,11 @@ func runEject(cmd *cobra.Command, args []string) error {
 	}
 	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
 
-	// Check that a store exists
-	dbPath := db.DefaultDBPath(dir)
-	manifestPath := filepath.Join(dir, ".ai-setup.json")
-
-	dbExists := files.FileExists(dbPath)
-	manifestExists := files.FileExists(manifestPath)
-
-	if !dbExists && !manifestExists {
+	plan := eject.Inspect(dir)
+	if len(plan.Existing) == 0 {
 		return aierror.ManifestNotFound(dir)
 	}
 
-	// Read store to count files
-	storeData, err := readStore(dir)
-	if err != nil {
-		return err
-	}
-
-	numFiles := len(storeData.Files)
-
-	// Styled output
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
 	warnStyle := lipgloss.NewStyle().Foreground(theme.Warning)
 	greenStyle := lipgloss.NewStyle().Foreground(theme.Success)
@@ -63,11 +47,17 @@ func runEject(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Println(headerStyle.Render("🚀 Ejecting from LazyAI"))
 	fmt.Println()
-	fmt.Printf("  %s This will remove the .ai-setup.json manifest and .ai-setup.db database.\n", warnStyle.Render("⚠"))
-	fmt.Printf("  %s Your %d managed files will be kept, but LazyAI will no longer update them.\n", warnStyle.Render("⚠"), numFiles)
+	fmt.Printf("  %s This will remove LazyAI management metadata but keep native files in place.\n", warnStyle.Render("⚠"))
+	fmt.Printf("  %s Metadata files to remove: %d\n", warnStyle.Render("⚠"), len(plan.Existing))
+	for _, path := range plan.Existing {
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			rel = path
+		}
+		fmt.Printf("    - %s\n", rel)
+	}
 	fmt.Println()
 
-	// Confirmation
 	if !nonInteractive {
 		fmt.Print("  Are you sure you want to eject? [y/N] ")
 		reader := bufio.NewReader(os.Stdin)
@@ -83,26 +73,20 @@ func runEject(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Delete .ai-setup.db
-	if dbExists {
-		if err := os.Remove(dbPath); err != nil {
-			cmdLog.Warn("could not remove database", "path", dbPath, "error", err)
-		} else {
-			fmt.Printf("  Removed %s\n", dbPath)
-		}
+	result, err := eject.Run(dir)
+	if err != nil {
+		return err
 	}
-
-	// Delete .ai-setup.json
-	if manifestExists {
-		if err := os.Remove(manifestPath); err != nil {
-			cmdLog.Warn("could not remove manifest", "path", manifestPath, "error", err)
-		} else {
-			fmt.Printf("  Removed %s\n", manifestPath)
+	for _, path := range result.Removed {
+		rel, relErr := filepath.Rel(dir, path)
+		if relErr != nil {
+			rel = path
 		}
+		fmt.Printf("  Removed %s\n", rel)
 	}
 
 	fmt.Println()
-	fmt.Printf("  %s\n", greenStyle.Render("✓ Ejected successfully. Your files remain in place."))
+	fmt.Printf("  %s\n", greenStyle.Render("✓ Ejected successfully. Native files remain in place."))
 	fmt.Println()
 
 	return nil

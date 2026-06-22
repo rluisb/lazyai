@@ -167,28 +167,33 @@ func initExpressWizardState(defaults *WizardResult) *WizardState {
 }
 
 func buildExpressInteractiveForm(state *WizardState) *huh.Form {
+	scopeField := huh.NewSelect[string]().
+		Title("Scope").
+		Options(
+			huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
+			huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
+			huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
+		).
+		Value(&state.Scope)
+
+	toolsField := huh.NewMultiSelect[string]().
+		Title("AI Tools").
+		OptionsFunc(func() []huh.Option[string] {
+			return toolOptionsForScope(types.SetupScope(state.Scope))
+		}, &state.Scope).
+		Value(&state.Tools)
+
 	groups := []*huh.Group{
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Scope").
-				Options(
-					huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
-					huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
-					huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
-				).
-				Value(&state.Scope),
-		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("AI Tools").
-				OptionsFunc(func() []huh.Option[string] {
-					return toolOptionsForScope(types.SetupScope(state.Scope))
-				}, &state.Scope).
-				Value(&state.Tools),
-		),
+		huh.NewGroup(selectFooterDescription(scopeField, func() string {
+			return selectHoverDescription(scopeField, scopeDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(toolsField, func() string {
+			return multiSelectHoverDescription(toolsField, toolDescriptions, defaultHoverHint)
+		})),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Project Name").
+				Description("Used in generated project identity and local config names.").
 				Placeholder(defaultPhase1ProjectName()).
 				Value(&state.ProjectName).
 				Validate(validateProjectName),
@@ -201,68 +206,115 @@ func buildExpressInteractiveForm(state *WizardState) *huh.Form {
 }
 
 func buildInteractiveForm(state *WizardState) *huh.Form {
+	scopeField := huh.NewSelect[string]().
+		Title("Scope").
+		Options(
+			huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
+			huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
+			huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
+		).
+		Value(&state.Scope)
+
+	toolsField := huh.NewMultiSelect[string]().
+		Title("AI Tools").
+		OptionsFunc(func() []huh.Option[string] {
+			return toolOptionsForScope(types.SetupScope(state.Scope))
+		}, &state.Scope).
+		Value(&state.Tools)
+
+	skillsField := huh.NewMultiSelect[string]().
+		Title("Skills").
+		Options(skillOptions()...).
+		Value(&state.Skills)
+
+	agentsField := huh.NewMultiSelect[string]().
+		Title("Agents").
+		Options(agentOptions()...).
+		Value(&state.Agents)
+
+	mcpPresetField := huh.NewSelect[string]().
+		Title("MCP Preset").
+		Options(
+			huh.NewOption("Minimal — core local setup tools", string(McpPresetMinimal)),
+			huh.NewOption("Recommended — balanced default", string(McpPresetRecommended)),
+			huh.NewOption("Full — all catalog servers", string(McpPresetFull)),
+		).
+		Value(&state.McpPreset)
+
+	mcpServersField := NewMcpServersSelect(state.McpServers).
+		Title("MCP Servers").
+		Value(&state.McpServers)
+
+	cliToolsField := NewCliToolsSelect(state.CliTools, detectInstalledCliToolsFromCatalog()).
+		Title("CLI Tools").
+		Value(&state.CliTools)
+
+	presetField := huh.NewSelect[string]().
+		Title("Preset").
+		Options(
+			huh.NewOption("Minimal — Quality gates + git only", "minimal"),
+			huh.NewOption("Standard (recommended) — +RPI, reasoning, bug resolution", "standard"),
+			huh.NewOption("Full — All features enabled", "full"),
+			huh.NewOption("Custom — Pick features individually", "custom"),
+		).
+		Value(&state.Preset)
+
+	featuresField := huh.NewMultiSelect[string]().
+		Title("Features").
+		Options(featureOptions...).
+		Value(&state.Features)
+
+	branchPatternField := huh.NewSelect[string]().
+		Title("Branch Pattern").
+		Options(branchPatternOptions...).
+		Value(&state.BranchPattern)
+
+	commitPatternField := huh.NewSelect[string]().
+		Title("Commit Pattern").
+		Options(commitPatternOptions...).
+		Value(&state.CommitPattern)
+
+	chatModesField := huh.NewMultiSelect[string]().
+		Title("Copilot Chat Modes").
+		Options(
+			huh.NewOption("Architect mode (architect)", string(types.ChatModeIdArchitect)),
+			huh.NewOption("Reviewer mode (reviewer)", string(types.ChatModeIdReviewer)),
+		).
+		Value(&state.ChatModes)
+
 	groups := []*huh.Group{
 		// Phase 1
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Scope").
-				Options(
-					huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
-					huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
-					huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
-				).
-				Value(&state.Scope),
-		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("AI Tools").
-				OptionsFunc(func() []huh.Option[string] {
-					return toolOptionsForScope(types.SetupScope(state.Scope))
-				}, &state.Scope).
-				Value(&state.Tools),
-		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Skills").
-				Options(skillOptions()...).
-				Value(&state.Skills),
-		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Agents").
-				Options(agentOptions()...).
-				Value(&state.Agents),
-		),
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("MCP Preset").
-				Description("Choose a starting MCP set, then refine individual servers next.").
-				Options(
-					huh.NewOption("Minimal — core local setup tools", string(McpPresetMinimal)),
-					huh.NewOption("Recommended — balanced default", string(McpPresetRecommended)),
-					huh.NewOption("Full — all catalog servers", string(McpPresetFull)),
-				).
-				Value(&state.McpPreset),
-		),
-		huh.NewGroup(
-			NewMcpServersSelect(state.McpServers).
-				Title("MCP Servers").
-				Value(&state.McpServers),
-		),
+		huh.NewGroup(selectFooterDescription(scopeField, func() string {
+			return selectHoverDescription(scopeField, scopeDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(toolsField, func() string {
+			return multiSelectHoverDescription(toolsField, toolDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(skillsField, func() string {
+			return multiSelectHoverDescription(skillsField, skillDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(agentsField, func() string {
+			return multiSelectHoverDescription(agentsField, agentDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(selectFooterDescription(mcpPresetField, func() string {
+			return selectHoverDescription(mcpPresetField, mcpPresetDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(mcpServersField, func() string {
+			return multiSelectHoverDescription(mcpServersField, catalogServerDescriptions(), defaultHoverHint)
+		})),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Project Name").
+				Description("Used in generated project identity and local config names.").
 				Placeholder(defaultPhase1ProjectName()).
 				Value(&state.ProjectName).
 				Validate(validateProjectName),
 		).WithHideFunc(func() bool {
 			return state.Scope == "global"
 		}),
-		huh.NewGroup(
-			NewCliToolsSelect(state.CliTools, detectInstalledCliToolsFromCatalog()).
-				Title("CLI Tools").
-				Value(&state.CliTools),
-		),
+		huh.NewGroup(multiSelectFooterDescription(cliToolsField, func() string {
+			return multiSelectHoverDescription(cliToolsField, catalogCliToolDescriptions(), defaultHoverHint)
+		})),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Organization Name").
@@ -277,50 +329,36 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		),
 
 		// Phase 2
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Preset").
-				Options(
-					huh.NewOption("Minimal — Quality gates + git only", "minimal"),
-					huh.NewOption("Standard (recommended) — +RPI, reasoning, bug resolution", "standard"),
-					huh.NewOption("Full — All features enabled", "full"),
-					huh.NewOption("Custom — Pick features individually", "custom"),
-				).
-				Value(&state.Preset),
-		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Features").
-				Options(featureOptions...).
-				Value(&state.Features),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Branch Pattern").
-				Options(branchPatternOptions...).
-				Value(&state.BranchPattern),
-		),
+		huh.NewGroup(selectFooterDescription(presetField, func() string {
+			return selectHoverDescription(presetField, presetDescriptions, defaultHoverHint)
+		})),
+		huh.NewGroup(multiSelectFooterDescription(featuresField, func() string {
+			return multiSelectHoverDescription(featuresField, featureDescriptions, defaultHoverHint)
+		})).WithHideFunc(func() bool { return state.Preset != "custom" }),
+		huh.NewGroup(selectFooterDescription(branchPatternField, func() string {
+			return selectHoverDescription(branchPatternField, branchPatternDescriptions, defaultHoverHint)
+		})),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Custom branch pattern (use {type}, {ticket}, {description}):").
+				Description("Template for new branch names; supported placeholders are shown in the title.").
 				Placeholder(types.DefaultGitConventions().BranchPattern).
 				Value(&state.CustomBranch),
 		).WithHideFunc(func() bool { return state.BranchPattern != "custom" }),
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Commit Pattern").
-				Options(commitPatternOptions...).
-				Value(&state.CommitPattern),
-		),
+		huh.NewGroup(selectFooterDescription(commitPatternField, func() string {
+			return selectHoverDescription(commitPatternField, commitPatternDescriptions, defaultHoverHint)
+		})),
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Custom commit pattern (use {type}, {scope}, {ticket}, {description}):").
+				Description("Template for commit messages; supported placeholders are shown in the title.").
 				Placeholder(types.DefaultGitConventions().CommitPattern).
 				Value(&state.CustomCommit),
 		).WithHideFunc(func() bool { return state.CommitPattern != "custom" }),
 		huh.NewGroup(
 			huh.NewConfirm().
 				Title("Require Ticket").
+				Description("When enabled, branch and commit guidance expects a ticket placeholder.").
 				Value(&state.RequireTicket),
 		),
 		huh.NewGroup(
@@ -329,38 +367,9 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Description("Runs deterministic Scout/Reversa analysis against this project before scaffolding.").
 				Value(&state.AnalyzeExistingCode),
 		).Title("Project Profile"),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Copilot Chat Modes").
-				Description("Select Copilot chat modes to install. Deselect to skip.").
-				Options(
-					huh.NewOption("Architect mode (architect)", string(types.ChatModeIdArchitect)),
-					huh.NewOption("Reviewer mode (reviewer)", string(types.ChatModeIdReviewer)),
-				).
-				Value(&state.ChatModes),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Commands").
-				Description("Select OpenCode slash commands to install. Deselect to skip.").
-				Options(
-					huh.NewOption("Review branch (review)", string(types.OpenCodeCommandIdReview)),
-					huh.NewOption("Run tests (test)", string(types.OpenCodeCommandIdTest)),
-					huh.NewOption("Draft commit (commit)", string(types.OpenCodeCommandIdCommit)),
-				).
-				Value(&state.OpenCodeCommands),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Modes").
-				Description("Select OpenCode chat modes to install. Deselect to skip.").
-				Options(
-					huh.NewOption("Plan mode (plan)", string(types.OpenCodeModeIdPlan)),
-					huh.NewOption("Audit mode (audit)", string(types.OpenCodeModeIdAudit)),
-				).
-				Value(&state.OpenCodeModes),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-
+		huh.NewGroup(multiSelectFooterDescription(chatModesField, func() string {
+			return multiSelectHoverDescription(chatModesField, chatModeDescriptions, defaultHoverHint)
+		})).WithHideFunc(func() bool { return state.Preset != "custom" }),
 		// Phase 5
 		huh.NewGroup(
 			huh.NewInput().
@@ -369,30 +378,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Placeholder(".specify/memory").
 				Value(&state.MemoryPath),
 		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Plugins").
-				Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
-				Options(
-					huh.NewOption("Desktop Commander (@opencode/desktop-commander)", "@opencode/desktop-commander"),
-					huh.NewOption("Context Files (@opencode/context-files)", "@opencode/context-files"),
-					huh.NewOption("Git Tools (@opencode/git-tools)", "@opencode/git-tools"),
-				).
-				Value(&state.OpenCodePlugins),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "opencode") || !opencodeBinaryPresent()
-		}),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				TitleFunc(func() string { return "OpenCode Providers" }, &state.Tools).
-				DescriptionFunc(func() string {
-					return "Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy."
-				}, &state.Tools).
-				OptionsFunc(opencodeProviderHuhOptions, &state.Tools).
-				Value(&state.OpenCodeProviders),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "opencode")
-		}),
 	}
 
 	return theme.NewForm(groups...)

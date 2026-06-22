@@ -32,6 +32,7 @@
 | 026 | vibe-lab alignment — exact baseline parity applied for default agent/tool surfaces across Claude Code, OpenCode, GitHub Copilot, and compatible `bin/` commands; runtime-adjacent CLI commands and LazyAI-only MCP extras remain secondary/transitional | ✅ Exact baseline parity applied | `specs/refactors/026-vibe-lab-alignment/` |
 | 027 | Production readiness hardening — release pipeline correctness, enforcing CI gates (smoke/integration/lint), backup-restore path-traversal fix, notify sanitization, `validate skills` honesty, setupscan scope correctness, and deferred snapshot/opencode coverage | ✅ Complete | `specs/027-production-readiness-hardening/` |
 | 028 | Fake projects testing plan and evidence collection | ✅ Complete | `specs/028-fake-projects-testing-plan/` |
+| 029 | LazyAI V2 — canonical `.ai/lazyai.json` manifest + `.ai/lock.json` driven compile pipeline (discover→parse→resolve→validate→plan→write), adapter capabilities model + docs-conformance fixtures, validation hardening (`validate --all` + secret scanner + path/symlink safety + doctor security report), migration/eject, multi-tool plugin bundles, local eval validation, and `.ai/` v1 schema freeze; Codex dropped (7 targets), binary stays `lazyai-cli` | ✅ Complete | `specs/029-lazyai-v2/` |
 
 ## Standards
 
@@ -49,6 +50,7 @@
 | Capability-first vibe-lab alignment | `specs/adrs/004-vibe-lab-alignment-contract.md` | Closes missing baseline behaviors while preserving verified native contracts; Copilot selected skills now use Agent Skills directories instead of legacy `.agent.yaml` skill output, and OpenCode MCP placement remains under active review. |
 | Pi is skills-only; Antigravity is minimal `.gemini` settings + hooks | `specs/adrs/004-vibe-lab-alignment-contract.md` | Matches verified baseline breadth without reviving unsupported agents or workflow runtime behavior |
 | LazyAI defaults to setup-core; runtime-adjacent commands are optional modules | `specs/adrs/005-core-vs-optional-modules.md` | Maximizes vibe-lab philosophy alignment while preserving retained runtime-adjacent capabilities behind a documented future opt-in boundary |
+| Manifest-driven compile and seven-target contract | `specs/adrs/006-manifest-driven-compile-and-seven-target-contract.md` | Makes `.ai/lazyai.json` + `.ai/lock.json` the V2 compile contract, freezes the supported target set at seven, and keeps the binary name `lazyai-cli` |
 | Workspace scope = project-shaped layout at user-selected dir | — | No tool-native workspace concept; direct-write is universal |
 | `CompileContext` struct carries scope info to compile-time adapters | — | Breaks `CompileMCP(targetDir, records)` signature for all supported adapters; clean internal migration |
 | Claude Code × global compile skips `.mcp.json`; init's settings.json merge handles it | — | `.mcp.json` is a user-committed project-scope file; global mcpServers live in settings.json |

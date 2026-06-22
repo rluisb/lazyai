@@ -79,13 +79,6 @@ func runImport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no existing AI setup detected in %s", sourcePath)
 	}
 
-	// Show detected adapters.
-	fmt.Println("Detected AI setups:")
-	for _, d := range detections {
-		fmt.Printf("  • %s (confidence: %.0f%%, %d files)\n", d.AdapterName, d.Confidence*100, len(d.Files))
-	}
-	fmt.Println()
-
 	// Filter by --tool flag if specified.
 	if toolFlag != "" {
 		var filtered []migration.DetectionResult
@@ -100,15 +93,38 @@ func runImport(cmd *cobra.Command, args []string) error {
 		detections = filtered
 	}
 
-	// Step 2: Build migration plan.
-	plan, err := migration.BuildPlan(ctx, detections)
+	// Show detected adapters.
+	fmt.Println("Detected AI setups:")
+	for _, d := range detections {
+		fmt.Printf("  • %s (detector confidence: %.0f%%, %d files)\n", d.AdapterName, d.Confidence*100, len(d.Files))
+	}
+	fmt.Println()
+
+	// Step 2: Parse canonical candidates.
+	parsedDetections := canonicalImportDetections(detections)
+	parsedSetups := make([]migration.ParsedSetup, 0, len(parsedDetections))
+	if len(parsedDetections) > 0 {
+		parsedSetups, err = migration.ParseDetectedSetups(ctx, parsedDetections)
+		if err != nil {
+			return fmt.Errorf("failed to parse supported setups: %w", err)
+		}
+	}
+
+	plan, err := migration.BuildCanonicalPlan(ctx, detections, parsedSetups)
 	if err != nil {
 		return fmt.Errorf("failed to build migration plan: %w", err)
 	}
 
 	// Step 3: Show plan.
 	fmt.Println(migration.FormatPlan(plan))
-	fmt.Println()
+	rawPaths, err := planRawPreservation(ctx.SourcePath, ctx.TargetPath, detections, true)
+	if err != nil {
+		return fmt.Errorf("failed to plan raw preservation: %w", err)
+	}
+	if len(rawPaths) > 0 {
+		fmt.Printf("Preserve raw native config: %d file(s) under .ai/adapters/*/raw/\n", len(rawPaths))
+	}
+	fmt.Printf("Migration report: %s\n\n", migrationReportRelPath)
 
 	if preview {
 		fmt.Println("Preview mode — no changes were made.")
@@ -126,28 +142,45 @@ func runImport(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Step 5: Execute.
-	result, err := migration.Execute(plan, ctx)
+	// Step 5: Execute canonical import + preservation.
+	result, err := migration.ExecuteToCanonical(ctx, plan, parsedSetups)
 	if err != nil {
 		return fmt.Errorf("import failed: %w", err)
 	}
+	if err := scaffoldImportManifest(targetPath, detections, ctx.Options.Preview); err != nil {
+		result.Success = false
+		result.Errors = append(result.Errors, fmt.Sprintf("manifest bootstrap failed: %v", err))
+	}
+	if _, err := planRawPreservation(ctx.SourcePath, ctx.TargetPath, detections, false); err != nil {
+		result.Success = false
+		result.Errors = append(result.Errors, fmt.Sprintf("raw preservation failed: %v", err))
+	}
+	reportPath, err := writeMigrationReport(ctx.SourcePath, ctx.TargetPath, detections, result, rawPaths, ctx.Options.Preview)
+	if err != nil {
+		result.Success = false
+		result.Errors = append(result.Errors, fmt.Sprintf("report write failed: %v", err))
+	}
 
 	// Step 6: Show results.
-	printImportResult(result)
+	printImportResult(result, reportPath, len(rawPaths))
 
 	return nil
 }
 
-func printImportResult(result *migration.MigrationResult) {
+func printImportResult(result *migration.MigrationResult, reportPath string, rawPreserved int) {
 	fmt.Println()
 	fmt.Println("Import complete!")
 	fmt.Printf("  Files created:   %d\n", result.Stats.FilesCreated)
 	fmt.Printf("  Files modified:  %d\n", result.Stats.FilesModified)
 	fmt.Printf("  Files backed up: %d\n", result.Stats.FilesBackedUp)
 	fmt.Printf("  Files skipped:   %d\n", result.Stats.FilesSkipped)
+	fmt.Printf("  Raw preserved:   %d\n", rawPreserved)
 
 	if result.BackupPath != "" {
 		fmt.Printf("  Backup location: %s\n", result.BackupPath)
+	}
+	if reportPath != "" {
+		fmt.Printf("  Report:          %s\n", reportPath)
 	}
 
 	if len(result.Errors) > 0 {

@@ -476,6 +476,7 @@ func TestOpenCodeAdapter_Install_DefaultAgentMode(t *testing.T) {
 		t.Error("STARTUP.md should not be installed")
 	}
 }
+
 func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := testRepoRoot(t)
@@ -539,6 +540,14 @@ func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 	if _, ok := cfg["mcp"]; ok {
 		t.Fatalf("mcp should not be emitted in default opencode.json")
 	}
+	// FR-013: OpenCode must use the modern `permission`/`steps` fields, never
+	// the deprecated `tools`/`maxSteps`. Guard both config and agent levels.
+	if _, ok := cfg["tools"]; ok {
+		t.Fatalf("FR-013: opencode.json must use permission, not deprecated tools")
+	}
+	if _, ok := cfg["maxSteps"]; ok {
+		t.Fatalf("FR-013: opencode.json must not emit deprecated maxSteps")
+	}
 	agents, ok := cfg["agent"].(map[string]any)
 	if !ok {
 		t.Fatalf("agent = %T, want object", cfg["agent"])
@@ -552,6 +561,12 @@ func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 		perm, ok := rawAgent["permission"].(map[string]any)
 		if !ok {
 			t.Fatalf("agent.%s.permission = %T, want object", name, rawAgent["permission"])
+		}
+		if _, ok := rawAgent["tools"]; ok {
+			t.Fatalf("FR-013: agent.%s must use permission, not deprecated tools", name)
+		}
+		if _, ok := rawAgent["maxSteps"]; ok {
+			t.Fatalf("FR-013: agent.%s must not emit deprecated maxSteps", name)
 		}
 		if got, _ := perm["edit"].(string); got != wantEdit {
 			t.Fatalf("agent.%s.permission.edit = %q, want %q", name, got, wantEdit)
@@ -571,6 +586,7 @@ func TestOpenCodeAdapter_DefaultConfigIncludesSkillSurface(t *testing.T) {
 	assertAgentPermission("build", "ask", "ask")
 	assertAgentPermission("explore", "deny", "deny")
 }
+
 func TestOpenCodeAdapter_PackageJSONUsesModuleType(t *testing.T) {
 	targetDir := t.TempDir()
 	repoRoot := testRepoRoot(t)

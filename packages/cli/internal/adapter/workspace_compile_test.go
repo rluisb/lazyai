@@ -79,7 +79,7 @@ func TestPropagateNilRegistryErrors(t *testing.T) {
 // TestPropagateWritesPerRepoMcpConfigs sets up a workspace with two real
 // repos, a canonical .ai/mcp.json, and verifies that propagation writes
 // per-repo tool configs (here .opencode/opencode.jsonc as the simplest
-// signal — Codex/Claude write distinct files at distinct scopes).
+// signal — Copilot/Claude write distinct files at distinct scopes).
 func TestPropagateWritesPerRepoMcpConfigs(t *testing.T) {
 	tmp := t.TempDir()
 

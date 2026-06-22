@@ -102,6 +102,9 @@ nav:
       - Agent Contracts: concepts/agent-contracts.md
       - Hook Lifecycle: concepts/hook-lifecycle.md
       - Trace/Eval Improvement Loop: concepts/trace-eval-improvement-loop.md
+      - Token Rent: concepts/token-rent.md
+      - Minimality: concepts/minimality.md
+      - Minimality Report: concepts/minimality-report.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md

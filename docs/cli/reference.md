@@ -99,6 +99,21 @@ lazyai-cli init
 lazyai-cli init --tools opencode --preset standard --no-interactive
 ```
 
+**AGENTS.md placeholders (headless init):**
+
+`init` writes a canonical `AGENTS.md` that contains `<!-- fill-in: ... -->` markers for project-specific sections (organization, conventions, architecture, etc.). The CLI does not fill these markers itself because it cannot run your AI tool. After `init` finishes:
+
+- **Host tool path (recommended):** Open the project in your AI tool (Claude Code, OpenCode, etc.) and run `/init` or `/populate`. The AI tool indexes the codebase and replaces each marker with a value backed by code evidence.
+- **Manual path:** Edit `AGENTS.md` by hand and replace each `<!-- fill-in: ... -->` marker with a concrete value, or remove the marker if the section does not apply.
+- **Validate after populate:**
+
+  ```bash
+  lazyai-cli validate agents   # confirm agent frontmatter is still valid
+  lazyai-cli doctor            # full setup health check
+  ```
+
+Both `--no-interactive` and the interactive wizard leave markers unfilled on purpose; filling requires the AI tool to run.
+
 ---
 ## Add
 

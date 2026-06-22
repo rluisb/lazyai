@@ -65,6 +65,19 @@ lazyai-cli server add filesystem
 lazyai-cli compile
 ```
 
+### After `init`: filling AGENTS.md placeholders
+
+`lazyai-cli init` writes a canonical `AGENTS.md` with `<!-- fill-in: ... -->` markers for project-specific sections. The CLI cannot run your AI tool, so it does not fill those markers itself. After init:
+
+1. Open the project in your AI tool (Claude Code, OpenCode, etc.) and run `/init` or `/populate` so the tool fills the markers from code evidence.
+2. Or edit `AGENTS.md` by hand and replace each `<!-- fill-in: ... -->` marker with a concrete value (or remove the marker if the section does not apply).
+3. Validate the result:
+
+   ```bash
+   lazyai-cli validate agents
+   lazyai-cli doctor
+   ```
+
 ## Supported tools
 
 | Tool | What it provides |

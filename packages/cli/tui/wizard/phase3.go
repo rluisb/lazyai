@@ -67,6 +67,9 @@ func runPhase3Interactive(conflicts []conflict.Conflict, reviewer DiffReviewClie
 			huh.NewOption("Skip — Keep existing files and skip conflicts", "skip"),
 		).
 		Value(&strategyValue)
+	strategySelect.DescriptionFunc(func() string {
+		return selectHoverDescription(strategySelect, conflictStrategyDescriptions, defaultHoverHint)
+	}, strategySelect)
 
 	form := theme.NewForm(huh.NewGroup(strategySelect).Title("Conflict Resolution"))
 	if err := form.Run(); err != nil {

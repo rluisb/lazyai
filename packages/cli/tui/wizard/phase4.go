@@ -39,12 +39,19 @@ func runPhase4Interactive(plan *InstallPlan, result *WizardResult, installConsen
 		consentDetails.WriteString("\n")
 		consentPrompt := huh.NewSelect[string]().
 			Title("Approve CLI install prompts?").
-			Description(consentDetails.String()).
 			Options(
 				huh.NewOption("Yes, I have installed or will install these", "yes"),
 				huh.NewOption("No, continue without installing", "no"),
 			).
 			Value(&consentValue)
+		consentPrompt.DescriptionFunc(func() string {
+			base := strings.TrimSpace(consentDetails.String())
+			hover := selectHoverDescription(consentPrompt, installConsentDescriptions, defaultHoverHint)
+			if base == "" {
+				return hover
+			}
+			return base + "\n\n" + hover
+		}, consentPrompt)
 
 		consentForm := theme.NewForm(huh.NewGroup(consentPrompt).Title("Optional CLI Installs"))
 		if err := consentForm.Run(); err != nil {
@@ -56,13 +63,15 @@ func runPhase4Interactive(plan *InstallPlan, result *WizardResult, installConsen
 	var confirmValue string
 	confirmSelect := huh.NewSelect[string]().
 		Title("Proceed with installation?").
-		Description("Review the dry-run above. Choose Edit to change wizard answers before install.").
 		Options(
 			huh.NewOption("Yes, install", "yes"),
 			huh.NewOption("Edit choices", "edit"),
 			huh.NewOption("No, cancel", "no"),
 		).
 		Value(&confirmValue)
+	confirmSelect.DescriptionFunc(func() string {
+		return "Review the dry-run above. " + selectHoverDescription(confirmSelect, finalInstallDescriptions, defaultHoverHint)
+	}, confirmSelect)
 
 	form := theme.NewForm(huh.NewGroup(confirmSelect).Title("Review & Confirm"))
 	if err := form.Run(); err != nil {

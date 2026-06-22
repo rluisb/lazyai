@@ -284,6 +284,9 @@ func askScope(current types.SetupScope, info phase1StepInfo) (types.SetupScope, 
 			huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
 		).
 		Value(&scopeValue)
+	field.DescriptionFunc(func() string {
+		return selectHoverDescription(field, scopeDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
@@ -298,6 +301,9 @@ func askTools(current []types.ToolId, scope types.SetupScope, info phase1StepInf
 		Title(info.Title()).
 		Options(appendPhase1BackOption(toolOptionsForScope(scope))...).
 		Value(&selectedTools)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, toolDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
@@ -365,6 +371,7 @@ func askProjectName(current string, defaults *Phase1Result, scope types.SetupSco
 
 	field := huh.NewInput().
 		Title(info.Title()).
+		Description("Used in generated project identity and local config names.").
 		Placeholder(placeholder).
 		Value(&nameValue).
 		Validate(validateProjectName)
@@ -386,6 +393,9 @@ func askCliTools(current []string, info phase1StepInfo) ([]string, PhaseAction, 
 		selected = cloneStrings(preSelected)
 	}
 	field.Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, catalogCliToolDescriptions(), defaultHoverHint)
+	}, field)
 	field.Options(appendPhase1BackOption(cliToolOptionsFromCatalogForSelect())...)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
@@ -408,6 +418,9 @@ func askSkills(current []types.SkillId, info phase1StepInfo) ([]types.SkillId, P
 		Title(info.Title()).
 		Options(appendPhase1BackOption(skillOptions())...).
 		Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, skillDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
@@ -429,6 +442,9 @@ func askAgents(current []types.AgentId, info phase1StepInfo) ([]types.AgentId, P
 		Title(info.Title()).
 		Options(appendPhase1BackOption(agentOptions())...).
 		Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, agentDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
@@ -444,7 +460,6 @@ func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseActio
 	presetValue := string(normalizeMcpPreset(current))
 	field := huh.NewSelect[string]().
 		Title(info.Title()).
-		Description("Choose a starting MCP set, then refine individual servers next.").
 		Options(
 			huh.NewOption("Minimal — core local setup tools", string(McpPresetMinimal)),
 			huh.NewOption("Recommended — balanced default", string(McpPresetRecommended)),
@@ -452,6 +467,9 @@ func askMcpPreset(current McpPreset, info phase1StepInfo) (McpPreset, PhaseActio
 			huh.NewOption("↩ Back", phase1BackValue),
 		).
 		Value(&presetValue)
+	field.DescriptionFunc(func() string {
+		return selectHoverDescription(field, mcpPresetDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)
@@ -469,6 +487,9 @@ func askMcpServers(current []string, info phase1StepInfo) ([]string, PhaseAction
 
 	selected := cloneStrings(current)
 	field.Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, catalogServerDescriptions(), defaultHoverHint)
+	}, field)
 	field.Options(appendPhase1BackOption(mcpServerOptionsForSelect())...)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
@@ -504,6 +525,9 @@ func askProjectIdentity(currentOrg, currentTeam string, info phase1StepInfo) (st
 			huh.NewOption("↩ Back", phase1BackValue),
 		).
 		Value(&decision)
+	decisionField.DescriptionFunc(func() string {
+		return selectHoverDescription(decisionField, projectIdentityActionDescriptions, defaultHoverHint)
+	}, decisionField)
 
 	if err := theme.NewForm(huh.NewGroup(orgField, teamField, decisionField)).Run(); err != nil {
 		return "", "", PhaseCancel, fmt.Errorf("phase 1 cancelled: %w", err)

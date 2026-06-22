@@ -68,3 +68,29 @@ func TestOptionDescriptionFallsBackForUnknownHoveredOption(t *testing.T) {
 		t.Fatalf("optionDescription() = %q, want %q", got, want)
 	}
 }
+
+func TestWizardOptionDescriptionsCoverVisibleChoices(t *testing.T) {
+	cases := []struct {
+		name         string
+		values       []string
+		descriptions map[string]string
+	}{
+		{"scope", []string{"global", "workspace", "project"}, scopeDescriptions},
+		{"tools", []string{"opencode", "claude-code", "copilot", "pi", "omp", "kiro", "antigravity"}, toolDescriptions},
+		{"preset", []string{"minimal", "standard", "full", "custom"}, presetDescriptions},
+		{"features", []string{"qualityGates", "rpiWorkflow", "chainOfThought", "bugResolution", "contextEngineering", "treeOfThoughts", "adrEnforcement", "agentHarness", "pivotHandling", "adversarialDesign"}, featureDescriptions},
+		{"branch patterns", []string{"{type}/{ticket}-{description}", "{type}/{ticket}/{description}", "{type}/{description}", "{ticket}/{description}", "{description}", "custom"}, branchPatternDescriptions},
+		{"commit patterns", []string{"{type}({scope}): {description}", "{type}: {description}", "[{ticket}] {description}", "{description}", "custom"}, commitPatternDescriptions},
+		{"chat modes", []string{"architect", "reviewer"}, chatModeDescriptions},
+		{"conflict strategies", []string{"align", "backup-and-replace", "skip"}, conflictStrategyDescriptions},
+		{"final install", []string{"yes", "edit", "no"}, finalInstallDescriptions},
+	}
+
+	for _, tc := range cases {
+		for _, value := range tc.values {
+			if got := optionDescription(value, tc.descriptions, defaultHoverHint); got == "" || got == defaultHoverHint {
+				t.Fatalf("%s option %q has no description", tc.name, value)
+			}
+		}
+	}
+}

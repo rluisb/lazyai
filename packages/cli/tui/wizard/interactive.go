@@ -195,6 +195,7 @@ func buildExpressInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Project Name").
+				Description("Used in generated project identity and local config names.").
 				Placeholder(defaultPhase1ProjectName()).
 				Value(&state.ProjectName).
 				Validate(validateProjectName),
@@ -330,6 +331,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Project Name").
+				Description("Used in generated project identity and local config names.").
 				Placeholder(defaultPhase1ProjectName()).
 				Value(&state.ProjectName).
 				Validate(validateProjectName),
@@ -357,6 +359,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Custom branch pattern (use {type}, {ticket}, {description}):").
+				Description("Template for new branch names; supported placeholders are shown in the title.").
 				Placeholder(types.DefaultGitConventions().BranchPattern).
 				Value(&state.CustomBranch),
 		).WithHideFunc(func() bool { return state.BranchPattern != "custom" }),
@@ -364,12 +367,14 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Custom commit pattern (use {type}, {scope}, {ticket}, {description}):").
+				Description("Template for commit messages; supported placeholders are shown in the title.").
 				Placeholder(types.DefaultGitConventions().CommitPattern).
 				Value(&state.CustomCommit),
 		).WithHideFunc(func() bool { return state.CommitPattern != "custom" }),
 		huh.NewGroup(
 			huh.NewConfirm().
 				Title("Require Ticket").
+				Description("When enabled, branch and commit guidance expects a ticket placeholder.").
 				Value(&state.RequireTicket),
 		),
 		huh.NewGroup(

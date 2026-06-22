@@ -203,9 +203,11 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Optional OpenCode plugins installed via `opencode plugin`. Dynamic context pruning reduces context bloat, subtask2 adds background task helpers, shell strategy improves shell execution, envsitter guards environment use, and background-agents enables async agent workflows. Deselect all to skip plugin installs.").
 		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
+	}, field)
 
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
@@ -275,9 +277,11 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 
 	field := huh.NewMultiSelect[string]().
 		Title("OpenCode Providers").
-		Description("Authenticated model providers OpenCode-side agents may use during install/model resolution. Anthropic is excluded because OpenCode rejects it here; deselect providers you do not want exposed to OpenCode configs.").
 		Options(options...).
 		Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, opencodeProviderDescriptions(eligible), defaultHoverHint)
+	}, field)
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
@@ -319,6 +323,14 @@ func opencodeProviderLabel(p auth.ProviderID) string {
 		}
 	}
 	return string(p)
+}
+
+func opencodeProviderDescriptions(providers []auth.ProviderID) map[string]string {
+	descriptions := make(map[string]string, len(providers))
+	for _, p := range providers {
+		descriptions[string(p)] = fmt.Sprintf("Expose authenticated %s models to OpenCode config resolution.", opencodeProviderLabel(p))
+	}
+	return descriptions
 }
 
 // opencodeProviderHuhOptions runs auth.DetectAll, drops disallowed providers

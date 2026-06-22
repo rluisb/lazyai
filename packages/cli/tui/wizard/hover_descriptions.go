@@ -160,3 +160,51 @@ var chatModeDescriptions = map[string]string{
 	"architect": "Copilot mode for architecture and design tradeoffs.",
 	"reviewer":  "Copilot mode for code review and risk checks.",
 }
+
+var projectIdentityActionDescriptions = map[string]string{
+	"continue": "Save these optional identity values and continue.",
+}
+
+var conflictStrategyDescriptions = map[string]string{
+	"align":              "Review each conflicting file before deciding.",
+	"backup-and-replace": "Back up existing files, then replace them with LazyAI output.",
+	"skip":               "Keep current files unchanged and skip conflicting outputs.",
+}
+
+var installConsentDescriptions = map[string]string{
+	"yes": "Continue knowing these optional CLIs may be needed.",
+	"no":  "Continue without approving optional CLI install prompts.",
+}
+
+var finalInstallDescriptions = map[string]string{
+	"yes":  "Apply the dry-run plan now.",
+	"edit": "Return to the wizard with current answers prefilled.",
+	"no":   "Cancel without installing files.",
+}
+
+var opencodeCommandDescriptions = map[string]string{
+	"review":               "Reviews branch changes against project guidance.",
+	"test":                 "Runs the configured project test command.",
+	"commit":               "Drafts a conventional commit message.",
+	"speckit.analyze":      "Runs Spec Kit analysis guidance.",
+	"speckit.checklist":    "Runs Spec Kit checklist guidance.",
+	"speckit.clarify":      "Runs Spec Kit clarification guidance.",
+	"speckit.constitution": "Runs Spec Kit constitution guidance.",
+	"speckit.implement":    "Runs Spec Kit implementation guidance.",
+	"speckit.plan":         "Runs Spec Kit planning guidance.",
+	"speckit.specify":      "Runs Spec Kit specification guidance.",
+	"speckit.tasks":        "Runs Spec Kit task breakdown guidance.",
+}
+
+var opencodeModeDescriptions = map[string]string{
+	"plan":  "Constrains OpenCode to planning-first behavior.",
+	"audit": "Focuses OpenCode on risks, defects, and review findings.",
+}
+
+var opencodePluginDescriptions = map[string]string{
+	"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning": "Reduces OpenCode context bloat dynamically.",
+	"https://github.com/spoons-and-mirrors/subtask2":                   "Adds background subtask helpers.",
+	"https://github.com/JRedeker/opencode-shell-strategy":              "Improves shell execution strategy.",
+	"https://github.com/boxpositron/envsitter-guard":                   "Guards environment-variable use.",
+	"https://github.com/kdcokenny/opencode-background-agents":          "Enables async background-agent workflows.",
+}

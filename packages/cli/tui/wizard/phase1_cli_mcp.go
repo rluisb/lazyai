@@ -85,6 +85,9 @@ func NewCliToolsSelect(defaults []string, preSelected []string) *huh.MultiSelect
 		Options(cliToolOptionsFromCatalog(catalog)...)
 
 	field.Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, catalogCliToolDescriptions(), defaultHoverHint)
+	}, field)
 	return field
 }
 
@@ -95,11 +98,14 @@ func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {
 	}
 
 	selected := defaults
-	return huh.NewMultiSelect[string]().
+	field := huh.NewMultiSelect[string]().
 		Title("Which MCP servers would you like to enable?").
-		Description("Start from the preset selection, then toggle individual setup resources.").
 		Options(mcpServerOptionsFromCatalog(catalog)...).
 		Value(&selected)
+	field.DescriptionFunc(func() string {
+		return multiSelectHoverDescription(field, catalogServerDescriptions(), defaultHoverHint)
+	}, field)
+	return field
 }
 
 func normalizeMcpPreset(preset McpPreset) McpPreset {

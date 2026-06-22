@@ -107,6 +107,8 @@ const (
 	SkillIdRpi                   SkillId = "rpi"
 	SkillIdSelfImprove           SkillId = "self-improve"
 	SkillIdSkillAuthoring        SkillId = "skill-authoring"
+	SkillIdSlackMessageFormatter SkillId = "slack-message-formatter"
+	SkillIdSlackfmt              SkillId = "slackfmt"
 	SkillIdSpeckitAnalyze        SkillId = "speckit-analyze"
 	SkillIdSpeckitChecklist      SkillId = "speckit-checklist"
 	SkillIdSpeckitClarify        SkillId = "speckit-clarify"
@@ -420,6 +422,8 @@ var (
 		SkillIdNoWorkarounds,
 		SkillIdProjectGuardrailsInit,
 		SkillIdSkillAuthoring,
+		SkillIdSlackMessageFormatter,
+		SkillIdSlackfmt,
 		SkillIdSpeckitAnalyze,
 		SkillIdSpeckitChecklist,
 		SkillIdSpeckitClarify,

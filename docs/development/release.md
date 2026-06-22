@@ -15,6 +15,12 @@ Root `vX.Y.Z` tags do not version these submodules for `go install`.
 
 ## Install contracts
 
+LazyAI is published as Go modules and GitHub release binaries. There is no
+repository-local Homebrew formula or tap automation in this repo yet, so Homebrew
+installation is not a supported release claim here.
+
+## Supported install paths
+
 Released users install commands with:
 
 ```bash
@@ -27,6 +33,18 @@ Pinned installs should use the same module path with the matching submodule vers
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 ```
+
+## Homebrew release contract
+
+If a Homebrew tap/formula is added later, this repository should only emit
+repository-local release artifacts and documentation that Homebrew can consume:
+
+1. Tag and publish the Go release first.
+2. Build or update the Homebrew formula in the tap repository from the published binary/version metadata.
+3. Keep tap publication out of this repository unless the tap repo is added as a
+   first-class, reviewed dependency.
+
+Until that exists, do not advertise `brew install lazyai` or any equivalent.
 
 ## Recommended release preparation steps
 

@@ -43,6 +43,7 @@ func TestKiroAdapter_Install_EmitsAgentProfilesSkillsAndPrompts(t *testing.T) {
 	for _, path := range expectedPaths {
 		assertExists(t, path)
 	}
+	assertMissing(t, filepath.Join(targetDir, ".kiro", "workflows"))
 
 	selectedAgentPath := filepath.Join(targetDir, ".kiro", "agents", "reviewer.md")
 	data, err := os.ReadFile(selectedAgentPath)

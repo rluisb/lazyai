@@ -13,6 +13,14 @@ func TestOutputCoverageIsExhaustive(t *testing.T) {
 	}
 }
 
+func TestOutputMappingDoesNotEmitWorkflowDirectories(t *testing.T) {
+	for _, kind := range AllAssetKinds() {
+		if kind == AssetKind("workflows") || kind == AssetKind("workflow") {
+			t.Fatalf("workflow catalog must not be emitted through generic output mapping: %q", kind)
+		}
+	}
+}
+
 func TestOutputTargetsAllKnownTools(t *testing.T) {
 	tools := []types.ToolId{
 		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot, types.ToolIdPi, types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity,

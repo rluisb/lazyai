@@ -8,8 +8,8 @@ import (
 )
 
 // KiroAdapter installs the Kiro IDE/CLI setup surface. Kiro CLI v3 discovers
-// custom agent profiles from .kiro/agents/<name>.md and skills from
-// .kiro/skills/<name>/SKILL.md.
+// custom agent profiles from .kiro/agents/<name>.md, skills from
+// .kiro/skills/<name>/SKILL.md, and prompt templates from .kiro/prompts/*.md.
 type KiroAdapter struct{}
 
 func (a *KiroAdapter) ID() types.ToolId  { return types.ToolIdKiro }

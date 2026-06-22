@@ -60,15 +60,16 @@ func TestBetaAdaptersAreOmpAndAntigravity(t *testing.T) {
 	}
 }
 
-// TestKiroCapabilitiesMatchMatrix spot-checks a distinctive adapter: Kiro
-// emits specs + steering and deliberately omits agents/skills.
+// TestKiroCapabilitiesMatchMatrix spot-checks the verified Kiro surface: the
+// adapter emits agents, skills, prompts, hooks, MCP, and permissions, but does
+// not claim specs or steering support.
 func TestKiroCapabilitiesMatchMatrix(t *testing.T) {
 	cap := (&KiroAdapter{}).Capabilities()
-	if !cap.Specs || !cap.Steering {
-		t.Error("Kiro must declare Specs and Steering")
+	if cap.Specs || cap.Steering {
+		t.Error("Kiro must not declare Specs or Steering")
 	}
-	if cap.Agents || cap.Skills {
-		t.Error("Kiro must not declare Agents or Skills (avoid unsupported .kiro/agents)")
+	if !cap.Agents || !cap.Skills || !cap.PromptTemplates {
+		t.Error("Kiro must declare Agents, Skills, and PromptTemplates")
 	}
 	if cap.Support != SupportStable {
 		t.Errorf("Kiro support = %q, want stable", cap.Support)

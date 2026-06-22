@@ -1,6 +1,6 @@
 # Supported Tools
 
-`lazyai-cli` compiles embedded library content into native formats for five setup surfaces.
+`lazyai-cli` compiles embedded library content into native formats for six setup surfaces.
 
 ## OpenCode
 
@@ -38,6 +38,15 @@
 - **Global scope support:** No
 - **Special behavior:** emits `.pi/agents/<name>.md`, `.pi/skills/<name>/SKILL.md`, `.pi/prompts/*.md`, and Pi safety hooks as `.pi/extensions/*.ts`; no MCP config is written
 
+## Kiro
+
+- **Description:** shared root instructions plus agents, skills, prompts, and MCP config
+- **Root file:** `AGENTS.md`
+- **Config directory:** `.kiro/`
+- **Project/workspace scope support:** Yes
+- **Global scope support:** Yes
+- **Special behavior:** emits `.kiro/agents/<name>.md`, `.kiro/skills/<name>/SKILL.md`, `.kiro/prompts/*.md`, and `.kiro/settings/mcp.json`; no `.kiro/workflows` directory is emitted
+
 ## Antigravity
 
 - **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, and hook surface
@@ -49,17 +58,18 @@
 
 ## Comparison
 
-| Capability | OpenCode | Claude Code | Copilot | Pi | Antigravity |
-|---|---|---|---|---|---|
-| Project scope | Yes | Yes | Yes | Yes | Yes |
-| Workspace scope | Yes | Yes | Yes | Yes | Yes |
-| Global scope | Yes | Yes | Yes (probe-gated) | No | No |
-| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | `.pi/agents/guide.md` | — |
-| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.gemini/hooks/lazyai/*.sh` + settings hooks |
-| MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
+| Capability | OpenCode | Claude Code | Copilot | Pi | Kiro | Antigravity |
+|---|---|---|---|---|---|---|
+| Project scope | Yes | Yes | Yes | Yes | Yes | Yes |
+| Workspace scope | Yes | Yes | Yes | Yes | Yes | Yes |
+| Global scope | Yes | Yes | Yes (probe-gated) | No | Yes | No |
+| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | `.pi/agents/guide.md` | `.kiro/agents/guide.md` | — |
+| Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
+| MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | `.kiro/settings/mcp.json` | — |
+
 ```bash
-lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity
+lazyai-cli init --tools opencode,claude-code,copilot,pi,kiro,antigravity
 ```
 
 You can add a tool later:

@@ -158,19 +158,19 @@ func (a *AntigravityAdapter) Capabilities() Capability {
 	}
 }
 
-// Capabilities reports the Kiro adapter's surfaces. Matrix §1: steering (root
-// instructions), specs, hooks, MCP, supervised/autopilot trusted commands +
-// protected paths (permissions), global steering. Deliberately omits agents
-// (avoid unsupported .kiro/agents) and skills.
+// Capabilities reports the Kiro adapter's verified surfaces. Kiro currently
+// installs agents, skills, prompts, hooks, MCP, permissions, and global
+// config, but does not yet emit native specs or steering files.
 func (a *KiroAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportStable,
 		RootInstructions: true,
+		Agents:           true,
+		Skills:           true,
 		Hooks:            true,
 		MCP:              true,
 		Permissions:      true,
-		Specs:            true,
-		Steering:         true,
+		PromptTemplates:  true,
 		GlobalConfig:     true,
 	}
 }

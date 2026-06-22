@@ -372,11 +372,10 @@ func askPreset(current types.PresetLevel, info phase2StepInfo) (types.PresetLeve
 			huh.NewOption("Custom — Pick features individually", "custom"),
 		).
 		Value(&presetValue)
-	field.DescriptionFunc(func() string {
-		return selectHoverDescription(field, presetDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, presetDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -391,13 +390,12 @@ func askFeatures(current *types.FeatureFlags, info phase2StepInfo) ([]string, Ph
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(optionsWithDescriptions(featureOptions, featureDescriptions))...).
+		Options(appendPhase2BackOption(featureOptions)...).
 		Value(&selectedFeatures)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, featureDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, featureDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if containsString(selectedFeatures, phase2BackValue) {
@@ -417,11 +415,10 @@ func askBranchPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Title(info.Title()).
 		Options(appendPhase2BackOption(branchPatternOptions)...).
 		Value(&branchPattern)
-	field.DescriptionFunc(func() string {
-		return selectHoverDescription(field, branchPatternDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, branchPatternDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if branchPattern == phase2BackValue {
@@ -461,11 +458,10 @@ func askCommitPattern(current string, info phase2StepInfo) (string, PhaseAction,
 		Title(info.Title()).
 		Options(appendPhase2BackOption(commitPatternOptions)...).
 		Value(&commitPattern)
-	field.DescriptionFunc(func() string {
-		return selectHoverDescription(field, commitPatternDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(selectFooterDescription(field, func() string {
+		return selectHoverDescription(field, commitPatternDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return "", PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 	if commitPattern == phase2BackValue {
@@ -522,13 +518,12 @@ func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.Chat
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(optionsWithDescriptions(options, chatModeDescriptions))...).
+		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, chatModeDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, chatModeDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -552,13 +547,12 @@ func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo)
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(optionsWithDescriptions(options, opencodeCommandDescriptions))...).
+		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, opencodeCommandDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodeCommandDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 
@@ -581,13 +575,12 @@ func askOpenCodeModes(current []types.OpenCodeModeId, info phase2StepInfo) ([]ty
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(optionsWithDescriptions(options, opencodeModeDescriptions))...).
+		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, opencodeModeDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodeModeDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 2 cancelled: %w", err)
 	}
 

@@ -203,13 +203,12 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(append(optionsWithDescriptions(opencodePluginOptions(), opencodePluginDescriptions), huh.NewOption("↩ Back", "__phase5_back__"))...).
+		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
-	}, field)
 
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
+		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 
@@ -277,12 +276,11 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 
 	field := huh.NewMultiSelect[string]().
 		Title("OpenCode Providers").
-		Options(optionsWithDescriptions(options, opencodeProviderDescriptions(eligible))...).
+		Options(options...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
+	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
 		return multiSelectHoverDescription(field, opencodeProviderDescriptions(eligible), defaultHoverHint)
-	}, field)
-	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {
+	}))).Run(); err != nil {
 		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
 	}
 

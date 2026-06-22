@@ -44,31 +44,6 @@ func optionDescription(value string, descriptions map[string]string, fallback st
 	return fmt.Sprintf("%s: no extra setup beyond selecting this item.", value)
 }
 
-func optionsWithDescriptions(options []huh.Option[string], descriptions map[string]string) []huh.Option[string] {
-	if len(options) == 0 {
-		return options
-	}
-	out := make([]huh.Option[string], 0, len(options))
-	for _, opt := range options {
-		description := optionDescription(opt.Value, descriptions, "")
-		label := opt.Key
-		if description != "" && !strings.Contains(label, " — ") {
-			label += " — " + trimDescription(description)
-		}
-		out = append(out, huh.NewOption(label, opt.Value))
-	}
-	return out
-}
-
-func trimDescription(description string) string {
-	description = strings.TrimSuffix(strings.TrimSpace(description), ".")
-	const max = 72
-	if len(description) <= max {
-		return description
-	}
-	return strings.TrimSpace(description[:max-1]) + "…"
-}
-
 func catalogServerDescriptions() map[string]string {
 	catalog, err := loadMcpCatalog()
 	if err != nil || catalog == nil {

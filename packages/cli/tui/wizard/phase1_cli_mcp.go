@@ -85,9 +85,6 @@ func NewCliToolsSelect(defaults []string, preSelected []string) *huh.MultiSelect
 		Options(cliToolOptionsFromCatalog(catalog)...)
 
 	field.Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, catalogCliToolDescriptions(), defaultHoverHint)
-	}, field)
 	return field
 }
 
@@ -102,9 +99,6 @@ func NewMcpServersSelect(defaults []string) *huh.MultiSelect[string] {
 		Title("Which MCP servers would you like to enable?").
 		Options(mcpServerOptionsFromCatalog(catalog)...).
 		Value(&selected)
-	field.DescriptionFunc(func() string {
-		return multiSelectHoverDescription(field, catalogServerDescriptions(), defaultHoverHint)
-	}, field)
 	return field
 }
 
@@ -191,7 +185,7 @@ func cliToolOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
 	for _, id := range ids {
 		options = append(options, huh.NewOption(id, id))
 	}
-	return optionsWithDescriptions(options, catalogCliToolDescriptions())
+	return options
 }
 
 func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
@@ -201,7 +195,7 @@ func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
 	for _, id := range ids {
 		options = append(options, huh.NewOption(id, id))
 	}
-	return optionsWithDescriptions(options, catalogServerDescriptions())
+	return options
 }
 
 func sortedCatalogServerIDs(catalog *McpCatalog) []string {
@@ -228,7 +222,7 @@ func skillOptions() []huh.Option[string] {
 	for _, skill := range types.ALL_SKILLS {
 		options = append(options, huh.NewOption(string(skill), string(skill)))
 	}
-	return optionsWithDescriptions(options, skillDescriptions)
+	return options
 }
 
 func agentOptions() []huh.Option[string] {
@@ -236,5 +230,5 @@ func agentOptions() []huh.Option[string] {
 	for _, agent := range types.ALL_AGENTS {
 		options = append(options, huh.NewOption(string(agent), string(agent)))
 	}
-	return optionsWithDescriptions(options, agentDescriptions)
+	return options
 }

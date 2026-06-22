@@ -191,7 +191,7 @@ func validateSkills(aiDir string, r *Report) {
 	for _, asset := range markdownAssets(aiDir, "skills") {
 		content, err := os.ReadFile(asset.abs)
 		if err != nil {
-			r.add(asset.rel, "skill", SeverityError, "unreadable: %v", err)
+			r.add(asset.rel, "skill", SeverityError, "cannot read file: %v", err)
 			continue
 		}
 		fm, _, err := frontmatter.ExtractFrontmatter(content)
@@ -217,7 +217,7 @@ func validateAgents(aiDir string, r *Report) {
 	for _, asset := range markdownAssets(aiDir, "agents") {
 		content, err := os.ReadFile(asset.abs)
 		if err != nil {
-			r.add(asset.rel, "agent", SeverityError, "unreadable: %v", err)
+			r.add(asset.rel, "agent", SeverityError, "cannot read file: %v", err)
 			continue
 		}
 		fm, _, err := frontmatter.ExtractFrontmatter(content)
@@ -271,7 +271,7 @@ func validateHooks(aiDir string, r *Report) {
 		isShell := ext == ".sh" || ext == ".bash" || ext == ""
 		content, err := os.ReadFile(path)
 		if err != nil {
-			r.add(rel, "hook", SeverityError, "unreadable: %v", err)
+			r.add(rel, "hook", SeverityError, "cannot read file: %v", err)
 			return nil
 		}
 		text := string(content)
@@ -326,7 +326,7 @@ func validateMCP(aiDir string, _ Profile, r *Report) {
 	for name, raw := range servers {
 		entry, ok := raw.(map[string]any)
 		if !ok {
-			r.add(rel, "mcp", SeverityError, "server %q is not an object", name)
+			r.add(rel, "mcp", SeverityError, "server %q must be a JSON object", name)
 			continue
 		}
 		_, hasCmd := entry["command"]

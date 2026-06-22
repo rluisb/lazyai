@@ -7,6 +7,8 @@
 
 ## Install released commands
 
+LazyAI does not currently ship a repository-local Homebrew tap or formula. Use the Go install paths below for supported releases, or build from source when working in the repository.
+
 Install the CLI:
 
 ```bash

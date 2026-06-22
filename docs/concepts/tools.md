@@ -31,12 +31,12 @@
 
 ## Pi
 
-- **Description:** shared root instructions plus skills-only surface
+- **Description:** shared root instructions plus agents, skills, prompt templates, and extension-based safety hooks
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.pi/`
 - **Project/workspace scope support:** Yes
 - **Global scope support:** No
-- **Special behavior:** emits `.pi/skills/<name>/SKILL.md` only; no Pi agents, prompt surface, or runtime hooks are generated
+- **Special behavior:** emits `.pi/agents/<name>.md`, `.pi/skills/<name>/SKILL.md`, `.pi/prompts/*.md`, and Pi safety hooks as `.pi/extensions/*.ts`; no MCP config is written
 
 ## Antigravity
 
@@ -54,10 +54,10 @@
 | Project scope | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | No | No |
-| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | — |
+| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | `.pi/agents/guide.md` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
-| MCP output | `opencode.json` (managed MCP in top-level `mcp`; legacy source migrated from `opencode.json`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
+| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.gemini/hooks/lazyai/*.sh` + settings hooks |
+| MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | — | — |
 ```bash
 lazyai-cli init --tools opencode,claude-code,copilot,pi,antigravity
 ```

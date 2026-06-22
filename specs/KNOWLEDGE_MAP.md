@@ -38,6 +38,7 @@
 
 | Document | Path | Status | Description |
 |----------|------|--------|-------------|
+| Harness Principles & Boundary | `docs/concepts/harness-principles.md` | Active | Single source of truth for LazyAI/vibe-lab architecture, boundaries, and principles. |
 | Reversa Confidence Scale | `specs/standards/confidence-scale.md` | Active | 🟢🟡🔴 confidence scale for `/populate` and AI-inferred content — meaning, evidence rules, write behavior, and human-escalation criteria |
 
 ## Key Architecture Decisions

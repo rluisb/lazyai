@@ -34,9 +34,8 @@ Pinned installs use the same paths with `@vX.Y.Z`.
 
 ## Release asset names
 
-GoReleaser publishes one archive per OS/arch (title-cased `<Os>`, `amd64` rendered as `x86_64`):
+Release workflows publish one raw binary per OS/arch plus checksums:
 
-- `lazyai-cli_<Os>_<Arch>.tar.gz` — e.g. `lazyai-cli_Linux_x86_64.tar.gz`, `lazyai-cli_Darwin_arm64.tar.gz`
-- `lazyai-diffviewer_<Os>_<Arch>.tar.gz`
-- Windows archives use `.zip` — e.g. `lazyai-cli_Windows_x86_64.zip`
+- `lazyai-cli-darwin-arm64`, `lazyai-cli-darwin-amd64`, `lazyai-cli-linux-amd64`, `lazyai-cli-linux-arm64`, `lazyai-cli-windows-amd64.exe`
+- `lazyai-diffviewer-<os>-<arch>` for the same OS/arch matrix
 - `checksums.txt`

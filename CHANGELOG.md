@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [1.3.0] - 2026-06-22
+
 ### Added
 - **LazyAI V2 manifest-driven compile** (spec 029). `.ai/lazyai.json` is now the
   authoritative target manifest for `compile`, with `.ai/lock.json` recording the

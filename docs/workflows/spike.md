@@ -48,7 +48,7 @@ n/a — no behavior change is implemented in this workflow.
 
 - Claude Code: markdown workflow only; researcher/planner style work stays read-only.
 - OpenCode: markdown workflow only; no orchestration claims.
-- OMP/Pi: markdown-only guidance.
+- Pi: markdown-only guidance.
 
 ## Exit Gate
 

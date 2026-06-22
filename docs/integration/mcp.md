@@ -60,13 +60,14 @@ Many cataloged servers have equivalent CLI tools. For bulk or deterministic work
 
 ## Environment variables
 
-If any enabled MCP server declares env vars, `lazyai-cli` generates:
+If any enabled MCP server declares env vars, `lazyai-cli` prints shell-ready guidance such as:
 
-```text
-.env.example
+```bash
+# Required by: example-server
+export EXAMPLE_API_KEY=""
 ```
 
-`lazyai-cli` never writes real secrets into `.env.example`.
+LazyAI does not create, manage, or commit `.env` files. Put real values in your shell, secret manager, or a local env file according to your project policy.
 
 ## Removed runtime note
 

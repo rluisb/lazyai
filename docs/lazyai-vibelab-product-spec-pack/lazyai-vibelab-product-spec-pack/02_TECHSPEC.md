@@ -476,7 +476,7 @@ opencode.json
 .opencode/skills/<name>/SKILL.md
 .opencode/commands/<name>.md
 .opencode/plugins/vibe-lab-hooks.js
-.opencode/lazyai.mcp.jsonc
+opencode.json
 ```
 
 ### 6.3 Agent mapping
@@ -547,7 +547,7 @@ Option A: merge into `opencode.json`:
 }
 ```
 
-Option B: generate `.opencode/lazyai.mcp.jsonc` and include/reference if OpenCode supports includes in current config.
+Decision: merge managed MCP entries into root `opencode.json` under top-level `mcp`; do not rely on include support.
 
 ### 6.6 Hook mapping
 
@@ -1198,7 +1198,7 @@ Rejected by default:
 
 | Target | Output |
 |---|---|
-| OpenCode | `opencode.json` `mcp` section or `.opencode/lazyai.mcp.jsonc` include strategy |
+| OpenCode | `opencode.json` `mcp` section or `opencode.json` top-level `mcp` section |
 | Claude Code | `.mcp.json`, `.claude/settings.local.json` where needed |
 | Copilot | `.vscode/mcp.json`, plugin `.mcp.json`, optional global |
 | Pi | settings/extension strategy if MCP supported directly; otherwise guidance or package output |

@@ -99,7 +99,7 @@ lazyai-cli compile
 
 ### Where do I put API keys for MCP servers?
 
-`lazyai-cli` generates `.env.example` with required variable names, but never writes real secrets. Add actual values to your environment or a local `.env` file (which should be ignored by git).
+`lazyai-cli` prints MCP-specific `export NAME=""` blocks for enabled servers that declare required variables. LazyAI does not create or manage `.env` files; add real values through your shell, secret manager, or a local env file according to your project policy.
 
 ## Update and conflict
 

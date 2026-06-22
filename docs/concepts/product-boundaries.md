@@ -70,7 +70,7 @@ The CLI reference documents shipped `lazyai-cli` commands only. Repository scrip
 
 - Default, shipped setup outputs emit eight canonical agents across supported tool surfaces: `guide` as the front-door default plus `implementer`, `researcher`, `planner`, `reviewer`, `deployer`, `responder`, and `evidence-verifier` as specialists.
 - OpenCode default setup writes a root `opencode.json` config with baseline shape plus managed MCP entries under top-level `mcp`.
-- Legacy `.opencode/lazyai.mcp.jsonc` entries are migrated into `opencode.json` during compile so the documented OpenCode config remains the active source.
+- Legacy `opencode.json` entries are migrated into `opencode.json` during compile so the documented OpenCode config remains the active source.
 - Retired artifacts such as orchestrator/loop-driver/Startup surfaces are not part of default setup outputs and belong to explicit runtime/archival paths only.
 
 ## Top-level CLI command inventory
@@ -119,7 +119,7 @@ Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup
 
 | Package | Category | Rationale |
 |---|---|---|
-| `internal/adapter` | `setup-core` | Implements tool-specific output for OpenCode, Claude Code, Copilot, OMP/Pi, Antigravity, hook runtimes, MCP, and related adapter contracts. |
+| `internal/adapter` | `setup-core` | Implements tool-specific output for OpenCode, Claude Code, Copilot, Pi, Antigravity, hook runtimes, MCP, and related adapter contracts. |
 | `internal/auth` | `ops-runtime-extra` | Probes provider authentication state used by auth-aware setup and runtime-adjacent checks. |
 | `internal/compiler` | `setup-core` | Compiles canonical fragments and validates agent contracts for generated setup output. |
 | `internal/configmerge` | `setup-core` | Merges generated and existing config files while preserving supported user customizations. |

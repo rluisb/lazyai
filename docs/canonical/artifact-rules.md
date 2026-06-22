@@ -20,5 +20,5 @@
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
 - OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
 - Copilot uses `.github/agents/<name>.agent.md` for canonical agents; selected LazyAI skills use Agent Skills directories instead of legacy `.github/agents/<name>.agent.yaml` or `.github/agents/<name>.agent.md` outputs.
-- OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
+- Pi receives shared markdown context and skills; project-local hook support is not assumed.
 - If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.

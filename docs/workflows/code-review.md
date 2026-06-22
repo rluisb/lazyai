@@ -51,7 +51,7 @@ n/a for review-only runs. If review feedback reveals missing behavior coverage, 
 
 - Claude Code: markdown workflow only; reviewer/feedback-review style work stays in existing tools and docs.
 - OpenCode: markdown workflow only; no workflow runtime claims.
-- OMP/Pi: markdown-only guidance.
+- Pi: markdown-only guidance.
 
 ## Exit Gate
 

@@ -36,7 +36,7 @@ LazyAI should not compete with Claude Code, OpenCode, GitHub Copilot, Pi, OMP, K
 | Principles / taste | vibe-lab | RPI workflow, human gates, anti-slop rules, skills, hooks, eval/rubric thinking |
 | Canonical source | LazyAI | `.ai/`, manifests, MCP catalog, embedded library assets |
 | Compilation | LazyAI | Emit tool-native files for each AI surface |
-| Execution | Host tool | Claude Code, OpenCode, Copilot, OMP/Pi, Antigravity/Gemini, Kiro |
+| Execution | Host tool | Claude Code, OpenCode, Copilot, Pi, Antigravity/Gemini, Kiro |
 | Optional memory/state | Runtime extras | Sessions, ledger, memory, messages, metrics, costs |
 
 ---
@@ -239,7 +239,7 @@ Needs:
 
 | Tool / surface | Product status | Required LazyAI outputs |
 |---|---:|---|
-| OpenCode | Supported adapter | `AGENTS.md`, `.opencode/`, `opencode.json`, `.opencode/agents/*`, `.opencode/skills/*`, `.opencode/commands/*`, `.opencode/plugins/vibe-lab-hooks.js`, `.opencode/lazyai.mcp.jsonc` |
+| OpenCode | Supported adapter | `AGENTS.md`, `.opencode/`, `opencode.json`, `.opencode/agents/*`, `.opencode/skills/*`, `.opencode/commands/*`, `.opencode/plugins/vibe-lab-hooks.js`, `opencode.json` |
 | Claude Code | Supported adapter | `CLAUDE.md`, `AGENTS.md` optional/shared, `.claude/`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, `.claude/agents/*`, `.claude/hooks/*`, `.mcp.json`, optional plugin bundle |
 | GitHub Copilot | Supported adapter | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*`, `.github/prompts/*`, `.github/chatmodes/*`, `.github/skills/*`, `.agents/skills/*` optional, `.vscode/mcp.json`, optional `~/.copilot/mcp-config.json`, optional Copilot CLI plugin bundle |
 | Pi | Supported adapter | `AGENTS.md`, `.pi/settings.json`, `.pi/SYSTEM.md` or `.pi/APPEND_SYSTEM.md` when selected, `.pi/skills/<name>/SKILL.md`, `.pi/prompts/*.md`, `.pi/extensions/*`, optional `.agents/skills/*` |
@@ -475,7 +475,7 @@ Migration sources:
 
 It must compile to:
 
-- `.opencode/lazyai.mcp.jsonc` or merged `opencode.json` MCP section;
+- `opencode.json` MCP section;
 - `.mcp.json` for Claude Code/project-level MCP;
 - `.claude/settings.local.json` or managed settings guidance where appropriate;
 - `.vscode/mcp.json` for IDE/Copilot surfaces;
@@ -548,7 +548,7 @@ Adapter outputs:
 - Claude Code: `.claude/agents/*.md` or plugin subagents;
 - GitHub Copilot: `.github/agents/*.agent.md` or Copilot CLI plugin agent files;
 - Kiro: steering/spec agents and CLI custom-agent output if officially supported;
-- OMP/Pi/Antigravity: target-native agent or rule/instruction equivalents.
+- Pi/Antigravity: target-native agent or rule/instruction equivalents.
 
 ### 9.11 Rules and root instructions
 
@@ -693,7 +693,7 @@ opencode.json
   skills/
   commands/
   plugins/vibe-lab-hooks.js
-  lazyai.mcp.jsonc
+  opencode.json
 ```
 
 ### Requirements

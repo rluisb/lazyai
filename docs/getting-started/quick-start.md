@@ -66,7 +66,7 @@ lazyai-cli init \
 3. Compiles root instructions for each selected tool
 4. Generates tool-native directories such as `.opencode/`, `.claude/`, `.github/`, and `.vscode/`
 5. Writes `.ai-setup.json` to track managed files, hashes, selections, and operations
-6. Generates `.env.example` when enabled MCP servers require environment variables
+6. Prints MCP-specific `export NAME=""` guidance when enabled servers require environment variables; LazyAI does not create or manage `.env` files
 
 ## OpenCode default behavior
 

@@ -39,10 +39,10 @@ func runPhase4Interactive(plan *InstallPlan, result *WizardResult, installConsen
 		consentDetails.WriteString("\n")
 		consentPrompt := huh.NewSelect[string]().
 			Title("Approve CLI install prompts?").
-			Options(
+			Options(optionsWithDescriptions([]huh.Option[string]{
 				huh.NewOption("Yes, I have installed or will install these", "yes"),
 				huh.NewOption("No, continue without installing", "no"),
-			).
+			}, installConsentDescriptions)...).
 			Value(&consentValue)
 		consentPrompt.DescriptionFunc(func() string {
 			base := strings.TrimSpace(consentDetails.String())
@@ -63,11 +63,11 @@ func runPhase4Interactive(plan *InstallPlan, result *WizardResult, installConsen
 	var confirmValue string
 	confirmSelect := huh.NewSelect[string]().
 		Title("Proceed with installation?").
-		Options(
+		Options(optionsWithDescriptions([]huh.Option[string]{
 			huh.NewOption("Yes, install", "yes"),
 			huh.NewOption("Edit choices", "edit"),
 			huh.NewOption("No, cancel", "no"),
-		).
+		}, finalInstallDescriptions)...).
 		Value(&confirmValue)
 	confirmSelect.DescriptionFunc(func() string {
 		return "Review the dry-run above. " + selectHoverDescription(confirmSelect, finalInstallDescriptions, defaultHoverHint)

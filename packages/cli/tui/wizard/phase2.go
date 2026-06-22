@@ -391,7 +391,7 @@ func askFeatures(current *types.FeatureFlags, info phase2StepInfo) ([]string, Ph
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(featureOptions)...).
+		Options(appendPhase2BackOption(optionsWithDescriptions(featureOptions, featureDescriptions))...).
 		Value(&selectedFeatures)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, featureDescriptions, defaultHoverHint)
@@ -522,7 +522,7 @@ func askChatModes(current []types.ChatModeId, info phase2StepInfo) ([]types.Chat
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(options)...).
+		Options(appendPhase2BackOption(optionsWithDescriptions(options, chatModeDescriptions))...).
 		Value(&selected)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, chatModeDescriptions, defaultHoverHint)
@@ -552,7 +552,7 @@ func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo)
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(options)...).
+		Options(appendPhase2BackOption(optionsWithDescriptions(options, opencodeCommandDescriptions))...).
 		Value(&selected)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, opencodeCommandDescriptions, defaultHoverHint)
@@ -581,7 +581,7 @@ func askOpenCodeModes(current []types.OpenCodeModeId, info phase2StepInfo) ([]ty
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(appendPhase2BackOption(options)...).
+		Options(appendPhase2BackOption(optionsWithDescriptions(options, opencodeModeDescriptions))...).
 		Value(&selected)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, opencodeModeDescriptions, defaultHoverHint)

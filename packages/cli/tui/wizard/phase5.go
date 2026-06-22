@@ -203,7 +203,7 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
+		Options(append(optionsWithDescriptions(opencodePluginOptions(), opencodePluginDescriptions), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
@@ -277,7 +277,7 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 
 	field := huh.NewMultiSelect[string]().
 		Title("OpenCode Providers").
-		Options(options...).
+		Options(optionsWithDescriptions(options, opencodeProviderDescriptions(eligible))...).
 		Value(&selected)
 	field.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(field, opencodeProviderDescriptions(eligible), defaultHoverHint)

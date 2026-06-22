@@ -287,7 +287,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 
 	featuresField := huh.NewMultiSelect[string]().
 		Title("Features").
-		Options(featureOptions...).
+		Options(optionsWithDescriptions(featureOptions, featureDescriptions)...).
 		Value(&state.Features)
 	featuresField.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(featuresField, featureDescriptions, defaultHoverHint)
@@ -311,10 +311,10 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 
 	chatModesField := huh.NewMultiSelect[string]().
 		Title("Copilot Chat Modes").
-		Options(
+		Options(optionsWithDescriptions([]huh.Option[string]{
 			huh.NewOption("Architect mode (architect)", string(types.ChatModeIdArchitect)),
 			huh.NewOption("Reviewer mode (reviewer)", string(types.ChatModeIdReviewer)),
-		).
+		}, chatModeDescriptions)...).
 		Value(&state.ChatModes)
 	chatModesField.DescriptionFunc(func() string {
 		return multiSelectHoverDescription(chatModesField, chatModeDescriptions, defaultHoverHint)

@@ -191,7 +191,7 @@ func cliToolOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
 	for _, id := range ids {
 		options = append(options, huh.NewOption(id, id))
 	}
-	return options
+	return optionsWithDescriptions(options, catalogCliToolDescriptions())
 }
 
 func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
@@ -201,7 +201,7 @@ func mcpServerOptionsFromCatalog(catalog *McpCatalog) []huh.Option[string] {
 	for _, id := range ids {
 		options = append(options, huh.NewOption(id, id))
 	}
-	return options
+	return optionsWithDescriptions(options, catalogServerDescriptions())
 }
 
 func sortedCatalogServerIDs(catalog *McpCatalog) []string {
@@ -228,7 +228,7 @@ func skillOptions() []huh.Option[string] {
 	for _, skill := range types.ALL_SKILLS {
 		options = append(options, huh.NewOption(string(skill), string(skill)))
 	}
-	return options
+	return optionsWithDescriptions(options, skillDescriptions)
 }
 
 func agentOptions() []huh.Option[string] {
@@ -236,5 +236,5 @@ func agentOptions() []huh.Option[string] {
 	for _, agent := range types.ALL_AGENTS {
 		options = append(options, huh.NewOption(string(agent), string(agent)))
 	}
-	return options
+	return optionsWithDescriptions(options, agentDescriptions)
 }

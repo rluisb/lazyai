@@ -328,7 +328,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),
 	}
 	if scope == "" {
-		return all
+		return optionsWithDescriptions(all, toolDescriptions)
 	}
 	out := make([]huh.Option[string], 0, len(all))
 	for _, opt := range all {
@@ -336,7 +336,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 			out = append(out, opt)
 		}
 	}
-	return out
+	return optionsWithDescriptions(out, toolDescriptions)
 }
 
 // filterToolsByScope drops previously-selected tool IDs that are not supported

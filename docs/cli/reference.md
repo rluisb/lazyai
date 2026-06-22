@@ -290,6 +290,10 @@ lazyai-cli compile
 
 Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-tool MCP config files. Pass a server name to validate only one server.
 
+**L1 config check:** Verifies the server entry exists in `.ai/mcp.json`, is enabled, and is present in each per-tool compiled MCP config file.
+
+**L3 stdio handshake (not performed):** The Go binary does not bundle an MCP client library for the JSON-RPC handshake protocol. A TypeScript wrapper using `@modelcontextprotocol/sdk` could perform L3 checks; this is future work.
+
 **Arguments:**
 
 - `name` (optional): Catalog server name
@@ -305,8 +309,6 @@ Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-
 ```bash
 lazyai-cli server doctor ai-memory --json
 ```
-
----
 
 ## Config
 

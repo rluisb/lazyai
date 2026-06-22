@@ -219,6 +219,14 @@ lazyai-cli server add ai-memory
 lazyai-cli compile
 ```
 
+### L1 vs L3 validation
+
+`lazyai-cli server doctor` performs **L1 config checks** only: it verifies that the server entry exists in `.ai/mcp.json`, is enabled, and is present in each per-tool compiled MCP config file.
+
+**L3 stdio handshake** (spawning the server process and performing a `tools/list` JSON-RPC exchange) is not performed. The Go binary does not bundle an MCP client library for the handshake protocol. A TypeScript wrapper using `@modelcontextprotocol/sdk` could perform L3 checks; this is future work.
+
+The `server doctor` output includes a `stdio handshake` check that is always skipped, with a message explaining the limitation.
+
 ## Presets
 
 | Preset | What it includes |

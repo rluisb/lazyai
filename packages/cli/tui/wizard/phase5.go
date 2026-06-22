@@ -203,7 +203,7 @@ func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseA
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
+		Description("Optional OpenCode plugins installed via `opencode plugin`. Dynamic context pruning reduces context bloat, subtask2 adds background task helpers, shell strategy improves shell execution, envsitter guards environment use, and background-agents enables async agent workflows. Deselect all to skip plugin installs.").
 		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
 		Value(&selected)
 
@@ -275,7 +275,7 @@ func askOpenCodeProviders(current []string) ([]string, PhaseAction, error) {
 
 	field := huh.NewMultiSelect[string]().
 		Title("OpenCode Providers").
-		Description("Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy.").
+		Description("Authenticated model providers OpenCode-side agents may use during install/model resolution. Anthropic is excluded because OpenCode rejects it here; deselect providers you do not want exposed to OpenCode configs.").
 		Options(options...).
 		Value(&selected)
 	if err := theme.NewForm(huh.NewGroup(field)).Run(); err != nil {

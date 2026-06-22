@@ -535,7 +535,7 @@ func askOpenCodeCommands(current []types.OpenCodeCommandId, info phase2StepInfo)
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode slash commands to install. Deselect to skip.").
+		Description("Choose OpenCode slash commands written to .opencode/commands. Review checks branch changes, test runs the project test command, and commit drafts a conventional commit message. Deselect all if you only want agents/skills.").
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 
@@ -562,7 +562,7 @@ func askOpenCodeModes(current []types.OpenCodeModeId, info phase2StepInfo) ([]ty
 
 	field := huh.NewMultiSelect[string]().
 		Title(info.Title()).
-		Description("Select OpenCode chat modes to install. Deselect to skip.").
+		Description("Choose OpenCode modes written to .opencode/modes. Plan constrains the assistant to planning-first behavior; audit focuses review on risks and defects. Deselect all if you do not use OpenCode modes.").
 		Options(appendPhase2BackOption(options)...).
 		Value(&selected)
 

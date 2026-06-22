@@ -316,7 +316,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 		huh.NewOption("OpenCode", string(types.ToolIdOpenCode)),
 		huh.NewOption("Claude Code", string(types.ToolIdClaudeCode)),
 		huh.NewOption("GitHub Copilot", string(types.ToolIdCopilot)),
-		huh.NewOption("OMP/Pi", string(types.ToolIdPi)),
+		huh.NewOption("Pi", string(types.ToolIdPi)),
 		huh.NewOption("OMP", string(types.ToolIdOmp)),
 		huh.NewOption("Kiro", string(types.ToolIdKiro)),
 		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),

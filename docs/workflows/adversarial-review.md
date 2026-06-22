@@ -49,7 +49,7 @@ n/a — no behavior change is implemented in this workflow.
 
 - Claude Code: markdown workflow only; reviewer and evidence-verifier style agents/skills perform the work.
 - OpenCode: markdown workflow only; no workflow runtime claims.
-- OMP/Pi: markdown-only guidance.
+- Pi: markdown-only guidance.
 
 ## Exit Gate
 

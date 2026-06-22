@@ -161,10 +161,10 @@ flowchart TD
     A --> C["`lazyai-cli server add <name>`"]
     B --> D["`lazyai-cli compile`"]
     C --> D
-    D --> E["`.opencode/lazyai.mcp.jsonc`"]
+    D --> E["`opencode.json`"]
     D --> F["`.mcp.json` / `.claude/settings.local.json`"]
     D --> G["`.vscode/mcp.json`"]
-    D --> H["`.env.example` for required MCP variables"]
+    D --> H["Print `export NAME=""` commands for required MCP variables"]
 ```
 
 ### 3) Validate flow (`validate agents`)

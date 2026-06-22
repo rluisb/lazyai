@@ -52,7 +52,7 @@ Use `n/a` only when the workflow is deliberately read-only or documentation-only
 
 - Claude Code: <skill / hook / agent mapping>
 - OpenCode: <skill / plugin / agent mapping>
-- OMP/Pi: <markdown / unsupported mapping>
+- Pi: <markdown / unsupported mapping>
 
 ## Exit Gate
 

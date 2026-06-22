@@ -34,7 +34,7 @@ Max per dimension: 10. Max total: 60.
 
 ### 1. Tooling
 
-- [ ] I use a supported terminal-first AI tool (Claude Code, OpenCode, or OMP/Pi) as my daily driver.
+- [ ] I use a supported terminal-first AI tool (Claude Code, OpenCode, or Pi) as my daily driver.
 - [ ] Every active repo has the context/adapters its tool can consume (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.opencode/`, or `.pi/skills` as applicable).
 - [ ] I know which model to use for which task (fast vs. smart vs. cheap).
 - [ ] I have API keys or local model access ready.

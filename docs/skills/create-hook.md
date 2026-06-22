@@ -47,7 +47,7 @@ Use `canonical/hook-template.md`.
 - Hooks must never silently drop data.
 - Safety hooks deny when parsing or required runtime fails.
 - OpenCode plugins are TypeScript/JavaScript, not shell hook JSON.
-- OMP/Pi runtime hook support is not assumed.
+- Pi runtime hook support is not assumed.
 
 ## Verification Checklist
 

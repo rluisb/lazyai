@@ -1,6 +1,6 @@
 ---
 name: create-workflow
-description: Use when asked to create or design a vibe-lab workflow artifact that coordinates skills, agents, hooks, plugins, and verification gates across Claude Code, OpenCode, and OMP/Pi.
+description: Use when asked to create or design a vibe-lab workflow artifact that coordinates skills, agents, hooks, plugins, and verification gates across Claude Code, OpenCode, and Pi.
 ---
 
 # Create Workflow
@@ -32,7 +32,7 @@ Use `canonical/workflow-template.md`.
 5. Include a Behavior Scenario unless the workflow is deliberately read-only/documentation-only; mark `n/a` explicitly when skipped.
 6. Record a TDD mode or `n/a` depending on whether the workflow changes behavior.
 7. Map each step to a skill, agent, hook/plugin, command, or verification gate.
-8. Document adapter behavior for Claude Code, OpenCode, and OMP/Pi.
+8. Document adapter behavior for Claude Code, OpenCode, and Pi.
 9. Mark unsupported adapter behavior explicitly.
 10. Run `lazyai-cli compile` and `lazyai-cli doctor` after workflow support is wired.
 

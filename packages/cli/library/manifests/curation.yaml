@@ -663,6 +663,41 @@ entries:
     reason_compressed_or_changed: LazyAI-authored taxonomy file for progressive
       disclosure without runtime instrumentation.
     token_rent_relevant: false
+  - path: packages/cli/library/templates/context-handoff.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Context handoff template retained for evidence-backed transfer
+      between agents or sessions.
+    reason_compressed_or_changed: LazyAI-authored template for handoff discipline without runtime automation.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/multi-agent-decision.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Multi-agent decision template retained for scoped agent fan-out
+      planning and merge-risk review.
+    reason_compressed_or_changed: LazyAI-authored template documenting host-tool
+      agent use without LazyAI orchestration.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/recovery-handoff.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Recovery handoff template retained for failure-state transfer with
+      evidence and next-action requirements.
+    reason_compressed_or_changed: LazyAI-authored template for recovery guidance
+      without a scheduler or daemon.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/session-compaction.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Session compaction template retained for preserving decisions,
+      constraints, evidence, and pending gates.
+    reason_compressed_or_changed: LazyAI-authored template for context hygiene
+      without automated compaction runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/rubrics/evidence-verifier.rubric.yaml
     kind: rubric
     category: setup-core

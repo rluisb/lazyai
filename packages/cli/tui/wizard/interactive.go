@@ -342,7 +342,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Commands").
-				Description("Select OpenCode slash commands to install. Deselect to skip.").
+				Description("Choose OpenCode slash commands written to .opencode/commands. Review checks branch changes, test runs the project test command, and commit drafts a conventional commit message. Deselect all if you only want agents/skills.").
 				Options(
 					huh.NewOption("Review branch (review)", string(types.OpenCodeCommandIdReview)),
 					huh.NewOption("Run tests (test)", string(types.OpenCodeCommandIdTest)),
@@ -353,7 +353,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Modes").
-				Description("Select OpenCode chat modes to install. Deselect to skip.").
+				Description("Choose OpenCode modes written to .opencode/modes. Plan constrains the assistant to planning-first behavior; audit focuses review on risks and defects. Deselect all if you do not use OpenCode modes.").
 				Options(
 					huh.NewOption("Plan mode (plan)", string(types.OpenCodeModeIdPlan)),
 					huh.NewOption("Audit mode (audit)", string(types.OpenCodeModeIdAudit)),
@@ -372,7 +372,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("OpenCode Plugins").
-				Description("Select OpenCode plugins to install via `opencode plugin`. Deselect to skip.").
+				Description("Optional OpenCode plugins installed via `opencode plugin`. Desktop Commander adds desktop/file automation, Context Files improves project-context loading, and Git Tools adds git-aware helpers. Deselect all to skip plugin installs.").
 				Options(
 					huh.NewOption("Desktop Commander (@opencode/desktop-commander)", "@opencode/desktop-commander"),
 					huh.NewOption("Context Files (@opencode/context-files)", "@opencode/context-files"),
@@ -386,7 +386,7 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 			huh.NewMultiSelect[string]().
 				TitleFunc(func() string { return "OpenCode Providers" }, &state.Tools).
 				DescriptionFunc(func() string {
-					return "Authenticated providers OpenCode-side agents may pull models from. Anthropic is excluded by policy."
+					return "Authenticated model providers OpenCode-side agents may use during install/model resolution. Anthropic is excluded because OpenCode rejects it here; deselect providers you do not want exposed to OpenCode configs."
 				}, &state.Tools).
 				OptionsFunc(opencodeProviderHuhOptions, &state.Tools).
 				Value(&state.OpenCodeProviders),

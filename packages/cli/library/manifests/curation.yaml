@@ -1096,6 +1096,20 @@ entries:
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's docs-only workflow catalog.
     token_rent_relevant: false
+  - path: packages/cli/library/templates/agent-contract.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup template for creating validated agent contracts.
+    reason_compressed_or_changed: LazyAI specific layout matching RPI cycle 2 expectations.
+    token_rent_relevant: false
+  - path: packages/cli/library/templates/skill-quality.md
+    kind: template
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Setup template for creating validated skill definitions.
+    reason_compressed_or_changed: LazyAI specific layout matching RPI cycle 2 expectations.
+    token_rent_relevant: false
 exclusions:
   - path: packages/cli/library/canonical/commands
     kind: command

@@ -8,19 +8,16 @@ import (
 	"strings"
 )
 
-// GitignoreEntries lists the recommended .gitignore entries for ai-setup.
+// GitignoreEntries lists the LazyAI-owned paths recommended for .gitignore.
 var GitignoreEntries = []string{
 	".ai/memory/",
-	".env",
-	".env.local",
-	".env*.local",
 }
 
 // LocalSecretsGitignoreEntry is appended to the suggestion list when the
 // --local-secrets flag is set (spec 015).
 const LocalSecretsGitignoreEntry = ".claude/settings.local.json"
 
-// CheckGitignoreGuidance checks if .gitignore has recommended entries and
+// CheckGitignoreGuidance checks if .gitignore has recommended LazyAI entries and
 // prints guidance for missing ones. When localSecrets is true, also checks
 // for `.claude/settings.local.json` and appends it to an existing .gitignore
 // automatically (non-disruptive: idempotent, only when file already exists).

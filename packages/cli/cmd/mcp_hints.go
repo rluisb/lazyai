@@ -46,7 +46,7 @@ func GetMcpNextSteps(activeServers map[string]adapter.McpServer) string {
 	sb.WriteString("\n\n")
 
 	if hasEnv {
-		sb.WriteString(fmt.Sprintf("  %s %s\n", bulletStyle.Render("•"), textStyle.Render("Fill in any required environment variables (e.g. ${API_KEY}) in your .ai/mcp.json.")))
+		sb.WriteString(fmt.Sprintf("  %s %s\n", bulletStyle.Render("•"), textStyle.Render("Export required MCP environment variables in your shell or secret manager; LazyAI does not create or manage .env files.")))
 		sb.WriteString(fmt.Sprintf("    %s\n\n", lipgloss.NewStyle().Foreground(theme.Dimmed).Render("Run 'lazyai-cli compile' again if you update variables that tools need at compile time.")))
 	}
 

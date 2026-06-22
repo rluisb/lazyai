@@ -749,6 +749,15 @@ entries:
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
+  - path: packages/cli/library/hooks/catalog.md
+    kind: hook
+    category: setup-core
+    adapter_targets: [none]
+    reason_kept: Neutral hook lifecycle and adapter capability catalog retained for
+      static hook classification and host-tool boundary documentation.
+    reason_compressed_or_changed: LazyAI-authored catalog that documents
+      compile-time hook asset management without adding runtime hook execution.
+    token_rent_relevant: false
   - path: packages/cli/library/hooks/pre-commit
     kind: hook
     category: setup-core

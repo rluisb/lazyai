@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "${COPILOT_PROJECT_DIR:-$PWD}/.github/hooks/block-destructive-shell.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

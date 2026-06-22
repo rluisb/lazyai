@@ -223,7 +223,7 @@ lazyai-cli init --preset full --disable-features all --features rpiWorkflow,qual
 
 - **Site:** <https://rluisb.github.io/lazyai/>
 - **Getting started:** [Quick Start](docs/getting-started/quick-start.md), [Installation](docs/getting-started/installation.md)
-- **Concepts:** [How it Works](docs/concepts/how-it-works.md), [Product Boundaries](docs/concepts/product-boundaries.md), [Scopes](docs/concepts/scopes.md), [Presets](docs/concepts/presets.md), [Tools](docs/concepts/tools.md)
+- **Concepts:** [Harness Principles](docs/concepts/harness-principles.md), [How it Works](docs/concepts/how-it-works.md), [Product Boundaries](docs/concepts/product-boundaries.md), [Scopes](docs/concepts/scopes.md), [Presets](docs/concepts/presets.md), [Tools](docs/concepts/tools.md)
 - **CLI reference:** [CLI commands](docs/cli/reference.md)
 - **Integrations:** [MCP Integration](docs/integration/mcp.md), [Migration note](docs/migration/fortnite-orchestrator-removal.md)
 - **Troubleshooting:** [FAQ](docs/troubleshooting/faq.md)

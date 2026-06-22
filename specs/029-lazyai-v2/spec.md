@@ -3,7 +3,7 @@
 **Feature ID:** 029
 **Feature name:** lazyai-v2
 **Date:** 2026-06-22
-**Status:** Draft
+**Status:** Done
 **Owner:** maintainers
 **Constitution:** [specs/001-store-and-errors/constitution.md](../001-store-and-errors/constitution.md)
 

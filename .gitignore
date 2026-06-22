@@ -39,6 +39,7 @@ GEMINI.md
 # git worktrees
 .worktrees/
 AGENTS.md
+!docs/reference/agents.md
 INSTRUCTIONS.md
 
 # Scaffold-generated docs (copies from library/)

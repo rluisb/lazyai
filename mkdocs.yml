@@ -98,6 +98,13 @@ nav:
       - Presets: concepts/presets.md
       - Tools: concepts/tools.md
       - Product Boundaries: concepts/product-boundaries.md
+  - Reference:
+      - Tool Outputs: reference/tool-outputs.md
+      - Agents: reference/agents.md
+      - Skills: reference/skills.md
+      - Hooks: reference/hooks.md
+      - MCP Servers: reference/mcp-servers.md
+      - CLI Tools: reference/cli-tools.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

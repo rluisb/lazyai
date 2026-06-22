@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-22
+
 ### Changed
 - **Exact vibe-lab baseline parity for default agent/tool surfaces.** LazyAI now
   emits the same seven baseline agents as `/Users/ricardo/code/vibe-lab` across

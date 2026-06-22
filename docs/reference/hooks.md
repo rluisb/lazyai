@@ -6,6 +6,27 @@ Hooks are guardrail or automation scripts that run at tool lifecycle events (for
 They can block an action, emit an advisory warning, or trigger maintenance work.
 Support is adapter-specific and varies by tool.
 
+For the lifecycle vocabulary and capability matrix, see [Hook Lifecycle & Capability Matrix](../concepts/hook-lifecycle.md).
+For the neutral lifecycle catalog, see [Hook Catalog](https://github.com/rluisb/lazyai/blob/main/packages/cli/library/hooks/catalog.md).
+
+---
+
+## Hook Classification
+
+Every shipped hook is classified by lifecycle event, purpose, and behavioral
+properties. The classification is grounded in the hook policy files under
+`packages/cli/library/hooks/` and `packages/cli/library/canonical/hooks/`.
+
+| Hook | Lifecycle | Purpose | blocks_actions | requires_human_approval | captures_evidence | surfaces |
+|---|---|---|---|---|---|---|
+| `pre-commit` | pre-commit | Enforce RPI gate attestation and token-rent budget before local commits | true | false | true | git (`.githooks/pre-commit`, `.husky/pre-commit`) |
+| `rpi-gate-check.yml` | CI/CD (pull_request, push) | Enforce RPI process gates on non-trivial PRs and main pushes | true | false | true | GitHub Actions |
+| `caveman-memory-promotion` | on_compaction, after_agent | Detect reusable knowledge in caveman summaries and route to memory-promotion review | false | true | false | opencode (plugin) |
+| `startup-self-heal` | before_agent | Run scoped health checks and regenerate CLI artifacts on drift | false | false | true | opencode (plugin) |
+| `block-destructive-shell` | before_tool | Block destructive shell commands (rm -rf /, mkfs, dd, shutdown, etc.) | true | false | false | opencode, claude, copilot, antigravity, omp, pi (extension) |
+| `objective-workflow-gate` | after_model | Require verification evidence or explicit blocked reason in completion claims | true | false | true | opencode, claude, copilot, antigravity |
+| `session-start` | before_agent | Session bootstrap reminder policy (objective, handoff, verification seam) | false | false | false | instruction_only (all tools) |
+
 ## Shipped hooks
 
 Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/library/canonical/hooks/`, or the OpenCode runtime plugin.
@@ -66,7 +87,7 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
   - load latest handoff,
   - identify next verification seam,
   - surface blockers early.
-- **Trigger event:** conceptual workflow convention (“beginning of work session”), not emitted as a dedicated per-tool runtime hook.
+- **Trigger event:** conceptual workflow convention ("beginning of work session"), not emitted as a dedicated per-tool runtime hook.
 
 ### `pre-commit`
 
@@ -97,14 +118,14 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 
 ## Per-tool hook surfaces
 
-| Tool | Hook surface emitted | Notes |
-|---|---|---|
-| opencode | `.opencode/plugins/vibe-lab-hooks.js` | `OpenCodeAdapter.Install` copies `opencode/plugins` to `.opencode/plugins`. |
-| claude | `.claude/hooks/*.sh` + `.claude/settings.json` | `claude` settings wire `PreToolUse` and `Stop` commands to the generated scripts. |
-| copilot | `.github/hooks/*.{json,sh}` | `copilot/hooks` JSON descriptors pair with generated shell scripts; project scope only. |
-| antigravity | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | `AntigravityAdapter` copies hook scripts under `.gemini/hooks` and writes hook mapping in `.agents/hooks.json`. |
-| pi | `.pi/extensions/block-destructive-shell.ts` | `PiAdapter` comments “Pi safety hooks ship as extensions at `.pi/extensions/*.ts`”; no `.pi/hooks` directory emitted. |
-| omp | `.omp/hooks/pre/*.ts` | `OmpAdapter` ensures `.omp/hooks/pre` and copies `omp/hooks/*` there; available as TypeScript hook factories. |
-| kiro | not supported for hooks in current adapter | `KiroAdapter` emits only agents/skills/prompts and no hook directory. |
+| Tool | Capability | Hook surface emitted | Notes |
+|---|---|---|---|
+| opencode | **supported** | `.opencode/plugins/vibe-lab-hooks.js` | Full plugin runtime; events: `session.created`, `tool.execute.before`, `session.idle`, `experimental.session.compacting` |
+| claude | **supported** | `.claude/hooks/*.sh` + `.claude/settings.json` | Shell command hooks wired via `PreToolUse` and `Stop` settings |
+| copilot | **partial** | `.github/hooks/*.{json,sh}` | Project scope only; limited to pre-exec and stop events |
+| antigravity | **partial** | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | Beta support level; limited to pre-exec and stop events |
+| omp | **partial** | `.omp/hooks/pre/*.ts` | Beta support level; only `before_tool` surface (pre hooks) |
+| pi | **instruction_only** | `.pi/extensions/block-destructive-shell.ts` | No `.pi/hooks` directory emitted; only one extension runtime; all other hooks are markdown-only |
+| kiro | **instruction_only** | none | Capability declared in adapter metadata; no `.kiro/hooks` directory emitted |
 
-For each tool’s managed output paths and MCP outputs, see [Tool Outputs](tool-outputs.md) and [Hook Template](../canonical/hook-template.md).
+For each tool's managed output paths and MCP outputs, see [Tool Outputs](tool-outputs.md) and [Hook Template](../canonical/hook-template.md).

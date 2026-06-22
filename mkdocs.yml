@@ -112,6 +112,15 @@ nav:
       - Hooks: reference/hooks.md
       - MCP Servers: reference/mcp-servers.md
       - CLI Tools: reference/cli-tools.md
+      - Adapters:
+          - Capability Matrix: adapters/capability-matrix.md
+          - OpenCode: adapters/opencode.md
+          - Claude Code: adapters/claude-code.md
+          - GitHub Copilot: adapters/copilot.md
+          - Pi: adapters/pi.md
+          - OMP: adapters/omp.md
+          - Antigravity: adapters/antigravity.md
+          - Kiro: adapters/kiro.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

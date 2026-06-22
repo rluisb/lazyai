@@ -243,9 +243,12 @@ func RunWizardWithDefaults(config *WizardConfig, defaults *WizardResult) (*Wizar
 	}
 
 	// Phase 4: confirm
-	phase4, action, err := RunPhase4(plan, !config.Interactive, installConsents)
+	phase4, action, err := RunPhase4(plan, result, !config.Interactive, installConsents)
 	if err != nil {
 		return nil, err
+	}
+	if action == PhaseBack {
+		return RunWizardWithDefaults(config, result)
 	}
 	if action == PhaseCancel {
 		return nil, ErrUserCancelled

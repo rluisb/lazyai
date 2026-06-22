@@ -63,7 +63,7 @@ func TestFormatInstallConsentsDeterministic(t *testing.T) {
 
 func TestRunPhase4NonInteractiveAllowsDefaults(t *testing.T) {
 	plan := &InstallPlan{FilesToInstall: []PlannedFile{}}
-	result, action, err := RunPhase4(plan, true, []string{"ai-memory: curl install"})
+	result, action, err := RunPhase4(plan, nil, true, []string{"ai-memory: curl install"})
 	if err != nil {
 		t.Fatalf("RunPhase4() returned error: %v", err)
 	}

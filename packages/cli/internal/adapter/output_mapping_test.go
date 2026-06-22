@@ -94,16 +94,16 @@ func TestOutputMappingCopilotAgentsWritesMd(t *testing.T) {
 	}
 }
 
-func TestOutputMappingCopilotSkillsRewritesToAgentMarkdown(t *testing.T) {
+func TestOutputMappingCopilotSkillsRewritesToSkillDirectories(t *testing.T) {
 	target, ok := LookupOutputTarget(types.ToolIdCopilot, AssetKindSkills)
 	if !ok {
 		t.Fatal("copilot has no skills target")
 	}
-	if target.Shape != ShapeRewriteExt {
-		t.Errorf("copilot skills Shape=%q, want %q", target.Shape, ShapeRewriteExt)
+	if target.Shape != ShapeDirPerItem {
+		t.Errorf("copilot skills Shape=%q, want %q", target.Shape, ShapeDirPerItem)
 	}
-	if target.RewriteSuffix != ".agent.md" {
-		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, ".agent.md")
+	if target.RewriteSuffix != "" {
+		t.Errorf("copilot skills RewriteSuffix=%q, want %q", target.RewriteSuffix, "")
 	}
 }
 

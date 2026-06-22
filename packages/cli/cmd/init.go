@@ -46,6 +46,8 @@ func init() {
 	initCmd.Flags().String("memory-path", "", "Project memory path (default: .specify/memory)")
 	initCmd.Flags().Bool("reversa", false, "Analyze existing code with Scout/Reversa to auto-populate project details")
 	initCmd.Flags().Bool("no-reversa", false, "Skip Scout/Reversa analysis and leave project details explicit/manual")
+	initCmd.Flags().Bool("express", false, "Run interactive wizard with Express mode")
+	initCmd.Flags().Bool("custom", false, "Run interactive wizard with Personalized mode")
 	rootCmd.AddCommand(initCmd)
 	initCmd.GroupID = "lifecycle"
 }
@@ -62,6 +64,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	commitPattern, _ := cmd.Flags().GetString("commit-pattern")
 	memoryPath, _ := cmd.Flags().GetString("memory-path")
 	nonInteractive, _ := cmd.Flags().GetBool("no-interactive")
+	expressMode, _ := cmd.Flags().GetBool("express")
+	customMode, _ := cmd.Flags().GetBool("custom")
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	driveCLI, _ := cmd.Flags().GetBool("drive-cli")
@@ -90,6 +94,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 		preset = types.PresetLevel(presetStr)
 	}
 
+	if expressMode && customMode {
+		return fmt.Errorf("--express and --custom cannot be used together")
+	}
+
+	var wizardMode wizard.WizardMode
+	if expressMode {
+		wizardMode = wizard.WizardModeExpress
+	} else if customMode {
+		wizardMode = wizard.WizardModePersonalized
+	}
+
 	homeDir, _ := os.UserHomeDir()
 	targetDir, _ := os.Getwd()
 
@@ -115,6 +130,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		CLIMemoryPath:          memoryPath,
 		CLIExistingSetupPolicy: existingSetupPolicy,
 		CLIUseReversa:          useReversa,
+		CLIWizardMode:          wizardMode,
 	}
 
 	if nonInteractive {

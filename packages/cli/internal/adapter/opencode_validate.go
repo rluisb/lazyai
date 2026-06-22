@@ -41,6 +41,10 @@ func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWa
 	if err != nil {
 		return nil, nil
 	}
+	configRoot, err := openCodeConfigRoot(ctx)
+	if err != nil {
+		return nil, nil
+	}
 
 	var warnings []ValidationWarning
 
@@ -51,7 +55,7 @@ func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWa
 			Item:   "opencode.json",
 			Reason: fmt.Sprintf("opencode debug config failed: %v", err),
 		})
-	} else if !strings.Contains(string(out), "mcp") && files.FileExists(filepath.Join(ocDir, OpenCodeConfigFilename)) {
+	} else if !strings.Contains(string(out), "mcp") && files.FileExists(filepath.Join(configRoot, OpenCodeConfigFilename)) {
 		warnings = append(warnings, ValidationWarning{
 			Scope:  "config",
 			Item:   "opencode.json",

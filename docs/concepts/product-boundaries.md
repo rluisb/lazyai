@@ -69,8 +69,8 @@ The CLI reference documents shipped `lazyai-cli` commands only. Repository scrip
 ### Default surface contract vs LazyAI extras
 
 - Default, shipped setup outputs emit eight canonical agents across supported tool surfaces: `guide` as the front-door default plus `implementer`, `researcher`, `planner`, `reviewer`, `deployer`, `responder`, and `evidence-verifier` as specialists.
-- OpenCode default setup writes a root `opencode.json` config with baseline shape only (schema, permissions, skill paths, instructions). It does not carry LazyAI runtime-only MCP content.
-- LazyAI runtime-adjacent MCP/runtime extras are isolated to `.opencode/lazyai.mcp.jsonc` so the default `opencode.json` stays baseline-compatible and replaceable.
+- OpenCode default setup writes a root `opencode.json` config with baseline shape plus managed MCP entries under top-level `mcp`.
+- Legacy `.opencode/lazyai.mcp.jsonc` entries are migrated into `opencode.json` during compile so the documented OpenCode config remains the active source.
 - Retired artifacts such as orchestrator/loop-driver/Startup surfaces are not part of default setup outputs and belong to explicit runtime/archival paths only.
 
 ## Top-level CLI command inventory
@@ -166,7 +166,9 @@ Archived and retired material is still useful for migration, rollback, and histo
 
 These are documented follow-ups only; this issue does not move or delete code.
 
-- `packages/cli/internal/runtime/schema.go` still contains workflow, task queue, and eval tables even though the corresponding top-level command surfaces are removed; a future schema/migration task should decide what remains for compatibility and what becomes archived state.
-- `packages/cli/internal/db/migrations.go` still includes older task queue and dispatch migration tables; a future migration audit should decide whether those are required compatibility migrations or removable historical scaffolding.
-- Adapter and setup-scan tests still exercise preserved orchestrator MCP entries for adoption/compatibility scenarios; future cleanup should decide whether those tests represent supported user-owned config preservation or retired runtime coupling.
-- The embedded library still contains non-default historical agent/skill names such as `orchestrator`/`orchestrate`; the library curation/provenance work should decide which assets remain active, compatibility-only, or archived.
+- `packages/cli/internal/runtime/schema.go`: Active schema is now explicit runtime-adjacent compatibility, retaining only core runtime tables (`sessions`, `dispatches`, `handoff`, `ledger_refs`) for active LazyAI surfaces.
+- `packages/cli/internal/db/migrations.go`:
+  - Migration 009/010 are **compatibility-only** (legacy runtime residue kept to migrate/restore older local DBs).
+  - Migration 011 is **optional-module internals** for the optional `message` command surface.
+- Adapter/setup-scan compatibility tests now encode preserved orchestrator-era MCP entries as migration/rollback compatibility, not active orchestrator coupling.
+- Non-default historical agent names/skills are under curation review as **retired/stale** assets; they remain for compatibility until explicitly archived.

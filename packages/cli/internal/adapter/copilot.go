@@ -5,17 +5,19 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
-	"github.com/rluisb/lazyai/packages/cli/internal/files"
-	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
-	"github.com/rluisb/lazyai/packages/cli/internal/models"
-	"github.com/rluisb/lazyai/packages/cli/internal/types"
 	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/conflict"
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
+	"github.com/rluisb/lazyai/packages/cli/internal/frontmatter"
+	"github.com/rluisb/lazyai/packages/cli/internal/models"
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
 // CopilotAdapter implements ToolAdapter for GitHub Copilot.
@@ -64,7 +66,7 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 	selectedSkills := selectionSet(ctx.Selections.Skills)
 	selectedPrompts := selectionSet(ctx.Selections.Prompts)
 
-	// Copy agents from library to .github/agents/.
+	// Copy canonical agents from library to .github/agents/.
 	if err := a.copyCopilotAgents(ctx, agentsDir); err != nil {
 		return nil, err
 	}
@@ -79,7 +81,18 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 		return nil, err
 	}
 
-	// Copy skills as Copilot agent files.
+	skillsDir := filepath.Join(githubDir, "skills")
+	_ = files.EnsureDir(skillsDir)
+
+	// Copy selected skills to Agent Skills directories.
+	if err := a.cleanupLegacySkillAgentOutputs(ctx, agentsDir, selectedSkills); err != nil {
+		return nil, err
+	}
+	if len(selectedSkills) > 0 {
+		if err := a.copySkillsAsSkillDirs(ctx, skillsDir, selectedSkills); err != nil {
+			return nil, err
+		}
+	}
 
 	// Copy Copilot project/workspace hooks. Global Copilot support remains
 	// agent/instructions/MCP oriented; no verified user-scope hook surface is
@@ -104,11 +117,6 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 			},
 			Mode: 0o755,
 		}); err != nil {
-			return nil, err
-		}
-	}
-	if len(selectedSkills) > 0 {
-		if err := a.copySkillsAsAgents(ctx, agentsDir, selectedSkills); err != nil {
 			return nil, err
 		}
 	}
@@ -317,164 +325,110 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 	})
 }
 
-// copySkillsAsAgents converts explicitly selected skill files to Copilot custom
-// agent Markdown profiles. Copilot has no native skill surface, so selected
-// skills become .agent.md files under .github/agents.
-func (a *CopilotAdapter) copySkillsAsAgents(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
+// copySkillsAsSkillDirs copies selected skill files to Copilot Agent Skills
+// directories.
+func (a *CopilotAdapter) copySkillsAsSkillDirs(ctx *AdapterContext, skillsDir string, selected map[types.SkillId]bool) error {
 	if selected == nil || len(selected) == 0 {
 		return nil
 	}
-	libFS := ctx.LibraryFS
-	if libFS != nil {
-		return a.copySkillsAsAgentsFromFS(ctx, libFS, agentsDir, selected)
-	}
-	// Fallback: disk mode
-	srcDir := filepath.Join(ctx.LibraryDir, "skills")
-	if !files.DirExists(srcDir) {
+	return CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "skills",
+		SelectionKey: "skills",
+		ToDestPath: func(file string) string {
+			name := fileID(file)
+			return filepath.Join(skillsDir, name, "SKILL.md")
+		},
+	})
+}
+
+// cleanupLegacySkillAgentOutputs removes old, selected Copilot skill outputs that
+// used the deprecated skill-as-agent behavior.
+func (a *CopilotAdapter) cleanupLegacySkillAgentOutputs(ctx *AdapterContext, agentsDir string, selected map[types.SkillId]bool) error {
+	if len(selected) == 0 {
 		return nil
 	}
-	for _, file := range files.ListDir(srcDir) {
-		srcPath := filepath.Join(srcDir, file)
-		if files.IsDirectory(srcPath) {
-			continue
+	for skill := range selected {
+		fileBase := string(skill)
+		legacyMarkdown := filepath.Join(agentsDir, fileBase+".agent.md")
+		legacyYaml := filepath.Join(agentsDir, fileBase+".agent.yaml")
+		if err := a.cleanupLegacySkillAgentArtifact(ctx, legacyMarkdown, fileBase, ".agent.md"); err != nil {
+			return err
 		}
-		fileIDVal := fileID(file)
-		if !selected[types.SkillId(fileIDVal)] {
-			continue
-		}
-		destFile := fileIDVal + ".agent.md"
-		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
-		if err := a.copySkillAsAgentWithRecord(ctx, srcPath, dest, libRelPath); err != nil {
+		if err := a.cleanupLegacySkillAgentArtifact(ctx, legacyYaml, fileBase, ".agent.yaml"); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// copySkillsAsAgentsFromFS copies skills from the library FS as Copilot custom agent Markdown files.
-func (a *CopilotAdapter) copySkillsAsAgentsFromFS(ctx *AdapterContext, libFS fs.FS, agentsDir string, selected map[types.SkillId]bool) error {
-	entries, err := fs.ReadDir(libFS, "skills")
+func (a *CopilotAdapter) cleanupLegacySkillAgentArtifact(ctx *AdapterContext, path string, skillID string, ext string) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if !a.isLikelyLegacySkillAgentFile(string(data), skillID, ctx, ext) {
 		return nil
 	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		file := entry.Name()
-		fileIDVal := fileID(file)
-		if selected != nil && !selected[types.SkillId(fileIDVal)] {
-			continue
-		}
-		destFile := fileIDVal + ".agent.md"
-		dest := filepath.Join(agentsDir, destFile)
-		libRelPath := filepath.ToSlash(filepath.Join("skills", file))
-		if err := a.copySkillAsAgentFromFS(ctx, libFS, libRelPath, dest); err != nil {
-			return err
-		}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
 	}
 	return nil
 }
 
-// copySkillAsAgentWithRecord reads a skill from disk and converts it to Copilot custom agent Markdown.
-func (a *CopilotAdapter) copySkillAsAgentWithRecord(ctx *AdapterContext, src, dest string, sourcePath string) error {
-	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
-
-	effectiveStrategy := ctx.Strategy
-	if override, ok := ctx.PerFileOverrides[dest]; ok {
-		effectiveStrategy = override
+func (a *CopilotAdapter) isLikelyLegacySkillAgentFile(content string, skillID string, ctx *AdapterContext, ext string) bool {
+	if strings.Contains(content, managedAgentMarker("copilot", skillID)) {
+		return true
 	}
-
-	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
-		Force:    ctx.Force,
-		Strategy: effectiveStrategy,
-	})
-	if err != nil {
-		return err
-	}
-	if action == conflict.ActionSkip {
-		return nil
-	}
-	if action == conflict.ActionReplace && files.FileExists(dest) {
-		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
-			return err
+	sourceContent, ok := a.readLibrarySkillSource(ctx, skillID)
+	switch ext {
+	case ".agent.md":
+		if ok {
+			expected, err := skillToCopilotAgentMarkdown(ctx, filepath.ToSlash(filepath.Join("skills", skillID+".md")), string(sourceContent))
+			if err == nil {
+				return strings.TrimSpace(content) == strings.TrimSpace(expected)
+			}
 		}
+		return false
+	case ".agent.yaml":
+		if !strings.Contains(content, "name: "+skillID) {
+			return false
+		}
+		if !strings.Contains(content, "model:") || !strings.Contains(content, "prompt:") {
+			return false
+		}
+		if !ok {
+			return true
+		}
+		// Best-effort check: legacy YAML embeds the skill body as an indented prompt.
+		_, sourceBody, err := frontmatter.ExtractFrontmatter(sourceContent)
+		heading := "# " + skillID
+		return err == nil && strings.Contains(string(sourceBody), heading) && strings.Contains(content, heading)
+	default:
+		return false
 	}
-
-	data, err := files.ReadFile(src)
-	if err != nil {
-		return err
-	}
-
-	// Transform skill to Copilot custom agent Markdown.
-	transformed, err := skillToCopilotAgentMarkdown(ctx, src, string(data))
-	if err != nil {
-		return err
-	}
-
-	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
-		return err
-	}
-	if err := files.WriteFile(dest, []byte(transformed), 0o644); err != nil {
-		return err
-	}
-
-	hash, _ := files.FileHash(dest)
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: sourcePath, Owner: types.FileOwnerLibrary,
-	})
-	return nil
 }
 
-// copySkillAsAgentFromFS reads a skill from the library FS and converts it to Copilot custom agent Markdown.
-func (a *CopilotAdapter) copySkillAsAgentFromFS(ctx *AdapterContext, libFS fs.FS, src, dest string) error {
-	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
-
-	effectiveStrategy := ctx.Strategy
-	if override, ok := ctx.PerFileOverrides[dest]; ok {
-		effectiveStrategy = override
-	}
-
-	action, err := conflict.ResolveConflictWithOptions(dest, relPath, conflict.ConflictOptions{
-		Force:    ctx.Force,
-		Strategy: effectiveStrategy,
-	})
-	if err != nil {
-		return err
-	}
-	if action == conflict.ActionSkip {
-		return nil
-	}
-	if action == conflict.ActionReplace && files.FileExists(dest) {
-		if _, err := files.BackupFile(dest, ctx.TargetDir); err != nil {
-			return err
+func (a *CopilotAdapter) readLibrarySkillSource(ctx *AdapterContext, skillID string) ([]byte, bool) {
+	path := filepath.ToSlash(filepath.Join("skills", skillID+".md"))
+	if ctx.LibraryFS != nil {
+		data, err := fs.ReadFile(ctx.LibraryFS, path)
+		if err == nil {
+			return data, true
 		}
+		return nil, false
 	}
-
-	data, err := fs.ReadFile(libFS, src)
+	if ctx.LibraryDir == "" {
+		return nil, false
+	}
+	data, err := os.ReadFile(filepath.Join(ctx.LibraryDir, "skills", skillID+".md"))
 	if err != nil {
-		return fmt.Errorf("read FS %s: %w", src, err)
+		return nil, false
 	}
-
-	// Transform skill to Copilot custom agent Markdown.
-	transformed, err := skillToCopilotAgentMarkdown(ctx, src, string(data))
-	if err != nil {
-		return err
-	}
-
-	if err := files.EnsureDir(filepath.Dir(dest)); err != nil {
-		return err
-	}
-	if err := files.WriteFile(dest, []byte(transformed), 0o644); err != nil {
-		return err
-	}
-
-	hash, _ := files.FileHash(dest)
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: src, Owner: types.FileOwnerLibrary,
-	})
-	return nil
+	return data, true
 }
 
 // skillToCopilotAgentMarkdown transforms a skill markdown file into Copilot

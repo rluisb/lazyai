@@ -1,8 +1,8 @@
 # ADR-005: Core-First LazyAI with Optional Runtime Modules
 
 **Date:** 2026-06-15  
-**Status:** Proposed  
-**Deciders:** LazyAI maintainers (pending human approval)  
+**Status:** Accepted — maintainer approved 2026-06-21
+**Deciders:** LazyAI maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 
 > **Purpose.** Record how LazyAI should maximize vibe-lab philosophical alignment without deleting useful LazyAI-specific capabilities: keep setup-core as the default product, and reclassify runtime-adjacent commands as optional modules with a documented future enablement path.

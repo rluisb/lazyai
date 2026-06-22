@@ -4,6 +4,8 @@ package adapter
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
@@ -38,7 +40,12 @@ func (r *Registry) register(a ToolAdapter) {
 func (r *Registry) Get(id types.ToolId) (ToolAdapter, error) {
 	a, ok := r.adapters[id]
 	if !ok {
-		return nil, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", id)
+		supportedTools := r.List()
+		supportedStrings := make([]string, len(supportedTools))
+		for i, tool := range supportedTools {
+			supportedStrings[i] = string(tool)
+		}
+		return nil, fmt.Errorf("unsupported tool %q (supported tools: %s)", id, strings.Join(supportedStrings, ", "))
 	}
 	return a, nil
 }
@@ -49,6 +56,9 @@ func (r *Registry) List() []types.ToolId {
 	for id := range r.adapters {
 		ids = append(ids, id)
 	}
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i] < ids[j]
+	})
 	return ids
 }
 

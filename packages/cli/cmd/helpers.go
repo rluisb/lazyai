@@ -3,7 +3,10 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
@@ -26,7 +29,13 @@ func validateToolFlag(tool string) error {
 	if tool == "" || types.IsValidToolId(types.ToolId(tool)) {
 		return nil
 	}
-	return fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, antigravity)", tool)
+	supported := adapter.NewRegistry().List()
+	supportedStrings := make([]string, len(supported))
+	for i, id := range supported {
+		supportedStrings[i] = string(id)
+	}
+	sort.Strings(supportedStrings)
+	return fmt.Errorf("unsupported tool %q (supported tools: %s)", tool, strings.Join(supportedStrings, ", "))
 }
 
 // openStore opens the SQLite database for the given target directory.

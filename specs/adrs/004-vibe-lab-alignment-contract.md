@@ -1,8 +1,8 @@
 # ADR-004: Capability-First Vibe-Lab Alignment
 
 **Date:** 2026-06-15  
-**Status:** Proposed  
-**Deciders:** LazyAI maintainers (pending human approval)  
+**Status:** Accepted — maintainer approved 2026-06-21
+**Deciders:** LazyAI maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 
 > **Purpose.** Record how LazyAI should close the remaining vibe-lab parity gaps without regressing verified tool-native contracts or reviving retired runtime surfaces.
@@ -74,7 +74,7 @@ Choose **Option B — capability-first parity with verified native shapes**.
 
 Alignment for this refactor means:
 - add missing capabilities where LazyAI currently lacks the baseline behavior;
-- preserve verified native contracts such as Copilot `.agent.yaml` emission and the current OpenCode `.opencode/opencode.jsonc` contract unless implementation evidence proves they are wrong;
+- preserve verified native contracts unless newer implementation evidence proves they are wrong; current evidence supersedes legacy Copilot `.agent.yaml` skill output with Agent Skills directories, while OpenCode MCP placement remains under active review;
 - keep Pi and Antigravity limited to the smallest supported surfaces the baseline actually uses;
 - keep retired workflow/task/orchestration/eval runtime surfaces retired.
 
@@ -114,7 +114,7 @@ Alignment for this refactor means:
 
 Re-open this ADR if any of the following becomes true:
 
-- Upstream or implementation evidence proves that Copilot `.agent.yaml` or OpenCode `.opencode/opencode.jsonc` is the wrong active contract.
+- Upstream or implementation evidence proves another preserved native contract is wrong, as happened for the legacy Copilot `.agent.yaml` skill surface.
 - Pi or Antigravity fixture coverage shows their generated surfaces cannot be kept stable without disproportionate maintenance.
 - The team decides LazyAI should support only Claude/OpenCode/Copilot and explicitly no longer pursue baseline breadth.
 - Human review rejects capability-first parity and asks for literal baseline mirroring instead.

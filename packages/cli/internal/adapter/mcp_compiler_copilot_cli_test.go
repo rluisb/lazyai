@@ -114,6 +114,109 @@ func TestToCopilotVSCodeMcp_InputsSortedByID(t *testing.T) {
 	}
 }
 
+func TestToCopilotVSCodeMcp_RemoteURLUsesHttpType(t *testing.T) {
+	servers := map[string]McpServer{
+		"remote": {
+			URL:     "https://mcp.example.com",
+			Headers: map[string]string{"Authorization": "Bearer TOKEN"},
+		},
+		"stdio": {
+			Command: "npx",
+			Env:     map[string]string{"API_KEY": "${API_KEY}"},
+		},
+	}
+	got := toCopilotVSCodeMcp(servers)
+
+	serversSection, ok := got["servers"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected servers map, got %T", got["servers"])
+	}
+	remote := serversSection["remote"].(map[string]any)
+	if remote["type"] != "http" {
+		t.Errorf("expected remote type=http, got %v", remote["type"])
+	}
+	if remote["url"] != "https://mcp.example.com" {
+		t.Fatalf("expected remote url, got %v", remote["url"])
+	}
+	headers, ok := remote["headers"].(map[string]string)
+	if !ok {
+		t.Fatalf("expected headers map, got %T", remote["headers"])
+	}
+	if headers["Authorization"] != "Bearer TOKEN" {
+		t.Fatalf("expected Authorization header to pass through, got %v", headers["Authorization"])
+	}
+
+	inputs, ok := got["inputs"].([]map[string]any)
+	if !ok {
+		t.Fatalf("expected inputs slice, got %T", got["inputs"])
+	}
+	if len(inputs) != 1 || inputs[0]["id"] != "API_KEY" {
+		t.Fatalf("expected one API_KEY input prompt, got %v", inputs)
+	}
+}
+
+func TestCompileCopilotVSCodeMcp_RemoteURL_UsesHTTPType(t *testing.T) {
+	targetDir := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("PATH", t.TempDir())
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{
+  "servers": {
+    "remote": {
+      "url": "https://mcp.example.com",
+      "headers": { "Authorization": "Bearer ${TOKEN}" }
+    },
+    "stdio": {
+      "command": "npx",
+      "env": { "API_KEY": "${API_KEY}" }
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("write mcp.json: %v", err)
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdCopilot, CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    home,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected only .vscode/mcp.json record when Copilot CLI probe fails, got %d", len(records))
+	}
+
+	var parsed struct {
+		Servers map[string]map[string]any `json:"servers"`
+		Inputs  []struct {
+			ID string `json:"id"`
+		} `json:"inputs"`
+	}
+	data, err := os.ReadFile(filepath.Join(targetDir, ".vscode", "mcp.json"))
+	if err != nil {
+		t.Fatalf("read .vscode/mcp.json: %v", err)
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("parse .vscode/mcp.json: %v", err)
+	}
+	remote := parsed.Servers["remote"]
+	if remote["type"] != "http" {
+		t.Fatalf("expected remote type=http, got %v", remote["type"])
+	}
+	if remote["url"] != "https://mcp.example.com" {
+		t.Fatalf("expected remote url, got %v", remote["url"])
+	}
+	if headers, ok := remote["headers"].(map[string]any); !ok || headers["Authorization"] != "Bearer ${TOKEN}" {
+		t.Fatalf("expected headers to include Authorization=Bearer ${TOKEN}, got %v", remote["headers"])
+	}
+	if len(parsed.Inputs) != 1 || parsed.Inputs[0].ID != "API_KEY" {
+		t.Fatalf("expected one API_KEY input prompt, got %+v", parsed.Inputs)
+	}
+}
 func TestCompileCopilotVSCodeMcp_WritesInputsSortedByID(t *testing.T) {
 	targetDir := t.TempDir()
 	home := t.TempDir()

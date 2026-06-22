@@ -34,8 +34,10 @@ type WizardState struct {
 	OpenCodeModes       []string
 	AnalyzeExistingCode bool
 
-	// Phase 5
 	MemoryPath        string
+	EnableObsidian    bool
+	EnableCodegraph   bool
+	CodegraphDataPath string
 	OpenCodePlugins   []string
 	OpenCodeProviders []string
 }
@@ -127,10 +129,21 @@ func initWizardState(defaults *WizardResult) *WizardState {
 
 	// Set Phase 5 Defaults
 	s.MemoryPath = ".specify/memory"
-
+	s.EnableObsidian = true
+	s.EnableCodegraph = true
+	s.CodegraphDataPath = ".codegraph/"
 	if defaults != nil && defaults.Phase5 != nil {
 		if defaults.Phase5.MemoryPath != "" {
 			s.MemoryPath = defaults.Phase5.MemoryPath
+		}
+		if defaults.Phase5.EnableObsidian {
+			s.EnableObsidian = defaults.Phase5.EnableObsidian
+		}
+		if defaults.Phase5.EnableCodegraph {
+			s.EnableCodegraph = defaults.Phase5.EnableCodegraph
+		}
+		if defaults.Phase5.CodegraphDataPath != "" {
+			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
 		}
 		if len(defaults.Phase5.OpenCodePlugins) > 0 {
 			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
@@ -141,6 +154,50 @@ func initWizardState(defaults *WizardResult) *WizardState {
 	}
 
 	return s
+}
+
+func initExpressWizardState(defaults *WizardResult) *WizardState {
+	state := initWizardState(defaults)
+	state.McpPreset = string(McpPresetRecommended)
+	state.McpServers = []string{"filesystem", "ripgrep", "ai-memory", "codegraph"}
+	state.EnableObsidian = false
+	state.EnableCodegraph = true
+	state.CodegraphDataPath = ".codegraph/"
+	return state
+}
+
+func buildExpressInteractiveForm(state *WizardState) *huh.Form {
+	groups := []*huh.Group{
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Scope").
+				Options(
+					huh.NewOption("Global  — Install to ~/.config/opencode/ + native tool global paths", "global"),
+					huh.NewOption("Workspace  — Planning repo with multi-project management", "workspace"),
+					huh.NewOption("Project (recommended)  — Self-contained single repository", "project"),
+				).
+				Value(&state.Scope),
+		),
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("AI Tools").
+				OptionsFunc(func() []huh.Option[string] {
+					return toolOptionsForScope(types.SetupScope(state.Scope))
+				}, &state.Scope).
+				Value(&state.Tools),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Project Name").
+				Placeholder(defaultPhase1ProjectName()).
+				Value(&state.ProjectName).
+				Validate(validateProjectName),
+		).WithHideFunc(func() bool {
+			return state.Scope == "global"
+		}),
+	}
+
+	return theme.NewForm(groups...)
 }
 
 func buildInteractiveForm(state *WizardState) *huh.Form {
@@ -384,13 +441,32 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	// Phase 5
 	p5 := buildPhase5Result(
 		state.MemoryPath,
-		true,
+		state.EnableObsidian,
 		"",
-		true,
-		".codegraph/",
+		state.EnableCodegraph,
+		state.CodegraphDataPath,
 		state.OpenCodePlugins,
 	)
 	p5.OpenCodeProviders = state.OpenCodeProviders
 
 	return p1, p2, p5
+}
+
+func askWizardMode() (WizardMode, error) {
+	mode := string(WizardModePersonalized)
+	group := huh.NewGroup(
+		huh.NewSelect[string]().
+			Title("Setup mode").
+			Description("Choose an initialization flow").
+			Options(
+				huh.NewOption("Express", string(WizardModeExpress)),
+				huh.NewOption("Personalized", string(WizardModePersonalized)),
+			).
+			Value(&mode),
+	)
+
+	if err := theme.NewForm(group).Run(); err != nil {
+		return "", err
+	}
+	return WizardMode(mode), nil
 }

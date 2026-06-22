@@ -131,12 +131,11 @@ func TestPropagateWritesPerRepoMcpConfigs(t *testing.T) {
 		t.Fatal("expected propagated records, got none")
 	}
 
-	// Verify each repo got at least one tool config touched. We test a
-	// representative path: opencode mcp jsonc.
+	// Verify each repo got the OpenCode root config touched.
 	for _, r := range []string{"api", "web"} {
-		expected := filepath.Join(tmp, r, ".opencode", "lazyai.mcp.jsonc")
+		expected := filepath.Join(tmp, r, "opencode.json")
 		if !files.FileExists(expected) {
-			t.Errorf("expected per-repo tool config at %s, missing", expected)
+			t.Fatalf("expected propagated OpenCode config %s", expected)
 		}
 	}
 }

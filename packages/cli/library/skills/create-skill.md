@@ -17,8 +17,7 @@ Do not use when the user is only brainstorming. Use `skill-authoring` when modif
 
 ## Rule
 
-A shipped LazyAI skill has one source of truth. In this repository that source is `packages/cli/library/skills/<name>.md`. Generated `.opencode/skills/<name>/SKILL.md`, `.claude/skills/<name>/SKILL.md`, `.pi/skills/<name>/SKILL.md`, and Copilot `.agent.yaml` files are outputs, not authoring locations.
-
+- A shipped LazyAI skill has one source of truth. In this repository that source is `packages/cli/library/skills/<name>.md`. Generated `.opencode/skills/<name>/SKILL.md`, `.claude/skills/<name>/SKILL.md`, `.pi/skills/<name>/SKILL.md`, and Copilot `.github/skills/<name>/SKILL.md` (global `~/.copilot/skills/<name>/SKILL.md`) files are outputs, not authoring locations.
 ## Workflow
 
 1. Confirm WHAT, HOW, DON'T WANT, and VALIDATE.

@@ -100,6 +100,7 @@ nav:
       - Product Boundaries: concepts/product-boundaries.md
       - Skill Quality: concepts/skill-quality.md
       - Agent Contracts: concepts/agent-contracts.md
+      - Context Discipline: concepts/context-discipline.md
       - Hook Lifecycle: concepts/hook-lifecycle.md
       - Trace/Eval Improvement Loop: concepts/trace-eval-improvement-loop.md
       - Token Rent: concepts/token-rent.md

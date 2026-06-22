@@ -28,43 +28,131 @@
             ]
           },
           "command": {
-            "type": "string"
+            "type": "string",
+            "description": "Executable command to start the server"
           },
           "url": {
-            "type": "string"
+            "type": "string",
+            "description": "Remote URL for HTTP/SSE-based servers"
           },
           "args": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Command-line arguments"
           },
           "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
-            }
+            },
+            "description": "Environment variables"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "HTTP headers for remote servers"
           },
           "tools": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Exposed MCP tool names"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the server is enabled by default"
+          },
+          "requiresInstall": {
+            "type": "boolean",
+            "description": "Whether the server requires additional installation"
+          },
+          "installHint": {
+            "type": "string",
+            "description": "Installation instructions for the server"
+          },
+          "setupHint": {
+            "type": "string",
+            "description": "Setup and configuration instructions"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "One-line purpose statement explaining why this server exists"
           },
           "preferredUse": {
-            "type": "string"
+            "type": "string",
+            "description": "Guidance on when to prefer this server over alternatives"
           },
-          "description": {
-            "type": "string"
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Example use cases demonstrating appropriate usage"
           },
-          "safety": {
-            "type": "object",
-            "additionalProperties": true
+          "antiExamples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Scenarios where this server should NOT be used"
+          },
+          "securityNotes": {
+            "type": "string",
+            "description": "Security considerations, access scoping, and authentication requirements"
+          },
+          "adapterOutputDifferences": {
+            "type": "string",
+            "description": "How the server output or configuration differs across adapter targets"
+          },
+          "preferred_interface": {
+            "type": "string",
+            "enum": [
+              "cli",
+              "mcp",
+              "hybrid"
+            ],
+            "description": "Whether CLI, MCP, or hybrid usage is preferred"
+          },
+          "cli_equivalent": {
+            "type": "string",
+            "description": "Equivalent CLI command or tool name"
+          },
+          "token_policy": {
+            "type": "string",
+            "enum": [
+              "cli-first",
+              "mcp-first",
+              "hybrid"
+            ],
+            "description": "Token efficiency guidance: prefer CLI, MCP, or hybrid approach"
           }
         },
         "required": [
           "type"
         ],
+        "additionalProperties": true
+      }
+    },
+    "cliTools": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "installHint": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
         "additionalProperties": true
       }
     }

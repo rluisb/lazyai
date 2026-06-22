@@ -339,28 +339,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				).
 				Value(&state.ChatModes),
 		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Commands").
-				Description("Choose OpenCode slash commands written to .opencode/commands. Review checks branch changes, test runs the project test command, and commit drafts a conventional commit message. Deselect all if you only want agents/skills.").
-				Options(
-					huh.NewOption("Review branch (review)", string(types.OpenCodeCommandIdReview)),
-					huh.NewOption("Run tests (test)", string(types.OpenCodeCommandIdTest)),
-					huh.NewOption("Draft commit (commit)", string(types.OpenCodeCommandIdCommit)),
-				).
-				Value(&state.OpenCodeCommands),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Modes").
-				Description("Choose OpenCode modes written to .opencode/modes. Plan constrains the assistant to planning-first behavior; audit focuses review on risks and defects. Deselect all if you do not use OpenCode modes.").
-				Options(
-					huh.NewOption("Plan mode (plan)", string(types.OpenCodeModeIdPlan)),
-					huh.NewOption("Audit mode (audit)", string(types.OpenCodeModeIdAudit)),
-				).
-				Value(&state.OpenCodeModes),
-		).WithHideFunc(func() bool { return state.Preset != "custom" }),
-
 		// Phase 5
 		huh.NewGroup(
 			huh.NewInput().
@@ -369,30 +347,6 @@ func buildInteractiveForm(state *WizardState) *huh.Form {
 				Placeholder(".specify/memory").
 				Value(&state.MemoryPath),
 		),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("OpenCode Plugins").
-				Description("Optional OpenCode plugins installed via `opencode plugin`. Desktop Commander adds desktop/file automation, Context Files improves project-context loading, and Git Tools adds git-aware helpers. Deselect all to skip plugin installs.").
-				Options(
-					huh.NewOption("Desktop Commander (@opencode/desktop-commander)", "@opencode/desktop-commander"),
-					huh.NewOption("Context Files (@opencode/context-files)", "@opencode/context-files"),
-					huh.NewOption("Git Tools (@opencode/git-tools)", "@opencode/git-tools"),
-				).
-				Value(&state.OpenCodePlugins),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "opencode") || !opencodeBinaryPresent()
-		}),
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				TitleFunc(func() string { return "OpenCode Providers" }, &state.Tools).
-				DescriptionFunc(func() string {
-					return "Authenticated model providers OpenCode-side agents may use during install/model resolution. Anthropic is excluded because OpenCode rejects it here; deselect providers you do not want exposed to OpenCode configs."
-				}, &state.Tools).
-				OptionsFunc(opencodeProviderHuhOptions, &state.Tools).
-				Value(&state.OpenCodeProviders),
-		).WithHideFunc(func() bool {
-			return !containsString(state.Tools, "opencode")
-		}),
 	}
 
 	return theme.NewForm(groups...)

@@ -226,6 +226,22 @@ entries:
     reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
       the asset without depending on vibe-lab at runtime.
     token_rent_relevant: false
+  - path: packages/cli/library/skills/slack-message-formatter.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Slack-ready formatting guidance retained for reusable message polishing.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/slackfmt.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Slack markdown formatting guidance retained for reusable message cleanup.
+    reason_compressed_or_changed: Curated into standalone markdown so LazyAI embeds
+      the asset without depending on vibe-lab at runtime.
+    token_rent_relevant: false
   - path: packages/cli/library/skills/populate/SKILL.md
     kind: skill
     category: setup-core

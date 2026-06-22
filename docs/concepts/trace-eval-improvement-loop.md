@@ -61,7 +61,7 @@ The host tool (OpenCode, Claude Code, Copilot, Pi, OMP, etc.) records the agent 
 
 ## Phase 2: Classify
 
-Trace evidence is classified using the [trace taxonomy](../templates/trace-taxonomy.md) — a structured vocabulary of categories (`context`, `tooling`, `workflow`, `quality`, `adapter`) and granular tags.
+Trace evidence is classified using the embedded library trace taxonomy template (`packages/cli/library/templates/trace-taxonomy.md`) — a structured vocabulary of categories (`context`, `tooling`, `workflow`, `quality`, `adapter`) and granular tags.
 
 Classification is performed by:
 
@@ -147,5 +147,5 @@ The loop's assets (taxonomy, rubrics, holdout sets) are:
 | [Product Boundaries](product-boundaries.md) | The loop's assets are `setup-core` library content; no runtime-adjacent state is required |
 | [Skill Quality](skill-quality.md) | Improvement-loop asset updates must meet skill quality guidelines |
 | [Agent Contracts](agent-contracts.md) | Trace evidence verifies that agents honored their contracts |
-| [Trace Taxonomy](../templates/trace-taxonomy.md) | The classification vocabulary used in Phase 2 |
+| Trace Taxonomy (`packages/cli/library/templates/trace-taxonomy.md`) | The classification vocabulary used in Phase 2 |
 | Eval Rubrics (`packages/cli/library/rubrics/`) | The pass/fail criteria used in Phase 3 |

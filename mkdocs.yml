@@ -109,7 +109,6 @@ nav:
       - Hooks: reference/hooks.md
       - MCP Servers: reference/mcp-servers.md
       - CLI Tools: reference/cli-tools.md
-      - Trace Taxonomy: templates/trace-taxonomy.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

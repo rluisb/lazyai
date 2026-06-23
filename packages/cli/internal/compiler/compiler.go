@@ -2,6 +2,8 @@
 // Ported from the TypeScript compiler/ module.
 package compiler
 
+import "github.com/rluisb/lazyai/packages/cli/internal/types"
+
 // ToolOverrides contains per-tool template metadata.
 type ToolOverrides struct {
 	Description string
@@ -11,7 +13,7 @@ type ToolOverrides struct {
 
 // ToolOverrideMap maps tool IDs to their template overrides.
 var ToolOverrideMap = map[string]ToolOverrides{
-	"opencode": {
+	string(types.ToolIdOpenCode): {
 		Description: "This project uses OpenCode with LazyAI integration.",
 		Notes: "## OpenCode-Specific Notes\n\n" +
 			"- Project config: `opencode.json`\n" +
@@ -21,8 +23,8 @@ var ToolOverrideMap = map[string]ToolOverrides{
 			"- Commands: `.opencode/commands/<name>.md`\n" +
 			"- Multiple config sources merged (project -> global -> env)",
 	},
-	"claude-code": {
-		Description: "This project uses Claude Code with ai-setup integration.",
+	string(types.ToolIdClaudeCode): {
+		Description: "This project uses Claude Code with LazyAI integration.",
 		Notes: "## Claude Code-Specific Notes\n\n" +
 			"- Project settings: `.claude/settings.json`\n" +
 			"- Modular rules: `.claude/rules/<name>.md` (supports `paths` frontmatter for scoping)\n" +
@@ -30,14 +32,30 @@ var ToolOverrideMap = map[string]ToolOverrides{
 			"- Agents: `.claude/agents/<name>.md`\n" +
 			"- Personal overrides: `CLAUDE.local.md` (gitignore this)",
 	},
-	"copilot": {
-		Description: "This project uses GitHub Copilot with ai-setup integration.",
+	string(types.ToolIdCopilot): {
+		Description: "This project uses GitHub Copilot with LazyAI integration.",
 		RootFile:    "copilot-instructions.md",
 		Notes: "## Copilot-Specific Notes\n\n" +
 			"- Repository-wide instructions: `.github/copilot-instructions.md`\n" +
 			"- Path-specific instructions: `.github/instructions/<name>.instructions.md` with `applyTo` frontmatter\n" +
 			"- Reusable prompts: `.github/prompts/<name>.prompt.md`\n" +
 			"- Agent instructions: `AGENTS.md` at project root",
+	},
+	string(types.ToolIdPi): {
+		Description: "This project uses Pi with LazyAI integration.",
+		Notes:       "## Pi-Specific Notes\n\n- Agents: `.pi/agents/<name>.md`\n- Skills: `.pi/skills/<name>/SKILL.md`\n- Prompts: `.pi/prompts/<name>.md`\n- Safety hooks ship as `.pi/extensions/*.ts`.",
+	},
+	string(types.ToolIdOmp): {
+		Description: "This project uses OMP with LazyAI integration.",
+		Notes:       "## OMP-Specific Notes\n\n- Agents: `.omp/agents/<name>.md`\n- Skills: `.omp/skills/<name>/SKILL.md`\n- Project instructions: `AGENTS.md`.",
+	},
+	string(types.ToolIdKiro): {
+		Description: "This project uses Kiro with LazyAI integration.",
+		Notes:       "## Kiro-Specific Notes\n\n- Agents: `.kiro/agents/<name>.md`\n- Skills: `.kiro/skills/<name>/SKILL.md`\n- Prompts: `.kiro/prompts/<name>.md`.",
+	},
+	string(types.ToolIdAntigravity): {
+		Description: "This project uses Antigravity with LazyAI integration.",
+		Notes:       "## Antigravity-Specific Notes\n\n- Gemini settings: `.gemini/settings.json`\n- Hooks: `.gemini/hooks/lazyai/*`\n- Skills: `.agents/skills/<name>/SKILL.md`.",
 	},
 }
 

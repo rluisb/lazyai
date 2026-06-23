@@ -54,6 +54,18 @@ const (
 	ToolIdAntigravity ToolId = "antigravity"
 )
 
+// SupportedToolIDs is the canonical ordered set of LazyAI compile targets.
+// Keep target-specific registries derived from this list or covered by tests.
+var SupportedToolIDs = []ToolId{
+	ToolIdOpenCode,
+	ToolIdClaudeCode,
+	ToolIdCopilot,
+	ToolIdPi,
+	ToolIdOmp,
+	ToolIdKiro,
+	ToolIdAntigravity,
+}
+
 // AgentId identifies a canonical agent role.
 type AgentId string
 
@@ -805,12 +817,12 @@ func IsValidSetupScope(s SetupScope) bool {
 
 // IsValidToolId reports whether t is a recognized ToolId value.
 func IsValidToolId(t ToolId) bool {
-	switch t {
-	case ToolIdOpenCode, ToolIdClaudeCode, ToolIdCopilot, ToolIdPi, ToolIdOmp, ToolIdAntigravity, ToolIdKiro:
-		return true
-	default:
-		return false
+	for _, supported := range SupportedToolIDs {
+		if t == supported {
+			return true
+		}
 	}
+	return false
 }
 
 // ParseOperationResult parses a string into an OperationResult, returning an

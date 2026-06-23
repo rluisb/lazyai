@@ -10,6 +10,18 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
+func TestToolOverrideMapCoversSupportedTools(t *testing.T) {
+	for _, tool := range types.SupportedToolIDs {
+		override, ok := ToolOverrideMap[string(tool)]
+		if !ok {
+			t.Fatalf("ToolOverrideMap missing %s", tool)
+		}
+		if override.Description == "" {
+			t.Fatalf("ToolOverrideMap[%s] missing description", tool)
+		}
+	}
+}
+
 func TestFragmentResolver_VariableInterpolation(t *testing.T) {
 	resolver := NewFragmentResolver("")
 

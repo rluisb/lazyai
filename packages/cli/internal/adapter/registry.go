@@ -21,15 +21,41 @@ func NewRegistry() *Registry {
 		adapters: make(map[types.ToolId]ToolAdapter),
 	}
 
-	r.register(&OpenCodeAdapter{})
-	r.register(&ClaudeCodeAdapter{})
-	r.register(&CopilotAdapter{})
-	r.register(&PiAdapter{})
-	r.register(&OmpAdapter{})
-	r.register(&KiroAdapter{})
-	r.register(&AntigravityAdapter{})
+	for _, id := range types.SupportedToolIDs {
+		a, err := builtinAdapter(id)
+		if err != nil {
+			panic(err)
+		}
+		r.register(a)
+	}
 
 	return r
+}
+
+// NewBuiltinAdapter constructs the built-in adapter for a supported tool ID.
+func NewBuiltinAdapter(id types.ToolId) (ToolAdapter, error) {
+	return builtinAdapter(id)
+}
+
+func builtinAdapter(id types.ToolId) (ToolAdapter, error) {
+	switch id {
+	case types.ToolIdOpenCode:
+		return &OpenCodeAdapter{}, nil
+	case types.ToolIdClaudeCode:
+		return &ClaudeCodeAdapter{}, nil
+	case types.ToolIdCopilot:
+		return &CopilotAdapter{}, nil
+	case types.ToolIdPi:
+		return &PiAdapter{}, nil
+	case types.ToolIdOmp:
+		return &OmpAdapter{}, nil
+	case types.ToolIdKiro:
+		return &KiroAdapter{}, nil
+	case types.ToolIdAntigravity:
+		return &AntigravityAdapter{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported tool %q", id)
+	}
 }
 
 func (r *Registry) register(a ToolAdapter) {

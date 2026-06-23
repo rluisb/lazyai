@@ -45,6 +45,7 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	}
 
 	relPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
+	relPath = filepath.ToSlash(relPath)
 	hash, _ := files.FileHash(settingsPath)
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path: relPath, Hash: hash, Source: "antigravity/settings.json", Owner: types.FileOwnerLibrary,
@@ -77,6 +78,7 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	}
 
 	relHooksPath, _ := filepath.Rel(ctx.TargetDir, hooksJSONPath)
+	relHooksPath = filepath.ToSlash(relHooksPath)
 	hash, _ = files.FileHash(hooksJSONPath)
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path: relHooksPath, Hash: hash, Source: "antigravity/hooks.json", Owner: types.FileOwnerLibrary,

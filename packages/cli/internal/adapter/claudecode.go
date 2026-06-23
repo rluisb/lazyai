@@ -87,6 +87,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	}
 	if !preExisted {
 		relPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
+		relPath = filepath.ToSlash(relPath)
 		hash, _ := files.FileHash(settingsPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 			Path: relPath, Hash: hash, Source: "generated", Owner: types.FileOwnerLibrary,
@@ -103,6 +104,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 			return nil, err
 		}
 		relPath, _ := filepath.Rel(ctx.TargetDir, sampleRulePath)
+		relPath = filepath.ToSlash(relPath)
 		hash, _ := files.FileHash(sampleRulePath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 			Path: relPath, Hash: hash, Source: "generated", Owner: types.FileOwnerLibrary,

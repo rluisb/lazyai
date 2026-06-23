@@ -20,6 +20,7 @@ func TestAuthListCmd(t *testing.T) {
 	dbPath := db.DefaultDBPath(tmpDir)
 	database, err := db.Open(dbPath)
 	assert.NoError(t, err)
+	defer database.Close()
 	err = db.RunMigrations(database)
 	assert.NoError(t, err)
 

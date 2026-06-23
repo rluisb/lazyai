@@ -195,6 +195,7 @@ func (a *CopilotAdapter) copySubdirAsPromptsFromFS(ctx *AdapterContext, libFS fs
 // src is an absolute filesystem path; sourcePath is the library-relative path for tracking.
 func (a *CopilotAdapter) copyFileWithRecord(src, dest string, ctx *AdapterContext, sourcePath string) error {
 	relPath, _ := filepath.Rel(ctx.TargetDir, dest)
+	relPath = filepath.ToSlash(relPath)
 
 	effectiveStrategy := ctx.Strategy
 	if override, ok := ctx.PerFileOverrides[dest]; ok {

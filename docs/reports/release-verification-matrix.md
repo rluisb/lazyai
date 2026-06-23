@@ -1,8 +1,8 @@
 # Release Verification Matrix
 
 > **Last updated:** 2026-06-23
-> **Issue:** [#350](https://github.com/rluisb/lazyai/issues/350)
-> **Status:** Documented matrix with CI automation for Linux, macOS, and Windows; macOS arm64 also verified locally.
+> **Issue:** [#366](https://github.com/rluisb/lazyai/issues/366)
+> **Status:** Documented matrix with CI automation for Linux, macOS, and Windows; macOS arm64 also verified locally. Windows promoted from build-only to test/build gate.
 
 ## Platform Coverage
 
@@ -11,14 +11,14 @@
 | **Linux (ubuntu-latest)** | `.github/workflows/cross-platform.yml`, existing CI | Yes | Yes | Yes | Yes | CI workflow added; existing Linux CI already active |
 | **macOS (darwin/arm64)** | `.github/workflows/cross-platform.yml` (`macos-latest`) | Yes | Yes | N/A | N/A | Verified locally (2026-06-23); CI workflow added |
 | **macOS (darwin/amd64)** | Cross-compile only | Manual | Cross-compile | N/A | Manual | Not runtime-verified |
-| **Windows (amd64)** | `.github/workflows/cross-platform.yml` (`windows-latest`) | Not yet | Yes | N/A | N/A | CI build gate added; package tests need portability follow-up |
+| **Windows (amd64)** | `.github/workflows/cross-platform.yml` (`windows-latest`) | Yes | Yes | N/A | N/A | CI test/build gate added (2026-06-23); package tests made Windows-portable |
 
 ## Verification Commands
 
-Platform coverage is staged. Linux and macOS runners must pass package tests before release; Windows is currently a build-only gate until the package test suite is made Windows-portable.
+All three platforms (Linux, macOS, Windows) must pass package tests before release.
 
 ```bash
-# 1. Go tests (Linux/macOS release gates)
+# 1. Go tests (all platform release gates)
 cd packages/cli && go test ./... -count=1 -timeout 120s
 cd packages/diffviewer && go test ./... -count=1 -timeout 60s
 
@@ -82,7 +82,11 @@ rm -rf "$TMP"
 
 ### Windows
 
-- **amd64**: The new cross-platform workflow builds `lazyai-cli` and `lazyai-diffviewer` on `windows-latest`. Full `go test ./...` is not a Windows release gate yet because existing package tests assume POSIX permissions, POSIX shell/path behavior, or globally isolated home-directory state.
+- **amd64**: The cross-platform workflow runs `go test ./...` on both `packages/cli` and `packages/diffviewer` on `windows-latest`. Package tests have been made Windows-portable:
+  - Hardcoded `/tmp/` paths replaced with `t.TempDir()` or `/placeholder/` strings.
+  - `TestChmodScriptsExecutable` skips on Windows (POSIX permissions are a no-op).
+  - Shell-script stubs for fake binaries (`#!/bin/sh`) remain as test data content (not executed on Windows).
+  - Sidecar resolver tests use `os.UserHomeDir()` via `setupTestEnv` with `HOME` override (Windows uses `os.UserHomeDir()` which respects `HOME` on Git Bash).
 - **Known Windows-specific code**: `update-self.go` (`.exe` extension, `.new` rename pattern), `notify.go` (unsupported — returns error), `secret.go` (unsupported — returns error).
 - **Shell scripts**: All test scripts use `#!/usr/bin/env bash` and are not compatible with Windows without WSL or Git Bash.
 - **MkDocs**: Not part of the Windows verification scope; docs build runs on Ubuntu.
@@ -102,7 +106,7 @@ rm -rf "$TMP"
 
 ### Cross-Platform CI Workflow
 
-A dedicated cross-platform workflow (`.github/workflows/cross-platform.yml`) has been added to run tests/builds on Linux and macOS and build-only checks on Windows. See that file for details.
+A dedicated cross-platform workflow (`.github/workflows/cross-platform.yml`) runs tests and builds on Linux, macOS, and Windows. See that file for details.
 
 ## Release Checklist
 
@@ -111,7 +115,7 @@ Before tagging a release, verify:
 - [ ] **Linux (CI)**: All CI workflows pass on ubuntu-latest
 - [ ] **macOS (CI/manual)**: `go test ./packages/cli/...` and build pass on `macos-latest`; manual darwin/arm64 smoke can be run before release
 - [ ] **Cross-compile (CI)**: `make cli-snapshot` succeeds for all 5 platform targets
-- [ ] **Windows (CI)**: CLI and diffviewer builds pass on `windows-latest`
+- [ ] **Windows (CI)**: `go test ./packages/cli/...`, `go test ./packages/diffviewer/...`, and builds pass on `windows-latest`
 - [ ] **Documentation**: `mkdocs build --strict` passes (checked on Ubuntu)
 - [ ] **Release assets**: Release workflow produces binaries for all 5 platform targets
 
@@ -119,5 +123,5 @@ Before tagging a release, verify:
 
 | Issue | Description | Priority |
 |---|---|---|
-| — | Make package tests Windows-portable, then promote Windows from build-only to test/build gate | P2 |
+| #366 | Make package tests Windows-portable, then promote Windows from build-only to test/build gate | P2 — Done |
 | — | Add macOS disposable-project smoke test once the smoke harness is portable | P3 |

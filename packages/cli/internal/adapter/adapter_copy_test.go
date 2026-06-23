@@ -3,6 +3,7 @@ package adapter
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"testing/fstest"
 
@@ -351,6 +352,9 @@ func TestCopyLibraryDirectory_RecursiveNestedPaths(t *testing.T) {
 // --- Test: ChmodScriptsExecutable makes .sh executable ---
 
 func TestChmodScriptsExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("ChmodScriptsExecutable is a no-op on Windows (no POSIX permissions)")
+	}
 	dir := t.TempDir()
 
 	scriptPath := filepath.Join(dir, "test.sh")

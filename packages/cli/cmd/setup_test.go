@@ -33,7 +33,7 @@ func TestRunSetupScanOutputsInventoryJSON(t *testing.T) {
 	withWorkingDir(t, dir)
 
 	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	setTestHome(t, homeDir)
 	if err := os.MkdirAll(filepath.Join(homeDir, ".config", "opencode"), 0o755); err != nil {
 		t.Fatalf("mkdir home config: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestRunSetupListOutputsDeterministicJSON(t *testing.T) {
 	withWorkingDir(t, dir)
 
 	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	setTestHome(t, homeDir)
 	mustWriteSetupTestFile(t, filepath.Join(dir, ".ai", "agents", "test-agent", "AGENT.md"), "# Test Agent\n\nPrompt body.\n")
 
 	cmd := newSetupTestCommand(t)
@@ -169,7 +169,7 @@ func TestRunSetupListGlobalFiltersUnsupportedTargets(t *testing.T) {
 	withWorkingDir(t, dir)
 
 	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	setTestHome(t, homeDir)
 	_ = os.MkdirAll(filepath.Join(homeDir, ".omp", "agent"), 0o755)
 	_ = os.MkdirAll(filepath.Join(homeDir, ".kiro"), 0o755)
 
@@ -217,7 +217,7 @@ func TestRunSetupDryRunPlansSelectedToolWithoutWriting(t *testing.T) {
 	withWorkingDir(t, dir)
 
 	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	setTestHome(t, homeDir)
 	mustWriteSetupTestFile(t, filepath.Join(dir, ".claude", "settings.json"), `{"ok":true}`)
 
 	cmd := newSetupTestCommand(t)
@@ -271,7 +271,7 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 	withWorkingDir(t, dir)
 
 	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	setTestHome(t, homeDir)
 	_ = os.MkdirAll(filepath.Join(homeDir, ".omp", "agent"), 0o755)
 	_ = os.MkdirAll(filepath.Join(homeDir, ".kiro"), 0o755)
 

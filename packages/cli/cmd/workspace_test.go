@@ -13,7 +13,7 @@ import (
 
 func TestWorkspaceAdd_CreatesConfigAndAutoActivatesFirstWorkspace(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	project := t.TempDir()
@@ -51,7 +51,7 @@ func TestWorkspaceAdd_CreatesConfigAndAutoActivatesFirstWorkspace(t *testing.T) 
 
 func TestWorkspaceAdd_RejectsDuplicateName(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	project := t.TempDir()
@@ -77,7 +77,7 @@ func TestWorkspaceAdd_RejectsDuplicateName(t *testing.T) {
 
 func TestWorkspaceSwitch_UpdatesActiveWorkspace(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	projectOne := t.TempDir()
@@ -113,7 +113,7 @@ func TestWorkspaceSwitch_UpdatesActiveWorkspace(t *testing.T) {
 
 func TestWorkspaceStatus_ReportsMissingActivePath(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	project := t.TempDir()
@@ -152,7 +152,7 @@ func TestWorkspaceStatus_ReportsMissingActivePath(t *testing.T) {
 
 func TestWorkspaceList_UsesSidecarWorkspaceConfigStore(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	project := t.TempDir()

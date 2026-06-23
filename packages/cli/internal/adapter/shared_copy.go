@@ -95,6 +95,7 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 	if err != nil {
 		relPath = dest
 	}
+	relPath = filepath.ToSlash(relPath)
 
 	effectiveStrategy := ctx.Strategy
 	if override, ok := ctx.PerFileOverrides[dest]; ok {
@@ -187,6 +188,7 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 	if err != nil {
 		relPath = dest
 	}
+	relPath = filepath.ToSlash(relPath)
 
 	effectiveStrategy := ctx.Strategy
 	if override, ok := ctx.PerFileOverrides[dest]; ok {

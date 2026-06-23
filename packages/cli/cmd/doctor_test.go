@@ -26,7 +26,7 @@ func TestDoctorReportsStrayAgentsAndMetadataGapsInJSON(t *testing.T) {
 		t.Fatalf("write stray AGENTS: %v", err)
 	}
 	newSpec := `---
-created_at: 2026-04-17T10:00:00Z
+created_at: 2025-04-17T10:00:00Z
 updated_at: 2026-04-17T10:00:00Z
 created_by: planner
 updated_by: planner
@@ -56,12 +56,13 @@ updated_by: planner
 		t.Fatalf("expected metadata gaps, got %#v", payload["metadataGaps"])
 	}
 }
+
 func TestDoctorJSONOmitsLegacyStaleMcpSection(t *testing.T) {
 	dir := t.TempDir()
 	writeDoctorManifest(t, dir)
 
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{
   "mcpServers": {
     "memory": {

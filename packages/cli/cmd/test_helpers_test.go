@@ -38,6 +38,14 @@ func ensureTestLibraryFS(t *testing.T) {
 	library.SetEmbeddedFS(os.DirFS(filepath.Join(repoRoot, "library")))
 }
 
+func setTestHome(t *testing.T, home string) {
+	t.Helper()
+	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	}
+}
+
 func withWorkingDir(t *testing.T, dir string) {
 	t.Helper()
 	oldWD, err := os.Getwd()

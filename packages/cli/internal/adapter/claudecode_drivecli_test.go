@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -44,10 +45,19 @@ func TestClaudeAdapter_DriveCLI_CallsClaudeBinary(t *testing.T) {
 	// Stub claude binary that records its args.
 	stubDir := t.TempDir()
 	recordFile := filepath.Join(stubDir, "claude-args.txt")
-	stubScript := fmt.Sprintf("#!/bin/sh\necho \"$@\" >> %s\nexit 1\n", recordFile)
-	stubPath := filepath.Join(stubDir, "claude")
-	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
-		t.Fatal(err)
+	var stubPath string
+	if runtime.GOOS == "windows" {
+		stubScript := fmt.Sprintf("@echo off\r\necho %%* >> %s\r\nexit /b 1\r\n", recordFile)
+		stubPath = filepath.Join(stubDir, "claude.bat")
+		if err := os.WriteFile(stubPath, []byte(stubScript), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		stubScript := fmt.Sprintf("#!/bin/sh\necho \"$@\" >> %s\nexit 1\n", recordFile)
+		stubPath = filepath.Join(stubDir, "claude")
+		if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Canonical .ai/mcp.json so the adapter has a server to register.
@@ -89,10 +99,19 @@ func TestClaudeAdapter_DriveCLI_WorkspaceUsesWorkspaceRootForMCPRegistration(t *
 
 	stubDir := t.TempDir()
 	recordFile := filepath.Join(stubDir, "claude-cwd.txt")
-	stubScript := fmt.Sprintf("#!/bin/sh\npwd >> %s\nexit 1\n", recordFile)
-	stubPath := filepath.Join(stubDir, "claude")
-	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
-		t.Fatal(err)
+	var stubPath string
+	if runtime.GOOS == "windows" {
+		stubScript := fmt.Sprintf("@echo off\r\necho %%cd%% >> %s\r\nexit /b 1\r\n", recordFile)
+		stubPath = filepath.Join(stubDir, "claude.bat")
+		if err := os.WriteFile(stubPath, []byte(stubScript), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		stubScript := fmt.Sprintf("#!/bin/sh\npwd >> %s\nexit 1\n", recordFile)
+		stubPath = filepath.Join(stubDir, "claude")
+		if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	aiDir := filepath.Join(workspaceRoot, ".ai")
@@ -117,6 +136,7 @@ func TestClaudeAdapter_DriveCLI_WorkspaceUsesWorkspaceRootForMCPRegistration(t *
 		t.Fatalf("expected claude CLI to be called using workspace canonical MCP: %v", err)
 	}
 	for _, got := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		got = strings.TrimSpace(got)
 		if got != workspaceRoot {
 			t.Fatalf("claude CLI working dir = %q, want workspace root %q", got, workspaceRoot)
 		}

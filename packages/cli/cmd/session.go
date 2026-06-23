@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
+	pathpkg "path"
 	"strings"
 	"time"
 
@@ -187,10 +187,10 @@ func writeSessionHandoff(db *runtime.DB, mgr *session.Manager, sessionID string)
 	if path == "" {
 		path = defaultHandoffPath(s)
 		if path == "" {
-			path = filepath.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-session-%s.md", time.Now().UTC().Format("2006-01-02"), strings.TrimPrefix(s.ID, "ses_")))
+			path = pathpkg.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-session-%s.md", time.Now().UTC().Format("2006-01-02"), strings.TrimPrefix(s.ID, "ses_")))
 		}
 		if files.FileExists(path) {
-			path = filepath.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-%s-%s.md", time.Now().UTC().Format("2006-01-02"), handoffTopicSlug(s.Goal), strings.TrimPrefix(s.ID, "ses_")))
+			path = pathpkg.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-%s-%s.md", time.Now().UTC().Format("2006-01-02"), handoffTopicSlug(s.Goal), strings.TrimPrefix(s.ID, "ses_")))
 		}
 	}
 
@@ -216,7 +216,7 @@ func defaultHandoffPath(s *session.Session) string {
 		return ""
 	}
 
-	return filepath.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-%s.md", datePart, topic))
+	return pathpkg.Join("specs", "memory", "handoffs", fmt.Sprintf("%s-%s.md", datePart, topic))
 }
 
 func buildSessionHandoffDocument(s *session.Session, dispatches []session.Dispatch) handoff.Document {

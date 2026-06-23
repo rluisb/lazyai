@@ -200,11 +200,3 @@ var opencodeModeDescriptions = map[string]string{
 	"plan":  "Constrains OpenCode to planning-first behavior.",
 	"audit": "Focuses OpenCode on risks, defects, and review findings.",
 }
-
-var opencodePluginDescriptions = map[string]string{
-	"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning": "Reduces OpenCode context bloat dynamically.",
-	"https://github.com/spoons-and-mirrors/subtask2":                   "Adds background subtask helpers.",
-	"https://github.com/JRedeker/opencode-shell-strategy":              "Improves shell execution strategy.",
-	"https://github.com/boxpositron/envsitter-guard":                   "Guards environment-variable use.",
-	"https://github.com/kdcokenny/opencode-background-agents":          "Enables async background-agent workflows.",
-}

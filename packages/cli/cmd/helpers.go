@@ -110,7 +110,7 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 	var chatmodes []types.ChatModeId
 	var opencodeCommands []types.OpenCodeCommandId
 	var opencodeModes []types.OpenCodeModeId
-	var opencodePlugins []string
+	var opencodeProviders []string
 	var infra []types.InfraId
 
 	if presetLevel != types.PresetLevelMinimal {
@@ -147,10 +147,8 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		}
 	}
 
-	// Plugin selections come from Phase5 regardless of preset.
-	var opencodeProviders []string
+	// Providers come from Phase5 regardless of preset.
 	if result.Phase5 != nil {
-		opencodePlugins = result.Phase5.OpenCodePlugins
 		opencodeProviders = result.Phase5.OpenCodeProviders
 	}
 
@@ -218,7 +216,6 @@ func buildScaffoldContext(result *wizard.WizardResult, config *wizard.WizardConf
 		ChatModes:           chatmodes,
 		OpenCodeCommands:    opencodeCommands,
 		OpenCodeModes:       opencodeModes,
-		OpenCodePlugins:     opencodePlugins,
 		OpenCodeProviders:   opencodeProviders,
 		Templates:           templates,
 		Rules:               rules,
@@ -396,7 +393,6 @@ func writeStoreFromScaffoldResult(database *db.DB, ctx *scaffold.ScaffoldContext
 	storeData.Selections.ChatModes = ctx.ChatModes
 	storeData.Selections.OpenCodeCommands = ctx.OpenCodeCommands
 	storeData.Selections.OpenCodeModes = ctx.OpenCodeModes
-	storeData.Selections.OpenCodePlugins = ctx.OpenCodePlugins
 	storeData.Selections.OpenCodeProviders = ctx.OpenCodeProviders
 	storeData.Selections.Infra = ctx.Infra
 	storeData.Selections.Features = ctx.Features

@@ -1,45 +1,9 @@
 package wizard
 
 import (
-	"encoding/json"
-	"os"
 	"reflect"
 	"testing"
 )
-
-func TestOpenCodePluginsExactURLs(t *testing.T) {
-	t.Parallel()
-
-	want := []string{
-		"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
-		"https://github.com/spoons-and-mirrors/subtask2",
-		"https://github.com/JRedeker/opencode-shell-strategy",
-		"https://github.com/boxpositron/envsitter-guard",
-		"https://github.com/kdcokenny/opencode-background-agents",
-	}
-
-	if !reflect.DeepEqual(opencodePluginURLs, want) {
-		t.Fatalf("opencodePluginURLs = %#v, want %#v", opencodePluginURLs, want)
-	}
-
-	data, err := os.ReadFile("../../library/opencode/plugins.json")
-	if err != nil {
-		t.Fatalf("read OpenCode plugin catalog: %v", err)
-	}
-	var catalog []struct {
-		Module string `json:"module"`
-	}
-	if err := json.Unmarshal(data, &catalog); err != nil {
-		t.Fatalf("parse OpenCode plugin catalog: %v", err)
-	}
-	got := make([]string, 0, len(catalog))
-	for _, plugin := range catalog {
-		got = append(got, plugin.Module)
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("OpenCode plugin catalog = %#v, want %#v", got, want)
-	}
-}
 
 func TestBuildPhase5Result(t *testing.T) {
 	t.Parallel()
@@ -87,7 +51,6 @@ func TestBuildPhase5Result(t *testing.T) {
 				tt.args.ObsidianVaultPath,
 				tt.args.EnableCodegraph,
 				tt.args.CodegraphDataPath,
-				tt.args.OpenCodePlugins,
 			)
 
 			if !reflect.DeepEqual(*got, tt.want) {
@@ -100,15 +63,8 @@ func TestBuildPhase5Result(t *testing.T) {
 func TestPhase5StepInfoTitles(t *testing.T) {
 	t.Parallel()
 
-	state := Phase5Result{}
-	if got, want := phase5MemoryPathStepInfo(state).Title(), "Optional Tooling — 1/1: Memory Path"; got != want {
+	if got, want := phase5MemoryPathStepInfo().Title(), "Optional Tooling — 1/2: Memory Path"; got != want {
 		t.Fatalf("phase5MemoryPathStepInfo().Title() = %q, want %q", got, want)
-	}
-	if got, want := phase5MemoryPathStepInfo(state, true).Title(), "Optional Tooling — 1/2: Memory Path"; got != want {
-		t.Fatalf("phase5MemoryPathStepInfo(showPlugins).Title() = %q, want %q", got, want)
-	}
-	if got, want := phase5OpenCodePluginsStepInfo(state, true).Title(), "Optional Tooling — 2/2: OpenCode Plugins"; got != want {
-		t.Fatalf("phase5OpenCodePluginsStepInfo().Title() = %q, want %q", got, want)
 	}
 }
 

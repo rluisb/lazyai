@@ -86,7 +86,6 @@ func buildStoredScaffoldContext(targetDir string, library Library, storeData *ty
 		ChatModes:         storeData.Selections.ChatModes,
 		OpenCodeCommands:  storeData.Selections.OpenCodeCommands,
 		OpenCodeModes:     storeData.Selections.OpenCodeModes,
-		OpenCodePlugins:   storeData.Selections.OpenCodePlugins,
 		OpenCodeProviders: storeData.Selections.OpenCodeProviders,
 		Templates:         storeData.Selections.Templates,
 		Rules:             storeData.Selections.Rules,

@@ -38,7 +38,7 @@ The Antigravity adapter generates native configuration for the Antigravity/Gemin
 
 ## MCP Behavior
 
-Antigravity MCP is compiled via `CompileMCPForTool`. MCP servers are written to `~/.gemini/config/mcp_config.json` using the Gemini `mcpServers` shape.
+Antigravity MCP is compiled via `CompileMCPForTool`. MCP servers are written to `~/.gemini/config/mcp_config.json` using the Gemini `mcpServers` shape. MCP compile is project/workspace-scoped even though the output file is user-level; global scope setup is not supported.
 
 ## Hook Behavior
 

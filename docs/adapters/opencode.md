@@ -18,8 +18,7 @@ The OpenCode adapter generates native configuration for the [OpenCode](https://g
 | `.opencode/commands/<name>.md` | Slash commands |
 | `.opencode/modes/<name>.md` | Chat modes |
 | `.opencode/templates/<name>.md` | Speckit templates |
-| `.opencode/lazyai.mcp.jsonc` | Legacy MCP config (migration) |
-| `.opencode/mcp.json` | MCP server configuration |
+| `.opencode/lazyai.mcp.jsonc` | Legacy MCP config (migration input only) |
 | `.opencode/plugins/` | Plugin hooks |
 | `opencode.json` | Root config with instructions, agents, permissions |
 | `AGENTS.md` | Root instructions |
@@ -38,7 +37,7 @@ The OpenCode adapter generates native configuration for the [OpenCode](https://g
 
 ## MCP Behavior
 
-OpenCode MCP is compiled via `CompileMCPForTool`. The adapter writes to `.opencode/mcp.json` (new) and maintains a legacy `.opencode/lazyai.mcp.jsonc` for backward compatibility. User-authored servers are preserved across re-runs.
+OpenCode MCP is compiled via `CompileMCPForTool`. The adapter merges MCP servers into the root `opencode.json` config file. Legacy `.opencode/lazyai.mcp.jsonc` entries are read as migration input only; the current compiler does not write that file. User-authored servers are preserved across re-runs.
 
 ## Hook Behavior
 

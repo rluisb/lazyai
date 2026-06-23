@@ -43,7 +43,7 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add Copilot during init | `lazyai-cli init --tools copilot --preset standard --no-interactive` |
+| Add Copilot during init | `lazyai-cli init --scope project --tools copilot --preset standard --no-interactive` |
 | Add Copilot later | `lazyai-cli add --tools copilot --no-interactive` |
 | Compile only Copilot MCP | `lazyai-cli compile --tool copilot` |
 | Build a Copilot CLI bundle | `lazyai-cli build-plugin --target copilot-cli --out ./dist/copilot` |

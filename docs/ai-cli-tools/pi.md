@@ -38,9 +38,9 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add Pi during init | `lazyai-cli init --tools pi --preset standard --no-interactive` |
+| Add Pi during init | `lazyai-cli init --scope project --tools pi --preset standard --no-interactive` |
 | Add Pi later | `lazyai-cli add --tools pi --no-interactive` |
-| Include prompts/skills from full preset | `lazyai-cli init --tools pi --preset full --no-interactive` |
+| Include prompts/skills from full preset | `lazyai-cli init --scope project --tools pi --preset full --no-interactive` |
 | Build a Pi bundle | `lazyai-cli build-plugin --target pi --out ./dist/pi` |
 
 ## Example

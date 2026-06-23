@@ -23,7 +23,7 @@
 | Agents | yes | yes | yes | — | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
 | Skills | yes | yes | yes | yes | yes | yes | yes |
-| Hooks | yes | yes | yes | yes | yes | yes | yes |
+| Hooks | yes | yes | yes | yes | yes | yes | instruction-only |
 | Commands | yes | yes | — | — | yes | — | — |
 | Prompt templates | — | — | yes | yes | — | — | yes |
 | Chat modes | yes | — | yes | — | — | — | — |
@@ -112,8 +112,8 @@ Pi and Antigravity are project/workspace-only surfaces (`scope.go` line 32: `cas
 ### Pi — MCP is a no-op
 Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:81-83`). The adapter declares MCP capability for future compatibility, but no MCP configuration is emitted for Pi. Pi has no native MCP surface.
 
-### Kiro — No specs or steering
-Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). The adapter installs agents, skills, prompts, hooks, MCP, permissions, and global config, but specs and steering are intentionally absent.
+### Kiro — No specs or steering; hooks are instruction-only
+Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). Hooks are instruction-only — no runtime `.kiro/hooks` files are emitted (`capabilities.go:163-164`). The adapter installs agents, skills, prompts, MCP, permissions, and global config, but specs, steering, and runtime hook files are intentionally absent.
 
 ### OMP — Beta status
 OMP is marked beta because its partially JS-rendered official documentation has not been fully snapshot-verified. The adapter is functional and tested, but the compliance surface may shift.

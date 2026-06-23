@@ -43,6 +43,10 @@ Tags are the granular classification within a category. An evidence item MUST ha
 | `assumptions_recorded` | Agent explicitly recorded an assumption or uncertainty |
 | `prior_decision` | Agent referenced a prior decision, ADR, or memory entry |
 | `instructions_loaded` | Agent read skill, rule, or instruction files |
+| `missing_project_context` | Agent lacked necessary project context (spec, codebase, env) before acting |
+| `stale_memory` | Agent relied on outdated or stale memory/context |
+| `bad_retrieval` | Agent retrieved wrong or irrelevant information from search/lookup |
+| `ignored_user_constraint` | Agent proceeded despite an explicit user constraint or boundary |
 
 ### 2.2 Tooling tags
 
@@ -55,6 +59,10 @@ Tags are the granular classification within a category. An evidence item MUST ha
 | `tool_retry` | Agent retried a tool call after failure |
 | `tool_fallback` | Agent switched to an alternative tool or approach |
 | `tool_chain` | Agent used multiple tools in sequence for one logical operation |
+| `wrong_tool` | Agent chose an inappropriate tool for the task |
+| `missing_tool` | Agent needed a tool that was not available or not used |
+| `unsafe_tool_use` | Agent used a tool in an unsafe or destructive way (e.g., destructive git, rm -rf) |
+| `unhandled_tool_error` | Agent ignored or failed to handle a tool error |
 
 ### 2.3 Workflow tags
 
@@ -68,6 +76,11 @@ Tags are the granular classification within a category. An evidence item MUST ha
 | `handoff` | Agent produced or consumed a handoff document |
 | `lifecycle_change` | Agent changed its lifecycle label |
 | `escalation` | Agent escalated a decision outside its scope |
+| `skipped_research` | Agent proceeded to plan/implement without adequate research |
+| `skipped_plan` | Agent implemented without creating or following a plan |
+| `skipped_tests` | Agent delivered changes without running or adding tests |
+| `weak_handoff` | Agent produced an incomplete or low-quality handoff |
+| `missing_human_gate` | Agent proceeded past a decision point that required human approval |
 
 ### 2.4 Quality tags
 
@@ -83,6 +96,11 @@ Tags are the granular classification within a category. An evidence item MUST ha
 | `ac_satisfied` | An acceptance criterion was satisfied |
 | `ac_failed` | An acceptance criterion was not satisfied |
 | `regression_detected` | A change introduced a regression |
+| `hallucinated_api` | Agent referenced a non-existent API, function, or library |
+| `overbroad_change` | Agent made changes beyond what the task required |
+| `style_mismatch` | Agent produced code that does not match project style conventions |
+| `incomplete_fix` | Agent's fix addresses only part of the problem |
+| `no_evidence` | Agent made claims without supporting evidence |
 
 ### 2.5 Adapter tags
 
@@ -94,6 +112,10 @@ Tags are the granular classification within a category. An evidence item MUST ha
 | `speculative_avoided` | Agent explicitly avoided speculative or out-of-scope work |
 | `escalation` | Agent escalated a design decision outside task scope |
 | `minimal_change` | Agent made the smallest change that satisfies the requirement |
+| `generated_output_drift` | Generated output diverged from the expected format or contract |
+| `unsupported_surface_feature` | Agent used a feature not supported by the target tool surface |
+| `broken_mcp_mapping` | MCP tool mapping was incorrect or incomplete for the target |
+| `hook_not_emitted` | A required lifecycle hook was not emitted or not handled |
 
 ---
 

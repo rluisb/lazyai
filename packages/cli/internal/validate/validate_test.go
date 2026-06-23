@@ -230,3 +230,162 @@ func TestValidateManifestMissingTolerated(t *testing.T) {
 		t.Fatalf("missing manifest must be tolerated; issues: %+v", report.Issues)
 	}
 }
+
+func issuesForCode(report Report, code string) []Issue {
+	var out []Issue
+	for _, issue := range report.Issues {
+		if issue.Code == code {
+			out = append(out, issue)
+		}
+	}
+	return out
+}
+
+func TestValidateSkillsSemanticWarnings(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	// Skill with only name and description — no trigger, non_trigger, evidence, output.
+	writeFile(t, filepath.Join(ai, "skills", "minimal.md"), "---\nname: minimal\ndescription: A minimal skill\n---\n# Minimal\n")
+	// Fully specified skill — should produce no semantic warnings.
+	writeFile(t, filepath.Join(ai, "skills", "full.md"), "---\nname: full\ndescription: A full skill\n---\n# Full\n\n## When to use\nUse when full validation is needed.\n\n## When not to use\nDo not use for unrelated work.\n\n## Evidence\nRecord source evidence.\n\n## Output\nReturn a structured report.\n")
+
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+
+	// Warnings must not make HasErrors true.
+	if report.HasErrors() {
+		t.Fatalf("semantic warnings must not cause HasErrors; issues: %+v", report.Issues)
+	}
+
+	// Minimal skill should have all 4 semantic warnings.
+	for _, code := range []string{"skill.missing_trigger", "skill.missing_non_trigger", "skill.missing_evidence", "skill.missing_output"} {
+		issues := issuesForCode(report, code)
+		if len(issues) == 0 {
+			t.Errorf("expected at least one issue with code %q", code)
+		} else {
+			for _, iss := range issues {
+				if iss.Severity != SeverityWarning {
+					t.Errorf("issue %q must be warning severity, got %q", code, iss.Severity)
+				}
+			}
+		}
+	}
+
+	// Full skill should have no semantic warnings.
+	for _, code := range []string{"skill.missing_trigger", "skill.missing_non_trigger", "skill.missing_evidence", "skill.missing_output"} {
+		for _, iss := range issuesForCode(report, code) {
+			if iss.File == filepath.Join("skills", "full.md") {
+				t.Errorf("full skill should not have warning %q, got: %+v", code, iss)
+			}
+		}
+	}
+}
+
+func TestValidateAgentsSemanticWarnings(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	// Agent with only name and description — no role, steps, trigger, non_trigger, human_gate, handoff, evidence, output.
+	writeFile(t, filepath.Join(ai, "agents", "minimal.md"), "---\nname: minimal\ndescription: A minimal agent\n---\n# Minimal\n")
+	// Fully specified agent — should produce no semantic warnings.
+	writeFile(t, filepath.Join(ai, "agents", "full.md"), "---\nname: full\ndescription: A full agent\n---\n# Full\n\n## Role\nSpecialist agent.\n\n## Workflow\nFollow documented steps.\n\n## When to use\nUse when full validation is needed.\n\n## When not to use\nDo not use for unrelated work.\n\n## Human gate\nStop and ask for human approval.\n\n## Handoff\nWhen finished, hand off a summary to the next agent.\n\n## Evidence\nRecord source evidence.\n\n## Output\nReturn a structured report.\n")
+
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+
+	// Warnings must not make HasErrors true.
+	if report.HasErrors() {
+		t.Fatalf("semantic warnings must not cause HasErrors; issues: %+v", report.Issues)
+	}
+
+	// Minimal agent should have all 8 semantic warnings.
+	agentCodes := []string{
+		"agent.missing_role",
+		"agent.missing_workflow",
+		"agent.missing_trigger",
+		"agent.missing_non_trigger",
+		"agent.missing_human_gate",
+		"agent.missing_handoff",
+		"agent.missing_evidence",
+		"agent.missing_output",
+	}
+	for _, code := range agentCodes {
+		issues := issuesForCode(report, code)
+		if len(issues) == 0 {
+			t.Errorf("expected at least one issue with code %q", code)
+		} else {
+			for _, iss := range issues {
+				if iss.Severity != SeverityWarning {
+					t.Errorf("issue %q must be warning severity, got %q", code, iss.Severity)
+				}
+			}
+		}
+	}
+
+	// Full agent should have no semantic warnings.
+	for _, code := range agentCodes {
+		for _, iss := range issuesForCode(report, code) {
+			if iss.File == filepath.Join("agents", "full.md") {
+				t.Errorf("full agent should not have warning %q, got: %+v", code, iss)
+			}
+		}
+	}
+}
+
+func TestValidateSkillsSemanticWarningsNotErrors(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	// Skill with no optional fields at all — only name and description.
+	writeFile(t, filepath.Join(ai, "skills", "bare.md"), "---\nname: bare\ndescription: Bare skill\n---\n# Bare\n")
+
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+
+	// All semantic warnings must be SeverityWarning, never SeverityError.
+	for _, code := range []string{"skill.missing_trigger", "skill.missing_non_trigger", "skill.missing_evidence", "skill.missing_output"} {
+		for _, iss := range issuesForCode(report, code) {
+			if iss.Severity == SeverityError {
+				t.Errorf("semantic code %q must not be error severity, got %q: %s", code, iss.Severity, iss.Message)
+			}
+		}
+	}
+}
+
+func TestValidateAgentsSemanticWarningsNotErrors(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	// Agent with no optional fields at all — only name and description.
+	writeFile(t, filepath.Join(ai, "agents", "bare.md"), "---\nname: bare\ndescription: Bare agent\n---\n# Bare\n")
+
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+
+	// All semantic warnings must be SeverityWarning, never SeverityError.
+	agentCodes := []string{
+		"agent.missing_role",
+		"agent.missing_workflow",
+		"agent.missing_trigger",
+		"agent.missing_non_trigger",
+		"agent.missing_human_gate",
+		"agent.missing_handoff",
+		"agent.missing_evidence",
+		"agent.missing_output",
+	}
+	for _, code := range agentCodes {
+		for _, iss := range issuesForCode(report, code) {
+			if iss.Severity == SeverityError {
+				t.Errorf("semantic code %q must not be error severity, got %q: %s", code, iss.Severity, iss.Message)
+			}
+		}
+	}
+}
+
+func TestValidateSemanticWarningsDoNotBlockHasErrors(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	// Only a skill with no optional fields — no structural errors.
+	writeFile(t, filepath.Join(ai, "skills", "ok.md"), "---\nname: ok\ndescription: OK skill\n---\n# OK\n")
+
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if report.HasErrors() {
+		t.Fatalf("report with only semantic warnings must not have errors; issues: %+v", report.Issues)
+	}
+	if report.Warnings() == 0 {
+		t.Fatal("expected at least one warning for skill with missing optional fields")
+	}
+}

@@ -28,7 +28,7 @@ func checkPaths(root, aiDir string, r *Report) {
 
 		target, readErr := os.Readlink(path)
 		if readErr != nil {
-			r.add(rel, "path", SeverityError, "cannot read symlink target: %v", readErr)
+			r.add(rel, "path", "", SeverityError, "cannot read symlink target: %v", readErr)
 			return nil
 		}
 
@@ -43,10 +43,10 @@ func checkPaths(root, aiDir string, r *Report) {
 		}
 
 		if !withinRoot(rootAbs, resolved) {
-			r.add(rel, "path", SeverityError, "symlink escapes repository root (-> %s)", target)
+			r.add(rel, "path", "", SeverityError, "symlink escapes repository root (-> %s)", target)
 			return nil
 		}
-		r.add(rel, "path", SeverityWarning, "internal symlink detected (-> %s)", target)
+		r.add(rel, "path", "", SeverityWarning, "internal symlink detected (-> %s)", target)
 		return nil
 	})
 }

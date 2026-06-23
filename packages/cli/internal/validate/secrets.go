@@ -68,7 +68,7 @@ func scanAssetSecrets(aiDir string, sev Severity, r *Report) {
 		rel := relForReport(aiDir, path)
 		for _, pat := range secretPatterns {
 			if pat.re.MatchString(text) {
-				r.add(rel, "secret", sev, "possible inline secret (%s)", pat.name)
+				r.add(rel, "secret", "", sev, "possible inline secret (%s)", pat.name)
 			}
 		}
 		return nil
@@ -112,11 +112,11 @@ func scanMCPEnvSecrets(aiDir string, sev Severity, r *Report) {
 				continue // empty or a ${VAR}/$VAR reference: safe
 			}
 			if matchesSecretPattern(value) {
-				r.add(rel, "secret", sev, "server %q env %q has an inline secret value", name, key)
+				r.add(rel, "secret", "", sev, "server %q env %q has an inline secret value", name, key)
 				continue
 			}
 			if secretEnvKeyRe.MatchString(key) {
-				r.add(rel, "secret", sev, "server %q env %q holds an inline literal; use a ${VAR} reference", name, key)
+				r.add(rel, "secret", "", sev, "server %q env %q holds an inline literal; use a ${VAR} reference", name, key)
 			}
 		}
 	}

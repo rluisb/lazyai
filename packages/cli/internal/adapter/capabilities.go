@@ -159,15 +159,16 @@ func (a *AntigravityAdapter) Capabilities() Capability {
 }
 
 // Capabilities reports the Kiro adapter's verified surfaces. Kiro currently
-// installs agents, skills, prompts, hooks, MCP, permissions, and global
-// config, but does not yet emit native specs or steering files.
+// installs agents, skills, prompts, MCP, permissions, and global config.
+// Hooks are instruction-only (described in agent/skill prompts) — no runtime
+// hook files are emitted to .kiro/hooks. Specs and steering are intentionally
+// absent.
 func (a *KiroAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportStable,
 		RootInstructions: true,
 		Agents:           true,
 		Skills:           true,
-		Hooks:            true,
 		MCP:              true,
 		Permissions:      true,
 		PromptTemplates:  true,

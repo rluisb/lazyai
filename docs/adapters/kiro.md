@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Kiro IDE/CLI). It emits agents, skills, prompts, hooks, MCP configuration, and permissions into `.kiro/`.
+The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Kiro IDE/CLI). It emits agents, skills, prompts, MCP configuration, and permissions into `.kiro/`. Hooks are instruction-only (described in agent/skill prompts) — no runtime hook files are emitted.
 
 ## Generated Files
 
@@ -36,7 +36,7 @@ Kiro MCP is compiled via `CompileMCPForTool`. The adapter writes to `.kiro/setti
 
 ## Hook Behavior
 
-Kiro supports hooks via the capability model (`capabilities.go:170`: `Hooks: true`), but the adapter does not install hook scripts directly. Hook configuration is handled through the standard compile path.
+Kiro has no `.kiro/hooks` path. Hooks are instruction-only — described in agent and skill prompts rather than emitted as runtime hook files. The adapter does not install hook scripts or hook configuration files.
 
 ## Skill Behavior
 
@@ -64,7 +64,8 @@ No (`CanRunHeadless() = false`).
 
 ## Known Limitations
 
-- **No specs or steering** — Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). The adapter installs agents, skills, prompts, hooks, MCP, permissions, and global config, but specs and steering are intentionally absent.
+- **No specs or steering** — Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). The adapter installs agents, skills, prompts, MCP, permissions, and global config, but specs and steering are intentionally absent.
+- **Hooks are instruction-only** — Kiro has no `.kiro/hooks` path. Hook behavior is described in agent and skill prompts rather than emitted as runtime hook files (`capabilities.go:163-164`).
 - No templates, commands, chat modes, or output styles
 - No headless support
 - No plugin surface

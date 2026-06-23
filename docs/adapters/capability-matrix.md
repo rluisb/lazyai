@@ -91,7 +91,7 @@ Pi and Antigravity are project/workspace-only surfaces (`scope.go` line 32: `cas
 | Copilot | `CompileMCPForTool` | `.vscode/mcp.json` (project), `~/.copilot/mcp-config.json` (CLI) | Dual output: VS Code + CLI; CLI probe-gated |
 | Pi | **no-op** (`CompileMCP` returns `ctx.FileRecords`) | — | Pi has no native MCP surface; MCP capability is declared for future use |
 | OMP | `CompileMCPForTool` | `.omp/mcp.json` | Standard compile path |
-| Antigravity | `CompileMCPForTool` | `.gemini/settings.json` merge | MCP servers merged into settings |
+| Antigravity | `CompileMCPForTool` | `~/.gemini/config/mcp_config.json` | User-level Gemini MCP config |
 | Kiro | `CompileMCPForTool` | `.kiro/settings/mcp.json` | Standard compile path |
 
 ## 7. Test Coverage

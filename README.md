@@ -32,7 +32,7 @@ flowchart TD
     F --> J["`.pi/`"]
     F --> K["`.omp/`"]
     F --> L["`.kiro/`"]
-    F --> M["`.gemini/`"]
+    F --> M["`.gemini/` + `.agents/`"]
     E --> N["`.ai/lock.json`"]
     B --> O["`.ai-setup.json` scoped state"]
     N --> P["`lazyai-cli compile` idempotency"]
@@ -89,6 +89,8 @@ lazyai-cli compile
 | `omp` | OMP task-agent surface (`.omp/agents/*`) and skills (`.omp/skills/*`). |
 | `kiro` | Kiro CLI agent profiles (`.kiro/agents/*`), skills, and `.kiro/settings/mcp.json`. |
 | `antigravity` | `.gemini` configuration and hook surface (`.gemini/hooks/...`). |
+
+For tool-by-tool generated structure, LazyAI options, diagrams, and examples, see the MkDocs section `docs/ai-cli-tools/`.
 
 ## Command reference (all shipped commands)
 

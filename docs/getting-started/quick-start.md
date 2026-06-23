@@ -17,9 +17,9 @@ lazyai-cli init
 This launches a wizard where you choose:
 
 - **Scope**: `project`, `global`, or `workspace`
-- **Tools**: OpenCode, Claude Code, GitHub Copilot
-- **Preset**: `minimal`, `standard`, or `full`
-- **Optional MCP servers**: filesystem, ripgrep, memory, and other catalog entries
+- **Tools**: OpenCode, Claude Code, GitHub Copilot, Pi, OMP, Kiro, Antigravity
+- **Preset**: `minimal`, `standard`, `full`, or `custom`
+- **Optional MCP servers**: filesystem, ripgrep, ai-memory, and other catalog entries
 
 ## Non-interactive setup
 
@@ -64,8 +64,8 @@ lazyai-cli init \
 1. Creates canonical, tool-agnostic files under `.ai/`
 2. Scaffolds specs, templates, rules, and infrastructure based on the selected preset
 3. Compiles root instructions for each selected tool
-4. Generates tool-native directories such as `.opencode/`, `.claude/`, `.github/`, and `.vscode/`
-5. Writes `.ai-setup.json` to track managed files, hashes, selections, and operations
+4. Generates tool-native directories such as `.opencode/`, `.claude/`, `.github/`, `.pi/`, `.omp/`, `.kiro/`, `.gemini/`, and `.agents/`
+5. Writes `.ai-setup.json` and `.ai/lock.json` to track managed files, hashes, selections, and generated outputs
 6. Prints MCP-specific `export NAME=""` guidance when enabled servers require environment variables; LazyAI does not create or manage `.env` files
 
 ## OpenCode default behavior
@@ -89,6 +89,7 @@ lazyai-cli doctor
 
 ## Next steps
 
+- Read [AI CLI Tool Setups](../ai-cli-tools/index.md) for one page per supported AI CLI target.
 - Read [How It Works](../concepts/how-it-works.md) to understand the canonical source model.
 - Browse [Scopes](../concepts/scopes.md) to choose the right setup mode.
 - See [MCP Integration](../integration/mcp.md) to configure optional servers.

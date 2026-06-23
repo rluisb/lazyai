@@ -2,7 +2,7 @@
 
 Scaffold a canonical, multi-tool AI development environment from one CLI.
 
-`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, GitHub Copilot, Pi, and Antigravity. It ships with bundled agents, skills, templates, rules, hook runtimes, a workflow catalog, and an MCP catalog so teams can keep one managed source of truth. LazyAI owns this runtime/product surface; vibe-lab informs principles, assets, and adapter expectations, but is not a runtime dependency.
+`lazyai-cli` initializes and maintains a tool-agnostic canonical layer under `.ai/`, then compiles it into native formats for OpenCode, Claude Code, GitHub Copilot, Pi, OMP, Kiro, and Antigravity. It ships with bundled agents, skills, templates, rules, hook runtimes, a workflow catalog, and an MCP catalog so teams can keep one managed source of truth. LazyAI owns this runtime/product surface; host AI CLIs execute the generated assets.
 
 ## What it does
 
@@ -27,6 +27,8 @@ See [Product Boundaries](concepts/product-boundaries.md) for the command and int
 - [Installation](getting-started/installation.md) — install options and prerequisites
 - [How It Works](concepts/how-it-works.md) — canonical source, compile model, manifest tracking, and runtime boundary
 - [Product Boundaries](concepts/product-boundaries.md) — supported CLI, embedded library, repository harness, and archived surfaces
+- [AI CLI Tool Setups](ai-cli-tools/index.md) — one page per supported AI CLI target with structure, options, diagrams, and examples
+- [Production Readiness](development/production-readiness.md) — current quality posture and stale artifact inventory
 - [CLI Reference](cli/reference.md) — full command and flag documentation
 - [GitHub Wiki](https://github.com/rluisb/lazyai/wiki) — short-form operational notes and release/install references
 
@@ -39,10 +41,13 @@ flowchart TD
     CLI -->|"compile"| TOOLS["tool-native configs"]
     AI --> TOOLS
     CLI -->|"doctor / status"| DB[".ai-setup.json / .ai-setup.db"]
-    TOOLS --> OC[".opencode/"]
+    TOOLS --> OC[".opencode/ + opencode.json"]
     TOOLS --> CC[".claude/ + .mcp.json"]
     TOOLS --> CP[".github/ + .vscode/"]
-    TOOLS --> PI[".pi/ + .gemini/"]
+    TOOLS --> PI[".pi/"]
+    TOOLS --> OMP[".omp/"]
+    TOOLS --> KIRO[".kiro/"]
+    TOOLS --> AG[".gemini/ + .agents/"]
 ```
 
 The execution path uses local native agents directly. A2A remains a config seam only; remote/network execution is not the default, and retired Fortnite/orchestrator/eval surfaces are not part of the active runtime.

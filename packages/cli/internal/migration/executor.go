@@ -317,9 +317,3 @@ func adapterToToolID(adapter string) (types.ToolId, bool) {
 		return "", false
 	}
 }
-
-// Rollback is a placeholder for restoring backed-up files.
-func Rollback(_ *MigrationContext, _ string) error {
-	migrationLog.Info("rolling back migration")
-	return nil
-}

@@ -70,14 +70,9 @@ var SupportedToolIDs = []ToolId{
 type AgentId string
 
 const (
-	AgentIdGuide            AgentId = "guide"
-	AgentIdImplementer      AgentId = "implementer"
-	AgentIdResearcher       AgentId = "researcher"
-	AgentIdDeployer         AgentId = "deployer"
-	AgentIdResponder        AgentId = "responder"
-	AgentIdPlanner          AgentId = "planner"
-	AgentIdReviewer         AgentId = "reviewer"
-	AgentIdEvidenceVerifier AgentId = "evidence-verifier"
+	AgentIdImplementer AgentId = "implementer"
+	AgentIdResearcher  AgentId = "researcher"
+	AgentIdReviewer    AgentId = "reviewer"
 )
 
 // SkillId identifies a workflow skill.
@@ -85,9 +80,7 @@ type SkillId string
 
 const (
 	SkillIdAdhdEngineer          SkillId = "adhd-engineer"
-	SkillIdAntiSpeculation       SkillId = "anti-speculation"
 	SkillIdArchitectureReview    SkillId = "architecture-review"
-	SkillIdBugfix                SkillId = "bugfix"
 	SkillIdCaveman               SkillId = "caveman"
 	SkillIdCodebaseExploration   SkillId = "codebase-exploration"
 	SkillIdCreateAgent           SkillId = "create-agent"
@@ -96,28 +89,15 @@ const (
 	SkillIdCreateWorkflow        SkillId = "create-workflow"
 	SkillIdDiagnose              SkillId = "diagnose"
 	SkillIdDocBackedClarify      SkillId = "doc-backed-clarify"
-	SkillIdExtractStandards      SkillId = "extract-standards"
 	SkillIdFastFeedback          SkillId = "fast-feedback"
 	SkillIdFourPointVibeCoding   SkillId = "four-point-vibe-coding"
 	SkillIdHandoff               SkillId = "handoff"
-	SkillIdHousekeeping          SkillId = "housekeeping"
-	SkillIdImpactCheck           SkillId = "impact-check"
-	SkillIdImplement             SkillId = "implement"
 	SkillIdIssueTriage           SkillId = "issue-triage"
-	SkillIdIterate               SkillId = "iterate"
 	SkillIdMemoryPromotion       SkillId = "memory-promotion"
-	SkillIdMemoryWrite           SkillId = "memory-write"
 	SkillIdNoWorkarounds         SkillId = "no-workarounds"
-	SkillIdParallelExecution     SkillId = "parallel-execution"
-	SkillIdPlan                  SkillId = "plan"
 	SkillIdPrReview              SkillId = "pr-review"
-	SkillIdProcessAudit          SkillId = "process-audit"
 	SkillIdProjectGuardrailsInit SkillId = "project-guardrails-init"
-	SkillIdProofOfConcept        SkillId = "proof-of-concept"
-	SkillIdResearch              SkillId = "research"
 	SkillIdReview                SkillId = "review"
-	SkillIdRpi                   SkillId = "rpi"
-	SkillIdSelfImprove           SkillId = "self-improve"
 	SkillIdSkillAuthoring        SkillId = "skill-authoring"
 	SkillIdSlackMessageFormatter SkillId = "slack-message-formatter"
 	SkillIdSlackfmt              SkillId = "slackfmt"
@@ -129,12 +109,9 @@ const (
 	SkillIdSpeckitPlan           SkillId = "speckit-plan"
 	SkillIdSpeckitSpecify        SkillId = "speckit-specify"
 	SkillIdSpeckitTasks          SkillId = "speckit-tasks"
-	SkillIdSpike                 SkillId = "spike"
 	SkillIdTaskToIssues          SkillId = "task-to-issues"
-	SkillIdTddLoop               SkillId = "tdd-loop"
 	SkillIdTddPlanning           SkillId = "tdd-planning"
 	SkillIdTestFirstChange       SkillId = "test-first-change"
-	SkillIdUpdateMemory          SkillId = "update-memory"
 	SkillIdZoomOut               SkillId = "zoom-out"
 )
 
@@ -230,20 +207,12 @@ const (
 type ArtifactType string
 
 const (
-	ArtifactTypeAgent               ArtifactType = "agent"
-	ArtifactTypeSkill               ArtifactType = "skill"
-	ArtifactTypeCommand             ArtifactType = "command"
-	ArtifactTypePrompt              ArtifactType = "prompt"
-	ArtifactTypeTemplate            ArtifactType = "template"
-	ArtifactTypeHook                ArtifactType = "hook"
-	ArtifactTypeWorkflow            ArtifactType = "workflow"
-	ArtifactTypeChain               ArtifactType = "chain"
-	ArtifactTypeTeam                ArtifactType = "team"
-	ArtifactTypeDomain              ArtifactType = "domain"
-	ArtifactTypeMode                ArtifactType = "mode"
-	ArtifactTypeMemoryNote          ArtifactType = "memory_note"
-	ArtifactTypeMaintenanceContract ArtifactType = "maintenance_contract"
-	ArtifactTypeSyncStateSnapshot   ArtifactType = "sync_state_snapshot"
+	ArtifactTypeAgent    ArtifactType = "agent"
+	ArtifactTypeSkill    ArtifactType = "skill"
+	ArtifactTypeCommand  ArtifactType = "command"
+	ArtifactTypePrompt   ArtifactType = "prompt"
+	ArtifactTypeTemplate ArtifactType = "template"
+	ArtifactTypeHook     ArtifactType = "hook"
 )
 
 // ApprovalScope defines the persistence scope for maintenance approvals.
@@ -405,14 +374,9 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
-		AgentIdGuide,
 		AgentIdImplementer,
 		AgentIdResearcher,
-		AgentIdDeployer,
-		AgentIdResponder,
-		AgentIdPlanner,
 		AgentIdReviewer,
-		AgentIdEvidenceVerifier,
 	}
 
 	ALL_SKILLS = []SkillId{
@@ -506,25 +470,11 @@ var (
 		RuleIdToolUse,
 		RuleIdWorkflow,
 	}
-
 	ALL_INFRA = []InfraId{
 		InfraIdPreCommit,
 		InfraIdCompliance,
 		InfraIdKnowledgeMap,
 		InfraIdCodeowners,
-	}
-
-	ALL_SPECS_DIRS = []string{
-		"features",
-		"bugfixes",
-		"refactors",
-		"tech-debt",
-		"adrs",
-		"memory",
-		"prompts",
-		"standards",
-		"templates",
-		"rules",
 	}
 )
 

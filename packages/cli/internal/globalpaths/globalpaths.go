@@ -78,10 +78,3 @@ func IsGlobalSupportedTool(tool types.ToolId) bool {
 		return false
 	}
 }
-
-// LogUnsupportedGlobalTool prints a message for tools that don't support global config.
-// Deprecated: prefer adapter.ErrScopeUnsupported and the wizard/non-interactive scope
-// filters; this helper remains for callers that still need a simple stderr warning.
-func LogUnsupportedGlobalTool(tool types.ToolId) {
-	// All supported tools support global scope (some conditionally).
-}

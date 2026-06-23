@@ -41,7 +41,7 @@ OpenCode MCP is compiled via `CompileMCPForTool`. The adapter merges MCP servers
 
 ## Hook Behavior
 
-Hooks are installed as OpenCode plugins under `.opencode/plugins/`. The adapter shells out to `opencode plugin <module>` for each selected plugin when the binary is on PATH.
+Hooks are installed as OpenCode plugins under `.opencode/plugins/`. The adapter copies managed plugin files from the LazyAI library into `.opencode/plugins/` and does NOT shell out to install external plugins.
 
 ## Skill Behavior
 

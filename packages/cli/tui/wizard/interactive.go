@@ -38,7 +38,6 @@ type WizardState struct {
 	EnableObsidian    bool
 	EnableCodegraph   bool
 	CodegraphDataPath string
-	OpenCodePlugins   []string
 	OpenCodeProviders []string
 }
 
@@ -144,9 +143,6 @@ func initWizardState(defaults *WizardResult) *WizardState {
 		}
 		if defaults.Phase5.CodegraphDataPath != "" {
 			s.CodegraphDataPath = defaults.Phase5.CodegraphDataPath
-		}
-		if len(defaults.Phase5.OpenCodePlugins) > 0 {
-			s.OpenCodePlugins = defaults.Phase5.OpenCodePlugins
 		}
 		if len(defaults.Phase5.OpenCodeProviders) > 0 {
 			s.OpenCodeProviders = defaults.Phase5.OpenCodeProviders
@@ -423,17 +419,14 @@ func extractResults(state *WizardState) (*Phase1Result, *Phase2Result, *Phase5Re
 	)
 	p2.UseReversa = boolPtr(state.AnalyzeExistingCode)
 
-	// Phase 5
 	p5 := buildPhase5Result(
 		state.MemoryPath,
 		state.EnableObsidian,
 		"",
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
-		state.OpenCodePlugins,
 	)
 	p5.OpenCodeProviders = state.OpenCodeProviders
-
 	return p1, p2, p5
 }
 

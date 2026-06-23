@@ -3,7 +3,6 @@ package wizard
 import (
 	"context"
 	"fmt"
-	"os/exec"
 
 	"charm.land/huh/v2"
 
@@ -27,7 +26,6 @@ type Phase5Result struct {
 	ObsidianVaultPath string
 	EnableCodegraph   bool
 	CodegraphDataPath string
-	OpenCodePlugins   []string
 	// OpenCodeProviders are the provider IDs (e.g., "openai", "ollama-cloud")
 	// the user has authenticated and chosen to expose to OpenCode-side agents
 	// at install time. Empty when OpenCode isn't selected; otherwise
@@ -37,14 +35,11 @@ type Phase5Result struct {
 }
 
 // RunPhase5 runs the optional tooling phase.
-// opencodeSelected is true when opencode is in the user's tool list — it gates
-// the plugin install step (which also requires the binary to be on PATH).
-func RunPhase5(defaults *Phase5Result, nonInteractive bool, opencodeSelected ...bool) (*Phase5Result, PhaseAction, error) {
-	selected := len(opencodeSelected) > 0 && opencodeSelected[0]
+func RunPhase5(defaults *Phase5Result, nonInteractive bool) (*Phase5Result, PhaseAction, error) {
 	if nonInteractive {
 		return runPhase5NonInteractive(defaults)
 	}
-	return runPhase5Interactive(defaults, selected)
+	return runPhase5Interactive(defaults)
 }
 
 func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction, error) {
@@ -58,67 +53,33 @@ func runPhase5NonInteractive(defaults *Phase5Result) (*Phase5Result, PhaseAction
 		result.ObsidianVaultPath,
 		result.EnableCodegraph,
 		result.CodegraphDataPath,
-		result.OpenCodePlugins,
 	), PhaseContinue, nil
 }
 
-func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase5Result, PhaseAction, error) {
+func runPhase5Interactive(defaults *Phase5Result) (*Phase5Result, PhaseAction, error) {
 	state := defaultPhase5Result()
 	if defaults != nil {
 		state = *defaults
 	}
 
-	// Plugin step is shown only when opencode is selected AND binary is on PATH.
-	showPlugins := opencodeSelected && opencodeBinaryPresent()
-	// Provider step also gates on opencode selection — same condition as
-	// plugins. Providers are derived from a live auth probe so they only
-	// make sense when the OpenCode adapter is part of this run.
-	showProviders := opencodeSelected
-
 	currentStep := 1
-	maxStep := phase5TotalSteps(showPlugins)
-	if showProviders {
-		maxStep++
-	}
+	maxStep := 2 // memory path + providers
 	for currentStep >= 1 && currentStep <= maxStep {
 		switch currentStep {
 		case 1:
-			memoryPath, action, err := askMemoryPath(state.MemoryPath, phase5MemoryPathStepInfo(state, showPlugins))
+			memoryPath, action, err := askMemoryPath(state.MemoryPath, phase5MemoryPathStepInfo())
 			if err != nil {
 				return nil, action, err
 			}
 			state.MemoryPath = memoryPath
 			currentStep++
 		case 2:
-			if !showPlugins {
-				currentStep++
-				continue
-			}
-			plugins, action, err := askOpenCodePlugins(state.OpenCodePlugins, phase5OpenCodePluginsStepInfo(state, showPlugins))
-			if err != nil {
-				return nil, action, err
-			}
-			if action == PhaseBack {
-				currentStep = 1
-				continue
-			}
-			state.OpenCodePlugins = plugins
-			currentStep++
-		case 3:
-			if !showProviders {
-				currentStep++
-				continue
-			}
 			providers, action, err := askOpenCodeProviders(state.OpenCodeProviders)
 			if err != nil {
 				return nil, action, err
 			}
 			if action == PhaseBack {
-				if showPlugins {
-					currentStep = 2
-				} else {
-					currentStep = 1
-				}
+				currentStep = 1
 				continue
 			}
 			state.OpenCodeProviders = providers
@@ -132,13 +93,12 @@ func runPhase5Interactive(defaults *Phase5Result, opencodeSelected bool) (*Phase
 		state.ObsidianVaultPath,
 		state.EnableCodegraph,
 		state.CodegraphDataPath,
-		state.OpenCodePlugins,
 	)
 	result.OpenCodeProviders = state.OpenCodeProviders
 	return result, PhaseContinue, nil
 }
 
-func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableCodegraph bool, codegraphDataPath string, opencodePlugins []string) *Phase5Result {
+func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath string, enableCodegraph bool, codegraphDataPath string) *Phase5Result {
 	if memoryPath == "" {
 		memoryPath = ".specify/memory"
 	}
@@ -152,7 +112,6 @@ func buildPhase5Result(memoryPath string, enableObsidian bool, obsidianVaultPath
 		ObsidianVaultPath: obsidianVaultPath,
 		EnableCodegraph:   enableCodegraph,
 		CodegraphDataPath: codegraphDataPath,
-		OpenCodePlugins:   opencodePlugins,
 	}
 }
 
@@ -178,68 +137,8 @@ func askMemoryPath(defaultValue string, info phase5StepInfo) (string, PhaseActio
 	return memoryPath, PhaseContinue, nil
 }
 
-func phase5MemoryPathStepInfo(_ Phase5Result, showPlugins ...bool) phase5StepInfo {
-	return phase5StepInfo{Current: 1, Total: phase5TotalSteps(showPlugins...), StepTitle: "Memory Path"}
-}
-
-func phase5OpenCodePluginsStepInfo(_ Phase5Result, showPlugins bool) phase5StepInfo {
-	return phase5StepInfo{Current: phase5TotalSteps(showPlugins), Total: phase5TotalSteps(showPlugins), StepTitle: "OpenCode Plugins"}
-}
-
-func phase5TotalSteps(showPlugins ...bool) int {
-	if len(showPlugins) > 0 && showPlugins[0] {
-		return 2
-	}
-	return 1
-}
-
-func opencodeBinaryPresent() bool {
-	_, err := exec.LookPath("opencode")
-	return err == nil
-}
-
-func askOpenCodePlugins(current []string, info phase5StepInfo) ([]string, PhaseAction, error) {
-	selected := append([]string(nil), current...)
-
-	field := huh.NewMultiSelect[string]().
-		Title(info.Title()).
-		Options(append(opencodePluginOptions(), huh.NewOption("↩ Back", "__phase5_back__"))...).
-		Value(&selected)
-
-	if err := theme.NewForm(huh.NewGroup(multiSelectFooterDescription(field, func() string {
-		return multiSelectHoverDescription(field, opencodePluginDescriptions, defaultHoverHint)
-	}))).Run(); err != nil {
-		return nil, PhaseCancel, fmt.Errorf("phase 5 cancelled: %w", err)
-	}
-
-	filtered := selected[:0]
-	for _, s := range selected {
-		if s != "__phase5_back__" {
-			filtered = append(filtered, s)
-		}
-	}
-	for _, s := range selected {
-		if s == "__phase5_back__" {
-			return nil, PhaseBack, nil
-		}
-	}
-	return filtered, PhaseContinue, nil
-}
-
-func opencodePluginOptions() []huh.Option[string] {
-	options := make([]huh.Option[string], 0, len(opencodePluginURLs))
-	for _, url := range opencodePluginURLs {
-		options = append(options, huh.NewOption(url, url))
-	}
-	return options
-}
-
-var opencodePluginURLs = []string{
-	"https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
-	"https://github.com/spoons-and-mirrors/subtask2",
-	"https://github.com/JRedeker/opencode-shell-strategy",
-	"https://github.com/boxpositron/envsitter-guard",
-	"https://github.com/kdcokenny/opencode-background-agents",
+func phase5MemoryPathStepInfo() phase5StepInfo {
+	return phase5StepInfo{Current: 1, Total: 2, StepTitle: "Memory Path"}
 }
 
 // askOpenCodeProviders runs a live auth probe, filters out providers OpenCode

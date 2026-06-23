@@ -1,0 +1,31 @@
+{
+  "$schema": "https://lazyai.dev/schemas/lazyai.schema.json",
+  "version": "1.0",
+  "profile": "team",
+  "targets": [
+    "omp"
+  ],
+  "source": {
+    "assets": [
+      "agents",
+      "skills",
+      "rules",
+      "hooks",
+      "prompts",
+      "templates",
+      "standards"
+    ]
+  },
+  "library": {
+    "packs": [
+      "vibe-lab/starter"
+    ]
+  },
+  "safety": {
+    "requireDiffBeforeWrite": true,
+    "allowGlobalWrites": false,
+    "denyInlineSecrets": true,
+    "warnIfNoSandbox": true,
+    "generatedFileMode": "managed-region"
+  }
+}

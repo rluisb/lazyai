@@ -38,7 +38,10 @@ func (m *Manager) CreateParallelTask(sessionID string, waveID string, agent stri
 		return nil, fmt.Errorf("create parallel task: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last insert id: %w", err)
+	}
 	return m.GetParallelTask(int(id))
 }
 

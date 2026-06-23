@@ -33,7 +33,10 @@ func (m *Manager) CreateBarrier(sessionID string, barrierID string, expectedCoun
 		return nil, fmt.Errorf("create barrier: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last insert id: %w", err)
+	}
 	return m.GetBarrierByDBID(int(id))
 }
 

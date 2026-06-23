@@ -194,7 +194,10 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 		return ctx.FileRecords, err
 	}
 
-	hash, _ := files.FileHash(configPath)
+	hash, err := files.FileHash(configPath)
+	if err != nil {
+		return ctx.FileRecords, fmt.Errorf("hash %s: %w", configPath, err)
+	}
 	return append(ctx.FileRecords, types.TrackedFile{
 		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), configPath), Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
 	}), nil

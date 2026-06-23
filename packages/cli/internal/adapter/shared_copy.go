@@ -179,7 +179,10 @@ func CopyWithRecord(src, dest string, ctx *AdapterContext, warnOnSkip bool, tran
 		return err
 	}
 
-	hash, _ := files.FileHash(dest)
+	hash, err := files.FileHash(dest)
+	if err != nil {
+		return fmt.Errorf("hash %s: %w", dest, err)
+	}
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,
@@ -241,7 +244,10 @@ func WriteContentWithRecord(dest string, content []byte, ctx *AdapterContext, so
 		return err
 	}
 
-	hash, _ := files.FileHash(dest)
+	hash, err := files.FileHash(dest)
+	if err != nil {
+		return fmt.Errorf("hash %s: %w", dest, err)
+	}
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path:   relPath,
 		Hash:   hash,

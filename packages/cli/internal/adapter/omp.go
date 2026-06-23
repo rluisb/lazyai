@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -25,13 +26,25 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		return nil, err
 	}
 
-	_ = files.EnsureDir(ompDir)
-	_ = files.EnsureDir(filepath.Join(ompDir, "skills"))
-	_ = files.EnsureDir(filepath.Join(ompDir, "agents"))
-	_ = files.EnsureDir(filepath.Join(ompDir, "commands"))
-	_ = files.EnsureDir(filepath.Join(ompDir, "prompts"))
+	if err := files.EnsureDir(ompDir); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", ompDir, err)
+	}
+	if err := files.EnsureDir(filepath.Join(ompDir, "skills")); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "skills"), err)
+	}
+	if err := files.EnsureDir(filepath.Join(ompDir, "agents")); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "agents"), err)
+	}
+	if err := files.EnsureDir(filepath.Join(ompDir, "commands")); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "commands"), err)
+	}
+	if err := files.EnsureDir(filepath.Join(ompDir, "prompts")); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "prompts"), err)
+	}
 	// OMP discovers TypeScript hook factories from .omp/hooks/pre/*.ts.
-	_ = files.EnsureDir(filepath.Join(ompDir, "hooks", "pre"))
+	if err := files.EnsureDir(filepath.Join(ompDir, "hooks", "pre")); err != nil {
+		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "hooks", "pre"), err)
+	}
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",

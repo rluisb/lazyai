@@ -40,7 +40,10 @@ func (m *Manager) AcquireLock(sessionID string, lockName string, heldBy string) 
 		return nil, fmt.Errorf("acquire lock: %w", err)
 	}
 
-	affected, _ := result.RowsAffected()
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("getting rows affected: %w", err)
+	}
 	if affected == 0 {
 		// Another caller already holds the active lock.
 		existing, lookupErr := m.GetLockStatus(lockName)
@@ -50,7 +53,10 @@ func (m *Manager) AcquireLock(sessionID string, lockName string, heldBy string) 
 		return nil, fmt.Errorf("lock %s already held by %s", lockName, *existing.HeldBy)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last insert id: %w", err)
+	}
 	return m.GetLock(int(id))
 }
 

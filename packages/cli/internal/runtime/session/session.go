@@ -93,7 +93,10 @@ func (m *Manager) End(sessionID string) error {
 		return fmt.Errorf("end session: %w", err)
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("getting rows affected: %w", err)
+	}
 	if rowsAffected == 0 {
 		return fmt.Errorf("session not found: %s", sessionID)
 	}

@@ -71,7 +71,10 @@ func (m *Manager) Dispatch(sessionID string, opts DispatchOptions) (*Dispatch, e
 		return nil, fmt.Errorf("create dispatch: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last insert id: %w", err)
+	}
 
 	return m.GetDispatch(int(id))
 }

@@ -35,7 +35,10 @@ func (m *Manager) SendMessage(sessionID string, fromAgent string, toAgent *strin
 		return nil, fmt.Errorf("send message: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last insert id: %w", err)
+	}
 	return m.GetMessage(int(id))
 }
 

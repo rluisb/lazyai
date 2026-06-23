@@ -12,6 +12,9 @@ on:
       - 'packages/cli/**'
       - '.github/workflows/ci-cli.yml'
 
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest

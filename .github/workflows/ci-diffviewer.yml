@@ -12,6 +12,9 @@ on:
       - 'packages/diffviewer/**'
       - '.github/workflows/ci-diffviewer.yml'
 
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest

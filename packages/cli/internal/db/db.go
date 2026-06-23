@@ -32,6 +32,22 @@ func Open(dbPath string) (*DB, error) {
 		return nil, fmt.Errorf("open sqlite %s: %w", dbPath, err)
 	}
 
+	// Force the database file to be created by opening a real connection.
+	// sql.Open is lazy; the file only materializes on first use.
+	if err := sqlDB.Ping(); err != nil {
+		sqlDB.Close()
+		return nil, fmt.Errorf("ping sqlite %s: %w", dbPath, err)
+	}
+
+	// Restrict file permissions so the database is only accessible by the owner.
+	// For ":memory:" databases there is no file on disk to chmod.
+	if dbPath != ":memory:" {
+		if err := os.Chmod(dbPath, 0o600); err != nil {
+			sqlDB.Close()
+			return nil, fmt.Errorf("chmod sqlite %s: %w", dbPath, err)
+		}
+	}
+
 	// Enable WAL mode and foreign keys.
 	if _, err := sqlDB.Exec("PRAGMA journal_mode=WAL"); err != nil {
 		sqlDB.Close()

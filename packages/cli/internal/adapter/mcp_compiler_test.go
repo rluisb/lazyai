@@ -571,3 +571,113 @@ func TestMcpCatalogExcludesRetiredOrchestratorDefault(t *testing.T) {
 		t.Fatal("catalog must not ship retired orchestrator as a default MCP server")
 	}
 }
+
+// TestCompileOpenCodeMCP_JsoncFallback verifies that when only .ai/mcp.jsonc
+// exists (no .ai/mcp.json), CompileMCPForTool still reads and compiles the
+// canonical MCP config. This is the regression test for issue #369.
+func TestCompileOpenCodeMCP_JsoncFallback(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	// JSONC with comments — only .jsonc exists, no .json
+	mcpContent := `{
+	// This is a comment in JSONC
+	"servers": {
+		"filesystem": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+		}
+	}
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.jsonc"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("failed to write mcp.jsonc: %v", err)
+	}
+
+	// Verify no .ai/mcp.json exists
+	if _, err := os.Stat(filepath.Join(aiDir, "mcp.json")); !os.IsNotExist(err) {
+		t.Fatal("mcp.json should not exist for this test")
+	}
+
+	records, err := CompileMCPForTool(types.ToolIdOpenCode, CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("CompileMCPForTool failed: %v", err)
+	}
+
+	configPath := filepath.Join(targetDir, OpenCodeConfigFilename)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Fatal("expected opencode.json was not created from .ai/mcp.jsonc")
+	}
+
+	if len(records) != 1 {
+		t.Fatalf("expected 1 tracked file record, got %d", len(records))
+	}
+}
+
+// TestReadCanonicalMcp_JsoncFallback verifies that ReadCanonicalMcp falls back
+// to .ai/mcp.jsonc when .ai/mcp.json does not exist.
+func TestReadCanonicalMcp_JsoncFallback(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	mcpContent := `{
+	// comment
+	"servers": {
+		"test": {
+			"command": "echo",
+			"args": ["hello"]
+		}
+	}
+}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.jsonc"), []byte(mcpContent), 0o644); err != nil {
+		t.Fatalf("failed to write mcp.jsonc: %v", err)
+	}
+
+	catalog := ReadCanonicalMcp(targetDir)
+	if catalog == nil {
+		t.Fatal("ReadCanonicalMcp returned nil, expected catalog from .ai/mcp.jsonc")
+	}
+	if len(catalog.Servers) != 1 {
+		t.Fatalf("expected 1 server, got %d", len(catalog.Servers))
+	}
+	svr, ok := catalog.Servers["test"]
+	if !ok {
+		t.Fatal("expected server 'test' in catalog")
+	}
+	if svr.Command != "echo" {
+		t.Fatalf("expected command 'echo', got %q", svr.Command)
+	}
+}
+
+// TestReadCanonicalMcp_JsonPrecedence verifies that .ai/mcp.json takes
+// precedence over .ai/mcp.jsonc when both exist.
+func TestReadCanonicalMcp_JsonPrecedence(t *testing.T) {
+	targetDir := t.TempDir()
+
+	aiDir := filepath.Join(targetDir, ".ai")
+	_ = files.EnsureDir(aiDir)
+	// Write both .json and .jsonc with different content
+	jsonContent := `{"servers":{"from-json":{"command":"json","args":[]}}}`
+	jsoncContent := `{"servers":{"from-jsonc":{"command":"jsonc","args":[]}}}`
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), []byte(jsonContent), 0o644); err != nil {
+		t.Fatalf("failed to write mcp.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.jsonc"), []byte(jsoncContent), 0o644); err != nil {
+		t.Fatalf("failed to write mcp.jsonc: %v", err)
+	}
+
+	catalog := ReadCanonicalMcp(targetDir)
+	if catalog == nil {
+		t.Fatal("ReadCanonicalMcp returned nil")
+	}
+	if _, ok := catalog.Servers["from-json"]; !ok {
+		t.Fatal("expected server 'from-json' (from .json) to take precedence")
+	}
+	if _, ok := catalog.Servers["from-jsonc"]; ok {
+		t.Fatal("server 'from-jsonc' should not appear when .json takes precedence")
+	}
+}

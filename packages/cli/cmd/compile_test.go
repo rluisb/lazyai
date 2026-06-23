@@ -290,6 +290,49 @@ func TestCompileSurfacesBetaAdapters(t *testing.T) {
 	}
 }
 
+func TestCompileMultiToolWithNoOpTarget(t *testing.T) {
+	dir := t.TempDir()
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode, types.ToolIdPi}
+	})
+	writeCanonicalMCPConfig(t, dir)
+
+	cmd := newCompileCommand(dir, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	stdout, _ := captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile: %v", err)
+		}
+	})
+
+	// OpenCode should generate a config file
+	if !fileExists(filepath.Join(dir, "opencode.json")) {
+		t.Fatal("expected opencode.json to be generated")
+	}
+
+	// Pi should NOT generate any config file
+	if fileExists(filepath.Join(dir, ".pi", "mcp.json")) {
+		t.Fatal("did not expect .pi/mcp.json for no-op Pi target")
+	}
+
+	// Pi must not be reported as having compiled opencode.json
+	if strings.Contains(stdout, "Compiled MCP config for Pi") {
+		t.Fatalf("Pi must not report compiled config; got:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "No MCP config generated for Pi") {
+		t.Fatalf("expected 'No MCP config generated for Pi'; got:\n%s", stdout)
+	}
+
+	// Store must only track opencode.json, not Pi's leaked records
+	storeData := readSeededStoreData(t, dir)
+	if hasTrackedFile(storeData.Files, ".pi/mcp.json") {
+		t.Fatal("store must not track .pi/mcp.json from Pi no-op")
+	}
+	if !hasTrackedFile(storeData.Files, "opencode.json") {
+		t.Fatal("store must track opencode.json")
+	}
+}
+
 func hasTrackedFile(files []types.TrackedFile, path string) bool {
 	for _, file := range files {
 		if file.Path == path {

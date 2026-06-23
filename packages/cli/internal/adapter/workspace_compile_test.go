@@ -140,6 +140,67 @@ func TestPropagateWritesPerRepoMcpConfigs(t *testing.T) {
 	}
 }
 
+// TestPropagateHonorsToolSubset verifies that when parent.Tools is set to a
+// subset of registered tools, propagation only writes configs for those tools
+// and skips unselected ones. Regression for issue #371.
+func TestPropagateHonorsToolSubset(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Set up a workspace with one repo.
+	repoDir := filepath.Join(tmp, "api")
+	if err := files.EnsureDir(repoDir); err != nil {
+		t.Fatalf("ensure %s: %v", repoDir, err)
+	}
+	aiDir := filepath.Join(repoDir, ".ai")
+	if err := files.EnsureDir(aiDir); err != nil {
+		t.Fatalf("ensure %s: %v", aiDir, err)
+	}
+	mcp := []byte(`{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."],"enabled":true}}}`)
+	if err := os.WriteFile(filepath.Join(aiDir, "mcp.json"), mcp, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Workspace canonical mcp.json
+	if err := files.EnsureDir(filepath.Join(tmp, ".ai")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmp, ".ai", "mcp.json"), mcp, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Propagate with Tools set to only "opencode" — claude-code should NOT write.
+	records, err := PropagateMcpToRepos(NewRegistry(), CompileContext{
+		SetupScope:    types.SetupScopeWorkspace,
+		WorkspaceRoot: tmp,
+		HomeDir:       t.TempDir(),
+		Repos:         []types.RepoInfo{{Name: "api", Path: "api", Type: "service"}},
+		Tools:         []types.ToolId{types.ToolIdOpenCode},
+	})
+	if err != nil {
+		t.Fatalf("PropagateMcpToRepos: %v", err)
+	}
+
+	// OpenCode config should exist (selected tool).
+	opencodePath := filepath.Join(tmp, "api", "opencode.json")
+	if !files.FileExists(opencodePath) {
+		t.Fatal("expected opencode.json to be written (opencode was selected)")
+	}
+
+	// Claude Code config should NOT exist (not selected).
+	claudeDir := filepath.Join(tmp, "api", ".claude")
+	claudeSettings := filepath.Join(claudeDir, "settings.json")
+	if files.FileExists(claudeSettings) {
+		t.Fatal("claude-code settings.json should NOT be written (claude-code was not selected)")
+	}
+
+	// All records should be tagged with the repo prefix.
+	for _, r := range records {
+		if len(r.Source) == 0 || r.Source[:10] != "workspace:" {
+			t.Errorf("record source missing workspace prefix: %q", r.Source)
+		}
+	}
+}
+
 // TestSummarizeWorkspaceCompile verifies the summary helper formats
 // counts and repo names correctly.
 func TestSummarizeWorkspaceCompile(t *testing.T) {

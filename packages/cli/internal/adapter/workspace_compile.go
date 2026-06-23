@@ -73,7 +73,10 @@ func PropagateMcpToRepos(reg *Registry, parent CompileContext) ([]types.TrackedF
 			WorkspaceRoot: parent.WorkspaceRoot,
 		}
 
-		tools := reg.List()
+		tools := parent.Tools
+		if len(tools) == 0 {
+			tools = reg.List()
+		}
 		for _, tool := range tools {
 			adapt, err := reg.Get(tool)
 			if err != nil {

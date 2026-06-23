@@ -93,7 +93,7 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 }
 
 func (a *OmpAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
-	return ctx.FileRecords, nil
+	return CompileMCPForTool(types.ToolIdOmp, ctx)
 }
 
 func (a *OmpAdapter) CanRunHeadless() bool { return false }

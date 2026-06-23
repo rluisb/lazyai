@@ -19,7 +19,7 @@ properties. The classification is grounded in the hook policy files under
 
 | Hook | Lifecycle | Purpose | blocks_actions | requires_human_approval | captures_evidence | surfaces |
 |---|---|---|---|---|---|---|
-| `pre-commit` | pre-commit | Enforce RPI gate attestation and token-rent budget before local commits | true | false | true | git (`.githooks/pre-commit`, `.husky/pre-commit`) |
+| `pre-commit` | pre-commit | Enforce token-rent budget before local commits (`.githooks/pre-commit`). RPI gate attestation enforced via CI (`.github/workflows/rpi-gate-check.yml`) and `.husky/pre-commit` if configured. | true | false | true | git (`.githooks/pre-commit`, `.husky/pre-commit`) |
 | `rpi-gate-check.yml` | CI/CD (pull_request, push) | Enforce RPI process gates on non-trivial PRs and main pushes | true | false | true | GitHub Actions |
 | `caveman-memory-promotion` | on_compaction, after_agent | Detect reusable knowledge in caveman summaries and route to memory-promotion review | false | true | false | opencode (plugin) |
 | `startup-self-heal` | before_agent | Run scoped health checks and regenerate CLI artifacts on drift | false | false | true | opencode (plugin) |
@@ -93,9 +93,13 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 
 **Policy source:** `packages/cli/library/canonical/hooks/pre-commit.md`
 
-- **Purpose:** Before local commits, ensure the plan/budget rules are honored (RPI compliance and token-rent checks).
+- **Purpose:** Before local commits, enforce token-rent budget checks.
 - **Trigger event:** pre-commit.
-- **Runtime behavior:** repository-level hook policy asset; this policy file is retained with adapter target `[none]` in manifest.
+- **Runtime behavior:**
+  - `.githooks/pre-commit` (active local hook): runs `token-rent-check` only. Skips if `go` is not available.
+  - `.husky/pre-commit` (optional, if configured): enforces RPI gate attestation (human gate approval check) locally.
+  - CI (`.github/workflows/rpi-gate-check.yml`): enforces RPI gate attestation on pull_request and push to main/master.
+- **Note:** RPI gate attestation is primarily enforced via CI. The `.husky/pre-commit` hook provides optional local enforcement; the `.githooks/pre-commit` hook handles token-rent only.
 
 ### `rpi-gate-check`
 

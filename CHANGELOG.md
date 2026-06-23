@@ -4,7 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+- **AI CLI readiness guide** (docs). New `docs/ai-cli-tools/readiness.md` covering
+  tool-specific setup prerequisites, capability expectations, and verification
+  steps for each supported target (#381).
+- **Global scope for Pi and Antigravity targets**. `lazyai-cli init --scope global`
+  now emits Pi and Antigravity outputs to `~/.pi/` and `~/.gemini/` respectively,
+  matching the existing global-scope behavior for other targets (#390).
+
+### Fixed
+- **MCP validation**: Reject blank and whitespace-only `command`/`url` values in
+  `.ai/mcp.json` entries, preventing silent runtime failures (#382).
+- **OMP MCP dispatch**: `CompileMCP` now delegates to `CompileMCPForTool` for
+  consistent MCP output across all targets (#383).
+- **Manifest schema**: Added `claude-code` to the manifest targets enum, fixing
+  validation errors when `claude-code` is listed as a target (#384).
+- **Rubrics curation coverage**: Added rubrics to the curation coverage roots so
+  they are tracked and validated alongside other library assets (#385).
+- **Docs drift**: Fixed docs-only drift across AI CLI tool pages to align
+  capability claims with current adapter output (#386).
+- **Compile MCP fallback + target accounting**: Repaired MCP jsonc fallback
+  resolution and corrected per-tool target accounting in the compile pipeline
+  (#387).
+- **Windows package tests**: Promoted package tests to Windows-portable, fixing
+  path-separator assumptions that broke on Windows (#388).
+- **Kiro hook capability docs**: Aligned Kiro hook capability documentation with
+  the actual adapter surface (instruction-only, no `.kiro/hooks` directory) (#389).
 
 ## [1.3.0] - 2026-06-22
 

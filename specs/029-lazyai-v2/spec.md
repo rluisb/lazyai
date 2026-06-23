@@ -7,10 +7,10 @@
 **Owner:** maintainers
 **Constitution:** [specs/001-store-and-errors/constitution.md](../001-store-and-errors/constitution.md)
 
-> **Purpose.** This spec re-baselines the [LazyAI + vibe-lab Product Spec Pack](../../docs/lazyai-vibelab-product-spec-pack/lazyai-vibelab-product-spec-pack/) against the current repository and defines the V2 product slice: a **canonical `.ai/` manifest-driven compile pipeline** with a lockfile, an explicit adapter capabilities model, docs-conformance fixtures, validation hardening, migration/eject, multi-tool plugin bundles, and an optional trace/eval loop. The product stance is unchanged: **LazyAI is an asset manager + compiler; host tools execute.**
+> **Purpose.** This spec re-baselines the [LazyAI + vibe-lab Product Spec Pack](../../docs/lazyai-vibelab-product-spec-pack/) against the current repository and defines the V2 product slice: a **canonical `.ai/` manifest-driven compile pipeline** with a lockfile, an explicit adapter capabilities model, docs-conformance fixtures, validation hardening, migration/eject, multi-tool plugin bundles, and an optional trace/eval loop. The product stance is unchanged: **LazyAI is a...
 
 The authoritative source documents are the spec pack:
-- PRD: `docs/lazyai-vibelab-product-spec-pack/lazyai-vibelab-product-spec-pack/01_PRD.md`
+- PRD: `docs/lazyai-vibelab-product-spec-pack/01_PRD.md`
 - TechSpec: `…/02_TECHSPEC.md`
 - Compliance matrix: `…/03_OFFICIAL_TOOL_COMPLIANCE_MATRIX.md`
 - Schemas/examples: `…/04_SCHEMAS_AND_EXAMPLES.md`

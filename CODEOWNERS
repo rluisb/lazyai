@@ -1,12 +1,9 @@
-# Default CODEOWNERS template
-# Update ownership paths and handles for your repository.
-
-* @your-org/tech-leads
+* @rluisb
 
 # Docs and standards
-/specs/ @your-org/engineering
+/specs/ @rluisb
 
 # Infrastructure and governance
-/AGENTS.md @your-org/tech-leads
-/CLAUDE.md @your-org/tech-leads
-/.github/copilot-instructions.md @your-org/tech-leads
+/AGENTS.md @rluisb
+/CLAUDE.md @rluisb
+/.github/copilot-instructions.md @rluisb

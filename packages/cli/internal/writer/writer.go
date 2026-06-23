@@ -171,10 +171,3 @@ func cloneAdapters(in map[string]lockfile.AdapterLock) map[string]lockfile.Adapt
 	}
 	return out
 }
-
-func firstNonEmpty(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
-}

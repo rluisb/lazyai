@@ -154,9 +154,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		if len(tools) == 0 {
 			// Get all registered tools from adapter registry
 			reg := adapter.NewRegistry()
-			for _, t := range reg.List() {
-				tools = append(tools, t)
-			}
+			tools = append(tools, reg.List()...)
 		}
 	}
 

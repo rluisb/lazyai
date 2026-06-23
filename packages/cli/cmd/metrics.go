@@ -61,21 +61,21 @@ var metricsExportCmd = &cobra.Command{
 		// Add session count
 		var sessionCount int
 		database.QueryRow("SELECT COUNT(*) FROM sessions").Scan(&sessionCount)
-		promData += fmt.Sprintf("\n# HELP lazyai_sessions_total Total number of sessions\n")
-		promData += fmt.Sprintf("# TYPE lazyai_sessions_total counter\n")
+		promData += "\n# HELP lazyai_sessions_total Total number of sessions\n"
+		promData += "# TYPE lazyai_sessions_total counter\n"
 		promData += fmt.Sprintf("lazyai_sessions_total %d\n", sessionCount)
 
 		// Add task counts
 		var pendingTasks, completedTasks int
 		database.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'pending'").Scan(&pendingTasks)
 		database.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'completed'").Scan(&completedTasks)
-		promData += fmt.Sprintf("\n# HELP lazyai_tasks_total Total number of tasks by status\n")
-		promData += fmt.Sprintf("# TYPE lazyai_tasks_total counter\n")
+		promData += "\n# HELP lazyai_tasks_total Total number of tasks by status\n"
+		promData += "# TYPE lazyai_tasks_total counter\n"
 		promData += fmt.Sprintf("lazyai_tasks_total{status=\"pending\"} %d\n", pendingTasks)
 		promData += fmt.Sprintf("lazyai_tasks_total{status=\"completed\"} %d\n", completedTasks)
 
 		// Write to file
-		if err := os.WriteFile(output, []byte(promData), 0644); err != nil {
+		if err := os.WriteFile(output, []byte(promData), 0o644); err != nil {
 			return fmt.Errorf("error writing metrics file: %w", err)
 		}
 
@@ -171,7 +171,7 @@ var metricsDashboardCmd = &cobra.Command{
 </body>
 </html>`, sessionCount, activeSessions, totalTasks, completedTasks, ledgerEntries, time.Now().Format(time.RFC3339))
 
-		if err := os.WriteFile(output, []byte(html), 0644); err != nil {
+		if err := os.WriteFile(output, []byte(html), 0o644); err != nil {
 			return fmt.Errorf("error writing dashboard: %w", err)
 		}
 

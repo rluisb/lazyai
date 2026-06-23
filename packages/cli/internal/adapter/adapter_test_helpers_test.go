@@ -9,15 +9,6 @@ func min(a, b int) int {
 	return b
 }
 
-func sliceContains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
-}
-
 // baselineAgentSource matches the exact vibe-lab baseline canonical agent shape:
 // name and description only, no tier/risk/model/temperature/mode/steps/skills.
 func baselineAgentSource(name, description string) []byte {

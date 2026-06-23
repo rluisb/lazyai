@@ -204,36 +204,6 @@ func opencodeStepsFor(tier string) int {
 	return 0
 }
 
-// prependFallbackComment inserts a fallback-chain comment between the
-// closing frontmatter delimiter and the body. None of the supported CLIs
-// read it; it serves humans reviewing the compiled file.
-func prependFallbackComment(content []byte, chain []string) []byte {
-	if len(chain) == 0 {
-		return content
-	}
-	s := string(content)
-	const delim = "---\n"
-	// Locate the *closing* delimiter — the second occurrence of "---\n".
-	first := strings.Index(s, delim)
-	if first < 0 {
-		return content
-	}
-	closeIdx := strings.Index(s[first+len(delim):], delim)
-	if closeIdx < 0 {
-		return content
-	}
-	insertAt := first + len(delim) + closeIdx + len(delim)
-	comment := fmt.Sprintf("# fallback-chain: %s\n", strings.Join(chain, " -> "))
-	return []byte(s[:insertAt] + comment + s[insertAt:])
-}
-
-// formatFloat trims trailing zeros so 0.10 emits as "0.1" and 0.0 as "0".
-// Stable output makes adapter-output tests easier to write.
-func formatFloat(f float64) string {
-	s := fmt.Sprintf("%g", f)
-	return s
-}
-
 func trimLeadingNewlines(b []byte) []byte {
 	i := 0
 	for i < len(b) && b[i] == '\n' {

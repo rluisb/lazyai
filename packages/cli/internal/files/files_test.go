@@ -343,7 +343,7 @@ func TestWithFileLock_SerializesConcurrentSections(t *testing.T) {
 		})
 	}()
 
-	_ = <-firstAcquired
+	<-firstAcquired
 
 	go func() {
 		errors <- WithFileLock(lockPath, 2*time.Second, time.Minute, func() error {

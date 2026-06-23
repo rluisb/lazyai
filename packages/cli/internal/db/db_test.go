@@ -3,10 +3,14 @@ package db
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestOpen_RestrictsFilePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not expose POSIX 0600 file mode semantics")
+	}
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 

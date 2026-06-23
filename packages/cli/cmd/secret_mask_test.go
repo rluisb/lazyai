@@ -40,5 +40,5 @@ func TestMaskSecretNeverLeaksFullValue(t *testing.T) {
 func TestStoreSecretFallbackReturnsError(t *testing.T) {
 	err := storeSecretFallback("foo", "bar")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "No secure keychain available")
+	assert.Contains(t, err.Error(), "no secure keychain available")
 }

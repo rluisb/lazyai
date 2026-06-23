@@ -35,10 +35,6 @@ func newScopeTestContext(t *testing.T, scope types.SetupScope) (*AdapterContext,
 // every emitted file — just the scope-defining directories — so that future
 // content changes don't churn this test.
 func TestAdapter_ScopeParity(t *testing.T) {
-	type expect struct {
-		mustExistUnder string // directory that must exist after Install
-		mustNotContain string // substring that must not appear in any created path (leak check)
-	}
 	type caseRow struct {
 		name    string
 		adapter ToolAdapter

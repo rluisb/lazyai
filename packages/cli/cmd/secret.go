@@ -260,7 +260,7 @@ func removeSecret(name string) error {
 
 // Fallback implementations using file-based storage
 func storeSecretFallback(name, value string) error {
-	return fmt.Errorf("No secure keychain available. Install a system keychain (macOS Keychain, libsecret, or Windows Credential Manager) to store secrets.")
+	return fmt.Errorf("no secure keychain available; install a system keychain (macOS Keychain, libsecret, or Windows Credential Manager) to store secrets")
 }
 
 func retrieveSecretFallback(name string) (string, error) {

@@ -462,17 +462,3 @@ func validateRubricDir(dir string, results *[]ValidationResult, passCount *int, 
 		*failCount++
 	}
 }
-
-// frontmatterBlock returns the YAML frontmatter block (between the leading
-// "---" fences) of a markdown document, or "" if none is present.
-func frontmatterBlock(content string) string {
-	if !strings.HasPrefix(content, "---\n") {
-		return ""
-	}
-	rest := content[len("---\n"):]
-	end := strings.Index(rest, "\n---")
-	if end == -1 {
-		return rest
-	}
-	return rest[:end]
-}

@@ -111,13 +111,33 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 	}
 }
 
-// ReadCanonicalMcp reads and parses the canonical .ai/mcp.json.
+// ReadCanonicalMcp reads and parses the canonical .ai/mcp.json (or .ai/mcp.jsonc).
+// It tries .ai/mcp.json first, then falls back to .ai/mcp.jsonc.
 func ReadCanonicalMcp(targetDir string) *McpCatalog {
 	mcpPath := filepath.Join(targetDir, ".ai", "mcp.json")
+	if files.FileExists(mcpPath) {
+		data, err := files.ReadFile(mcpPath)
+		if err != nil {
+			return nil
+		}
+		var catalog McpCatalog
+		if err := json.Unmarshal(data, &catalog); err != nil {
+			return nil
+		}
+		return &catalog
+	}
+
+	// Fall back to .ai/mcp.jsonc
+	mcpPath = filepath.Join(targetDir, ".ai", "mcp.jsonc")
 	if !files.FileExists(mcpPath) {
 		return nil
 	}
-	data, err := files.ReadFile(mcpPath)
+	parsed, err := jsonc.ReadJSONCFile(mcpPath)
+	if err != nil {
+		return nil
+	}
+	// Convert map to struct via JSON round-trip
+	data, err := json.Marshal(parsed)
 	if err != nil {
 		return nil
 	}

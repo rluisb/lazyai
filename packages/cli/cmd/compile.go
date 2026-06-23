@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
+
 	"github.com/spf13/cobra"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
 	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
+	"github.com/rluisb/lazyai/packages/cli/internal/jsonc"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/lockfile"
 	"github.com/rluisb/lazyai/packages/cli/internal/theme"
@@ -199,15 +202,21 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Println(headerStyle.Render("⚙️  Compile MCP Config"))
 	fmt.Println()
-
 	// Read MCP source once
 	mcpData, err := os.ReadFile(mcpConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to read MCP config: %w", err)
 	}
 	var dataMap map[string]any
-	if err := json.Unmarshal(mcpData, &dataMap); err != nil {
-		return fmt.Errorf("failed to parse MCP config: %w", err)
+	if strings.HasSuffix(mcpConfigPath, ".jsonc") {
+		dataMap, err = jsonc.ParseJSONC(mcpData)
+		if err != nil {
+			return fmt.Errorf("failed to parse MCP config: %w", err)
+		}
+	} else {
+		if err := json.Unmarshal(mcpData, &dataMap); err != nil {
+			return fmt.Errorf("failed to parse MCP config: %w", err)
+		}
 	}
 
 	// Extract MCP servers from the config

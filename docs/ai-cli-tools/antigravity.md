@@ -40,7 +40,7 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add Antigravity during init | `lazyai-cli init --tools antigravity --preset standard --no-interactive` |
+| Add Antigravity during init | `lazyai-cli init --scope project --tools antigravity --preset standard --no-interactive` |
 | Add Antigravity later | `lazyai-cli add --tools antigravity --no-interactive` |
 | Compile only Antigravity MCP | `lazyai-cli compile --tool antigravity` |
 | Preview Antigravity MCP | `lazyai-cli compile --tool antigravity --dry-run` |
@@ -64,5 +64,5 @@ lazyai-cli doctor
 
 - Support level: beta.
 - Project and workspace scopes are supported; global scope is intentionally unsupported for setup files.
-- MCP compilation writes user config under `~/.gemini/config/` because the host MCP surface is user-level.
+- MCP compile is project/workspace-scoped even though the output file is the user-level Gemini config (`~/.gemini/config/mcp_config.json`). Setup (init) does not support global scope.
 - No custom agent, command, prompt, chat-mode, template, or output-style files are emitted for Antigravity.

@@ -36,7 +36,7 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add Kiro during init | `lazyai-cli init --tools kiro --preset standard --no-interactive` |
+| Add Kiro during init | `lazyai-cli init --scope project --tools kiro --preset standard --no-interactive` |
 | Add Kiro later | `lazyai-cli add --tools kiro --no-interactive` |
 | Compile only Kiro MCP | `lazyai-cli compile --tool kiro` |
 | Preview Kiro MCP output | `lazyai-cli compile --tool kiro --dry-run` |

@@ -11,7 +11,7 @@ verify adapter correctness.
 
 - `.ai/lazyai.json`, `.ai/mcp.json`, and canonical asset trees under `.ai/`
 - `.ai/lock.json` compile metadata for idempotent managed outputs
-- scoped installation state (`.ai-setup.json`)
+- scoped installation state (`.ai-setup.db`; legacy `.ai-setup.json` auto-imported on first use)
 - compiler/adapters that emit tool-native output for the 7 supported targets
 - optional runtime-adjacent local state (sessions, metrics, ledger, memory, secrets)
 
@@ -35,7 +35,7 @@ flowchart TD
     F --> L["`.kiro/`"]
     F --> M["`.gemini/` + `.agents/`"]
     E --> N["`.ai/lock.json`"]
-    B --> O["`.ai-setup.json` scoped state"]
+    B --> O["`.ai-setup.db` scoped state (legacy `.ai-setup.json` auto-imported)"]
     N --> P["`lazyai-cli compile` idempotency"]
 ```
 

@@ -72,9 +72,8 @@ lazyai-cli init \
 1. Creates canonical, tool-agnostic files under `.ai/`
 2. Scaffolds specs, templates, rules, and infrastructure based on the selected preset
 3. Compiles root instructions for each selected tool
-4. Generates tool-native directories such as `.opencode/`, `.claude/`, `.github/`, `.pi/`, `.omp/`, `.kiro/`, `.gemini/`, and `.agents/`
-5. Writes `.ai-setup.json` and `.ai/lock.json` to track managed files, hashes, selections, and generated outputs
-6. Prints MCP-specific `export NAME=""` guidance when enabled servers require environment variables; LazyAI does not create or manage `.env` files
+4. Writes `.ai-setup.db` to track selections and scoped state; `.ai/lock.json` records compile metadata (generated-output hashes) for idempotent writes
+5. Prints MCP-specific `export NAME=""` guidance when enabled servers require environment variables; LazyAI does not create or manage `.env` files
 
 ## OpenCode default behavior
 

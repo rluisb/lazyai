@@ -44,10 +44,10 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add Claude Code during init | `lazyai-cli init --tools claude-code --preset standard --no-interactive` |
-| Let Claude CLI register MCP when available | `lazyai-cli init --tools claude-code --drive-cli --no-interactive` |
+| Add Claude Code during init | `lazyai-cli init --scope project --tools claude-code --preset standard --no-interactive` |
+| Let Claude CLI register MCP when available | `lazyai-cli init --scope project --tools claude-code --drive-cli --no-interactive` |
 | Keep secrets out of committed MCP files | `lazyai-cli compile --tool claude-code --local-secrets` |
-| Compile from manifest token | `lazyai-cli compile --tool claude` |
+| Compile from manifest token | `lazyai-cli compile --tool claude-code` |
 
 ## Example
 

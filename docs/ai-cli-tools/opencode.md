@@ -14,7 +14,6 @@ OpenCode is a stable LazyAI target for teams that want native OpenCode agents, s
     ├── commands/<command>.md
     ├── modes/<mode>.md
     ├── plugins/<plugin>.js
-    └── mcp.json
 ```
 
 ```mermaid
@@ -38,12 +37,11 @@ flowchart LR
 | Chat modes | OpenCode mode markdown |
 | Plugins/hooks | managed plugin files under `.opencode/plugins/` |
 | MCP | canonical `.ai/mcp.json`, merged into `opencode.json` |
-
 ## LazyAI options
 
 | Use case | Command |
 |---|---|
-| Add OpenCode during init | `lazyai-cli init --tools opencode --preset standard --no-interactive` |
+| Add OpenCode during init | `lazyai-cli init --scope project --tools opencode --preset standard --no-interactive` |
 | Add OpenCode later | `lazyai-cli add --tools opencode --no-interactive` |
 | Compile only OpenCode MCP | `lazyai-cli compile --tool opencode` |
 | Preview changes | `lazyai-cli compile --tool opencode --dry-run` |

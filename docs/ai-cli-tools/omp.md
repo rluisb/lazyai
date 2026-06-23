@@ -42,7 +42,7 @@ flowchart LR
 
 | Use case | Command |
 |---|---|
-| Add OMP during init | `lazyai-cli init --tools omp --preset standard --no-interactive` |
+| Add OMP during init | `lazyai-cli init --scope project --tools omp --preset standard --no-interactive` |
 | Add OMP later | `lazyai-cli add --tools omp --no-interactive` |
 | Compile only OMP MCP | `lazyai-cli compile --tool omp` |
 | Build an OMP bundle | `lazyai-cli build-plugin --target omp --out ./dist/omp` |

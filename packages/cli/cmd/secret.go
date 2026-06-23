@@ -59,9 +59,23 @@ var secretGetCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("%s: %s\n", name, value)
+		show, _ := cmd.Flags().GetBool("show")
+		if show {
+			fmt.Printf("%s: %s\n", name, value)
+		} else {
+			fmt.Printf("%s: %s\n", name, maskSecret(value))
+		}
 		return nil
 	},
+}
+
+// maskSecret masks all but the last 4 characters of a secret value.
+// Values of 4 characters or fewer are fully masked.
+func maskSecret(value string) string {
+	if len(value) <= 4 {
+		return strings.Repeat("*", len(value))
+	}
+	return strings.Repeat("*", 4) + value[len(value)-4:]
 }
 
 var secretListCmd = &cobra.Command{
@@ -246,21 +260,7 @@ func removeSecret(name string) error {
 
 // Fallback implementations using file-based storage
 func storeSecretFallback(name, value string) error {
-	fmt.Println("⚠️  Using fallback file-based storage (not secure)")
-
-	// Store in ~/.lazyai/secrets/ with base64 encoding
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	secretsDir := fmt.Sprintf("%s/.lazyai/secrets", homeDir)
-	if err := os.MkdirAll(secretsDir, 0700); err != nil {
-		return err
-	}
-
-	secretPath := fmt.Sprintf("%s/%s", secretsDir, name)
-	return os.WriteFile(secretPath, []byte(value), 0600)
+	return fmt.Errorf("No secure keychain available. Install a system keychain (macOS Keychain, libsecret, or Windows Credential Manager) to store secrets.")
 }
 
 func retrieveSecretFallback(name string) (string, error) {
@@ -312,6 +312,7 @@ func removeSecretFallback(name string) error {
 
 func init() {
 	secretRemoveCmd.Flags().Bool("force", false, "Skip confirmation prompt")
+	secretGetCmd.Flags().Bool("show", false, "Reveal the full secret value (masked by default)")
 
 	secretCmd.AddCommand(secretSetCmd)
 	secretCmd.AddCommand(secretGetCmd)

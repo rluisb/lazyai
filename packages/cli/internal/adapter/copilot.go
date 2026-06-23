@@ -548,6 +548,7 @@ func (a *CopilotAdapter) RunHeadlessInit(ctx *AdapterContext, prompt string) err
 	execCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
+	adapterLog.Warn("Running headless init with elevated permissions. The spawned AI agent will have unrestricted access to files and commands for up to 120 seconds.")
 	cmd := exec.CommandContext(execCtx, "copilot",
 		"-p", prompt,
 		"--allow-all",

@@ -13,6 +13,16 @@ All notable changes to this project will be documented in this file.
   matching the existing global-scope behavior for other targets (#390).
 
 ### Fixed
+- **Round-1 production-readiness remediation**: merged issue fixes for MCP/runtime
+  persistence, docs drift, adapter coverage, workspace compile propagation, Windows
+  portability, global-scope outputs, and stale spec-pack cleanup (#400-#404).
+- **Round-2 remediation**: merged follow-up fixes for workspace lockfile coverage,
+  golden compiler fixtures, cross-platform CI gating, canonical validation/trust
+  warnings, command docs drift, and crash-safe writer durability (#414-#419).
+- **Round-3 remediation wave 1**: merged crash-safe sibling write paths, managed
+  block marker matching, CLI docs/flag drift, cross-platform smoke coverage,
+  golden extra-file detection, session test cleanup, nested conditional parsing,
+  and adapter error handling (#438-#442).
 - **MCP validation**: Reject blank and whitespace-only `command`/`url` values in
   `.ai/mcp.json` entries, preventing silent runtime failures (#382).
 - **OMP MCP dispatch**: `CompileMCP` now delegates to `CompileMCPForTool` for

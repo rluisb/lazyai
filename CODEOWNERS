@@ -7,3 +7,7 @@
 /AGENTS.md @rluisb
 /CLAUDE.md @rluisb
 /.github/copilot-instructions.md @rluisb
+
+/.githooks/ @rluisb
+/.husky/ @rluisb
+/packaging/homebrew/ @rluisb

@@ -77,8 +77,9 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			cmdLog.Warn("contract load failed", "error", err)
 		} else {
 			issues := compiler.ValidateChain(contracts)
-			if len(issues) > 0 {
-				cmdLog.Error("contract validation failed", "issues", compiler.FormatContractIssues(issues))
+			displayIssues := filterCompileContractIssues(issues, strictContracts)
+			if len(displayIssues) > 0 {
+				cmdLog.Error("contract validation failed", "issues", compiler.FormatContractIssues(displayIssues))
 			}
 			if compiler.ContractValidationFails(issues, strictContracts) {
 				return fmt.Errorf("contract validation failed; pass --validate-contracts=false to override")
@@ -329,23 +330,22 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// If we compiled any new records, update the store
+		// V2 (FR-003): record generated outputs in .ai/lock.json so future
+		// compiles can detect drift and skip unchanged files. The lockfile is
+		// required: do not update the legacy store if the canonical lock write
+		// fails, or the two bookkeeping stores can disagree.
+		if err := writeCompileLock(aiDir, mcpRoot, mcpData, newFileRecords, storeData.Config.Repos); err != nil {
+			return fmt.Errorf("writing .ai/lock.json: %w", err)
+		}
+
+		// If we compiled any new records, update the legacy store after the
+		// canonical lock has been written.
 		if len(newFileRecords) > 0 {
-			// Merge new file records with existing ones
 			allRecords := append(storeData.Files, newFileRecords...)
 			storeData.Files = allRecords
-
-			// Write back to store
 			if err := store.WriteStoreData(storeData); err != nil {
 				return fmt.Errorf("writing updated store: %w", err)
 			}
-		}
-
-		// V2 (FR-003): record generated outputs in .ai/lock.json so future
-		// compiles can detect drift and skip unchanged files. Best-effort: a
-		// lockfile failure warns but does not fail the compile.
-		if err := writeCompileLock(aiDir, mcpRoot, mcpData, newFileRecords, storeData.Config.Repos); err != nil {
-			cmdLog.Warn("writing .ai/lock.json failed", "error", err)
 		}
 		fmt.Printf("  %s Compiled %d tool(s).\n", greenStyle.Render("✓"), compiledCount)
 	}
@@ -358,6 +358,20 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func filterCompileContractIssues(issues []compiler.ContractIssue, strict bool) []compiler.ContractIssue {
+	if strict {
+		return issues
+	}
+	filtered := make([]compiler.ContractIssue, 0, len(issues))
+	for _, issue := range issues {
+		if issue.Severity == compiler.ContractSeverityWarn && issue.Code == "orphan-skill" {
+			continue
+		}
+		filtered = append(filtered, issue)
+	}
+	return filtered
 }
 
 // writeCompileLock records compiled outputs in <aiDir>/lock.json. Output paths

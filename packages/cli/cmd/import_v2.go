@@ -121,7 +121,22 @@ func writeMigrationReport(sourcePath, targetPath string, detections []migration.
 	if result.BackupPath != "" {
 		lines = append(lines, fmt.Sprintf("- Backup directory: `%s`", result.BackupPath))
 	}
-	lines = append(lines, "", "## Confidence levels", "- exact — direct canonical mapping", "- high — mapping likely complete, minor target metadata lost", "- medium — instructions imported but semantics uncertain", "- low — copied as raw target-specific asset", "- unsupported — left in native file only", "", "## Detections")
+	lines = append(lines,
+		"",
+		"## Confidence levels",
+		"- exact — direct canonical mapping",
+		"- high — mapping likely complete, minor target metadata lost",
+		"- medium — instructions imported but semantics uncertain",
+		"- low — copied as raw target-specific asset",
+		"- unsupported — left in native file only",
+		"",
+		"## Trust model",
+		"- Imported canonical files are copied from external AI-tool config and should be reviewed before compile/use.",
+		"- Raw native files preserved under `.ai/adapters/<target>/raw/` are snapshots for audit/recovery, not a safety boundary.",
+		"- Run `lazyai-cli validate --all` after import and review any MCP command, hook, or secret warnings before enabling outputs.",
+		"",
+		"## Detections",
+	)
 
 	for _, detection := range detections {
 		lines = append(lines,

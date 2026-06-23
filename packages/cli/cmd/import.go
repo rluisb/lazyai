@@ -126,6 +126,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("Migration report: %s\n\n", migrationReportRelPath)
 
+	fmt.Println("Trust model: imported canonical files and preserved raw snapshots come from external tool config.")
+	fmt.Println("Review `.ai/**` and `.ai/adapters/*/raw/`, then run `lazyai-cli validate --all` before compile/use.")
+
 	if preview {
 		fmt.Println("Preview mode — no changes were made.")
 		return nil
@@ -198,6 +201,10 @@ func printImportResult(result *migration.MigrationResult, reportPath string, raw
 			fmt.Printf("  ⚠ %s\n", w)
 		}
 	}
+
+	fmt.Println()
+	fmt.Println("Trust warning: imported content is copied from external AI-tool config and should be reviewed before compile/use.")
+	fmt.Println("Review canonical files under `.ai/**`, preserved raw snapshots under `.ai/adapters/*/raw/`, and run `lazyai-cli validate --all`.")
 
 	if result.Success {
 		fmt.Println()

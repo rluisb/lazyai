@@ -23,6 +23,7 @@ var noSandboxTools = map[types.ToolId]string{
 type mcpServerSummary struct {
 	Name      string
 	Transport string // "command" or "url"
+	Command   string // the actual command string for stdio servers
 	EnvKind   string // "none", "ref", or "inline"
 }
 
@@ -109,12 +110,19 @@ func inventoryMCPServers(aiDir string) []mcpServerSummary {
 			continue
 		}
 		transport := "command"
+		cmdStr := ""
+		if cmdRaw, hasCmd := entry["command"]; hasCmd {
+			if s, ok := cmdRaw.(string); ok {
+				cmdStr = s
+			}
+		}
 		if _, hasURL := entry["url"]; hasURL {
 			transport = "url"
 		}
 		summaries = append(summaries, mcpServerSummary{
 			Name:      name,
 			Transport: transport,
+			Command:   cmdStr,
 			EnvKind:   classifyEnv(entry["env"]),
 		})
 	}
@@ -157,7 +165,21 @@ func printSecurityReport(report securityReport, warnStyle, headerStyle styleRend
 	if len(report.MCPServers) > 0 {
 		fmt.Printf("  %s MCP servers (%d):\n", warnStyle.Render("•"), len(report.MCPServers))
 		for _, s := range report.MCPServers {
-			fmt.Printf("    %s %s [%s, env: %s]\n", warnStyle.Render("•"), s.Name, s.Transport, s.EnvKind)
+			cmdInfo := ""
+			if s.Transport == "command" && s.Command != "" {
+				cmdInfo = fmt.Sprintf(", cmd: %s", s.Command)
+			}
+			fmt.Printf("    %s %s [%s, env: %s%s]\n", warnStyle.Render("•"), s.Name, s.Transport, s.EnvKind, cmdInfo)
+		}
+		// Add a trust advisory for stdio command servers.
+		var cmdCount int
+		for _, s := range report.MCPServers {
+			if s.Transport == "command" && s.Command != "" {
+				cmdCount++
+			}
+		}
+		if cmdCount > 0 {
+			fmt.Printf("    %s %d stdio command server(s) — MCP commands execute arbitrary processes; review before enabling\n", warnStyle.Render("!"), cmdCount)
 		}
 	}
 	printIssueGroup("Hook risks", report.HookRisks, warnStyle)

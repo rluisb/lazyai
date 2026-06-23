@@ -128,6 +128,17 @@ title: Legacy Spec
 	}
 }
 
+func TestDoctorDirFlagRegistered(t *testing.T) {
+	// Verify the --dir flag is registered on the real command (regression for #421).
+	f := doctorCmd.Flags().Lookup("dir")
+	if f == nil {
+		t.Fatal("expected --dir flag to be registered on doctorCmd")
+	}
+	if f.DefValue != "" {
+		t.Errorf("expected --dir default to be empty, got %q", f.DefValue)
+	}
+}
+
 func newDoctorCommand(dir string, jsonOutput bool) *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.Flags().String("dir", dir, "")

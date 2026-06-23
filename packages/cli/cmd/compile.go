@@ -27,8 +27,8 @@ import (
 
 var compileCmd = &cobra.Command{
 	Use:   "compile",
-	Short: "Compile .ai/mcp.json to per-tool MCP configs",
-	Long:  "Compile the unified MCP server configuration into per-tool configuration files.",
+	Short: "Compile .ai/ sources into per-tool native configurations",
+	Long:  "Compile agents, skills, hooks, prompts, and MCP server configurations from the canonical .ai/ tree into tool-native layouts for each selected target.",
 	RunE:  runCompile,
 }
 

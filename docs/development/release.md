@@ -85,7 +85,7 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 After upgrading the CLI binary, refresh managed files:
 
 ```bash
-lazyai-cli update --check
+lazyai-cli update-self --check
 lazyai-cli update
 lazyai-cli doctor
 ```

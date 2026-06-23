@@ -40,6 +40,7 @@ func init() {
 	doctorCmd.Flags().Bool("fix", false, "Print fix instructions for detected issues")
 	doctorCmd.Flags().Bool("verbose", false, "Show detailed output for all files")
 	doctorCmd.Flags().Bool("json", false, "Output as JSON")
+	doctorCmd.Flags().String("dir", "", "Project directory to check (defaults to current directory)")
 	rootCmd.AddCommand(doctorCmd)
 	doctorCmd.GroupID = "lifecycle"
 }

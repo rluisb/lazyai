@@ -393,7 +393,7 @@ lazyai-cli import [source]
 
 | Flag | Description |
 |---|---|
-| `--tool` | Source tool to import (`opencode`, `claude-code`, `copilot`, `pi`, or `antigravity`); auto-detected if omitted |
+| `--tool` | Source tool to import (`opencode`, `claude-code`, `copilot`, `pi`, `antigravity`, `omp`, or `kiro`); auto-detected if omitted |
 | `--no-interactive` | Run without confirmation prompts |
 | `--preview` | Show the import plan without writing |
 | `--strategy` | Merge strategy: `smart`, `preserve`, `replace`, or `append` |
@@ -707,6 +707,7 @@ Validate setup integrity and run six environment health checks.
 
 | Flag | Description |
 |---|---|
+| `--dir` | Project directory to check (defaults to current directory) |
 | `--fix` | Print fix instructions for detected issues |
 | `--verbose` | Show detailed output for all files and metadata issues |
 | `--json` | Output JSON |

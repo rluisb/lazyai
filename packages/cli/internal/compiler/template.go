@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
 
 // SharedRootTemplatePath is the path to the shared root template relative to the library dir.
-var SharedRootTemplatePath = filepath.Join("tool-templates", "shared", "root.template.md")
+var SharedRootTemplatePath = path.Join("tool-templates", "shared", "root.template.md")
 
 // CompilerConfig holds the configuration for template compilation.
 type CompilerConfig struct {
@@ -40,7 +41,7 @@ func NewTemplateCompiler(config CompilerConfig) *TemplateCompiler {
 
 // Compile compiles all templates for the configured tool and returns the output.
 func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
-	toolTemplateDir := filepath.Join("tool-templates", tc.config.Tool)
+	toolTemplateDir := path.Join("tool-templates", tc.config.Tool)
 	sharedRootTemplate := SharedRootTemplatePath
 
 	hasSharedRootTemplate := tc.fileExistsFS(sharedRootTemplate)
@@ -68,7 +69,7 @@ func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
 		templateFiles := tc.findTemplateFilesFS(toolTemplateDir)
 		for _, templateFile := range templateFiles {
 			// Skip root template if shared root template was already processed.
-			baseName := filepath.Base(templateFile)
+			baseName := path.Base(templateFile)
 			if hasSharedRootTemplate && strings.HasPrefix(baseName, "root.template.") {
 				continue
 			}
@@ -80,8 +81,12 @@ func (tc *TemplateCompiler) Compile() (*CompiledOutput, error) {
 			resolved := tc.resolver.Resolve(string(content), context)
 
 			// Convert template path to output path.
-			relPath, err := filepath.Rel(toolTemplateDir, templateFile)
-			if err != nil {
+			relPath := templateFile
+			if tc.config.LibraryFS != nil {
+				relPath = strings.TrimPrefix(templateFile, toolTemplateDir+"/")
+			} else if diskRel, err := filepath.Rel(filepath.Join(tc.config.LibraryDir, toolTemplateDir), templateFile); err == nil {
+				relPath = diskRel
+			} else {
 				relPath = filepath.Base(templateFile)
 			}
 			outputPath := strings.ReplaceAll(relPath, ".template.md", ".md")

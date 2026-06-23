@@ -28,8 +28,8 @@ func runEnhancedHealthChecks() []HealthCheck {
 		check.Status = "pass"
 		check.Detail = strings.TrimSpace(string(out))
 	} else {
-		check.Status = "fail"
-		check.Detail = "sqlite3 not found on PATH"
+		check.Status = "warn"
+		check.Detail = "sqlite3 not found on PATH (optional; LazyAI uses the embedded Go SQLite driver)"
 	}
 	checks = append(checks, check)
 

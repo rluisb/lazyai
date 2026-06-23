@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -17,6 +18,21 @@ func makeValidateCtx(t *testing.T) *AdapterContext {
 		LibraryFS:  createTestFS(),
 		Strategy:   types.ConflictStrategyAlign,
 	}
+}
+
+func makeFakeOpenCodeBin(t *testing.T) string {
+	t.Helper()
+	binDir := t.TempDir()
+	fakeBin := filepath.Join(binDir, "opencode")
+	content := []byte("#!/bin/sh\nexit 0\n")
+	if runtime.GOOS == "windows" {
+		fakeBin = filepath.Join(binDir, "opencode.bat")
+		content = []byte("@echo off\r\nexit /b 0\r\n")
+	}
+	if err := os.WriteFile(fakeBin, content, 0o755); err != nil {
+		t.Fatalf("writing fake binary: %v", err)
+	}
+	return binDir
 }
 
 func TestValidateOpenCodeInstall_BinaryAbsent(t *testing.T) {
@@ -43,13 +59,7 @@ func TestValidateOpenCodeInstall_BinaryAbsent(t *testing.T) {
 func TestValidateOpenCodeInstall_ConfigFails(t *testing.T) {
 	ctx := makeValidateCtx(t)
 
-	// Create a fake opencode binary that the PATH trick will find.
-	binDir := t.TempDir()
-	fakeBin := filepath.Join(binDir, "opencode")
-	if err := os.WriteFile(fakeBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("writing fake binary: %v", err)
-	}
-	t.Setenv("PATH", binDir)
+	t.Setenv("PATH", makeFakeOpenCodeBin(t))
 
 	callCount := 0
 	stubRunner := func(name string, args ...string) ([]byte, error) {
@@ -89,12 +99,7 @@ func TestValidateOpenCodeInstall_AgentFails(t *testing.T) {
 		t.Fatalf("write agent: %v", err)
 	}
 
-	binDir := t.TempDir()
-	fakeBin := filepath.Join(binDir, "opencode")
-	if err := os.WriteFile(fakeBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("writing fake binary: %v", err)
-	}
-	t.Setenv("PATH", binDir)
+	t.Setenv("PATH", makeFakeOpenCodeBin(t))
 
 	stubRunner := func(name string, args ...string) ([]byte, error) {
 		if len(args) >= 3 && args[0] == "debug" && args[1] == "agent" {
@@ -132,12 +137,7 @@ func TestValidateOpenCodeInstall_AllPass(t *testing.T) {
 		t.Fatalf("write agent: %v", err)
 	}
 
-	binDir := t.TempDir()
-	fakeBin := filepath.Join(binDir, "opencode")
-	if err := os.WriteFile(fakeBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("writing fake binary: %v", err)
-	}
-	t.Setenv("PATH", binDir)
+	t.Setenv("PATH", makeFakeOpenCodeBin(t))
 
 	stubRunner := func(name string, args ...string) ([]byte, error) {
 		return []byte(`{"mcp": {"servers": {}}}`), nil

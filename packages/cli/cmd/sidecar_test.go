@@ -13,7 +13,7 @@ import (
 
 func TestSidecarStatus_PropagatesGetProjectRootError(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	origGetProjectRoot := getProjectRoot
@@ -41,7 +41,7 @@ func TestSidecarStatus_PropagatesGetProjectRootError(t *testing.T) {
 
 func TestSidecarDoctor_PropagatesGetProjectRootError(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	origGetProjectRoot := getProjectRoot
@@ -68,7 +68,7 @@ func TestSidecarDoctor_PropagatesGetProjectRootError(t *testing.T) {
 }
 func TestSidecarDetachProject_DoesNotCallGetProjectRootWithPositionalArg(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	missingConfigProject := filepath.Join(t.TempDir(), "project")
@@ -105,7 +105,7 @@ func TestSidecarDetachProject_DoesNotCallGetProjectRootWithPositionalArg(t *test
 
 func TestSidecarAttachProject_RejectsMissingProjectPathWithoutCreatingIt(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	missingProject := filepath.Join(t.TempDir(), "missing-project")
@@ -141,7 +141,7 @@ func TestSidecarAttachProject_RejectsMissingProjectPathWithoutCreatingIt(t *test
 
 func TestDetermineScope_ReturnsWorkspaceConfigLoadError(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 
 	withWorkingDir(t, t.TempDir())
 	configPath := filepath.Join(home, ".lazyai", "workspaces.yaml")
@@ -164,7 +164,7 @@ func TestDetermineScope_ReturnsWorkspaceConfigLoadError(t *testing.T) {
 
 func TestSidecarInitWorkspace_UsesLockedWorkspaceUpdate(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	workspaceRoot := t.TempDir()
@@ -211,7 +211,7 @@ func TestSidecarInitWorkspace_UsesLockedWorkspaceUpdate(t *testing.T) {
 
 func TestSidecarAttachWorkspace_UsesLockedWorkspaceUpdate(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	workspaceRoot := t.TempDir()
@@ -258,7 +258,7 @@ func TestSidecarAttachWorkspace_UsesLockedWorkspaceUpdate(t *testing.T) {
 
 func TestSidecarDetachWorkspace_UsesLockedWorkspaceUpdate(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 	withWorkingDir(t, t.TempDir())
 
 	workspaceRoot := t.TempDir()

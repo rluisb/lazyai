@@ -19,19 +19,24 @@ func setupTestEnv(t *testing.T) (homeDir, projectRoot, globalDir string, cleanup
 	projectRoot = filepath.Join(tmpDir, "project")
 	globalDir = filepath.Join(homeDir, ".lazyai")
 
-	require.NoError(t, os.MkdirAll(globalDir, 0755))
-	require.NoError(t, os.MkdirAll(projectRoot, 0755))
+	require.NoError(t, os.MkdirAll(globalDir, 0o755))
+	require.NoError(t, os.MkdirAll(projectRoot, 0o755))
 
-	// Override home directory.
+	// Override home directory. Go's os.UserHomeDir uses HOME on Unix and
+	// USERPROFILE on Windows, so set both for cross-platform tests.
 	origHome := os.Getenv("HOME")
+	origUserProfile := os.Getenv("USERPROFILE")
 	os.Setenv("HOME", homeDir)
+	os.Setenv("USERPROFILE", homeDir)
 
 	cleanup = func() {
 		os.Setenv("HOME", origHome)
+		os.Setenv("USERPROFILE", origUserProfile)
 	}
 
 	return homeDir, projectRoot, globalDir, cleanup
 }
+
 func ensureDirs(t *testing.T, paths ...string) {
 	for _, p := range paths {
 		require.NoError(t, os.MkdirAll(p, 0o755))
@@ -46,7 +51,7 @@ func writeWorkspaceConfig(t *testing.T, cfg *WorkspaceConfig) {
 	path := filepath.Join(dir, "workspaces.yaml")
 	data, err := yaml.Marshal(cfg)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0o644))
 }
 
 // writeGlobalSidecar writes a global sidecar config.
@@ -57,7 +62,7 @@ func writeGlobalSidecar(t *testing.T, cfg *SidecarConfig) {
 	path := filepath.Join(dir, "sidecar.yaml")
 	data, err := yaml.Marshal(GlobalSidecarConfig{Sidecar: cfg})
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0o644))
 }
 
 // writeProjectSidecar writes a project sidecar config.
@@ -66,7 +71,7 @@ func writeProjectSidecar(t *testing.T, projectRoot string, cfg *SidecarConfig) {
 	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
 	data, err := yaml.Marshal(ProjectSidecarConfig{Sidecar: cfg})
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0o644))
 }
 
 func TestResolve_NoSidecarAnyLevel(t *testing.T) {
@@ -88,7 +93,7 @@ func TestResolve_GlobalOnly(t *testing.T) {
 	defer cleanup()
 
 	sidecarPath := filepath.Join(globalDir, "kb")
-	require.NoError(t, os.MkdirAll(sidecarPath, 0755))
+	require.NoError(t, os.MkdirAll(sidecarPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
 		Path:     sidecarPath,
@@ -112,8 +117,8 @@ func TestResolve_ProjectOverridesGlobal(t *testing.T) {
 
 	globalPath := filepath.Join(globalDir, "global-kb")
 	projectPath := filepath.Join(projectRoot, "project-kb")
-	require.NoError(t, os.MkdirAll(globalPath, 0755))
-	require.NoError(t, os.MkdirAll(projectPath, 0755))
+	require.NoError(t, os.MkdirAll(globalPath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
 		Path:     globalPath,
@@ -144,8 +149,8 @@ func TestResolve_WorkspaceOverridesProject(t *testing.T) {
 
 	workspacePath := filepath.Join(globalDir, "workspace-kb")
 	projectPath := filepath.Join(projectRoot, "project-kb")
-	require.NoError(t, os.MkdirAll(workspacePath, 0755))
-	require.NoError(t, os.MkdirAll(projectPath, 0755))
+	require.NoError(t, os.MkdirAll(workspacePath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
 
 	writeWorkspaceConfig(t, &WorkspaceConfig{
 		Workspaces: []WorkspaceEntry{
@@ -185,7 +190,7 @@ func TestResolve_RelativePathResolution(t *testing.T) {
 
 	// Global sidecar with relative path.
 	kbPath := filepath.Join(globalDir, "kb")
-	require.NoError(t, os.MkdirAll(kbPath, 0755))
+	require.NoError(t, os.MkdirAll(kbPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
 		Path:     "kb", // relative to globalDir
@@ -208,7 +213,7 @@ func TestResolve_AbsolutePathPassthrough(t *testing.T) {
 	defer cleanup()
 
 	absPath := filepath.Join(os.TempDir(), "lazyai-test-abs-kb")
-	require.NoError(t, os.MkdirAll(absPath, 0755))
+	require.NoError(t, os.MkdirAll(absPath, 0o755))
 	defer os.RemoveAll(absPath)
 
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
@@ -230,7 +235,7 @@ func TestResolve_DefaultDirValues(t *testing.T) {
 	defer cleanup()
 
 	kbPath := filepath.Join(globalDir, "kb")
-	require.NoError(t, os.MkdirAll(kbPath, 0755))
+	require.NoError(t, os.MkdirAll(kbPath, 0o755))
 
 	// Sidecar with empty *_dir fields.
 	writeGlobalSidecar(t, &SidecarConfig{
@@ -251,8 +256,8 @@ func TestResolve_AbsoluteDirPaths(t *testing.T) {
 
 	absDocs := filepath.Join(os.TempDir(), "lazyai-test-abs-docs")
 	absSpecs := filepath.Join(os.TempDir(), "lazyai-test-abs-specs")
-	require.NoError(t, os.MkdirAll(absDocs, 0755))
-	require.NoError(t, os.MkdirAll(absSpecs, 0755))
+	require.NoError(t, os.MkdirAll(absDocs, 0o755))
+	require.NoError(t, os.MkdirAll(absSpecs, 0o755))
 	defer os.RemoveAll(absDocs)
 	defer os.RemoveAll(absSpecs)
 
@@ -306,6 +311,7 @@ func TestResolve_GlobalScopeDefault(t *testing.T) {
 	assert.Equal(t, filepath.Join(globalDir, "specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(globalDir, "plans"), result.PlansDir)
 }
+
 func TestResolve_GlobalScopeIgnoresProjectAndWorkspace(t *testing.T) {
 	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
 	defer cleanup()
@@ -419,6 +425,7 @@ func TestResolve_NoActiveWorkspace(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no active workspace")
 }
+
 func TestResolve_RejectsEmptySidecarPath(t *testing.T) {
 	_, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()

@@ -202,6 +202,7 @@ func TestSessionEnd(t *testing.T) {
 		t.Errorf("expected ended_at to be set, got %v", endedAt)
 	}
 }
+
 func TestSessionEndWritesHandoffAndMetadata(t *testing.T) {
 	tmpDir := withTempDir(t)
 

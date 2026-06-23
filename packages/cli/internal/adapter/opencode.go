@@ -103,9 +103,11 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		if _, err := configmerge.MergeJSONFile(configPath, defaultConfig); err != nil {
 			return nil, err
 		}
+		relPath, _ := filepath.Rel(ctx.TargetDir, configPath)
+		relPath = filepath.ToSlash(relPath)
 		hash, _ := files.FileHash(configPath)
 		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path:   configPath,
+			Path:   relPath,
 			Hash:   hash,
 			Source: "generated",
 			Owner:  types.FileOwnerLibrary,
@@ -202,16 +204,9 @@ func (a *OpenCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, err
 		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
 	}
 
-	// Install selected plugins via the opencode CLI if the binary is present.
-	if err := installOpenCodePlugins(ctx, defaultCmdRunner); err != nil {
-		adapterLog.Warn("plugin install failed", "adapter", "opencode", "error", err)
-	}
-	if err := normalizeOpenCodePackageJSON(ocDir); err != nil {
-		adapterLog.Warn("package.json normalization failed", "adapter", "opencode", "error", err)
-	}
-
 	return ctx.FileRecords, nil
 }
+
 func openCodeConfigRoot(ctx *AdapterContext) (string, error) {
 	switch ctx.SetupScope {
 	case types.SetupScopeProject:
@@ -276,32 +271,6 @@ func (a *OpenCodeAdapter) RunHeadlessValidation(ctx *AdapterContext) error { ret
 func fileID(filename string) string {
 	ext := filepath.Ext(filename)
 	return filename[:len(filename)-len(ext)]
-}
-
-// installOpenCodePlugins shells out to `opencode plugin <module>` for each
-// selected plugin. Requires the binary to be on PATH; no-ops silently otherwise.
-// Global scope passes -g; project/workspace scopes use the target dir as cwd.
-// Each failure is logged and skipped — plugin errors do not block the install.
-func installOpenCodePlugins(ctx *AdapterContext, run CmdRunner) error {
-	if len(ctx.Selections.OpenCodePlugins) == 0 {
-		return nil
-	}
-	if _, err := exec.LookPath("opencode"); err != nil {
-		return nil
-	}
-
-	for _, module := range ctx.Selections.OpenCodePlugins {
-		var args []string
-		if ctx.SetupScope == types.SetupScopeGlobal {
-			args = []string{"plugin", module, "-g"}
-		} else {
-			args = []string{"plugin", module}
-		}
-		if out, err := run("opencode", args...); err != nil {
-			adapterLog.Warn("opencode plugin failed", "adapter", "opencode", "plugin", module, "error", err, "output", out)
-		}
-	}
-	return nil
 }
 
 func normalizeOpenCodePackageJSON(ocDir string) error {

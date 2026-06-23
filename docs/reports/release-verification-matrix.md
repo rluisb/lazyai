@@ -11,14 +11,14 @@
 | **Linux (ubuntu-latest)** | `.github/workflows/cross-platform.yml`, existing CI | Yes | Yes | Yes | Yes | CI workflow added; existing Linux CI already active |
 | **macOS (darwin/arm64)** | `.github/workflows/cross-platform.yml` (`macos-latest`) | Yes | Yes | N/A | N/A | Verified locally (2026-06-23); CI workflow added |
 | **macOS (darwin/amd64)** | Cross-compile only | Manual | Cross-compile | N/A | Manual | Not runtime-verified |
-| **Windows (amd64)** | `.github/workflows/cross-platform.yml` (`windows-latest`) | Yes | Yes | N/A | N/A | CI workflow added; first run pending |
+| **Windows (amd64)** | `.github/workflows/cross-platform.yml` (`windows-latest`) | Not yet | Yes | N/A | N/A | CI build gate added; package tests need portability follow-up |
 
 ## Verification Commands
 
-Every platform must pass these commands before a release is considered verified:
+Platform coverage is staged. Linux and macOS runners must pass package tests before release; Windows is currently a build-only gate until the package test suite is made Windows-portable.
 
 ```bash
-# 1. Go tests (all packages)
+# 1. Go tests (Linux/macOS release gates)
 cd packages/cli && go test ./... -count=1 -timeout 120s
 cd packages/diffviewer && go test ./... -count=1 -timeout 60s
 
@@ -82,7 +82,7 @@ rm -rf "$TMP"
 
 ### Windows
 
-- **amd64**: The new cross-platform workflow runs Go tests and builds on `windows-latest`; first run pending after this PR opens.
+- **amd64**: The new cross-platform workflow builds `lazyai-cli` and `lazyai-diffviewer` on `windows-latest`. Full `go test ./...` is not a Windows release gate yet because existing package tests assume POSIX permissions, POSIX shell/path behavior, or globally isolated home-directory state.
 - **Known Windows-specific code**: `update-self.go` (`.exe` extension, `.new` rename pattern), `notify.go` (unsupported — returns error), `secret.go` (unsupported — returns error).
 - **Shell scripts**: All test scripts use `#!/usr/bin/env bash` and are not compatible with Windows without WSL or Git Bash.
 - **MkDocs**: Not part of the Windows verification scope; docs build runs on Ubuntu.
@@ -102,7 +102,7 @@ rm -rf "$TMP"
 
 ### Cross-Platform CI Workflow
 
-A dedicated cross-platform workflow (`.github/workflows/cross-platform.yml`) has been added to run tests and builds on all three platforms. See that file for details.
+A dedicated cross-platform workflow (`.github/workflows/cross-platform.yml`) has been added to run tests/builds on Linux and macOS and build-only checks on Windows. See that file for details.
 
 ## Release Checklist
 
@@ -111,7 +111,7 @@ Before tagging a release, verify:
 - [ ] **Linux (CI)**: All CI workflows pass on ubuntu-latest
 - [ ] **macOS (CI/manual)**: `go test ./packages/cli/...` and build pass on `macos-latest`; manual darwin/arm64 smoke can be run before release
 - [ ] **Cross-compile (CI)**: `make cli-snapshot` succeeds for all 5 platform targets
-- [ ] **Windows (CI)**: Go tests/build pass on `windows-latest`
+- [ ] **Windows (CI)**: CLI and diffviewer builds pass on `windows-latest`
 - [ ] **Documentation**: `mkdocs build --strict` passes (checked on Ubuntu)
 - [ ] **Release assets**: Release workflow produces binaries for all 5 platform targets
 
@@ -119,5 +119,5 @@ Before tagging a release, verify:
 
 | Issue | Description | Priority |
 |---|---|---|
-| — | Add Windows-compatible smoke test (PowerShell or Go-based) | P3 |
+| — | Make package tests Windows-portable, then promote Windows from build-only to test/build gate | P2 |
 | — | Add macOS disposable-project smoke test once the smoke harness is portable | P3 |

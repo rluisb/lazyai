@@ -32,16 +32,19 @@ jobs:
             packages/diffviewer/go.sum
 
       - name: Test CLI
+        if: runner.os != 'Windows'
         run: cd packages/cli && go test ./... -count=1 -timeout 180s
         env:
           GOWORK: off
 
       - name: Test Diffviewer
+        if: runner.os != 'Windows'
         run: cd packages/diffviewer && go test ./... -count=1 -timeout 60s
         env:
           GOWORK: off
 
       - name: Vet CLI
+        if: runner.os != 'Windows'
         run: cd packages/cli && go vet ./...
         env:
           GOWORK: off

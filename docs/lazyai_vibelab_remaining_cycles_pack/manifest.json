@@ -1,0 +1,109 @@
+{
+  "package": "lazyai_vibelab_remaining_cycles_pack",
+  "created_at": "2026-06-22T19:38:20.499071+00:00",
+  "description": "Single pack with all remaining RPI cycle subpacks after Cycle 2.",
+  "recommended_order": [
+    "cycle_2_1_semantic_validation_finish",
+    "cycle_3_hook_lifecycle",
+    "cycle_4_trace_eval_rubrics",
+    "cycle_5_mcp_adapter_docs",
+    "cycle_6_context_multiagent_init_server"
+  ],
+  "cycles": [
+    {
+      "directory": "cycle_2_1_semantic_validation_finish",
+      "title": "RPI Cycle 2.1 \u2014 Link semantic validation docs, curate templates, and inventory shipped asset warnings",
+      "goal": "Finish Cycle 2 by linking the new semantic validation docs, deciding template curation, and producing a warning inventory for shipped skills/agents.",
+      "files": [
+        "00_README.md",
+        "01_MASTER_PROMPT.md",
+        "02_SHARED_BOUNDARIES.md",
+        "03_RESEARCH_PHASE.md",
+        "04_PLAN_PHASE.md",
+        "05_IMPLEMENTATION_SCOPE.md",
+        "06_SHORT_PROMPT.md",
+        "07_FINAL_REPORT_TEMPLATE.md"
+      ]
+    },
+    {
+      "directory": "cycle_3_hook_lifecycle",
+      "title": "RPI Cycle 3 \u2014 Hook lifecycle catalog and adapter capability mapping",
+      "goal": "Define a neutral hook lifecycle and map current hook assets honestly to each supported adapter.",
+      "files": [
+        "00_README.md",
+        "01_MASTER_PROMPT.md",
+        "02_SHARED_BOUNDARIES.md",
+        "03_RESEARCH_PHASE.md",
+        "04_PLAN_PHASE.md",
+        "05_IMPLEMENTATION_SCOPE.md",
+        "06_SHORT_PROMPT.md",
+        "07_FINAL_REPORT_TEMPLATE.md"
+      ]
+    },
+    {
+      "directory": "cycle_4_trace_eval_rubrics",
+      "title": "RPI Cycle 4 \u2014 Trace/eval workflow templates and rubric assets",
+      "goal": "Add trace/eval improvement-loop templates and first-class rubric assets without adding a judge, scorer, daemon, or runtime.",
+      "files": [
+        "00_README.md",
+        "01_MASTER_PROMPT.md",
+        "02_SHARED_BOUNDARIES.md",
+        "03_RESEARCH_PHASE.md",
+        "04_PLAN_PHASE.md",
+        "05_IMPLEMENTATION_SCOPE.md",
+        "06_SHORT_PROMPT.md",
+        "07_FINAL_REPORT_TEMPLATE.md"
+      ]
+    },
+    {
+      "directory": "cycle_5_mcp_adapter_docs",
+      "title": "RPI Cycle 5 \u2014 MCP examples, adapter capability docs, official compliance matrix, and token-rent/minimality",
+      "goal": "Improve MCP/tool-selection guidance, adapter capability documentation, official compliance tracking, and token-rent/minimality visibility.",
+      "files": [
+        "00_README.md",
+        "01_MASTER_PROMPT.md",
+        "02_SHARED_BOUNDARIES.md",
+        "03_RESEARCH_PHASE.md",
+        "04_PLAN_PHASE.md",
+        "05_IMPLEMENTATION_SCOPE.md",
+        "06_SHORT_PROMPT.md",
+        "07_FINAL_REPORT_TEMPLATE.md"
+      ]
+    },
+    {
+      "directory": "cycle_6_context_multiagent_init_server",
+      "title": "RPI Cycle 6 \u2014 Context/handoff, multi-agent boundary, init headless clarity, and server L3 clarity",
+      "goal": "Complete the remaining guidance layer: context compaction, handoff, multi-agent boundary, init populate clarity, and server capability levels.",
+      "files": [
+        "00_README.md",
+        "01_MASTER_PROMPT.md",
+        "02_SHARED_BOUNDARIES.md",
+        "03_RESEARCH_PHASE.md",
+        "04_PLAN_PHASE.md",
+        "05_IMPLEMENTATION_SCOPE.md",
+        "06_SHORT_PROMPT.md",
+        "07_FINAL_REPORT_TEMPLATE.md"
+      ]
+    }
+  ],
+  "global_non_goals": [
+    "runtime orchestration",
+    "workflow execution",
+    "autonomous task engine",
+    "judge/eval runner",
+    "mandatory trace daemon",
+    "mandatory RAG core",
+    "LangChain/LangGraph/CrewAI dependency",
+    "Codex adapter",
+    "old task/workflow/eval commands"
+  ],
+  "definition_of_done_for_all_cycles": [
+    "Cycle-specific goals completed or clearly scoped",
+    "Tests run and reported",
+    "Changed files listed",
+    "Remaining work documented",
+    "LazyAI remains a compiler/asset manager",
+    "vibe-lab remains the process/quality asset layer",
+    "No runtime/orchestration surface added"
+  ]
+}

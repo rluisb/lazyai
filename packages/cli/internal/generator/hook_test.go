@@ -36,7 +36,7 @@ func TestHookGeneratorGenerateDefault(t *testing.T) {
 	g := &HookGenerator{}
 	files, err := g.Generate(GeneratorConfig{
 		Name:      "test-hook",
-		TargetDir: "/tmp/test",
+		TargetDir: "/placeholder",
 		Answers:   map[string]string{},
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func TestHookGeneratorGenerateWithAnswers(t *testing.T) {
 	files, err := g.Generate(GeneratorConfig{
 		Name:        "block-dangerous-cmd",
 		Description: "Block dangerous shell commands.",
-		TargetDir:   "/tmp/test",
+		TargetDir:   "/placeholder",
 		Answers: map[string]string{
 			"events":  "PreToolUse, PostToolUse",
 			"denied":  "rm -rf /, mkfs",
@@ -102,7 +102,7 @@ func TestHookGeneratorGenerateSlug(t *testing.T) {
 	g := &HookGenerator{}
 	files, err := g.Generate(GeneratorConfig{
 		Name:      "  MY HOOK  ",
-		TargetDir: "/tmp/test",
+		TargetDir: "/placeholder",
 		Answers:   map[string]string{},
 	})
 	if err != nil {

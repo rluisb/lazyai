@@ -88,7 +88,7 @@ func TestWriteAndReadStoreData_RoundTrip(t *testing.T) {
 			SetupScope:        types.SetupScopeProject,
 			Tools:             []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode},
 			ProjectName:       "test-project",
-			TargetDir:         "/tmp/test",
+			TargetDir:         t.TempDir(),
 			ProjectOverview:   "Project summary",
 			NamingConventions: "Use camelCase",
 			ErrorHandling:     "Return wrapped errors",

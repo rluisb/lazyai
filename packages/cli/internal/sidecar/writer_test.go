@@ -112,13 +112,13 @@ func TestSaveWorkspaceConfig_WritesSingleSlotBackup(t *testing.T) {
 	firstConfig := &WorkspaceConfig{
 		Active: "first",
 		Workspaces: []WorkspaceEntry{
-			{Name: "workspace-a", Path: "/tmp/a"},
+			{Name: "workspace-a", Path: "/placeholder/a"},
 		},
 	}
 	secondConfig := &WorkspaceConfig{
 		Active: "second",
 		Workspaces: []WorkspaceEntry{
-			{Name: "workspace-b", Path: "/tmp/b"},
+			{Name: "workspace-b", Path: "/placeholder/b"},
 		},
 	}
 
@@ -155,14 +155,14 @@ func TestUpdateWorkspaceConfig_PreservesConcurrentMutations(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		errCh <- UpdateWorkspaceConfig(func(cfg *WorkspaceConfig) error {
-			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "a", Path: "/tmp/a"})
+			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "a", Path: "/placeholder/a"})
 			return nil
 		})
 	}()
 	go func() {
 		defer wg.Done()
 		errCh <- UpdateWorkspaceConfig(func(cfg *WorkspaceConfig) error {
-			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "b", Path: "/tmp/b"})
+			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "b", Path: "/placeholder/b"})
 			return nil
 		})
 	}()

@@ -971,6 +971,7 @@ AGENTS.md
 .kiro/specs/<name>/requirements.md
 .kiro/specs/<name>/design.md
 .kiro/specs/<name>/tasks.md
+
 .kiro/settings/mcp.json
 .kiroignore
 ```

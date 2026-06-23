@@ -195,12 +195,8 @@ func compileOpenCodeMCP(ctx CompileContext, catalog *McpCatalog) ([]types.Tracke
 	}
 
 	hash, _ := files.FileHash(configPath)
-	recordPath, _ := filepath.Rel(mcpWorkspaceRoot(ctx), configPath)
-	if recordPath == "" || recordPath == "." {
-		recordPath = configPath
-	}
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path: recordPath, Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), configPath), Hash: hash, Source: "compiled:mcp:opencode", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 
@@ -343,18 +339,12 @@ func writeClaudeSettingsLocal(ctx CompileContext, servers map[string]McpServer) 
 		return ctx.FileRecords, fmt.Errorf("merge %s: %w", settingsPath, err)
 	}
 
-	relPath := settingsPath
-	if rel, err := filepath.Rel(mcpWorkspaceRoot(ctx), settingsPath); err == nil {
-		relPath = rel
-	}
 	hash, _ := files.FileHash(settingsPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: "compiled:mcp:claude-local", Owner: types.FileOwnerLibrary,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), settingsPath), Hash: hash, Source: "compiled:mcp:claude-local", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 
-// useCliForMCP attempts to reconcile MCP servers via the claude CLI.
-// Returns true if reconciliation succeeded, false if CLI unavailable or error (fallback will run).
 func useCliForMCP(ctx CompileContext, servers map[string]McpServer) bool {
 	_, found := LookupClaudeBinary()
 	if !found {
@@ -458,10 +448,7 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 	}
 	hash, _ := files.FileHash(mcpPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path:   mcpPath,
-		Hash:   hash,
-		Source: "compiled:mcp",
-		Owner:  types.FileOwnerLibrary,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), mcpPath), Hash: hash, Source: "compiled:mcp", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 
@@ -482,10 +469,7 @@ func compileOmpMCP(ctx CompileContext, servers map[string]McpServer) ([]types.Tr
 	}
 	hash, _ := files.FileHash(mcpPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path:   mcpPath,
-		Hash:   hash,
-		Source: "compiled:mcp:omp",
-		Owner:  types.FileOwnerUser,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), mcpPath), Hash: hash, Source: "compiled:mcp:omp", Owner: types.FileOwnerUser,
 	}), nil
 }
 
@@ -511,18 +495,9 @@ func compileAntigravityMCP(ctx CompileContext, servers map[string]McpServer) ([]
 	if _, err := configmerge.MergeJSONFile(cfgPath, patch); err != nil {
 		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
 	}
-
-	relPath, _ := filepath.Rel(mcpWorkspaceRoot(ctx), cfgPath)
-	recordPath := relPath
-	if recordPath == "" || recordPath == "." {
-		recordPath = cfgPath
-	}
 	hash, _ := files.FileHash(cfgPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path:   recordPath,
-		Hash:   hash,
-		Source: "compiled:mcp:antigravity",
-		Owner:  types.FileOwnerUser,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), cfgPath), Hash: hash, Source: "compiled:mcp:antigravity", Owner: types.FileOwnerUser,
 	}), nil
 }
 
@@ -634,13 +609,9 @@ func compileCopilotCLIMcp(ctx CompileContext, servers map[string]McpServer) ([]t
 		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
 	}
 
-	relPath := cfgPath
-	if rel, err := filepath.Rel(mcpWorkspaceRoot(ctx), cfgPath); err == nil {
-		relPath = rel
-	}
 	hash, _ := files.FileHash(cfgPath)
 	return append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: "compiled:mcp:copilot-cli", Owner: types.FileOwnerLibrary,
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), cfgPath), Hash: hash, Source: "compiled:mcp:copilot-cli", Owner: types.FileOwnerLibrary,
 	}), nil
 }
 

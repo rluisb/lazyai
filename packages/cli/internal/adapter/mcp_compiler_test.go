@@ -389,8 +389,8 @@ func TestCompileKiroMCP_ProjectScope(t *testing.T) {
 	if len(records) != 1 {
 		t.Fatalf("records len = %d, want 1", len(records))
 	}
-	if got := records[0].Path; got != configPath {
-		t.Fatalf("record path = %q, want %q", got, configPath)
+	if got := records[0].Path; got != ".kiro/settings/mcp.json" {
+		t.Fatalf("record path = %q, want %q", got, ".kiro/settings/mcp.json")
 	}
 }
 
@@ -680,4 +680,52 @@ func TestReadCanonicalMcp_JsonPrecedence(t *testing.T) {
 	if _, ok := catalog.Servers["from-jsonc"]; ok {
 		t.Fatal("server 'from-jsonc' should not appear when .json takes precedence")
 	}
+}
+
+// TestTrackedRecordPath_Normalization verifies that trackedRecordPath produces
+// slash-normalized relative paths for files under workspaceRoot, and
+// slash-normalized absolute paths for files outside workspaceRoot.
+func TestTrackedRecordPath_Normalization(t *testing.T) {
+	t.Run("relative path under root", func(t *testing.T) {
+		got := trackedRecordPath("/home/user/project", "/home/user/project/.kiro/settings/mcp.json")
+		if got != ".kiro/settings/mcp.json" {
+			t.Errorf("got %q, want %q", got, ".kiro/settings/mcp.json")
+		}
+	})
+
+	t.Run("absolute path outside root", func(t *testing.T) {
+		got := trackedRecordPath("/home/user/project", "/home/user/.gemini/config/mcp_config.json")
+		want := "/home/user/.gemini/config/mcp_config.json"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("path equals root returns dot", func(t *testing.T) {
+		got := trackedRecordPath("/home/user/project", "/home/user/project")
+		if got != "." {
+			t.Errorf("got %q, want %q", got, ".")
+		}
+	})
+
+	t.Run("Windows-style backslash under root normalized to forward slash", func(t *testing.T) {
+		root := filepath.FromSlash("C:/Users/me/project")
+		fp := filepath.FromSlash("C:/Users/me/project/.omp/mcp.json")
+		got := trackedRecordPath(root, fp)
+		if got != ".omp/mcp.json" {
+			t.Errorf("got %q, want %q", got, ".omp/mcp.json")
+		}
+	})
+
+	t.Run("Windows-style absolute outside root normalized to forward slash", func(t *testing.T) {
+		root := filepath.FromSlash("C:/Users/me/project")
+		fp := filepath.FromSlash("C:/Users/me/.kiro/settings/mcp.json")
+		got := trackedRecordPath(root, fp)
+		// On Windows, filepath.Rel succeeds and produces a relative path;
+		// on other platforms, the paths are treated as regular directories
+		// and Rel produces "../" — the helper falls back to absolute.
+		if got != "C:/Users/me/.kiro/settings/mcp.json" && got != "../.kiro/settings/mcp.json" {
+			t.Errorf("got %q, want either %q or %q", got, "C:/Users/me/.kiro/settings/mcp.json", "../.kiro/settings/mcp.json")
+		}
+	})
 }

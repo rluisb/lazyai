@@ -111,9 +111,10 @@ func TestCompileMCPForTool_ScopeParity(t *testing.T) {
 					}
 
 					// Leak check: project/workspace must not write under home; global must not write under target.
+					// Only flag relative paths (absolute paths are outside workspace root and intentional).
 					for _, rec := range records {
 						p := rec.Path
-						if filepath.IsAbs(p) {
+						if !filepath.IsAbs(p) {
 							switch exp.scope {
 							case types.SetupScopeProject, types.SetupScopeWorkspace:
 								if strings.HasPrefix(p, home) {

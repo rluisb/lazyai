@@ -139,8 +139,8 @@ func TestOmpAdapter_CompileMCP_ProjectScope(t *testing.T) {
 	if len(records) != 1 {
 		t.Fatalf("records len = %d, want 1", len(records))
 	}
-	if got := records[0].Path; got != configPath {
-		t.Fatalf("record path = %q, want %q", got, configPath)
+	if got := records[0].Path; got != ".omp/mcp.json" {
+		t.Fatalf("record path = %q, want %q", got, ".omp/mcp.json")
 	}
 }
 
@@ -172,8 +172,8 @@ func TestOmpAdapter_CompileMCP_AdapterMethod(t *testing.T) {
 	if len(records) != 1 {
 		t.Fatalf("records len = %d, want 1", len(records))
 	}
-	if got := records[0].Path; got != configPath {
-		t.Fatalf("record path = %q, want %q", got, configPath)
+	if got := records[0].Path; got != ".omp/mcp.json" {
+		t.Fatalf("record path = %q, want %q", got, ".omp/mcp.json")
 	}
 }
 

@@ -52,6 +52,17 @@ exclude_docs: |
   orchestrator-research.md
   release-process.md
   template-design-principles.md
+  SOURCES.md
+  cupcake-rpi-setup.md
+  docs/**
+  lazyai-vibelab-product-spec-pack/**
+  lazyai_vibelab_remaining_cycles_pack/**
+  lazyai_vibelab_rpi_cycle2_package/**
+  lazyai_vibelab_rpi_prompt_package/**
+  reports/**
+  skills/**
+  wiki/**
+  workflows/**
   prompts/**
   rules/**
   templates/**
@@ -107,6 +118,15 @@ nav:
       - Token Rent: concepts/token-rent.md
       - Minimality: concepts/minimality.md
       - Minimality Report: concepts/minimality-report.md
+  - AI CLI Tools:
+      - Overview: ai-cli-tools/index.md
+      - OpenCode: ai-cli-tools/opencode.md
+      - Claude Code: ai-cli-tools/claude-code.md
+      - GitHub Copilot: ai-cli-tools/copilot.md
+      - Pi: ai-cli-tools/pi.md
+      - OMP: ai-cli-tools/omp.md
+      - Kiro: ai-cli-tools/kiro.md
+      - Antigravity: ai-cli-tools/antigravity.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md
@@ -130,6 +150,7 @@ nav:
       - MCP: integration/mcp.md
       - Orchestration: integration/orchestration.md
   - Development:
+      - Production Readiness: development/production-readiness.md
       - Contributing: development/contributing.md
       - Release Process: development/release.md
   - Migration:

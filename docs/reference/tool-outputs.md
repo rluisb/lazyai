@@ -11,7 +11,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 | GitHub Copilot | `.github/copilot-instructions.md` | `.github/` | Yes (`.github/agents`) | Yes (`.github/skills`) | Yes (`.github/hooks/*`) | `.vscode/mcp.json`, optional `~/.copilot/mcp-config.json` |
 | Pi | `AGENTS.md` | `.pi/` | Yes (`.pi/agents`) | Yes (`.pi/skills`) | none (`.pi/extensions/*.ts`) | none |
 | OMP (beta) | `AGENTS.md` | `.omp/` | Yes (`.omp/agents`) | Yes (`.omp/skills`) | Yes (`.omp/hooks/pre/*.ts`) | `.omp/mcp.json` |
-| Antigravity (beta) | `AGENTS.md` | `.gemini/` | none | Yes (`.agents/skills`) | Yes (`.gemini/hooks/lazyai/*` and `.agents/hooks.json`) | `~/.gemini/config/mcp_config.json` |
+| Antigravity (beta) | `AGENTS.md` | `.gemini/` + `.agents/` | none | Yes (`.agents/skills`) | Yes (`.gemini/hooks/lazyai/*` and `.agents/hooks.json`) | `~/.gemini/config/mcp_config.json` |
 | Kiro | `AGENTS.md` | `.kiro/` | Yes (`.kiro/agents`) | Yes (`.kiro/skills`) | none | `.kiro/settings/mcp.json` |
 
 ## OpenCode
@@ -160,7 +160,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 
 ## Antigravity (beta)
 
-**Surface summary:** emits minimal `.gemini` settings + hook surface and `.agents`-scoped Agent Skills; MCP is written to user config.
+**Surface summary:** emits minimal `.gemini` settings + hook surface, `.agents`-scoped Agent Skills, and user-level Gemini MCP config.
 
 - **Root instructions:** `AGENTS.md`.
 - **Config directory:** `.gemini/`

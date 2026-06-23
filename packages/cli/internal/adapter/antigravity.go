@@ -97,7 +97,7 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 }
 
 func (a *AntigravityAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {
-	return ctx.FileRecords, nil
+	return CompileMCPForTool(types.ToolIdAntigravity, ctx)
 }
 
 func (a *AntigravityAdapter) CanRunHeadless() bool { return false }

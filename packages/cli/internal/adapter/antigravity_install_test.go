@@ -114,6 +114,40 @@ func TestAntigravityAdapter_Install_UsesWorkspaceRootForAgentsAndGemini(t *testi
 	assertFileExists(t, filepath.Join(workspaceRoot, ".agents", "skills", "review", "SKILL.md"))
 }
 
+func TestAntigravityAdapter_CompileMCP_WritesGeminiUserConfig(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+	writeFile(t, filepath.Join(targetDir, ".ai", "mcp.json"), `{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."],"enabled":true}}}`)
+
+	adapter := &AntigravityAdapter{}
+	records, err := adapter.CompileMCP(CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("Antigravity CompileMCP failed: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected one tracked file, got %d", len(records))
+	}
+	if records[0].Source != "compiled:mcp:antigravity" {
+		t.Fatalf("unexpected source %q", records[0].Source)
+	}
+
+	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("expected %s: %v", configPath, err)
+	}
+	content := string(data)
+	for _, want := range []string{"mcpServers", "filesystem", "npx", "@modelcontextprotocol/server-filesystem"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("mcp_config.json missing %q:\n%s", want, content)
+		}
+	}
+}
+
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {

@@ -36,7 +36,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 
 ## Pi
 
-- **Description:** shared root instructions plus skills, prompt templates, MCP metadata, compaction/global config capabilities, and extension-based safety hooks
+- **Description:** shared root instructions plus skills, prompt templates, extension-based safety hooks, and declared MCP capability with no emitted Pi MCP config
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.pi/`
 - **Project/workspace scope support:** Yes
@@ -66,14 +66,14 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 
 ## Antigravity
 
-- **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, hook surface, MCP/plugin capabilities, and permissions metadata
+- **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, hook surface, MCP config, plugin capabilities, and permissions metadata
 - **Root file:** `AGENTS.md`
-- **Config directory:** `.gemini/`
+- **Config directory:** `.gemini/` plus `.agents/`
 - **Project/workspace scope support:** Yes
-- **Global scope support:** No
+- **Global scope support:** No for setup files; MCP compilation writes user-level Gemini config
 - **Workflow delivery:** no verified native workflow directory; workflow helpers must use a verified Antigravity plugin layout, Agent Skills, hooks, or rules.
 - **Support level:** beta until Antigravity plugin docs and install locations are fully snapshot-verified.
-- **Special behavior:** emits `.gemini/settings.json`, `.gemini/hooks/lazyai/*.sh`, and selected Agent Skills at `.agents/skills/<name>/SKILL.md`; no custom agent files are emitted for Antigravity
+- **Special behavior:** emits `.gemini/settings.json`, `.gemini/hooks/lazyai/*.sh`, selected Agent Skills at `.agents/skills/<name>/SKILL.md`, and MCP config at `~/.gemini/config/mcp_config.json`; no custom agent files are emitted for Antigravity
 
 ## Workflow delivery matrix
 
@@ -97,7 +97,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.md` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.omp/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
-| MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | Capability only; no config currently written | `.omp/mcp.json` / OMP config | `.kiro/settings/mcp.json` | Capability only; no config currently written |
+| MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | Capability only; no config currently written | `.omp/mcp.json` / OMP config | `.kiro/settings/mcp.json` | `~/.gemini/config/mcp_config.json` |
 | Workflow directory | — | — | — | — | — | — | — |
 
 ```bash

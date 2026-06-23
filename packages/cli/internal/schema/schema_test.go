@@ -23,10 +23,10 @@ func TestAccessorsReturnJSON(t *testing.T) {
 			t.Fatalf("lazyai schema required must include version and targets, got %#v", required)
 		}
 		targetsEnum := mapPathSlice(payload, []string{"properties", "targets", "items", "enum"})
-		if len(targetsEnum) != 7 {
-			t.Fatalf("expected 7 manifest targets, got %d", len(targetsEnum))
+		if len(targetsEnum) != 8 {
+			t.Fatalf("expected 8 manifest targets, got %d", len(targetsEnum))
 		}
-		reqTargets := []string{"opencode", "claude", "copilot", "pi", "omp", "antigravity", "kiro"}
+		reqTargets := []string{"opencode", "claude", "claude-code", "copilot", "pi", "omp", "antigravity", "kiro"}
 		for _, want := range reqTargets {
 			if !containsString(targetsEnum, want) {
 				t.Fatalf("manifest enum missing target %q", want)

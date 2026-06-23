@@ -52,8 +52,9 @@ Until that exists, do not advertise `brew install lazyai` or any equivalent.
 2. Review `CHANGELOG.md` and package-specific release notes.
 3. Run package tests, vet, and local builds for affected modules.
 4. Run `mkdocs build --strict` so release documentation stays publishable.
-5. Merge the release preparation branch through the normal PR process.
-6. Create the prefixed submodule tag(s) and let release automation build `lazyai-*` assets.
+5. **Cross-platform verification**: Consult the [Release Verification Matrix](../reports/release-verification-matrix.md) and confirm the target platform(s) pass all checks. At minimum, verify Linux (CI) and the local development platform.
+6. Merge the release preparation branch through the normal PR process.
+7. Create the prefixed submodule tag(s) and let release automation build `lazyai-*` assets.
 
 ## GitHub release assets
 

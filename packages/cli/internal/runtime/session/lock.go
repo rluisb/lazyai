@@ -21,43 +21,33 @@ type Lock struct {
 }
 
 // AcquireLock attempts to acquire a lock. Returns error if already held.
+//
+// Uses an atomic INSERT guarded by a partial unique index on
+// (lock_name) WHERE status = 'active', eliminating the TOCTOU window
+// present in the previous SELECT-then-INSERT sequence. If a concurrent
+// caller inserts the active lock first, the unique constraint fails
+// and we report the lock as already held.
 func (m *Manager) AcquireLock(sessionID string, lockName string, heldBy string) (*Lock, error) {
 	acquiredAt := runtime.Now()
 
-	// Try to insert - will fail if lock_name+status='active' unique constraint exists
-	// For now, we check first then insert
-	var existing Lock
-	var heldByStr sql.NullString
-	var acquiredAtStr sql.NullString
-
-	err := m.db.QueryRow(
-		"SELECT id, session_id, lock_name, held_by, acquired_at, status FROM locks WHERE lock_name = ? AND status = ?",
-		lockName, "active",
-	).Scan(
-		&existing.ID, &existing.SessionID, &existing.LockName, &heldByStr, &acquiredAtStr, &existing.Status,
-	)
-	if err != sql.ErrNoRows {
-		if err != nil {
-			return nil, fmt.Errorf("check existing lock: %w", err)
-		}
-		// Lock is held
-		if heldByStr.Valid {
-			existing.HeldBy = &heldByStr.String
-		}
-		if acquiredAtStr.Valid {
-			t, _ := time.Parse(time.RFC3339, acquiredAtStr.String)
-			existing.AcquiredAt = &t
-		}
-		return nil, fmt.Errorf("lock %s already held by %s", lockName, *existing.HeldBy)
-	}
-
-	// Insert new lock
 	result, err := m.db.Exec(
-		"INSERT INTO locks (session_id, lock_name, held_by, acquired_at, status) VALUES (?, ?, ?, ?, ?)",
-		sessionID, lockName, heldBy, acquiredAt, "active",
+		"INSERT INTO locks (session_id, lock_name, held_by, acquired_at, status) "+
+			"SELECT ?, ?, ?, ?, 'active' "+
+			"WHERE NOT EXISTS (SELECT 1 FROM locks WHERE lock_name = ? AND status = 'active')",
+		sessionID, lockName, heldBy, acquiredAt, lockName,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("acquire lock: %w", err)
+	}
+
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		// Another caller already holds the active lock.
+		existing, lookupErr := m.GetLockStatus(lockName)
+		if lookupErr != nil || existing.HeldBy == nil {
+			return nil, fmt.Errorf("lock %s already held", lockName)
+		}
+		return nil, fmt.Errorf("lock %s already held by %s", lockName, *existing.HeldBy)
 	}
 
 	id, _ := result.LastInsertId()

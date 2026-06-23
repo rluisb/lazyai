@@ -13,10 +13,12 @@
 package runtime
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -37,8 +39,12 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
 
-	// Open with busy timeout and foreign keys
-	dsn := fmt.Sprintf("%s?_fk=1&_busy_timeout=5000&_journal_mode=WAL", path)
+	// Open with busy timeout, foreign keys, and WAL mode. The
+	// modernc.org/sqlite driver only honours pragmas passed via
+	// _pragma=... query parameters; bare _busy_timeout/_fk/_journal_mode
+	// params are silently ignored, which left busy_timeout at 0 and
+	// caused BEGIN IMMEDIATE to fail with SQLITE_BUSY under concurrency.
+	dsn := fmt.Sprintf("%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)", path)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
@@ -80,6 +86,42 @@ func (db *DB) WithTx(fn func(*sql.Tx) error) error {
 	return nil
 }
 
+// WithImmediateTx executes fn within an immediate transaction.
+// BEGIN IMMEDIATE acquires the write lock up front, serializing
+// read-modify-write sequences and preventing the lost-update race
+// that a deferred BEGIN permits under concurrent access.
+//
+// The callback receives a pinned *sql.Conn; all queries/execs issued
+// through it run on the same connection inside the transaction.
+func (db *DB) WithImmediateTx(ctx context.Context, fn func(*sql.Conn) error) error {
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire connection: %w", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return fmt.Errorf("begin immediate transaction: %w", err)
+	}
+
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(context.Background(), "ROLLBACK")
+		}
+	}()
+
+	if err := fn(conn); err != nil {
+		return err
+	}
+
+	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	committed = true
+	return nil
+}
+
 // Path returns the database file path.
 func (db *DB) Path() string {
 	return db.path
@@ -87,10 +129,13 @@ func (db *DB) Path() string {
 
 // BackupTo creates a backup copy of the database.
 func (db *DB) BackupTo(destPath string) error {
-	// Use SQLite backup API for online backup
+	// Escape single quotes to prevent SQL injection via the path.
+	// VACUUM INTO accepts a string literal; doubling embedded single
+	// quotes is the SQLite-compatible way to escape them.
+	escapedPath := strings.ReplaceAll(destPath, "'", "''")
 	_, err := db.Exec(fmt.Sprintf(
 		"VACUUM INTO '%s'",
-		destPath,
+		escapedPath,
 	))
 	if err != nil {
 		return fmt.Errorf("backup database: %w", err)

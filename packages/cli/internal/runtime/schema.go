@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS ledger_refs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ledger_refs_session ON ledger_refs(session_id);
+CREATE TABLE IF NOT EXISTS locks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    lock_name TEXT NOT NULL,
+    held_by TEXT,
+    acquired_at TEXT,
+    released_at TEXT,
+    status TEXT NOT NULL DEFAULT 'active'
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_locks_active_name ON locks(lock_name) WHERE status = 'active';
 
 INSERT OR IGNORE INTO schema_migrations (version, applied_at, name)
 VALUES (2, CURRENT_TIMESTAMP, 'runtime_schema_v2');

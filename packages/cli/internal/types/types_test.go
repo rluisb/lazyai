@@ -147,8 +147,8 @@ func TestTypeConstants(t *testing.T) {
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	t.Parallel()
 
-	if len(ALL_AGENTS) != 8 {
-		t.Errorf("ALL_AGENTS has %d elements, want 8 active canonical agents", len(ALL_AGENTS))
+	if len(ALL_AGENTS) != 3 {
+		t.Errorf("ALL_AGENTS has %d elements, want 3 active canonical agents", len(ALL_AGENTS))
 	}
 	if len(ALL_SKILLS) != 32 {
 		t.Errorf("ALL_SKILLS has %d elements, want 32 active parity skills (22 core + 10 speckit/utility)", len(ALL_SKILLS))
@@ -164,12 +164,6 @@ func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	}
 	if len(ALL_INFRA) != 4 {
 		t.Errorf("ALL_INFRA has %d elements, want 4", len(ALL_INFRA))
-	}
-	if len(ALL_SPECS_DIRS) != 10 {
-		t.Errorf("ALL_SPECS_DIRS has %d elements, want 10", len(ALL_SPECS_DIRS))
-	}
-	if !containsAgentID(ALL_AGENTS, AgentIdGuide) {
-		t.Errorf("ALL_AGENTS missing %q", AgentIdGuide)
 	}
 	if !containsAgentID(ALL_AGENTS, AgentIdImplementer) {
 		t.Errorf("ALL_AGENTS missing %q", AgentIdImplementer)

@@ -14,7 +14,7 @@ func TestFormatDryRunSummaryIncludesChoicesAndPlannedFiles(t *testing.T) {
 			Scope:         types.SetupScopeProject,
 			Tools:         []types.ToolId{types.ToolIdOpenCode, types.ToolIdPi},
 			Skills:        []types.SkillId{types.SkillIdArchitectureReview},
-			Agents:        []types.AgentId{types.AgentIdReviewer, types.AgentIdPlanner},
+			Agents:        []types.AgentId{types.AgentIdReviewer, types.AgentIdResearcher},
 			McpPreset:     McpPresetRecommended,
 			ProjectName:   "demo",
 			CliTools:      []string{"ai-memory"},

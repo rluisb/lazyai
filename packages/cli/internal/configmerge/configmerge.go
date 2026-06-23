@@ -16,8 +16,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 
 	"github.com/BurntSushi/toml"
@@ -234,14 +232,3 @@ func joinTOMLKey(parts []string) string {
 	}
 	return out
 }
-
-// dir is re-exported for tests that want to assert the .bak lives next to the
-// original rather than under some backup root. Kept as a helper to avoid
-// callers reaching into filepath themselves.
-func backupSibling(path string) string {
-	return filepath.Join(filepath.Dir(path), filepath.Base(path)+".bak")
-}
-
-// Unused symbol silencer — keeps backupSibling available for future callers
-// without tripping the linter. No-op at runtime.
-var _ = func() any { _ = backupSibling; _ = os.PathSeparator; return nil }()

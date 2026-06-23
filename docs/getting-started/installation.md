@@ -67,10 +67,10 @@ Re-run the relevant `go install ...@latest` command. For example:
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
-After upgrading the binary, refresh managed files:
+After upgrading the binary, preview and refresh managed files:
 
 ```bash
-lazyai-cli update --check
+lazyai-cli update --dry-run
 lazyai-cli update
 lazyai-cli doctor
 ```

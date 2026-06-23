@@ -77,7 +77,7 @@ Initialize the AI development environment.
 | Flag | Description |
 |---|---|
 | `--scope` | Setup scope (`project`, `global`, `workspace`) |
-| `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`, `pi`, `antigravity`) |
+| `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, `antigravity`) |
 | `--preset` | Preset configuration (`minimal`, `standard`, `full`, `custom`) |
 | `--enable-servers` | MCP servers to enable (for example: `filesystem`, `ai-memory`, `ripgrep`) |
 | `--name` | Project name |
@@ -131,14 +131,7 @@ Add agents, skills, or tool configurations to an existing initialized setup, the
 | `--no-interactive` | Run without prompts; at least one of `--tools`, `--agents`, or `--skills` is required |
 
 **Tool validation:**
-
-`--tools` is validated before scaffold dispatch. Valid tool IDs are `opencode`, `claude-code`, `copilot`, `pi`, and `antigravity`.
-
-Invalid tool IDs fail early with:
-
-```text
-invalid tool "X": valid tool IDs are opencode, claude-code, copilot, pi, antigravity
-```
+`--tools` is registry-backed. Current tool IDs are `opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, and `antigravity`.
 
 **Examples:**
 
@@ -159,7 +152,7 @@ Compile `.ai/mcp.json` or `.ai/mcp.jsonc` into per-tool MCP/config files for the
 
 | Flag | Description |
 |---|---|
-| `--tool` | Compile only one tool (`opencode`, `claude-code`, `copilot`, `pi`, or `antigravity`) |
+| `--tool` | Compile only one tool (`opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, or `antigravity`) |
 | `--dry-run` | Preview the tools that would be compiled without writing |
 | `--local-secrets` | Route Claude Code MCP writes to `.claude/settings.local.json` instead of committed config |
 | `--validate-contracts` | Validate skill contracts before compile (default: `true`) |

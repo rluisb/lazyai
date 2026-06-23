@@ -26,6 +26,7 @@
         "enum": [
           "opencode",
           "claude",
+          "claude-code",
           "copilot",
           "pi",
           "omp",

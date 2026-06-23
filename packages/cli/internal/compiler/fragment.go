@@ -162,21 +162,70 @@ func (r *FragmentResolver) Resolve(content string, ctx FragmentContext) string {
 }
 
 // resolveConditionals handles {{#if features.name}}...{{/if}} blocks.
-var conditionalRe = regexp.MustCompile(`\{\{#if\s+([\w.]+)\}\}([\s\S]*?)\{\{\/if\}\}`)
-
+// It supports nested conditionals by matching each close marker against the
+// nearest still-open {{#if ...}} marker.
 func (r *FragmentResolver) resolveConditionals(content string, ctx FragmentContext) string {
-	return conditionalRe.ReplaceAllStringFunc(content, func(match string) string {
-		submatch := conditionalRe.FindStringSubmatch(match)
-		if len(submatch) < 3 {
-			return ""
+	const (
+		openPrefix  = "{{#if "
+		closeMarker = "{{/if}}"
+	)
+
+	var out strings.Builder
+	pos := 0
+	for pos < len(content) {
+		startRel := strings.Index(content[pos:], openPrefix)
+		if startRel == -1 {
+			out.WriteString(content[pos:])
+			break
 		}
-		condition := submatch[1]
-		body := submatch[2]
+		start := pos + startRel
+		out.WriteString(content[pos:start])
+
+		condStart := start + len(openPrefix)
+		condEndRel := strings.Index(content[condStart:], "}}")
+		if condEndRel == -1 {
+			out.WriteString(content[start:])
+			break
+		}
+		condEnd := condStart + condEndRel
+		condition := strings.TrimSpace(content[condStart:condEnd])
+		bodyStart := condEnd + len("}}")
+
+		depth := 1
+		scan := bodyStart
+		bodyEnd := -1
+		closeEnd := -1
+		for scan < len(content) {
+			nextOpenRel := strings.Index(content[scan:], openPrefix)
+			nextCloseRel := strings.Index(content[scan:], closeMarker)
+			if nextCloseRel == -1 {
+				break
+			}
+			nextClose := scan + nextCloseRel
+			if nextOpenRel != -1 && scan+nextOpenRel < nextClose {
+				depth++
+				scan = scan + nextOpenRel + len(openPrefix)
+				continue
+			}
+			depth--
+			if depth == 0 {
+				bodyEnd = nextClose
+				closeEnd = nextClose + len(closeMarker)
+				break
+			}
+			scan = nextClose + len(closeMarker)
+		}
+		if bodyEnd == -1 {
+			out.WriteString(content[start:])
+			break
+		}
+
 		if r.evaluateCondition(condition, ctx) {
-			return body
+			out.WriteString(r.resolveConditionals(content[bodyStart:bodyEnd], ctx))
 		}
-		return ""
-	})
+		pos = closeEnd
+	}
+	return out.String()
 }
 
 func (r *FragmentResolver) evaluateCondition(condition string, ctx FragmentContext) bool {

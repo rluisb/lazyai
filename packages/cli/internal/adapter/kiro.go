@@ -25,9 +25,15 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		return nil, err
 	}
 
-	_ = files.EnsureDir(filepath.Join(kiroDir, "agents"))
-	_ = files.EnsureDir(filepath.Join(kiroDir, "prompts"))
-	_ = files.EnsureDir(filepath.Join(kiroDir, "skills"))
+	if err := files.EnsureDir(filepath.Join(kiroDir, "agents")); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(filepath.Join(kiroDir, "prompts")); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(filepath.Join(kiroDir, "skills")); err != nil {
+		return nil, err
+	}
 
 	if err := copyCanonicalDefaultAgent(ctx,
 		filepath.Join(kiroDir, "agents", defaultAgentID+".md"),

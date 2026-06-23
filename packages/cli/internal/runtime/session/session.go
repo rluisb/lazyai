@@ -2,6 +2,7 @@
 package session
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -229,41 +230,47 @@ func (m *Manager) UpdateSummary(sessionID string, summary string) error {
 }
 
 // AddTags appends tags to a session.
+//
+// The read-modify-write runs inside a single BEGIN IMMEDIATE
+// transaction so concurrent callers cannot overwrite each other's
+// tags (lost-update race).
 func (m *Manager) AddTags(sessionID string, newTags []string) error {
 	if len(newTags) == 0 {
 		return nil
 	}
 
-	var existingTags string
-	err := m.db.QueryRow("SELECT tags FROM sessions WHERE id = ?", sessionID).Scan(&existingTags)
-	if err != nil {
-		return fmt.Errorf("get existing tags: %w", err)
-	}
+	ctx := context.Background()
+	return m.db.WithImmediateTx(ctx, func(conn *sql.Conn) error {
+		var existingTags string
+		err := conn.QueryRowContext(ctx, "SELECT tags FROM sessions WHERE id = ?", sessionID).Scan(&existingTags)
+		if err != nil {
+			return fmt.Errorf("get existing tags: %w", err)
+		}
 
-	var tagSet []string
-	if existingTags != "" {
-		tagSet = strings.Split(existingTags, ",")
-	}
+		var tagSet []string
+		if existingTags != "" {
+			tagSet = strings.Split(existingTags, ",")
+		}
 
-	// Deduplicate
-	seen := make(map[string]bool)
-	for _, t := range tagSet {
-		seen[t] = true
-	}
-	for _, t := range newTags {
-		if !seen[t] {
-			tagSet = append(tagSet, t)
+		// Deduplicate
+		seen := make(map[string]bool)
+		for _, t := range tagSet {
 			seen[t] = true
 		}
-	}
+		for _, t := range newTags {
+			if !seen[t] {
+				tagSet = append(tagSet, t)
+				seen[t] = true
+			}
+		}
 
-	_, err = m.db.Exec(
-		"UPDATE sessions SET tags = ? WHERE id = ?",
-		strings.Join(tagSet, ","), sessionID,
-	)
-	if err != nil {
-		return fmt.Errorf("update tags: %w", err)
-	}
+		if _, err := conn.ExecContext(ctx,
+			"UPDATE sessions SET tags = ? WHERE id = ?",
+			strings.Join(tagSet, ","), sessionID,
+		); err != nil {
+			return fmt.Errorf("update tags: %w", err)
+		}
 
-	return nil
+		return nil
+	})
 }

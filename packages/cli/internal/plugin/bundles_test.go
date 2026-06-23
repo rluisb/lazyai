@@ -109,3 +109,35 @@ func TestBuildTarget_PiShape(t *testing.T) {
 		}
 	}
 }
+
+func TestCopyCopilotHooks_NonMapItemDoesNotPanic(t *testing.T) {
+	srcDir := t.TempDir()
+	outDir := t.TempDir()
+
+	// A hooks.json whose "PreToolUse" list contains a non-map entry
+	// (a bare string). Before the fix, the type assertion
+	// `entryMap, _ := item.(map[string]any)` left entryMap nil and
+	// the subsequent `entryMap["bash"]` panicked with a nil deref.
+	hooksJSON := `{
+  "hooks": {
+    "PreToolUse": ["not-a-map", {"bash": ".github/hooks/test.sh"}]
+  }
+}`
+	if err := os.WriteFile(filepath.Join(srcDir, "hooks.json"), []byte(hooksJSON), 0o644); err != nil {
+		t.Fatalf("write hooks.json: %v", err)
+	}
+
+	// Must not panic.
+	if err := copyCopilotHooks(srcDir, outDir); err != nil {
+		t.Fatalf("copyCopilotHooks failed: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(outDir, "hooks.json"))
+	if err != nil {
+		t.Fatalf("read output hooks.json: %v", err)
+	}
+	body := string(data)
+	if !strings.Contains(body, "hooks/test.sh") {
+		t.Fatalf("expected .github/hooks/ path rewritten to hooks/, got: %s", body)
+	}
+}

@@ -1,7 +1,9 @@
 package session
 
 import (
+	"fmt"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -97,6 +99,95 @@ func TestSessionManagerListParsesStartedAt(t *testing.T) {
 	for _, s := range sessions {
 		if s.StartedAt.IsZero() {
 			t.Fatalf("session %s has zero StartedAt", s.ID)
+		}
+	}
+}
+
+func TestAcquireLock_ConcurrentOnlyOneSucceeds(t *testing.T) {
+	db := setupSessionTestDB(t)
+	mgr := NewManager(db)
+
+	// Seed a session so the lock has a valid session_id.
+	s, err := mgr.Start("lock race test", StartOptions{Agent: "test-agent"})
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	const goroutines = 20
+	var successCount, errorCount int
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(n int) {
+			defer wg.Done()
+			_, err := mgr.AcquireLock(s.ID, "resource-A", fmt.Sprintf("worker-%d", n))
+			mu.Lock()
+			if err != nil {
+				errorCount++
+				if firstErr == nil {
+					firstErr = err
+				}
+			} else {
+				successCount++
+			}
+			mu.Unlock()
+		}(i)
+	}
+	wg.Wait()
+
+	if successCount != 1 {
+		t.Fatalf("expected exactly 1 successful lock acquisition, got %d (errors: %d, firstErr: %v)",
+			successCount, errorCount, firstErr)
+	}
+	if errorCount != goroutines-1 {
+		t.Fatalf("expected %d errors, got %d", goroutines-1, errorCount)
+	}
+}
+
+func TestAddTags_ConcurrentNoLostUpdates(t *testing.T) {
+	db := setupSessionTestDB(t)
+	mgr := NewManager(db)
+
+	s, err := mgr.Start("tag race test", StartOptions{Agent: "test-agent"})
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	// Each goroutine adds a distinct tag concurrently.
+	const goroutines = 20
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(n int) {
+			defer wg.Done()
+			tag := fmt.Sprintf("tag-%d", n)
+			if err := mgr.AddTags(s.ID, []string{tag}); err != nil {
+				t.Errorf("AddTags %d failed: %v", n, err)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	// After the dust settles, all 20 tags must be present — no lost updates.
+	got, err := mgr.Get(s.ID)
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if len(got.Tags) != goroutines {
+		t.Fatalf("expected %d tags, got %d: %v", goroutines, len(got.Tags), got.Tags)
+	}
+
+	seen := make(map[string]bool)
+	for _, tag := range got.Tags {
+		seen[tag] = true
+	}
+	for i := 0; i < goroutines; i++ {
+		tag := fmt.Sprintf("tag-%d", i)
+		if !seen[tag] {
+			t.Errorf("missing tag %s", tag)
 		}
 	}
 }

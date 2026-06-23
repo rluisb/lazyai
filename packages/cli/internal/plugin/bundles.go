@@ -304,7 +304,10 @@ func copyCopilotHooks(srcDir, outDir string) error {
 			for event, rawList := range rawHooks {
 				items, _ := rawList.([]any)
 				for _, item := range items {
-					entryMap, _ := item.(map[string]any)
+					entryMap, ok := item.(map[string]any)
+					if !ok {
+						continue
+					}
 					if bash, ok := entryMap["bash"].(string); ok {
 						entryMap["bash"] = strings.ReplaceAll(bash, ".github/hooks/", "hooks/")
 					}

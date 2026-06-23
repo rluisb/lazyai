@@ -494,7 +494,11 @@ func validateRubricDir(dir string, results *[]ValidationResult, passCount *int, 
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".md") {
+		if entry.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext != ".md" && ext != ".yaml" && ext != ".yml" {
 			continue
 		}
 		path := filepath.Join(dir, entry.Name())

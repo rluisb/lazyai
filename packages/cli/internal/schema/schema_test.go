@@ -108,8 +108,41 @@ func TestAccessorsReturnJSON(t *testing.T) {
 		if err := json.Unmarshal(data, &payload); err != nil {
 			t.Fatalf("eval-rubric schema not valid JSON: %v", err)
 		}
-		if payload["type"] != "string" {
-			t.Fatalf("expected eval-rubric schema type string, got %v", payload["type"])
+		if payload["type"] != "object" {
+			t.Fatalf("expected eval-rubric schema type object, got %v", payload["type"])
+		}
+		required, ok := payload["required"].([]any)
+		if !ok {
+			t.Fatal("eval-rubric schema missing required array")
+		}
+		for _, field := range []string{"id", "title", "criteria"} {
+			if !containsString(required, field) {
+				t.Fatalf("eval-rubric required must include %q", field)
+			}
+		}
+		props, ok := payload["properties"].(map[string]any)
+		if !ok {
+			t.Fatal("eval-rubric schema missing properties")
+		}
+		criteria, ok := props["criteria"].(map[string]any)
+		if !ok {
+			t.Fatal("eval-rubric schema missing criteria property")
+		}
+		if criteria["type"] != "array" {
+			t.Fatalf("expected criteria type array, got %v", criteria["type"])
+		}
+		items, ok := criteria["items"].(map[string]any)
+		if !ok {
+			t.Fatal("eval-rubric criteria missing items")
+		}
+		criteriaRequired, ok := items["required"].([]any)
+		if !ok {
+			t.Fatal("eval-rubric criteria items missing required array")
+		}
+		for _, field := range []string{"id", "label", "weight", "description", "pass", "fail"} {
+			if !containsString(criteriaRequired, field) {
+				t.Fatalf("criteria items required must include %q", field)
+			}
 		}
 	})
 

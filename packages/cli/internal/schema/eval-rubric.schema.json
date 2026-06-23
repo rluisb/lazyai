@@ -1,6 +1,150 @@
 {
   "$id": "https://lazyai.dev/schemas/eval-rubric.schema.json",
   "title": "Eval rubric",
-  "type": "string",
-  "minLength": 1
+  "description": "Schema for .rubric.yaml files that define evaluation criteria for agent output quality. This is a validation-only schema — it does not imply a scoring runtime, judge engine, or daemon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "criteria"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for this rubric"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable title"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Purpose and scope of this rubric"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Classification tags for this rubric"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "weight",
+          "description",
+          "pass",
+          "fail"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pass": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fail": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scale",
+        "thresholds"
+      ],
+      "properties": {
+        "scale": {
+          "type": "string",
+          "pattern": "^[0-9]+-[0-9]+$",
+          "description": "Score range, e.g. '0-100'"
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "excellent",
+            "good",
+            "acceptable",
+            "needs-improvement"
+          ],
+          "properties": {
+            "excellent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "good": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "acceptable": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "needs-improvement": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "guidance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "human_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "stop_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
 }

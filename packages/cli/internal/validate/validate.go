@@ -52,9 +52,12 @@ func NormalizeProfile(raw string) Profile {
 }
 
 // Issue is a single validation finding tied to a file and rule.
+// Code provides a semantic identifier (e.g. "skill.missing_trigger") for
+// programmatic filtering; Rule retains the broad category ("skill", "agent").
 type Issue struct {
 	File     string   `json:"file"`
 	Rule     string   `json:"rule"`
+	Code     string   `json:"code,omitempty"`
 	Severity Severity `json:"severity"`
 	Message  string   `json:"message"`
 }
@@ -64,10 +67,11 @@ type Report struct {
 	Issues []Issue `json:"issues"`
 }
 
-func (r *Report) add(file, rule string, sev Severity, format string, args ...any) {
+func (r *Report) add(file, rule, code string, sev Severity, format string, args ...any) {
 	r.Issues = append(r.Issues, Issue{
 		File:     file,
 		Rule:     rule,
+		Code:     code,
 		Severity: sev,
 		Message:  fmt.Sprintf(format, args...),
 	})
@@ -106,7 +110,7 @@ func All(opts Options) Report {
 	var r Report
 	aiDir := filepath.Join(opts.Root, ".ai")
 	if info, err := os.Stat(aiDir); err != nil || !info.IsDir() {
-		r.add(".ai", "structure", SeverityError, "canonical .ai/ directory not found; run 'lazyai-cli init' first")
+		r.add(".ai", "structure", "", SeverityError, "canonical .ai/ directory not found; run 'lazyai-cli init' first")
 		return r
 	}
 
@@ -138,11 +142,11 @@ func validateManifest(root, aiDir string, r *Report) {
 		if errors.Is(err, aimanifest.ErrNotFound) {
 			return
 		}
-		r.add(relForReport(aiDir, aimanifest.Path(aiDir)), "manifest", SeverityError, "%v", err)
+		r.add(relForReport(aiDir, aimanifest.Path(aiDir)), "manifest", "", SeverityError, "%v", err)
 		return
 	}
 	if err := mf.Validate(); err != nil {
-		r.add(relForReport(aiDir, aimanifest.Path(aiDir)), "manifest", SeverityError, "%v", err)
+		r.add(relForReport(aiDir, aimanifest.Path(aiDir)), "manifest", "", SeverityError, "%v", err)
 	}
 }
 
@@ -185,54 +189,112 @@ type assetFile struct {
 	name string // derived artifact name (frontmatter name takes precedence)
 }
 
+func semanticFieldPresent(fm map[string]any, body []byte, field string, phrases ...string) bool {
+	if strings.TrimSpace(frontmatter.ExtractField(fm, field)) != "" {
+		return true
+	}
+	text := strings.ToLower(string(body))
+	for _, phrase := range phrases {
+		if strings.Contains(text, strings.ToLower(phrase)) {
+			return true
+		}
+	}
+	return false
+}
+
 // validateSkills checks .ai/skills assets: frontmatter present, a valid name,
-// and a non-empty description (FR-009).
+// and a non-empty description (FR-009). Semantic warnings are emitted for
+// missing optional fields (trigger, non_trigger, evidence, output).
 func validateSkills(aiDir string, r *Report) {
 	for _, asset := range markdownAssets(aiDir, "skills") {
 		content, err := os.ReadFile(asset.abs)
 		if err != nil {
-			r.add(asset.rel, "skill", SeverityError, "cannot read file: %v", err)
+			r.add(asset.rel, "skill", "", SeverityError, "cannot read file: %v", err)
 			continue
 		}
-		fm, _, err := frontmatter.ExtractFrontmatter(content)
+		fm, body, err := frontmatter.ExtractFrontmatter(content)
 		if err != nil || fm == nil {
-			r.add(asset.rel, "skill", SeverityError, "missing or invalid YAML frontmatter")
+			r.add(asset.rel, "skill", "", SeverityError, "missing or invalid YAML frontmatter")
 			continue
 		}
 		name := frontmatter.ExtractField(fm, "name")
 		if name == "" {
-			r.add(asset.rel, "skill", SeverityError, "frontmatter missing 'name' field")
+			r.add(asset.rel, "skill", "", SeverityError, "frontmatter missing 'name' field")
 		} else if nameErr := validation.ValidateArtifactName(name); nameErr != nil {
-			r.add(asset.rel, "skill", SeverityError, "invalid skill name %q: %v", name, nameErr)
+			r.add(asset.rel, "skill", "", SeverityError, "invalid skill name %q: %v", name, nameErr)
 		}
 		if strings.TrimSpace(frontmatter.ExtractField(fm, "description")) == "" {
-			r.add(asset.rel, "skill", SeverityError, "frontmatter missing 'description' field")
+			r.add(asset.rel, "skill", "", SeverityError, "frontmatter missing 'description' field")
+		}
+
+		// Semantic warnings — advisory only, never errors. Body sections are
+		// preferred, but matching frontmatter fields are accepted for imported assets.
+		if !semanticFieldPresent(fm, body, "trigger", "when to use", "use when", "trigger", "activation") {
+			r.add(asset.rel, "skill", "skill.missing_trigger", SeverityWarning, "body missing trigger guidance, such as a 'When to use' section")
+		}
+		if !semanticFieldPresent(fm, body, "non_trigger", "when not to use", "do not use", "not to use", "avoid when", "misuse") {
+			r.add(asset.rel, "skill", "skill.missing_non_trigger", SeverityWarning, "body missing non-trigger guidance, such as a 'When not to use' section")
+		}
+		if !semanticFieldPresent(fm, body, "evidence", "evidence", "verification", "done criteria", "acceptance criteria") {
+			r.add(asset.rel, "skill", "skill.missing_evidence", SeverityWarning, "body missing evidence requirements")
+		}
+		if !semanticFieldPresent(fm, body, "output", "output", "deliverable", "return", "final report") {
+			r.add(asset.rel, "skill", "skill.missing_output", SeverityWarning, "body missing expected output or deliverable format")
 		}
 	}
 }
 
 // validateAgents checks .ai/agents assets: frontmatter present, a valid name,
-// and a non-empty description.
+// and a non-empty description. Semantic warnings are emitted for missing
+// optional fields (role, workflow/steps, trigger, non_trigger, human_gate,
+// handoff, evidence, output).
 func validateAgents(aiDir string, r *Report) {
 	for _, asset := range markdownAssets(aiDir, "agents") {
 		content, err := os.ReadFile(asset.abs)
 		if err != nil {
-			r.add(asset.rel, "agent", SeverityError, "cannot read file: %v", err)
+			r.add(asset.rel, "agent", "", SeverityError, "cannot read file: %v", err)
 			continue
 		}
-		fm, _, err := frontmatter.ExtractFrontmatter(content)
+		fm, body, err := frontmatter.ExtractFrontmatter(content)
 		if err != nil || fm == nil {
-			r.add(asset.rel, "agent", SeverityError, "missing or invalid YAML frontmatter")
+			r.add(asset.rel, "agent", "", SeverityError, "missing or invalid YAML frontmatter")
 			continue
 		}
 		name := frontmatter.ExtractField(fm, "name")
 		if name == "" {
-			r.add(asset.rel, "agent", SeverityError, "frontmatter missing 'name' field")
+			r.add(asset.rel, "agent", "", SeverityError, "frontmatter missing 'name' field")
 		} else if nameErr := validation.ValidateArtifactName(name); nameErr != nil {
-			r.add(asset.rel, "agent", SeverityError, "invalid agent name %q: %v", name, nameErr)
+			r.add(asset.rel, "agent", "", SeverityError, "invalid agent name %q: %v", name, nameErr)
 		}
 		if strings.TrimSpace(frontmatter.ExtractField(fm, "description")) == "" {
-			r.add(asset.rel, "agent", SeverityWarning, "frontmatter missing 'description' field")
+			r.add(asset.rel, "agent", "", SeverityWarning, "frontmatter missing 'description' field")
+		}
+
+		// Semantic warnings — advisory only, never errors. Body sections are
+		// preferred, but matching frontmatter fields are accepted for imported assets.
+		if !semanticFieldPresent(fm, body, "role", "role", "purpose", "you are", "specialist") {
+			r.add(asset.rel, "agent", "agent.missing_role", SeverityWarning, "body missing role or purpose guidance")
+		}
+		if !semanticFieldPresent(fm, body, "steps", "workflow", "workflow", "steps", "process", "procedure") {
+			r.add(asset.rel, "agent", "agent.missing_workflow", SeverityWarning, "body missing workflow or step guidance")
+		}
+		if !semanticFieldPresent(fm, body, "trigger", "when to use", "use when", "trigger", "activation") {
+			r.add(asset.rel, "agent", "agent.missing_trigger", SeverityWarning, "body missing trigger guidance")
+		}
+		if !semanticFieldPresent(fm, body, "non_trigger", "when not to use", "do not use", "not to use", "avoid when", "misuse") {
+			r.add(asset.rel, "agent", "agent.missing_non_trigger", SeverityWarning, "body missing non-trigger guidance")
+		}
+		if !semanticFieldPresent(fm, body, "human_gate", "human gate", "human approval", "ask the user", "stop and ask", "⛔") {
+			r.add(asset.rel, "agent", "agent.missing_human_gate", SeverityWarning, "body missing human-gate guidance")
+		}
+		if !semanticFieldPresent(fm, body, "handoff", "handoff", "handover", "next agent", "when finished") {
+			r.add(asset.rel, "agent", "agent.missing_handoff", SeverityWarning, "body missing handoff guidance")
+		}
+		if !semanticFieldPresent(fm, body, "evidence", "evidence", "verification", "done criteria", "acceptance criteria") {
+			r.add(asset.rel, "agent", "agent.missing_evidence", SeverityWarning, "body missing evidence requirements")
+		}
+		if !semanticFieldPresent(fm, body, "output", "output", "deliverable", "return", "final report") {
+			r.add(asset.rel, "agent", "agent.missing_output", SeverityWarning, "body missing expected output or deliverable format")
 		}
 	}
 }
@@ -271,7 +333,7 @@ func validateHooks(aiDir string, r *Report) {
 		isShell := ext == ".sh" || ext == ".bash" || ext == ""
 		content, err := os.ReadFile(path)
 		if err != nil {
-			r.add(rel, "hook", SeverityError, "cannot read file: %v", err)
+			r.add(rel, "hook", "", SeverityError, "cannot read file: %v", err)
 			return nil
 		}
 		text := string(content)
@@ -279,11 +341,11 @@ func validateHooks(aiDir string, r *Report) {
 		for _, bad := range dangerousHookPatterns {
 			needle := strings.Join(strings.Fields(bad), " ")
 			if strings.Contains(normalized, needle) {
-				r.add(rel, "hook", SeverityError, "contains dangerous command %q", bad)
+				r.add(rel, "hook", "", SeverityError, "contains dangerous command %q", bad)
 			}
 		}
 		if isShell && !strings.HasPrefix(text, "#!") {
-			r.add(rel, "hook", SeverityWarning, "shell hook missing shebang line")
+			r.add(rel, "hook", "", SeverityWarning, "shell hook missing shebang line")
 		}
 		return nil
 	})
@@ -315,24 +377,24 @@ func validateMCP(aiDir string, _ Profile, r *Report) {
 	rel := relForReport(aiDir, path)
 	doc, err := jsonc.ReadJSONCFile(path)
 	if err != nil {
-		r.add(rel, "mcp", SeverityError, "not valid JSON: %v", err)
+		r.add(rel, "mcp", "", SeverityError, "not valid JSON: %v", err)
 		return
 	}
 	servers := mcpServers(doc)
 	if servers == nil {
-		r.add(rel, "mcp", SeverityError, "missing 'servers' map")
+		r.add(rel, "mcp", "", SeverityError, "missing 'servers' map")
 		return
 	}
 	for name, raw := range servers {
 		entry, ok := raw.(map[string]any)
 		if !ok {
-			r.add(rel, "mcp", SeverityError, "server %q must be a JSON object", name)
+			r.add(rel, "mcp", "", SeverityError, "server %q must be a JSON object", name)
 			continue
 		}
 		_, hasCmd := entry["command"]
 		_, hasURL := entry["url"]
 		if !hasCmd && !hasURL {
-			r.add(rel, "mcp", SeverityError, "server %q has neither 'command' nor 'url'", name)
+			r.add(rel, "mcp", "", SeverityError, "server %q has neither 'command' nor 'url'", name)
 		}
 	}
 }

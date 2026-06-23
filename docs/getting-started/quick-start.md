@@ -59,8 +59,7 @@ lazyai-cli init \
 ```bash
 lazyai-cli init \
   --scope workspace \
-  --planning-repo ./planning-repo \
-  --repos ../app-one,../app-two \
+  --workspace-root ./planning-repo \
   --tools opencode,claude-code \
   --name team-workspace \
   --preset standard \

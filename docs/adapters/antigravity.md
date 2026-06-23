@@ -38,7 +38,7 @@ The Antigravity adapter generates native configuration for the Antigravity/Gemin
 
 ## MCP Behavior
 
-Antigravity MCP is compiled via `CompileMCPForTool`. MCP servers are written to `~/.gemini/config/mcp_config.json` using the Gemini `mcpServers` shape. MCP compile is project/workspace-scoped even though the output file is user-level; global scope setup is not supported.
+Antigravity MCP is compiled via `CompileMCPForTool`. MCP servers are written to `~/.gemini/config/mcp_config.json` using the Gemini `mcpServers` shape.
 
 ## Hook Behavior
 
@@ -56,11 +56,7 @@ Antigravity does not emit agent files. The adapter has no agents surface.
 
 | Scope | Supported |
 |---|---|
-| Project | yes |
-| Workspace | yes |
-| Global | **no** |
-
-Antigravity is a project/workspace-only surface (`scope.go` line 32).
+| Global | yes |
 
 ## Headless Support
 
@@ -71,7 +67,6 @@ No (`CanRunHeadless() = false`).
 - **Beta status** — compliance surface may shift as official docs are fully snapshot-verified
 - **No agents** — the adapter does not emit agent files
 - No templates, commands, chat modes, output styles, or prompts
-- No global scope support
 - Skills written to `.agents/skills/` (shared location), not `.gemini/skills/`
 
 ## Test Coverage

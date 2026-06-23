@@ -59,6 +59,6 @@ lazyai-cli doctor
 ## Readiness notes
 
 - Support level: stable.
-- Project and workspace scopes are supported; global scope is intentionally unsupported.
+- Project, workspace, and global (`~/.pi/`) scopes are supported.
 - Pi has no `.pi/hooks` directory; LazyAI emits safety behavior as `.pi/extensions/*.ts`.
 - `lazyai-cli compile --tool pi` reads canonical MCP state but emits no MCP file for Pi.

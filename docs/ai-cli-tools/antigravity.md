@@ -63,6 +63,6 @@ lazyai-cli doctor
 ## Readiness notes
 
 - Support level: beta.
-- Project and workspace scopes are supported; global scope is intentionally unsupported for setup files.
-- MCP compile is project/workspace-scoped even though the output file is the user-level Gemini config (`~/.gemini/config/mcp_config.json`). Setup (init) does not support global scope.
+- Project, workspace, and global (`~/.gemini/`) scopes are supported.
+- MCP compile is project/workspace-scoped even though the output file is the user-level Gemini config (`~/.gemini/config/mcp_config.json`).
 - No custom agent, command, prompt, chat-mode, template, or output-style files are emitted for Antigravity.

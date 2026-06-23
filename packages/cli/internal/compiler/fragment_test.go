@@ -1,6 +1,11 @@
 package compiler
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestFragmentContext_ConstitutionFieldResolution(t *testing.T) {
 	coverageThreshold := 80
@@ -106,5 +111,50 @@ func TestFragmentContext_NestedConditionals(t *testing.T) {
 	})
 	if result != "before  after" {
 		t.Fatalf("expected disabled outer conditional to remove nested body, got %q", result)
+	}
+}
+
+func TestFragmentContext_PathTraversal(t *testing.T) {
+	// Create a temp library directory with a real fragment and a secret file
+	// outside of it to prove traversal is blocked.
+	libDir := t.TempDir()
+	secretDir := t.TempDir()
+	secretPath := filepath.Join(secretDir, "secret.txt")
+	if err := os.WriteFile(secretPath, []byte("TOPSECRET"), 0o644); err != nil {
+		t.Fatalf("setup: write secret: %v", err)
+	}
+
+	// Place a legitimate fragment so we know the resolver is wired correctly.
+	legitPath := filepath.Join(libDir, "fragments", "ok.xml")
+	if err := os.MkdirAll(filepath.Dir(legitPath), 0o755); err != nil {
+		t.Fatalf("setup: mkdir: %v", err)
+	}
+	if err := os.WriteFile(legitPath, []byte("<ok/>"), 0o644); err != nil {
+		t.Fatalf("setup: write legit: %v", err)
+	}
+
+	// Compute a traversal path from libDir to the secret file.
+	rel, err := filepath.Rel(filepath.Join(libDir, "fragments"), secretPath)
+	if err != nil {
+		t.Fatalf("setup: rel: %v", err)
+	}
+	traversalInclude := "{{#include fragments/" + rel + "}}"
+
+	// libFS is nil → disk fallback, where the guard must fire.
+	r := NewFragmentResolver(libDir)
+	result := r.Resolve(traversalInclude, FragmentContext{})
+
+	expected := "<!-- Fragment not found: fragments/" + rel + " -->"
+	if result != expected {
+		t.Fatalf("path traversal not blocked:\nexpected %q\n  actual %q", expected, result)
+	}
+	if strings.Contains(result, "TOPSECRET") {
+		t.Fatalf("path traversal leaked secret file contents: %q", result)
+	}
+
+	// Sanity check: a legitimate include still resolves.
+	legitResult := r.Resolve("{{#include fragments/ok.xml}}", FragmentContext{})
+	if legitResult != "<ok/>" {
+		t.Fatalf("legitimate include broken: expected %q, got %q", "<ok/>", legitResult)
 	}
 }

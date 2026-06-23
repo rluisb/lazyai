@@ -1,2 +1,3 @@
 # Keep embedded library fixtures byte-stable across Windows checkouts.
 packages/cli/library/** text eol=lf
+packages/cli/testdata/** text eol=lf

@@ -113,9 +113,13 @@ var serverDoctorCmd = &cobra.Command{
 
 func init() {
 	serverListCmd.Flags().Bool("json", false, "Output as JSON")
+	serverListCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	serverAddCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
+	serverAddCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	serverRemoveCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
+	serverRemoveCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	serverDoctorCmd.Flags().Bool("json", false, "Output as JSON")
+	serverDoctorCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 
 	serverCmd.AddCommand(serverListCmd)
 	serverCmd.AddCommand(serverAddCmd)

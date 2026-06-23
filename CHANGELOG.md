@@ -54,8 +54,9 @@ All notable changes to this project will be documented in this file.
   OMP and Antigravity surfaced as `(beta)` in compile output and doctor advisories.
 - **Validation hardening**: `validate --all` over the canonical `.ai/` tree
   (skills/agents/hooks/MCP), a profile-aware secret scanner (error under `team`,
-  warning under `personal`), and symlink path-escape detection. `doctor --security`
-  reports MCP transport/env inventory plus trust/sandbox caveats for Pi and Kiro.
+  warning under `personal`), and symlink path-escape detection. The standard
+  `doctor` output includes MCP transport/env inventory plus trust/sandbox
+  caveats for Pi and Kiro (no separate flag needed).
 - **Migration & eject**: `import` parses detected native setups into the canonical
   `.ai/` tree, preserves every detected native file under
   `.ai/adapters/<target>/raw/` (never deletes originals), and writes

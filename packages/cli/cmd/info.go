@@ -24,6 +24,7 @@ var infoCmd = &cobra.Command{
 
 func init() {
 	infoCmd.Flags().Bool("json", false, "Output as JSON")
+	infoCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	rootCmd.AddCommand(infoCmd)
 	infoCmd.GroupID = "scaffold"
 }

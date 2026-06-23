@@ -329,7 +329,7 @@ func (a *CopilotAdapter) copyCopilotInstructions(ctx *AdapterContext, instructio
 // copySkillsAsSkillDirs copies selected skill files to Copilot Agent Skills
 // directories.
 func (a *CopilotAdapter) copySkillsAsSkillDirs(ctx *AdapterContext, skillsDir string, selected map[types.SkillId]bool) error {
-	if selected == nil || len(selected) == 0 {
+	if len(selected) == 0 {
 		return nil
 	}
 	return CopyLibraryDirectory(CopyLibraryDirectoryOption{

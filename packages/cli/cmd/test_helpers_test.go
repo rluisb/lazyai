@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,8 +15,6 @@ import (
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/manifest"
-	"github.com/rluisb/lazyai/packages/cli/internal/preset"
-	"github.com/rluisb/lazyai/packages/cli/internal/scaffold"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 	"github.com/rluisb/lazyai/packages/cli/tui/wizard"
 )
@@ -241,35 +238,6 @@ func runSeedInit(t *testing.T, dir string, tools []types.ToolId, presetLevel typ
 	}
 }
 
-func scaffoldContextFromStoreData(t *testing.T, dir string, storeData *types.StoreData) (*scaffold.ScaffoldContext, types.PresetLevel) {
-	t.Helper()
-	ensureTestLibraryFS(t)
-	presetLevel := preset.DefaultPresetForScope(storeData.Config.SetupScope)
-	ctx := &scaffold.ScaffoldContext{
-		TargetDir:      dir,
-		LibraryDir:     getLibraryDir(),
-		LibraryFS:      library.GetLibraryFS(),
-		Tools:          storeData.Config.Tools,
-		CLITools:       storeData.Config.CLITools,
-		EnableServers:  storeData.Config.EnableServers,
-		ProjectName:    storeData.Config.ProjectName,
-		PlanningDir:    storeData.Config.PlanningDir,
-		SetupScope:     storeData.Config.SetupScope,
-		Features:       storeData.Selections.Features,
-		GitConventions: storeData.Selections.GitConventions,
-		Strategy:       types.ConflictStrategyAlign,
-		Agents:         storeData.Selections.Agents,
-		Skills:         storeData.Selections.Skills,
-		Prompts:        storeData.Selections.Prompts,
-		Templates:      storeData.Selections.Templates,
-		Rules:          storeData.Selections.Rules,
-		Infra:          storeData.Selections.Infra,
-		SpecsDirs:      preset.SpecsDirsForPreset(presetLevel),
-		Housekeeping:   storeData.Config.Housekeeping,
-	}
-	return ctx, presetLevel
-}
-
 func fileHashForTest(t *testing.T, path string) string {
 	t.Helper()
 	hash, err := files.FileHash(path)
@@ -277,12 +245,6 @@ func fileHashForTest(t *testing.T, path string) string {
 		t.Fatalf("FileHash %q: %v", path, err)
 	}
 	return hash
-}
-
-func fileExistsInFS(t *testing.T, root, rel string) bool {
-	t.Helper()
-	_, err := fs.Stat(os.DirFS(root), rel)
-	return err == nil
 }
 
 func writeManifestStoreData(t *testing.T, dir string, mutate func(*types.StoreData)) *types.StoreData {

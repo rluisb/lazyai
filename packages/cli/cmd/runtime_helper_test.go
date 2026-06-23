@@ -418,19 +418,6 @@ func mustExec(t *testing.T, db *runtime.DB, query string, args ...any) {
 	}
 }
 
-func mustExecLastInsertID(t *testing.T, db *runtime.DB, query string, args ...any) int64 {
-	t.Helper()
-	result, err := db.Exec(query, args...)
-	if err != nil {
-		t.Fatalf("exec %q failed: %v", query, err)
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		t.Fatalf("LastInsertId for %q failed: %v", query, err)
-	}
-	return id
-}
-
 func assertRuntimeTableExists(t *testing.T, db *runtime.DB, tableName string) {
 	t.Helper()
 	exists, err := runtimeTableExists(db, tableName)

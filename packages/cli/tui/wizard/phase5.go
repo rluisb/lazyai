@@ -229,20 +229,3 @@ func opencodeProviderDescriptions(providers []auth.ProviderID) map[string]string
 	}
 	return descriptions
 }
-
-// opencodeProviderHuhOptions runs auth.DetectAll, drops disallowed providers
-// (anthropic), and returns huh options for the wizard's combined-form path.
-// The dynamic OptionsFunc reruns this when the tool selection changes — but
-// since it ignores its own args and returns based on current detection,
-// the result is stable per process run.
-func opencodeProviderHuhOptions() []huh.Option[string] {
-	probeCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	detected := auth.DetectAll(probeCtx)
-	eligible := filterOpenCodeEligible(detected)
-	out := make([]huh.Option[string], 0, len(eligible))
-	for _, p := range eligible {
-		out = append(out, huh.NewOption(opencodeProviderLabel(p), string(p)))
-	}
-	return out
-}

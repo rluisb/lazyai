@@ -176,15 +176,6 @@ func sortGeneratedByPath(in []Generated) {
 	})
 }
 
-func isSortedByPath(entries []Generated) bool {
-	for i := 1; i < len(entries); i++ {
-		if entries[i-1].Path > entries[i].Path {
-			return false
-		}
-	}
-	return true
-}
-
 func pathCount(entries []Generated, path string) int {
 	count := 0
 	for _, entry := range entries {

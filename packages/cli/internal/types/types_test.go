@@ -147,8 +147,8 @@ func TestTypeConstants(t *testing.T) {
 func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	t.Parallel()
 
-	if len(ALL_AGENTS) != 3 {
-		t.Errorf("ALL_AGENTS has %d elements, want 3 active canonical agents", len(ALL_AGENTS))
+	if len(ALL_AGENTS) != 8 {
+		t.Errorf("ALL_AGENTS has %d elements, want 8 canonical agents", len(ALL_AGENTS))
 	}
 	if len(ALL_SKILLS) != 32 {
 		t.Errorf("ALL_SKILLS has %d elements, want 32 active parity skills (22 core + 10 speckit/utility)", len(ALL_SKILLS))
@@ -167,6 +167,11 @@ func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	}
 	if !containsAgentID(ALL_AGENTS, AgentIdImplementer) {
 		t.Errorf("ALL_AGENTS missing %q", AgentIdImplementer)
+	}
+	for _, agent := range []AgentId{AgentIdGuide, AgentIdPlanner, AgentIdReviewer, AgentIdDeployer, AgentIdResponder, AgentIdEvidenceVerifier} {
+		if !containsAgentID(ALL_AGENTS, agent) {
+			t.Errorf("ALL_AGENTS missing %q", agent)
+		}
 	}
 	if containsAgentID(ALL_AGENTS, AgentId("orchestrator")) {
 		t.Errorf("ALL_AGENTS should not contain legacy orchestrator entry: %v", ALL_AGENTS)

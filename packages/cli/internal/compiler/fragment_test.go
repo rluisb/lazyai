@@ -138,13 +138,14 @@ func TestFragmentContext_PathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup: rel: %v", err)
 	}
-	traversalInclude := "{{#include fragments/" + rel + "}}"
+	includePath := filepath.ToSlash(filepath.Join("fragments", rel))
+	traversalInclude := "{{#include " + includePath + "}}"
 
 	// libFS is nil → disk fallback, where the guard must fire.
 	r := NewFragmentResolver(libDir)
 	result := r.Resolve(traversalInclude, FragmentContext{})
 
-	expected := "<!-- Fragment not found: fragments/" + rel + " -->"
+	expected := "<!-- Fragment not found: " + includePath + " -->"
 	if result != expected {
 		t.Fatalf("path traversal not blocked:\nexpected %q\n  actual %q", expected, result)
 	}

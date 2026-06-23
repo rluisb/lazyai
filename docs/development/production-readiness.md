@@ -14,6 +14,11 @@ This page records the current production-readiness posture for LazyAI docs and s
 | MCP compile | Mostly ready | OpenCode, Claude Code, Copilot, OMP, Kiro, and Antigravity emit configs; Pi is intentionally no-op. |
 | Docs information architecture | Improved | MkDocs now has an AI CLI Tools section with one page per supported target. |
 
+## Tracked watchouts
+
+- Beta adapter exit criteria are tracked in [#486](https://github.com/rluisb/lazyai/issues/486): OMP and Antigravity stay beta until host docs snapshots and conformance tests justify promotion.
+- Workflow helper ownership is tracked in [#487](https://github.com/rluisb/lazyai/issues/487): ADR-007 must be accepted or superseded before LazyAI emits workflow helpers, and LazyAI must not become a workflow runtime.
+
 ## Quality gates to run before release
 
 ```bash

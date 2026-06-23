@@ -178,8 +178,8 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *tes
 	orchestratorEntry := `{
   "servers": {
     "orchestrator": {
-      "command": "/tmp/lazyai-orchestrator",
-      "args": ["connect", "--project", "/tmp/project"]
+      "command": "/placeholder/lazyai-orchestrator",
+      "args": ["connect", "--project", "/placeholder/project"]
     }
   }
 }`
@@ -215,11 +215,10 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
   "servers": {
     "orchestrator": {
       "command": "lazyai-orchestrator",
-      "args": ["connect", "--project", "/tmp/project"]
+      "args": ["connect", "--project", "/placeholder/project"]
     },
     "orchestrator-absolute": {
-      "command": "/tmp/lazyai-orchestrator",
-      "args": ["connect"]
+      "command": "/placeholder/lazyai-orchestrator",
     }
   }
 }`
@@ -247,8 +246,8 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
 func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPayloads(t *testing.T) {
 	servers := map[string]McpServer{
 		"orchestrator": {
-			Command: "/tmp/lazyai-orchestrator",
-			Args:    []string{"connect", "--project", "/tmp/project"},
+			Command: "/placeholder/lazyai-orchestrator",
+			Args:    []string{"connect", "--project", "/placeholder/project"},
 		},
 	}
 

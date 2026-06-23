@@ -49,7 +49,7 @@ func TestLoadWorkspaceSidecar_WithSidecar(t *testing.T) {
 				Name: "my-project",
 				Path: projectRoot,
 				Sidecar: &SidecarConfig{
-					Path: "/tmp/kb",
+					Path: "/placeholder/kb",
 				},
 			},
 		},
@@ -59,7 +59,7 @@ func TestLoadWorkspaceSidecar_WithSidecar(t *testing.T) {
 	cfg, err := LoadWorkspaceSidecar()
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
-	assert.Equal(t, "/tmp/kb", cfg.Path)
+	assert.Equal(t, "/placeholder/kb", cfg.Path)
 }
 
 func TestLoadWorkspaceSidecar_NoActiveWorkspace(t *testing.T) {
@@ -110,7 +110,7 @@ func TestLoadProjectSidecar_MalformedYAML(t *testing.T) {
 	defer cleanup()
 
 	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0644))
+	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
 
 	_, err := LoadProjectSidecar(projectRoot)
 	require.Error(t, err)
@@ -148,7 +148,7 @@ func TestLoadGlobalSidecar_MalformedYAML(t *testing.T) {
 	defer cleanup()
 
 	path := filepath.Join(globalDir, "sidecar.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0644))
+	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
 
 	_, err := LoadGlobalSidecar()
 	require.Error(t, err)
@@ -160,7 +160,7 @@ func TestLoadWorkspaceConfig_MalformedYAML(t *testing.T) {
 	defer cleanup()
 
 	path := filepath.Join(globalDir, "workspaces.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0644))
+	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
 
 	_, err := LoadWorkspaceConfig()
 	require.Error(t, err)
@@ -181,7 +181,7 @@ func TestLoadWorkspaceConfig_BackwardCompat(t *testing.T) {
 	}
 	data, err := yaml.Marshal(oldConfig)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0o644))
 
 	cfg, err := LoadWorkspaceConfig()
 	require.NoError(t, err)

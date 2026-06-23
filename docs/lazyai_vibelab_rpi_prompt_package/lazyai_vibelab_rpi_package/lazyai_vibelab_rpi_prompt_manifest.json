@@ -1,0 +1,92 @@
+{
+  "name": "lazyai-vibelab-rpi-prompt-package",
+  "version": "1.0.0",
+  "repo_context": {
+    "root": "/Users/ricardo/projects/teachable/lazyai",
+    "product": "lazyai-cli",
+    "classification": "Go CLI harness asset manager/compiler plus optional runtime-adjacent state",
+    "host_tools": [
+      "OpenCode",
+      "Claude Code",
+      "GitHub Copilot",
+      "Pi",
+      "OMP",
+      "Gemini/Antigravity",
+      "Kiro"
+    ]
+  },
+  "rpi": {
+    "R": "Research the current implementation carefully",
+    "P": "Plan the safest implementation sequence",
+    "I": "Implement missing improvements in small, reviewable, test-backed changes"
+  },
+  "files": [
+    {
+      "path": "00_README.md",
+      "purpose": "Package index and usage guidance"
+    },
+    {
+      "path": "01_MASTER_RPI_PROMPT.md",
+      "purpose": "Complete one-shot prompt for local agents"
+    },
+    {
+      "path": "02_AGENT_BOUNDARIES_AND_SAFETY.md",
+      "purpose": "Non-negotiable product boundaries and safety preamble"
+    },
+    {
+      "path": "03_RESEARCH_PHASE_PROMPT.md",
+      "purpose": "Research-only prompt"
+    },
+    {
+      "path": "04_PLAN_PHASE_PROMPT.md",
+      "purpose": "Planning-only prompt"
+    },
+    {
+      "path": "05_IMPLEMENTATION_BACKLOG_ORDERED.md",
+      "purpose": "Ordered backlog of all missing improvements and acceptance criteria"
+    },
+    {
+      "path": "06_FINAL_REPORT_TEMPLATE.md",
+      "purpose": "Required final implementation report template"
+    },
+    {
+      "path": "07_SHORT_AGENT_PROMPT.md",
+      "purpose": "Compact version for smaller context windows"
+    },
+    {
+      "path": "08_PR_SEQUENCE.md",
+      "purpose": "Suggested PR sequence and patch grouping"
+    }
+  ],
+  "implementation_priorities": [
+    "Adapter conformance fixtures and golden tests",
+    "Harness principles and product boundary docs",
+    "Product/spec status drift cleanup",
+    "Semantic skill validation",
+    "Agent role contract validation",
+    "Hook/middleware lifecycle catalog",
+    "Trace/eval improvement loop without runtime expansion",
+    "Rubric assets and validation",
+    "MCP catalog examples and anti-examples",
+    "Adapter capability documentation and beta graduation path",
+    "Context compaction and handoff templates",
+    "Multi-agent decision guide without orchestration",
+    "Official tool compliance matrix refresh",
+    "Minimality/token-rent integration",
+    "Init headless populate clarity",
+    "Server L3 handshake clarity"
+  ],
+  "forbidden_scope": [
+    "lazyai run workflow",
+    "lazyai autonomous task",
+    "lazyai orchestrate",
+    "lazyai background subagents",
+    "lazyai judge",
+    "mandatory eval engine",
+    "mandatory trace daemon",
+    "mandatory RAG core",
+    "LangChain/LangGraph/CrewAI dependency in core",
+    "old task/workflow/orchestration/eval command surfaces",
+    "Codex adapter"
+  ]
+}

@@ -8,7 +8,7 @@ import (
 )
 
 func TestResolveGlobalToolTargetDir(t *testing.T) {
-	home := "/tmp/fakehome"
+	home := t.TempDir()
 	cases := []struct {
 		tool types.ToolId
 		want string

@@ -32,9 +32,9 @@ func TestScaffoldCompiledRoot_GlobalRequiresHomeDir(t *testing.T) {
 }
 
 func TestMemoryDocDestPath(t *testing.T) {
-	target := "/tmp/target"
-	workspaceRoot := "/tmp/workspace"
-	home := "/tmp/home"
+	target := t.TempDir()
+	workspaceRoot := t.TempDir()
+	home := t.TempDir()
 
 	cases := []struct {
 		name  string

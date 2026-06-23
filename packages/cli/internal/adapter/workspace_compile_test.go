@@ -15,7 +15,7 @@ func TestPropagateNoOpOutsideWorkspaceScope(t *testing.T) {
 	for _, scope := range []types.SetupScope{types.SetupScopeProject, types.SetupScopeGlobal} {
 		records, err := PropagateMcpToRepos(NewRegistry(), CompileContext{
 			SetupScope:    scope,
-			WorkspaceRoot: "/tmp/whatever",
+			WorkspaceRoot: t.TempDir(),
 			Repos: []types.RepoInfo{
 				{Name: "api", Path: "api"},
 			},

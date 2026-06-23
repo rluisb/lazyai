@@ -315,6 +315,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 				LocalSecrets:  localSecrets,
 				WorkspaceRoot: mcpRoot,
 				Repos:         storeData.Config.Repos,
+				Tools:         tools,
 			}
 			propagated, err := adapter.PropagateMcpToRepos(reg, propagatedCtx)
 			if err != nil {

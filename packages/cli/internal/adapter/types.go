@@ -94,6 +94,12 @@ type CompileContext struct {
 	// WorkspaceRoot; PropagateMcpToRepos walks this list to write tool
 	// configs into each repo.
 	Repos []types.RepoInfo
+	// Tools is the set of selected tool targets for this compile. When
+	// non-empty, propagation (and root compile) MUST only write configs
+	// for these tools. Empty means "all registered tools" (legacy
+	// behavior). Spec 022 / E2.3: workspace propagation uses this to
+	// honor the same target selection as root compile.
+	Tools []types.ToolId
 }
 
 // toAdapterContext builds a minimal AdapterContext suitable for calling

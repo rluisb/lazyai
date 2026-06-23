@@ -58,6 +58,7 @@ func TestOmpAdapter_Install_CommandsAndPrompts(t *testing.T) {
 		assertExists(t, filepath.Join(targetDir, rel))
 	}
 }
+
 func TestOmpAdapter_Install_Hooks(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	libDir, err := library.FindLibraryDir()
@@ -124,6 +125,39 @@ func TestOmpAdapter_CompileMCP_ProjectScope(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
+	}
+
+	configPath := filepath.Join(targetDir, ".omp", "mcp.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("expected %q: %v", configPath, err)
+	}
+	if !strings.Contains(string(data), `"mcpServers"`) {
+		t.Fatalf("omp mcp config missing mcpServers: %s", string(data))
+	}
+
+	if len(records) != 1 {
+		t.Fatalf("records len = %d, want 1", len(records))
+	}
+	if got := records[0].Path; got != configPath {
+		t.Fatalf("record path = %q, want %q", got, configPath)
+	}
+}
+
+// TestOmpAdapter_CompileMCP_AdapterMethod exercises the adapter method directly
+// (not CompileMCPForTool) to catch regressions where the adapter returns
+// ctx.FileRecords instead of delegating to the compiler.
+func TestOmpAdapter_CompileMCP_AdapterMethod(t *testing.T) {
+	targetDir := t.TempDir()
+	setupCanonicalMcp(t, targetDir)
+
+	adapter := &OmpAdapter{}
+	records, err := adapter.CompileMCP(CompileContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("OmpAdapter.CompileMCP failed: %v", err)
 	}
 
 	configPath := filepath.Join(targetDir, ".omp", "mcp.json")

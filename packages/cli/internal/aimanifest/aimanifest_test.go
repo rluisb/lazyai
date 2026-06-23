@@ -117,6 +117,55 @@ func TestEnabledTargetsHonorsDisabled(t *testing.T) {
 	}
 }
 
+func TestEnabledTargetsAliasAdapterLookup(t *testing.T) {
+	tests := []struct {
+		name     string
+		targets  []string
+		adapters map[string]map[string]any
+		want     []types.ToolId
+	}{
+		{
+			name:     "claude-code adapter disables claude alias",
+			targets:  []string{"claude", "claude-code", "copilot"},
+			adapters: map[string]map[string]any{"claude-code": {"enabled": false}},
+			want:     []types.ToolId{types.ToolIdCopilot},
+		},
+		{
+			name:     "claude adapter disables claude-code alias",
+			targets:  []string{"claude-code", "claude", "copilot"},
+			adapters: map[string]map[string]any{"claude": {"enabled": false}},
+			want:     []types.ToolId{types.ToolIdCopilot},
+		},
+		{
+			name:     "copilot adapter disables copilot, claude stays",
+			targets:  []string{"claude", "claude-code", "copilot"},
+			adapters: map[string]map[string]any{"copilot": {"enabled": false}},
+			want:     []types.ToolId{types.ToolIdClaudeCode},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := &Manifest{
+				Version:  SchemaVersion,
+				Targets:  tc.targets,
+				Adapters: tc.adapters,
+			}
+			got, err := m.EnabledTargets()
+			if err != nil {
+				t.Fatalf("enabled: %v", err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %v want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("got %v want %v", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestForToolsMapsTokens(t *testing.T) {
 	m := ForTools([]types.ToolId{types.ToolIdClaudeCode, types.ToolIdOpenCode})
 	if err := m.Validate(); err != nil {

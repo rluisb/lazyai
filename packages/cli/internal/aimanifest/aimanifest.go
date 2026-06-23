@@ -152,45 +152,61 @@ func (m *Manifest) Validate() error {
 	return nil
 }
 
-// ResolveTargets maps manifest target tokens to internal tool IDs, preserving
-// order and de-duplicating. Unknown tokens error; "codex" gets an explicit
-// V2-removal message.
-func (m *Manifest) ResolveTargets() ([]types.ToolId, error) {
+// resolveTargetsWithTokens is like ResolveTargets but also returns a map from
+// each resolved ToolId to all manifest tokens that produced it. This lets
+// callers look up adapter blocks by any token that maps to that ToolId,
+// even after deduplication.
+func (m *Manifest) resolveTargetsWithTokens() ([]types.ToolId, map[types.ToolId][]string, error) {
 	seen := make(map[types.ToolId]bool, len(m.Targets))
+	tokensForID := make(map[types.ToolId][]string, len(m.Targets))
 	out := make([]types.ToolId, 0, len(m.Targets))
 	for _, raw := range m.Targets {
 		token := strings.ToLower(strings.TrimSpace(raw))
 		if token == "codex" {
-			return nil, fmt.Errorf("target %q is not supported in V2 (Codex was removed)", raw)
+			return nil, nil, fmt.Errorf("target %q is not supported in V2 (Codex was removed)", raw)
 		}
 		id, ok := targetAliases[token]
 		if !ok {
-			return nil, fmt.Errorf("unknown target %q", raw)
+			return nil, nil, fmt.Errorf("unknown target %q", raw)
 		}
 		if !seen[id] {
 			seen[id] = true
 			out = append(out, id)
 		}
+		tokensForID[id] = append(tokensForID[id], token)
 	}
-	return out, nil
+	return out, tokensForID, nil
+}
+
+// ResolveTargets maps manifest target tokens to internal tool IDs, preserving
+// order and de-duplicating. Unknown tokens error; "codex" gets an explicit
+// V2-removal message.
+func (m *Manifest) ResolveTargets() ([]types.ToolId, error) {
+	out, _, err := m.resolveTargetsWithTokens()
+	return out, err
 }
 
 // EnabledTargets returns resolved targets whose adapter block is not explicitly
 // disabled. A target with no adapter entry defaults to enabled.
 func (m *Manifest) EnabledTargets() ([]types.ToolId, error) {
-	resolved, err := m.ResolveTargets()
+	resolved, tokensForID, err := m.resolveTargetsWithTokens()
 	if err != nil {
 		return nil, err
 	}
 	out := make([]types.ToolId, 0, len(resolved))
-	for i, id := range resolved {
-		token := strings.ToLower(strings.TrimSpace(m.Targets[i]))
-		if blk, ok := m.Adapters[token]; ok {
-			if enabled, present := blk["enabled"].(bool); present && !enabled {
-				continue
+	for _, id := range resolved {
+		disabled := false
+		for _, token := range tokensForID[id] {
+			if blk, ok := m.Adapters[token]; ok {
+				if enabled, present := blk["enabled"].(bool); present && !enabled {
+					disabled = true
+					break
+				}
 			}
 		}
-		out = append(out, id)
+		if !disabled {
+			out = append(out, id)
+		}
 	}
 	return out, nil
 }

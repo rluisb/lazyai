@@ -108,10 +108,9 @@ lazyai-cli compile
 `lazyai-cli update` prompts before overwriting customized files. Use `--force` to auto-overwrite with a backup saved under `.ai-setup-backup/`.
 
 ### How do I preview updates before applying them?
-
 ```bash
-lazyai-cli update --check
-lazyai-cli doctor --skills-check
+lazyai-cli update --dry-run
+lazyai-cli update-self --check
 ```
 
 ### How do I upgrade the binary itself?

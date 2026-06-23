@@ -111,20 +111,14 @@ func (l *Lock) Find(path string) (Generated, bool) {
 	return Generated{}, false
 }
 
-// Upsert inserts or replaces a generated entry and keeps entries sorted by path.
+// Upsert inserts or replaces a generated entry. Save performs one final sort so
+// callers can upsert many entries without paying O(n log n) per item.
 func (l *Lock) Upsert(g Generated) {
 	for i, generated := range l.Generated {
 		if generated.Path == g.Path {
 			l.Generated[i] = g
-			sort.Slice(l.Generated, func(i, j int) bool {
-				return l.Generated[i].Path < l.Generated[j].Path
-			})
 			return
 		}
 	}
-
 	l.Generated = append(l.Generated, g)
-	sort.Slice(l.Generated, func(i, j int) bool {
-		return l.Generated[i].Path < l.Generated[j].Path
-	})
 }

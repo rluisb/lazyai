@@ -93,7 +93,7 @@ func TestHashBytes(t *testing.T) {
 	}
 }
 
-func TestUpsertAndSortedOrder(t *testing.T) {
+func TestUpsertReplacesOrAppendsWithoutSortingEveryInsert(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -117,14 +117,14 @@ func TestUpsertAndSortedOrder(t *testing.T) {
 			},
 		},
 		{
-			name: "append new path while keeping sort order",
+			name: "append new path without sorting immediately",
 			initial: []Generated{
 				{Path: "zeta.txt", Target: "opencode", SourceHash: "x", OutputHash: "x", Managed: false},
 			},
 			insert: Generated{Path: "beta.txt", Target: "pi", SourceHash: "y", OutputHash: "y", Managed: true},
 			want: []Generated{
-				{Path: "beta.txt", Target: "pi", SourceHash: "y", OutputHash: "y", Managed: true},
 				{Path: "zeta.txt", Target: "opencode", SourceHash: "x", OutputHash: "x", Managed: false},
+				{Path: "beta.txt", Target: "pi", SourceHash: "y", OutputHash: "y", Managed: true},
 			},
 		},
 	} {
@@ -141,9 +141,8 @@ func TestUpsertAndSortedOrder(t *testing.T) {
 			if tc.shouldReplace && pathCount(l.Generated, tc.insert.Path) != 1 {
 				t.Fatalf("expected single %q entry after replace", tc.insert.Path)
 			}
-			if !isSortedByPath(l.Generated) {
-				t.Fatal("generated list is not sorted by path")
-			}
+			// Save performs the deterministic final sort; Upsert intentionally does
+			// not sort on every insert.
 		})
 	}
 }

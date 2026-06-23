@@ -11,8 +11,32 @@ import (
 	"time"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
+	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+func TestFilterCompileContractIssuesSuppressesNonStrictOrphans(t *testing.T) {
+	issues := []compiler.ContractIssue{
+		{Severity: compiler.ContractSeverityWarn, Code: "orphan-skill", Source: "skills/slackfmt.md"},
+		{Severity: compiler.ContractSeverityWarn, Code: "missing-downstream", Source: "skills/producer.md"},
+		{Severity: compiler.ContractSeverityError, Code: "duplicate-name", Source: "skills/a.md"},
+	}
+
+	filtered := filterCompileContractIssues(issues, false)
+	if len(filtered) != 2 {
+		t.Fatalf("expected 2 non-orphan issues, got %#v", filtered)
+	}
+	for _, issue := range filtered {
+		if issue.Code == "orphan-skill" {
+			t.Fatalf("orphan warning should be hidden in non-strict compile: %#v", filtered)
+		}
+	}
+
+	strictFiltered := filterCompileContractIssues(issues, true)
+	if len(strictFiltered) != len(issues) {
+		t.Fatalf("strict compile should keep all issues, got %#v", strictFiltered)
+	}
+}
 
 func TestCompileSuccessWritesToolConfigsAndTracksFiles(t *testing.T) {
 	dir := t.TempDir()

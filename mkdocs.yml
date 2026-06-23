@@ -118,6 +118,9 @@ nav:
       - Token Rent: concepts/token-rent.md
       - Minimality: concepts/minimality.md
       - Minimality Report: concepts/minimality-report.md
+      - Harness Principles: concepts/harness-principles.md
+      - MCP vs CLI: concepts/mcp-vs-cli.md
+      - Library Manifests: concepts/library-manifests.md
   - AI CLI Tools:
       - Overview: ai-cli-tools/index.md
       - OpenCode: ai-cli-tools/opencode.md

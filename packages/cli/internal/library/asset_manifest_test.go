@@ -86,6 +86,15 @@ func TestValidateCurationManifestFailsMissingCoverage(t *testing.T) {
 	assertManifestErrorContains(t, err, "missing curation manifest coverage: packages/cli/library/rules/custom.md")
 }
 
+func TestValidateCurationManifestFailsMissingRubricCoverage(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeAssetManifestTestFile(t, projectRoot, "packages/cli/library/rubrics/custom.rubric.yaml", "# Custom Rubric\n")
+	writeAssetManifestTestFile(t, projectRoot, CurationManifestRelPath, "version: 1\nlibrary_root: packages/cli/library\nentries: []\nexclusions: []\n")
+
+	err := ValidateCurationManifest(projectRoot)
+	assertManifestErrorContains(t, err, "missing curation manifest coverage: packages/cli/library/rubrics/custom.rubric.yaml")
+}
+
 func TestValidateCurationManifestRequiresAdapterTargets(t *testing.T) {
 	projectRoot := t.TempDir()
 	writeAssetManifestTestFile(t, projectRoot, "packages/cli/library/tool-templates/shared/root.template.md", "# Root\n")

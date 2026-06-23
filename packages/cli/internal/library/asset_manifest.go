@@ -35,6 +35,7 @@ var CurationCoverageRoots = []string{
 	"hooks",
 	"opencode/plugins",
 	"root",
+	"rubrics",
 	"rules",
 	"skills",
 	"standards",

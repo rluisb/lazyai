@@ -13,11 +13,24 @@ Each active package is an independent Go module and must be tagged with its modu
 
 Root `vX.Y.Z` tags do not version these submodules for `go install`.
 
+## Homebrew install
+
+`lazyai-cli` is distributed through a dedicated Homebrew tap:
+
+- **Tap:** `rluisb/lazyai` (https://github.com/rluisb/homebrew-lazyai)
+- **Formula:** `lazyai-cli`
+- **Install:** `brew install rluisb/lazyai/lazyai-cli`
+
+The canonical formula template lives at `packaging/homebrew/lazyai-cli.rb.tmpl` in this repository.
+See `packaging/homebrew/README.md` for the release maintenance workflow.
+
+Only macOS (arm64 and amd64) is supported for Homebrew installation. Linux users should use `go install` or the raw release binaries.
+
 ## Install contracts
 
-LazyAI is published as Go modules and GitHub release binaries. There is no
-repository-local Homebrew formula or tap automation in this repo yet, so Homebrew
-installation is not a supported release claim here.
+LazyAI is published as Go modules and GitHub release binaries. The Homebrew tap
+lives in a separate repository (`rluisb/homebrew-lazyai`); formula updates are a
+manual post-release step.
 
 ## Supported install paths
 
@@ -36,15 +49,12 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@v0.1.0
 
 ## Homebrew release contract
 
-If a Homebrew tap/formula is added later, this repository should only emit
-repository-local release artifacts and documentation that Homebrew can consume:
+The Homebrew tap (`rluisb/homebrew-lazyai`) is a separate repository. This repository
+emits the rendered formula as a release artifact (`lazyai-cli.rb`) and documents the
+release maintenance workflow in `packaging/homebrew/README.md`.
 
-1. Tag and publish the Go release first.
-2. Build or update the Homebrew formula in the tap repository from the published binary/version metadata.
-3. Keep tap publication out of this repository unless the tap repo is added as a
-   first-class, reviewed dependency.
-
-Until that exists, do not advertise `brew install lazyai` or any equivalent.
+Tap publication is kept out of this repository; formula updates are a manual
+post-release step performed in the tap repository.
 
 ## Recommended release preparation steps
 

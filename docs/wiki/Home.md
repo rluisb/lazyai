@@ -6,11 +6,18 @@ LazyAI scaffolds a canonical, multi-tool AI development environment from one Go 
 
 ## Install commands
 
+### Homebrew (macOS)
+
+```bash
+brew install rluisb/lazyai/lazyai-cli
+```
+
+### Go install
+
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
-
 The primary command is `lazyai-cli`. The diff viewer is an optional companion utility.
 
 ## Wiki map

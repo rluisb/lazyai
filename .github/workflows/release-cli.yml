@@ -52,6 +52,16 @@ jobs:
           done
           (cd dist && shasum -a 256 lazyai-cli-* > checksums.txt)
 
+      - name: Generate Homebrew formula
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          SHA256_DARWIN_ARM64="$(grep 'lazyai-cli-darwin-arm64' dist/checksums.txt | cut -d' ' -f1)"
+          SHA256_DARWIN_AMD64="$(grep 'lazyai-cli-darwin-amd64' dist/checksums.txt | cut -d' ' -f1)"
+          sed "s/{{VERSION}}/${VERSION}/g; s/{{SHA256_DARWIN_ARM64}}/${SHA256_DARWIN_ARM64}/g; s/{{SHA256_DARWIN_AMD64}}/${SHA256_DARWIN_AMD64}/g" \
+            packaging/homebrew/lazyai-cli.rb.tmpl > dist/lazyai-cli.rb
+          echo "Generated dist/lazyai-cli.rb"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -60,5 +70,6 @@ jobs:
           files: |
             dist/lazyai-cli-*
             dist/checksums.txt
+            dist/lazyai-cli.rb
           generate_release_notes: true
           draft: false

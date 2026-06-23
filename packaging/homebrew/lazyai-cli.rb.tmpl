@@ -1,0 +1,24 @@
+class LazyaiCli < Formula
+  desc "Define AI-tool setup once and compile to each supported AI surface"
+  homepage "https://github.com/rluisb/lazyai"
+  license "MIT"
+  version "{{VERSION}}"
+
+  if OS.mac?
+    if Hardware::CPU.arm?
+      url "https://github.com/rluisb/lazyai/releases/download/packages/cli/v#{version}/lazyai-cli-darwin-arm64"
+      sha256 "{{SHA256_DARWIN_ARM64}}"
+    elsif Hardware::CPU.intel?
+      url "https://github.com/rluisb/lazyai/releases/download/packages/cli/v#{version}/lazyai-cli-darwin-amd64"
+      sha256 "{{SHA256_DARWIN_AMD64}}"
+    end
+  end
+
+  def install
+    bin.install Dir["lazyai-cli-*"].first => "lazyai-cli"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/lazyai-cli --version")
+  end
+end

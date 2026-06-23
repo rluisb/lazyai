@@ -1,8 +1,16 @@
 # Quick Start
 
-> **Important:** LazyAI is Go-only. Install `lazyai-cli` with `go install`; npm/npx distribution has been removed.
+> **Important:** LazyAI is Go-only. Install `lazyai-cli` with `go install` or Homebrew (macOS); npm/npx distribution has been removed.
 
 ## Install
+
+### Homebrew (macOS)
+
+```bash
+brew install rluisb/lazyai/lazyai-cli
+```
+
+### Go install
 
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest

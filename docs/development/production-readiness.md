@@ -41,7 +41,7 @@ These files are excluded from MkDocs or absent from navigation, but they still l
 | `docs/AI-Agentic-Setup-Implementation-Plan.md` | predecessor ai-setup material | archive or remove after human approval |
 | `docs/AI-Agentic-Setup-Playbook.md` | predecessor ai-setup material | archive or remove after human approval |
 | `docs/AI-Agentic-Setup-Templates/` | predecessor template tree | archive or remove after human approval |
-| `docs/docs/` | duplicate product spec pack | consolidate with canonical spec pack |
+| `docs/docs/` | duplicate product spec pack | removed — canonical spec pack at `docs/lazyai-vibelab-product-spec-pack/` |
 | `docs/lazyai-vibelab-product-spec-pack.zip` | zip beside extracted content | remove after human approval |
 | `docs/lazyai_vibelab_remaining_cycles_pack/*.zip` | zips beside extracted cycle packs | remove after human approval |
 | `docs/reports/` | historical adversarial-review reports | keep as evidence or move to archive |

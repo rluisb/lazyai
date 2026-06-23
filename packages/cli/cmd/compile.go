@@ -268,7 +268,6 @@ func runCompile(cmd *cobra.Command, args []string) error {
 			TargetDir:    dir,
 			HomeDir:      homeDir,
 			SetupScope:   storeData.Config.SetupScope,
-			FileRecords:  newFileRecords,
 			LocalSecrets: localSecrets,
 		}
 		if storeData.Config.SetupScope == types.SetupScopeWorkspace {

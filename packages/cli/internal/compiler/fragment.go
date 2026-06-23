@@ -302,7 +302,16 @@ func (r *FragmentResolver) loadFragment(fragmentPath string) string {
 	if r.libFS != nil {
 		data, err = fs.ReadFile(r.libFS, fragmentPath)
 	} else {
+		// Security: validate that the resolved path stays inside libraryDir to
+		// prevent path traversal via crafted {{#include ../../etc/passwd}} directives.
+		// The embedded-FS branch above relies on fs.ReadFile which already rejects
+		// traversal; only the disk fallback needs this explicit check.
 		fullPath := filepath.Join(r.libraryDir, fragmentPath)
+		rel, relErr := filepath.Rel(r.libraryDir, fullPath)
+		if relErr != nil || strings.HasPrefix(rel, "..") {
+			compilerLog.Error("Fragment path traversal blocked", "fragment_path", fragmentPath)
+			return fmt.Sprintf("<!-- Fragment not found: %s -->", fragmentPath)
+		}
 		data, err = os.ReadFile(fullPath)
 	}
 

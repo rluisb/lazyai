@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check DCO sign-off
-        uses: christophebedard/dco-check@master
+        uses: christophebedard/dco-check@ec8bfc43106afe98b323ace9133650df10497e12 # v0.5.1
         with:
           args: --verbose
         env:

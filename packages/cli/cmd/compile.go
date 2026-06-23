@@ -344,7 +344,7 @@ func runCompile(cmd *cobra.Command, args []string) error {
 		// V2 (FR-003): record generated outputs in .ai/lock.json so future
 		// compiles can detect drift and skip unchanged files. Best-effort: a
 		// lockfile failure warns but does not fail the compile.
-		if err := writeCompileLock(aiDir, mcpRoot, mcpData, newFileRecords); err != nil {
+		if err := writeCompileLock(aiDir, mcpRoot, mcpData, newFileRecords, storeData.Config.Repos); err != nil {
 			cmdLog.Warn("writing .ai/lock.json failed", "error", err)
 		}
 		fmt.Printf("  %s Compiled %d tool(s).\n", greenStyle.Render("✓"), compiledCount)
@@ -364,23 +364,50 @@ func runCompile(cmd *cobra.Command, args []string) error {
 // are resolved relative to mcpRoot when not absolute; unreadable outputs are
 // skipped. The source hash for every MCP-derived output is the canonical
 // .ai/mcp.json content hash.
-func writeCompileLock(aiDir, mcpRoot string, mcpSource []byte, records []types.TrackedFile) error {
+//
+// When repos is non-nil, records whose Source starts with "workspace:" are
+// treated as per-repo propagated outputs: the path is resolved against
+// mcpRoot/<repoPath> for reading, and stored in the lockfile as
+// <repoPath>/<rec.Path> so entries are unique and resolvable.
+func writeCompileLock(aiDir, mcpRoot string, mcpSource []byte, records []types.TrackedFile, repos []types.RepoInfo) error {
 	lock, err := lockfile.Load(aiDir)
 	if err != nil {
 		return err
 	}
 	srcHash := lockfile.HashBytes(mcpSource)
+
+	// Build a lookup from repo name to repo path for workspace propagation.
+	repoPathByName := make(map[string]string, len(repos))
+	for _, r := range repos {
+		repoPathByName[r.Name] = r.Path
+	}
+
 	for _, rec := range records {
 		p := rec.Path
+		lockPath := p
 		if !filepath.IsAbs(p) {
-			p = filepath.Join(mcpRoot, p)
+			// Check if this is a propagated record (workspace:repoName/... source).
+			// Propagated records have repo-relative paths; resolve against the
+			// repo directory under mcpRoot.
+			if repoName, ok := workspaceRepoName(rec.Source); ok {
+				if rp, found := repoPathByName[repoName]; found {
+					p = filepath.Join(mcpRoot, rp, p)
+					lockPath = filepath.Join(rp, rec.Path)
+				} else {
+					// Unknown repo — fall back to mcpRoot resolution.
+					p = filepath.Join(mcpRoot, p)
+				}
+			} else {
+				p = filepath.Join(mcpRoot, p)
+			}
 		}
+		lockPath = filepath.ToSlash(lockPath)
 		data, readErr := os.ReadFile(p)
 		if readErr != nil {
 			continue
 		}
 		lock.Upsert(lockfile.Generated{
-			Path:       rec.Path,
+			Path:       lockPath,
 			Target:     "mcp",
 			SourceHash: srcHash,
 			OutputHash: lockfile.HashBytes(data),
@@ -391,6 +418,21 @@ func writeCompileLock(aiDir, mcpRoot string, mcpSource []byte, records []types.T
 	lock.LazyaiVersion = Version
 	lock.CompiledAt = time.Now().UTC().Format(time.RFC3339)
 	return lock.Save(aiDir)
+}
+
+// workspaceRepoName extracts the repo name from a workspace-tagged source
+// string of the form "workspace:repoName/...". Returns ("", false) when the
+// source is not a workspace-tagged record.
+func workspaceRepoName(source string) (string, bool) {
+	const prefix = "workspace:"
+	if !strings.HasPrefix(source, prefix) {
+		return "", false
+	}
+	rest := source[len(prefix):]
+	if idx := strings.IndexByte(rest, '/'); idx > 0 {
+		return rest[:idx], true
+	}
+	return "", false
 }
 
 // printKV is a helper for printing key-value pairs with styling

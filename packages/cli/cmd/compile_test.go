@@ -82,6 +82,99 @@ func TestCompileWorkspaceUsesPersistedWorkspaceRootForCanonicalMCPAndOutputs(t *
 	}
 }
 
+// TestCompileWorkspaceLockfileIncludesPropagatedRepos verifies that when
+// compiling at workspace scope with repos, the lockfile includes entries for
+// both root-level outputs and per-repo propagated outputs. Regression for
+// issue #405 where propagated repo outputs were silently skipped because
+// writeCompileLock resolved all relative paths against mcpRoot.
+func TestCompileWorkspaceLockfileIncludesPropagatedRepos(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	planningRepo := t.TempDir()
+
+	// Create two repos under the workspace root.
+	for _, repo := range []string{"api", "web"} {
+		repoDir := filepath.Join(workspaceRoot, repo)
+		if err := os.MkdirAll(repoDir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", repoDir, err)
+		}
+		// Each repo needs a .ai/mcp.json so adapters can read the catalog.
+		repoAiDir := filepath.Join(repoDir, ".ai")
+		if err := os.MkdirAll(repoAiDir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", repoAiDir, err)
+		}
+		mcp := []byte(`{"servers":{"filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","."],"enabled":true}}}`)
+		if err := os.WriteFile(filepath.Join(repoAiDir, "mcp.json"), mcp, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	seedStoreData(t, planningRepo, func(data *types.StoreData) {
+		data.Config.SetupScope = types.SetupScopeWorkspace
+		data.Config.TargetDir = planningRepo
+		data.Config.PlanningRepoPath = planningRepo
+		data.Config.WorkspaceRoot = workspaceRoot
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
+		data.Config.Repos = []types.RepoInfo{
+			{Name: "api", Path: "api", Type: "service"},
+			{Name: "web", Path: "web", Type: "frontend"},
+		}
+	})
+	writeCanonicalMCPConfig(t, workspaceRoot)
+
+	cmd := newCompileCommand(planningRepo, "", false)
+	_ = cmd.Flags().Set("validate-contracts", "false")
+	if _, _ = captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile: %v", err)
+		}
+	}); false {
+	}
+
+	// Read the lockfile.
+	lockData, err := os.ReadFile(filepath.Join(workspaceRoot, ".ai", "lock.json"))
+	if err != nil {
+		t.Fatalf("read lock.json: %v", err)
+	}
+	var lock struct {
+		Generated []struct {
+			Path       string `json:"path"`
+			Target     string `json:"target"`
+			SourceHash string `json:"sourceHash"`
+			OutputHash string `json:"outputHash"`
+		} `json:"generated"`
+	}
+	if err := json.Unmarshal(lockData, &lock); err != nil {
+		t.Fatalf("unmarshal lock.json: %v", err)
+	}
+
+	// Build a set of lockfile paths for easy lookup.
+	lockPaths := make(map[string]bool)
+	for _, g := range lock.Generated {
+		lockPaths[g.Path] = true
+	}
+
+	// Root-level outputs should be present (e.g., opencode.json).
+	if !lockPaths["opencode.json"] {
+		t.Error("lockfile missing root-level opencode.json entry")
+	}
+
+	// Propagated repo outputs should be present with repo-prefixed paths.
+	for _, repo := range []string{"api", "web"} {
+		expectedPath := repo + "/opencode.json"
+		if !lockPaths[expectedPath] {
+			t.Errorf("lockfile missing propagated entry %q", expectedPath)
+		}
+	}
+
+	// Verify the propagated files actually exist on disk.
+	for _, repo := range []string{"api", "web"} {
+		propPath := filepath.Join(workspaceRoot, repo, "opencode.json")
+		if !fileExists(propPath) {
+			t.Errorf("propagated file %q does not exist on disk", propPath)
+		}
+	}
+}
+
 func TestCompileMissingConfigReturnsError(t *testing.T) {
 	dir := t.TempDir()
 	cmd := newCompileCommand(dir, "", false)
@@ -340,4 +433,29 @@ func hasTrackedFile(files []types.TrackedFile, path string) bool {
 		}
 	}
 	return false
+}
+
+func TestWorkspaceRepoName(t *testing.T) {
+	tests := []struct {
+		source string
+		name   string
+		ok     bool
+	}{
+		{"workspace:api/opencode.json", "api", true},
+		{"workspace:web/.mcp.json", "web", true},
+		{"workspace:my-repo/some/path", "my-repo", true},
+		{"opencode.json", "", false},
+		{"workspace:", "", false},
+		{"workspace:no-slash", "", false},
+		{"", "", false},
+	}
+	for _, tc := range tests {
+		got, ok := workspaceRepoName(tc.source)
+		if ok != tc.ok {
+			t.Errorf("workspaceRepoName(%q) ok = %v, want %v", tc.source, ok, tc.ok)
+		}
+		if ok && got != tc.name {
+			t.Errorf("workspaceRepoName(%q) = %q, want %q", tc.source, got, tc.name)
+		}
+	}
 }

@@ -32,9 +32,15 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	hooksDir := filepath.Join(geminiDir, "hooks", "lazyai")
 	agentsRoot := filepath.Join(filepath.Dir(geminiDir), ".agents")
 	skillsDir := filepath.Join(agentsRoot, "skills")
-	_ = files.EnsureDir(geminiDir)
-	_ = files.EnsureDir(hooksDir)
-	_ = files.EnsureDir(skillsDir)
+	if err := files.EnsureDir(geminiDir); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(hooksDir); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(skillsDir); err != nil {
+		return nil, err
+	}
 
 	defaultSettings, err := readJSONAsset(ctx, "antigravity/settings.json")
 	if err != nil {
@@ -44,9 +50,15 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		return nil, err
 	}
 
-	relPath, _ := filepath.Rel(ctx.TargetDir, settingsPath)
+	relPath, err := filepath.Rel(ctx.TargetDir, settingsPath)
+	if err != nil {
+		return nil, fmt.Errorf("record antigravity/settings.json path: %w", err)
+	}
 	relPath = filepath.ToSlash(relPath)
-	hash, _ := files.FileHash(settingsPath)
+	hash, err := files.FileHash(settingsPath)
+	if err != nil {
+		return nil, fmt.Errorf("hash antigravity/settings.json: %w", err)
+	}
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path: relPath, Hash: hash, Source: "antigravity/settings.json", Owner: types.FileOwnerLibrary,
 	})
@@ -77,9 +89,15 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		return nil, err
 	}
 
-	relHooksPath, _ := filepath.Rel(ctx.TargetDir, hooksJSONPath)
+	relHooksPath, err := filepath.Rel(ctx.TargetDir, hooksJSONPath)
+	if err != nil {
+		return nil, fmt.Errorf("record antigravity/hooks.json path: %w", err)
+	}
 	relHooksPath = filepath.ToSlash(relHooksPath)
-	hash, _ = files.FileHash(hooksJSONPath)
+	hash, err = files.FileHash(hooksJSONPath)
+	if err != nil {
+		return nil, fmt.Errorf("hash antigravity/hooks.json: %w", err)
+	}
 	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
 		Path: relHooksPath, Hash: hash, Source: "antigravity/hooks.json", Owner: types.FileOwnerLibrary,
 	})

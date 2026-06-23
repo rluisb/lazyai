@@ -25,11 +25,19 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		return nil, err
 	}
 
-	_ = files.EnsureDir(piDir)
-	_ = files.EnsureDir(filepath.Join(piDir, "skills"))
-	_ = files.EnsureDir(filepath.Join(piDir, "prompts"))
+	if err := files.EnsureDir(piDir); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(filepath.Join(piDir, "skills")); err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(filepath.Join(piDir, "prompts")); err != nil {
+		return nil, err
+	}
 	// Pi safety hooks ship as extensions at .pi/extensions/*.ts (Pi has no .pi/hooks path).
-	_ = files.EnsureDir(filepath.Join(piDir, "extensions"))
+	if err := files.EnsureDir(filepath.Join(piDir, "extensions")); err != nil {
+		return nil, err
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

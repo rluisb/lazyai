@@ -72,3 +72,39 @@ func TestFragmentContext_AdversarialDesignConditional(t *testing.T) {
 		t.Fatalf("expected disabled conditional to be removed, got %q", disabledResult)
 	}
 }
+
+func TestFragmentContext_NestedConditionals(t *testing.T) {
+	enabled := true
+	disabled := false
+	content := "before {{#if features.adversarialDesign}}outer {{#if features.qualityGates}}inner{{/if}} done{{/if}} after"
+
+	result := NewFragmentResolver("").Resolve(content, FragmentContext{
+		Features: &FeatureFlags{
+			AdversarialDesign: &enabled,
+			QualityGates:      &enabled,
+		},
+	})
+	if result != "before outer inner done after" {
+		t.Fatalf("expected nested conditionals to resolve, got %q", result)
+	}
+
+	result = NewFragmentResolver("").Resolve(content, FragmentContext{
+		Features: &FeatureFlags{
+			AdversarialDesign: &enabled,
+			QualityGates:      &disabled,
+		},
+	})
+	if result != "before outer  done after" {
+		t.Fatalf("expected disabled nested conditional to be removed, got %q", result)
+	}
+
+	result = NewFragmentResolver("").Resolve(content, FragmentContext{
+		Features: &FeatureFlags{
+			AdversarialDesign: &disabled,
+			QualityGates:      &enabled,
+		},
+	})
+	if result != "before  after" {
+		t.Fatalf("expected disabled outer conditional to remove nested body, got %q", result)
+	}
+}

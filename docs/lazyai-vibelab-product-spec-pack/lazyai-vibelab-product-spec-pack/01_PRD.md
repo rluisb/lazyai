@@ -245,7 +245,7 @@ Needs:
 | Pi | Supported adapter | `AGENTS.md`, `.pi/settings.json`, `.pi/SYSTEM.md` or `.pi/APPEND_SYSTEM.md` when selected, `.pi/skills/<name>/SKILL.md`, `.pi/prompts/*.md`, `.pi/extensions/*`, optional `.agents/skills/*` |
 | OMP / Oh My Pi | Supported adapter | `AGENTS.md`, `.omp/agents/*`, `.omp/skills/*`, `.omp/commands/*`, `.omp/hooks/*`, `.omp/mcp.json`, optional plugin bundle |
 | Antigravity / Gemini CLI | Supported adapter | `AGENTS.md`, `GEMINI.md` optional/shared, `.agents/skills/*`, `.agents/rules/*`, `.agents/hooks.json` or official hook location, `.gemini/antigravity-cli/settings.json` guidance, `.gemini/hooks/lazyai/*` where supported |
-| Kiro | Supported adapter | `AGENTS.md`, `.kiro/steering/*`, `.kiro/specs/*/{requirements.md,design.md,tasks.md}`, `.kiro/hooks/*`, `.kiro/settings/mcp.json`, `.kiroignore`, optional `.kiro/agents/*` if supported by current CLI |
+| Kiro | Supported adapter | `AGENTS.md`, `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json`; specs, steering, runtime hooks, and `.kiroignore` require source-verified output contracts before emission |
 
 ### 8.2 Canonical `.ai/` source
 
@@ -1200,7 +1200,7 @@ The product is complete when:
 - Generated files are reviewable, reproducible, and ejectable.
 - Skills, agents, hooks, MCP, rules, prompts, commands, and templates are all covered.
 - Claude adapter emits `CLAUDE.md`.
-- Kiro adapter emits steering/spec/hook/MCP files.
+- Kiro adapter emits agents, skills, prompts, and MCP; steering/spec/hook files remain non-emitted until source-verified output contracts exist.
 - Pi adapter respects project trust and sandbox caveats.
 - OpenCode adapter uses current `steps` and permission fields.
 - Copilot adapter supports instructions, skills, hooks, MCP, and plugin packaging.

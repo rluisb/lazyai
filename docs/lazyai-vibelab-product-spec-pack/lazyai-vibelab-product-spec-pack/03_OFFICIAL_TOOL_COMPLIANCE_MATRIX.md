@@ -16,7 +16,7 @@ This matrix turns official tool docs into adapter requirements. Each adapter mus
 | Pi | stable | settings, project trust, skills, prompts, TypeScript extensions, compaction, packages, subagents | skills, prompts, hooks, rules, agents | `.pi/*`, `.agents/skills`, `AGENTS.md` | Medium: project trust and no sandbox must be explicit; MCP is a no-op |
 | OMP | beta | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff, prompts | agents, skills, hooks, MCP, commands, handoff, prompts | `.omp/*`, `AGENTS.md` | Medium: beta until official docs snapshots are fully captured |
 | Antigravity/Gemini | beta | `.agents/skills`, hooks, MCP, plugins, permissions, sandbox/settings | skills, hooks, MCP, root instructions | `.gemini/*`, `.agents/skills/*`, `.agents/hooks.json` | Medium: beta until official docs snapshots are fully captured; no `.agents/rules` or `GEMINI.md` emitted |
-| Kiro | stable | agents, skills, prompts, MCP, permissions | agents, skills, prompts, MCP | `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json` | Low/medium: steering, specs, hooks, and `.kiroignore` not yet emitted (requires external docs refresh) |
+| Kiro | stable | agents, skills, prompts, MCP, permissions | agents, skills, prompts, MCP | `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json` | Low/medium: steering, specs, runtime hooks, and `.kiroignore` not yet emitted (requires external docs refresh) |
 
 ---
 
@@ -320,7 +320,7 @@ LazyAI requirements:
 - [ ] Generate `.kiro/steering/*.md`. (Not yet implemented — requires external docs refresh.)
 - [ ] Generate steering frontmatter for inclusion modes. (Not yet implemented — requires external docs refresh.)
 - [ ] Generate `.kiro/specs/<name>/requirements.md`, `design.md`, `tasks.md` when specs enabled. (Not yet implemented — requires external docs refresh.)
-- [ ] Generate `.kiro/hooks/*` from canonical hooks where supported. (Not yet implemented — requires external docs refresh.)
+- [ ] Generate `.kiro/hooks/*` from canonical hooks only after a source-verified native hook output contract exists. Current LazyAI Kiro hooks are instruction-only.
 - [ ] Generate `.kiroignore` for sensitive exclusions. (Not yet implemented — requires external docs refresh.)
 - [x] Warn that Supervised mode is not a sandbox.
 - [x] Warn about broad trusted command wildcards.

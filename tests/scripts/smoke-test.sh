@@ -112,6 +112,19 @@ EOF
 validate_output=$(cd "$validate_dir" && "$bin_path" validate agents 2>&1) || true
 assert_contains "$validate_output" "Agent Validation Results" "validate agents works"
 rm -rf "$validate_dir"
+
+# ─── Test: Compile Command ───
+
+echo ""
+echo "🧪 Compile Command"
+tmp_compile=$(mktemp -d)
+mkdir -p "$tmp_compile/.ai"
+echo '{"version":"1.0","targets":["opencode"]}' > "$tmp_compile/.ai/lazyai.json"
+echo '{"servers":{}}' > "$tmp_compile/.ai/mcp.json"
+compile_output=$(cd "$tmp_compile" && "$bin_path" compile --dry-run --validate-contracts=false 2>&1) || true
+assert_contains "$compile_output" "Would compile 1 tool(s)" "compile dry-run works"
+rm -rf "$tmp_compile"
+
 rm -rf "$tmp_dir"
 rm -f "$bin_path"
 

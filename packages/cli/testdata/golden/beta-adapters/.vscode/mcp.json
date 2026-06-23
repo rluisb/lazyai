@@ -1,0 +1,40 @@
+{
+  "servers": {
+    "ai-memory": {
+      "type": "http",
+      "url": "http://127.0.0.1:49374/mcp"
+    },
+    "codegraph": {
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "command": "codegraph",
+      "type": "stdio"
+    },
+    "filesystem": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "command": "npx",
+      "type": "stdio"
+    },
+    "obsidian": {
+      "args": [
+        "mcp"
+      ],
+      "command": "ob",
+      "type": "stdio"
+    },
+    "ripgrep": {
+      "args": [
+        "-y",
+        "mcp-ripgrep"
+      ],
+      "command": "npx",
+      "type": "stdio"
+    }
+  }
+}

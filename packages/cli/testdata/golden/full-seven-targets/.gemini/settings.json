@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/lazyai/objective-workflow-gate.sh",
+            "name": "objective-workflow-gate",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/lazyai/block-destructive-shell.sh",
+            "name": "block-destructive-shell",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ],
+        "matcher": "run_shell_command"
+      }
+    ]
+  }
+}

@@ -37,57 +37,35 @@ func captureStdout(t *testing.T, fn func()) string {
 	return buf.String()
 }
 
-func TestGetDB(t *testing.T) {
-	// This test requires a database to be initialized
-	// In a real test, we would mock the database or use a temp directory
-	// For now, we just verify the function exists and returns an error when no DB exists
+func TestGetDBReturnsErrorWithoutStore(t *testing.T) {
+	// Verify getDB returns an error when run from a directory without a store.
+	origDir, _ := os.Getwd()
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
+
 	_, err := getDB()
 	if err == nil {
-		t.Log("getDB returned a database (may have found one in current directory)")
-	} else {
-		t.Logf("getDB returned expected error: %v", err)
+		t.Error("expected getDB to fail without a store, but it succeeded")
 	}
 }
 
-func TestRunSessionStart(t *testing.T) {
-	// Test that session start generates a valid session ID format
-	sessionID := fmt.Sprintf("ses_%d", time.Now().Unix())
-	if len(sessionID) < 4 {
-		t.Error("Session ID is too short")
+func TestSessionStartOutputContainsID(t *testing.T) {
+	// Verify that runSessionStart produces output containing "Session started:"
+	// with a ses_ prefixed ID (exercises real command behavior, not fmt.Sprintf).
+	withTempDir(t)
+	out := captureStdout(t, func() {
+		if err := runSessionStart(&cobra.Command{}, []string{"test-goal"}); err != nil {
+			t.Fatalf("runSessionStart failed: %v", err)
+		}
+	})
+	if !strings.Contains(out, "Session started:") {
+		t.Errorf("expected output to contain 'Session started:', got:\n%s", out)
 	}
-
-	if sessionID[:4] != "ses_" {
-		t.Error("Session ID does not start with 'ses_'")
-	}
-}
-
-func TestSessionIDFormat(t *testing.T) {
-	// Test session ID format
-	now := time.Now().Unix()
-	sessionID := fmt.Sprintf("ses_%d", now)
-
-	expectedPrefix := "ses_"
-	if len(sessionID) <= len(expectedPrefix) {
-		t.Errorf("Session ID '%s' is too short", sessionID)
-	}
-
-	if sessionID[:len(expectedPrefix)] != expectedPrefix {
-		t.Errorf("Session ID '%s' does not start with '%s'", sessionID, expectedPrefix)
-	}
-}
-
-func TestTimeFormat(t *testing.T) {
-	// Test that time formatting works correctly
-	now := time.Now().UTC()
-	formatted := now.Format(time.RFC3339)
-
-	// Should contain T and Z
-	if !strings.Contains(formatted, "T") {
-		t.Error("Formatted time does not contain 'T'")
-	}
-
-	if !strings.Contains(formatted, "Z") {
-		t.Error("Formatted time does not contain 'Z'")
+	if !strings.Contains(out, "ses_") {
+		t.Errorf("expected output to contain a ses_ prefixed ID, got:\n%s", out)
 	}
 }
 

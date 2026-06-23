@@ -391,10 +391,26 @@ func validateMCP(aiDir string, _ Profile, r *Report) {
 			r.add(rel, "mcp", "", SeverityError, "server %q must be a JSON object", name)
 			continue
 		}
-		_, hasCmd := entry["command"]
-		_, hasURL := entry["url"]
+		cmdVal, hasCmd := entry["command"]
+		urlVal, hasURL := entry["url"]
+		cmdBlank := hasCmd
+		if cmdBlank {
+			cmdStr, ok := cmdVal.(string)
+			cmdBlank = !ok || strings.TrimSpace(cmdStr) == ""
+		}
+		urlBlank := hasURL
+		if urlBlank {
+			urlStr, ok := urlVal.(string)
+			urlBlank = !ok || strings.TrimSpace(urlStr) == ""
+		}
 		if !hasCmd && !hasURL {
 			r.add(rel, "mcp", "", SeverityError, "server %q has neither 'command' nor 'url'", name)
+		} else if cmdBlank && urlBlank {
+			r.add(rel, "mcp", "", SeverityError, "server %q has blank 'command' and 'url'", name)
+		} else if cmdBlank {
+			r.add(rel, "mcp", "", SeverityError, "server %q has blank 'command'", name)
+		} else if urlBlank {
+			r.add(rel, "mcp", "", SeverityError, "server %q has blank 'url'", name)
 		}
 	}
 }

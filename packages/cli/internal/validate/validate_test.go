@@ -95,6 +95,56 @@ func TestValidateMCPValidPasses(t *testing.T) {
 	}
 }
 
+func TestValidateMCPBlankCommandFails(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"bad":{"command":"","args":["x"]}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if !hasError(report, "mcp") {
+		t.Fatalf("expected mcp error for blank command; issues: %+v", report.Issues)
+	}
+}
+
+func TestValidateMCPWhitespaceCommandFails(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"bad":{"command":"   ","args":["x"]}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if !hasError(report, "mcp") {
+		t.Fatalf("expected mcp error for whitespace-only command; issues: %+v", report.Issues)
+	}
+}
+
+func TestValidateMCPBlankURLFails(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"bad":{"url":""}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if !hasError(report, "mcp") {
+		t.Fatalf("expected mcp error for blank url; issues: %+v", report.Issues)
+	}
+}
+
+func TestValidateMCPWhitespaceURLFails(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"bad":{"url":"   "}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if !hasError(report, "mcp") {
+		t.Fatalf("expected mcp error for whitespace-only url; issues: %+v", report.Issues)
+	}
+}
+
+func TestValidateMCPValidURLPasses(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"ok":{"url":"http://localhost:8080/sse"}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	if hasError(report, "mcp") {
+		t.Fatalf("did not expect mcp error for valid url; issues: %+v", report.Issues)
+	}
+}
+
 func TestValidateHooksDangerousCommandFails(t *testing.T) {
 	dir := t.TempDir()
 	ai := filepath.Join(dir, ".ai")

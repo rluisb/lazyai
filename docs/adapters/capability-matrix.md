@@ -63,12 +63,12 @@ Each cell shows the output shape for the (tool, asset-kind) pair. See `output_ma
 | OpenCode | yes | yes | yes |
 | Claude Code | yes | yes | yes |
 | Copilot | yes | yes | yes (probes for CLI) |
-| Pi | yes | yes | **no** |
+| Pi | yes | yes | yes |
 | OMP | yes | yes | yes |
-| Antigravity | yes | yes | **no** |
+| Antigravity | yes | yes | yes (beta) |
 | Kiro | yes | yes | yes |
 
-Pi and Antigravity are project/workspace-only surfaces (`scope.go` line 32: `case types.ToolIdPi, types.ToolIdAntigravity: return false`).
+All 7 LazyAI-supported targets support project, workspace, and global scopes. Antigravity global scope is beta.
 
 ## 5. Headless Support
 

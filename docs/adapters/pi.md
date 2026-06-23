@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` CLI). It emits agents, skills, prompts, and TypeScript extensions into `.pi/`. Pi is a project/workspace-only surface with no global scope support.
+The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` CLI). It emits agents, skills, prompts, and TypeScript extensions into `.pi/`. Pi supports project, workspace, and global scopes.
 
 ## Generated Files
 
@@ -55,11 +55,7 @@ Prompt templates are copied as flat markdown files to `.pi/prompts/`. The adapte
 
 | Scope | Supported |
 |---|---|
-| Project | yes |
-| Workspace | yes |
-| Global | **no** |
-
-Pi is a project/workspace-only surface (`scope.go` line 32).
+| Global | yes |
 
 ## Headless Support
 
@@ -69,7 +65,6 @@ No (`CanRunHeadless() = false`).
 
 - **MCP is a no-op** — no MCP configuration is emitted despite the capability declaration
 - No templates, commands, or chat modes
-- No global scope support
 - No `.pi/hooks` path; hooks ship as TypeScript extensions
 - Pi project trust is not a sandbox (warned at install time)
 

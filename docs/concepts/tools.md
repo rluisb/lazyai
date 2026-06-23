@@ -39,9 +39,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 - **Description:** shared root instructions plus skills, prompt templates, extension-based safety hooks, and declared MCP capability with no emitted Pi MCP config
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.pi/`
-- **Project/workspace scope support:** Yes
-- **Global scope support:** No
-- **Workflow delivery:** no `.pi/workflows` surface; workflow helpers must use Pi extensions, skills, and prompts.
+- **Global scope support:** Yes — `~/.pi/`
 - **Special behavior:** emits `.pi/skills/<name>/SKILL.md`, `.pi/prompts/*.md`, and Pi safety hooks as `.pi/extensions/*.ts`
 
 ## OMP
@@ -69,9 +67,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 - **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, hook surface, MCP config, plugin capabilities, and permissions metadata
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.gemini/` plus `.agents/`
-- **Project/workspace scope support:** Yes
-- **Global scope support:** No for setup files; MCP compilation writes user-level Gemini config
-- **Workflow delivery:** no verified native workflow directory; workflow helpers must use a verified Antigravity plugin layout, Agent Skills, hooks, or rules.
+- **Global scope support:** Yes (beta) — `~/.gemini/`
 - **Support level:** beta until Antigravity plugin docs and install locations are fully snapshot-verified.
 - **Special behavior:** emits `.gemini/settings.json`, `.gemini/hooks/lazyai/*.sh`, selected Agent Skills at `.agents/skills/<name>/SKILL.md`, and MCP config at `~/.gemini/config/mcp_config.json`; no custom agent files are emitted for Antigravity
 
@@ -93,7 +89,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 |---|---|---|---|---|---|---|---|
 | Project scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Global scope | Yes | Yes | Yes (probe-gated) | No | Yes | Yes | No |
+| Global scope | Yes | Yes | Yes (probe-gated) | Yes | Yes | Yes | Yes (beta) |
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.md` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.omp/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |

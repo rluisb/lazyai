@@ -88,8 +88,7 @@ lazyai-cli init \
 ```bash
 lazyai-cli init \
   --scope workspace \
-  --planning-repo ./planning-repo \
-  --repos ../api,../web,../worker \
+  --workspace-root ./planning-repo \
   --tools opencode,claude-code,copilot \
   --name acme-workspace \
   --preset standard \

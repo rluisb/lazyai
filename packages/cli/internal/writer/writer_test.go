@@ -140,3 +140,34 @@ func TestSecondRunIsNoOp(t *testing.T) {
 		t.Fatalf("second run not all skips: %v", actions)
 	}
 }
+
+func TestAtomicWriteDurability(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.txt")
+
+	// First write: new file via atomic write.
+	if err := atomicWrite(path, []byte("first")); err != nil {
+		t.Fatalf("first atomicWrite: %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != "first" {
+		t.Fatalf("first write content = %q, want %q", got, "first")
+	}
+
+	// Overwrite: existing file replaced atomically.
+	if err := atomicWrite(path, []byte("second")); err != nil {
+		t.Fatalf("second atomicWrite: %v", err)
+	}
+	got, _ = os.ReadFile(path)
+	if string(got) != "second" {
+		t.Fatalf("second write content = %q, want %q", got, "second")
+	}
+
+	// Temp file must be cleaned up after success.
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.Name() != "out.txt" {
+			t.Fatalf("stale temp file left behind: %s", e.Name())
+		}
+	}
+}

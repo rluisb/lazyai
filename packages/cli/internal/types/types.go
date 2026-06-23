@@ -70,9 +70,14 @@ var SupportedToolIDs = []ToolId{
 type AgentId string
 
 const (
-	AgentIdImplementer AgentId = "implementer"
-	AgentIdResearcher  AgentId = "researcher"
-	AgentIdReviewer    AgentId = "reviewer"
+	AgentIdGuide            AgentId = "guide"
+	AgentIdImplementer      AgentId = "implementer"
+	AgentIdResearcher       AgentId = "researcher"
+	AgentIdPlanner          AgentId = "planner"
+	AgentIdReviewer         AgentId = "reviewer"
+	AgentIdDeployer         AgentId = "deployer"
+	AgentIdResponder        AgentId = "responder"
+	AgentIdEvidenceVerifier AgentId = "evidence-verifier"
 )
 
 // SkillId identifies a workflow skill.
@@ -374,9 +379,14 @@ const (
 
 var (
 	ALL_AGENTS = []AgentId{
+		AgentIdGuide,
 		AgentIdImplementer,
 		AgentIdResearcher,
+		AgentIdPlanner,
 		AgentIdReviewer,
+		AgentIdDeployer,
+		AgentIdResponder,
+		AgentIdEvidenceVerifier,
 	}
 
 	ALL_SKILLS = []SkillId{

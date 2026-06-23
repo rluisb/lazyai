@@ -24,6 +24,7 @@ var ejectCmd = &cobra.Command{
 
 func init() {
 	ejectCmd.Flags().Bool("no-interactive", false, "Skip confirmation prompt")
+	ejectCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	rootCmd.AddCommand(ejectCmd)
 	ejectCmd.GroupID = "lifecycle"
 }

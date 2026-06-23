@@ -27,6 +27,7 @@ func init() {
 	listCmd.Flags().String("type", "", "Filter by artifact type (agents, skills, templates, rules, etc.)")
 	listCmd.Flags().Bool("verbose", false, "Show detailed artifact information including file paths")
 	listCmd.Flags().Bool("json", false, "Output as JSON")
+	listCmd.Flags().String("dir", "", "Project directory (defaults to current directory)")
 	rootCmd.AddCommand(listCmd)
 	listCmd.GroupID = "scaffold"
 }

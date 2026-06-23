@@ -80,13 +80,28 @@ Initialize the AI development environment.
 | Flag | Description |
 |---|---|
 | `--scope` | Setup scope (`project`, `global`, `workspace`) |
+| `--workspace-root` | Root directory for workspace-scoped installs (workspace scope) |
 | `--tools` | Tools to configure (`opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, `antigravity`) |
 | `--preset` | Preset configuration (`minimal`, `standard`, `full`, `custom`) |
 | `--enable-servers` | MCP servers to enable (for example: `filesystem`, `ai-memory`, `ripgrep`) |
+| `--features` | Comma-separated features to enable |
+| `--disable-features` | Comma-separated features to disable |
 | `--name` | Project name |
+| `--branch-pattern` | Git branch naming pattern |
+| `--commit-pattern` | Git commit message pattern |
+| `--existing-setup-policy` | How to handle existing setup (`absorb`, `adapt`, `backup-only`) |
 | `--no-interactive` | Run without interactive prompts |
+| `--drive-cli` | Delegate scaffolding to the tool's own CLI when available (Claude Code) |
+| `--local-secrets` | Route Claude Code MCP/settings writes to gitignored `.claude/settings.local.json` instead of committed surfaces |
+| `--org` | Organization name (populates `[YOUR_ORG]` in AGENTS.md) |
+| `--team` | Team name (populates `[YOUR_TEAM]` in AGENTS.md) |
 | `--force` | Overwrite existing files |
 | `--dry-run` | Preview changes without writing |
+| `--memory-path` | Project memory path (default: `.specify/memory`) |
+| `--reversa` | Analyze existing code with Scout/Reversa to auto-populate project details |
+| `--no-reversa` | Skip Scout/Reversa analysis and leave project details explicit/manual |
+| `--express` | Run interactive wizard with Express mode |
+| `--custom` | Run interactive wizard with Personalized mode |
 
 **OpenCode default behavior:**
 
@@ -225,6 +240,7 @@ List cataloged MCP servers and show whether each is enabled.
 | Flag | Description |
 |---|---|
 | `--json` | Output JSON |
+| `--dir` | Project directory (defaults to current directory) |
 
 **Example:**
 
@@ -247,6 +263,7 @@ Enable a cataloged MCP server in the setup store. Run `lazyai-cli compile` after
 | Flag | Description |
 |---|---|
 | `--no-interactive` | Skip confirmation prompt |
+| `--dir` | Project directory (defaults to current directory) |
 
 **Example:**
 
@@ -271,6 +288,7 @@ Disable a cataloged MCP server in the setup store. Run `lazyai-cli compile` afte
 
 | Flag | Description |
 |---|---|
+| `--dir` | Project directory (defaults to current directory) |
 | `--no-interactive` | Skip confirmation prompt |
 
 **Example:**
@@ -299,6 +317,7 @@ Validate enabled MCP server definitions in `.ai/mcp.json` and the generated per-
 | Flag | Description |
 |---|---|
 | `--json` | Output JSON |
+| `--dir` | Project directory (defaults to current directory) |
 
 **Example:**
 
@@ -446,13 +465,14 @@ lazyai-cli migrate ~/old-ai-setup --preview
 
 ### `eject`
 
-Remove `.ai-setup.json` and `.ai-setup.db` so LazyAI stops managing the generated files. The generated files remain in place.
+Remove LazyAI management metadata so LazyAI stops managing the generated files. The generated files remain in place. The following files are removed if present: `.ai/lazyai.json`, `.ai/lock.json`, `.ai/migration-report.md`, `.ai-setup.json`, `.ai-setup.db`.
 
 **Flags:**
 
 | Flag | Description |
 |---|---|
 | `--no-interactive` | Skip confirmation prompt |
+| `--dir` | Project directory (defaults to current directory) |
 
 **Example:**
 
@@ -476,6 +496,7 @@ Show metadata for one tracked artifact by basename or tracked path.
 
 | Flag | Description |
 |---|---|
+| `--dir` | Project directory (defaults to current directory) |
 | `--json` | Output JSON |
 
 **Example:**
@@ -505,6 +526,7 @@ lazyai-cli list [category]
 | `--type` | Filter by artifact type (`agents`, `skills`, `templates`, `rules`, and so on) |
 | `--verbose` | Include file paths |
 | `--json` | Output JSON |
+| `--dir` | Project directory (defaults to current directory) |
 
 **Example:**
 

@@ -87,16 +87,6 @@ lazyai-cli status
 lazyai-diffviewer --help
 ```
 
-## Symlink mode
-
-By default, `lazyai-cli` copies library files into tool directories. You can use symlinks instead to keep all tools in sync when the library updates:
-
-```bash
-lazyai-cli init --install-mode symlink --no-interactive
-```
-
-Symlinked files are tracked in `.ai-setup.json` with `kind: "symlink"`.
-
 ## Next steps
 
 - [Quick Start](quick-start.md)

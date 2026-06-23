@@ -60,4 +60,4 @@ lazyai-cli status
 - Support level: stable.
 - Project, workspace, and global scopes are supported.
 - LazyAI intentionally emits no `.kiro/workflows`, specs, steering, commands, chat modes, templates, or output styles.
-- Hook capability is tracked in adapter metadata, but the current generated layout has no separate hook runtime file.
+- Hooks are instruction-only in LazyAI's Kiro output; the adapter does not emit `.kiro/hooks` runtime files.

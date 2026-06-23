@@ -971,7 +971,6 @@ AGENTS.md
 .kiro/specs/<name>/requirements.md
 .kiro/specs/<name>/design.md
 .kiro/specs/<name>/tasks.md
-.kiro/hooks/<name>.json
 .kiro/settings/mcp.json
 .kiroignore
 ```
@@ -1033,15 +1032,15 @@ Bugfix specs may use:
 
 ### 12.4 Hooks
 
-Canonical hooks compile to Kiro hook definitions with:
+LazyAI does not currently emit `.kiro/hooks` runtime files. Hook guidance for Kiro remains instruction-only until a native Kiro hook output contract is source-verified. When support is added, the compiler must define and test the native fields for:
 
 - title;
 - description;
 - event;
 - optional tool name;
 - optional file pattern;
-- action type: ask Kiro or run command;
-- instructions/command.
+- action type;
+- instructions or command.
 
 ### 12.5 Security mapping
 

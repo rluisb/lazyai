@@ -16,7 +16,7 @@ This matrix turns official tool docs into adapter requirements. Each adapter mus
 | Pi | settings, project trust, skills, prompts, TypeScript extensions, compaction, packages | skills, prompts, hooks, rules, MCP where supported | `.pi/*`, `.agents/skills`, `AGENTS.md` | Medium: project trust and no sandbox must be explicit |
 | OMP | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff | agents, skills, hooks, MCP, commands, handoff | `.omp/*`, `AGENTS.md` | Medium/high: docs content partially JS-rendered |
 | Antigravity/Gemini | `.agents/skills`, `.agents/rules`, hooks, MCP, plugins, permissions, sandbox/settings | skills, rules, hooks, MCP, root instructions | `.agents/*`, `AGENTS.md`, `GEMINI.md`, settings guidance | Medium/high: docs content partially JS-rendered |
-| Kiro | specs, steering, hooks, MCP, supervised/autopilot, trusted commands, protected paths | rules, specs, hooks, MCP, templates | `.kiro/steering`, `.kiro/specs`, `.kiro/hooks`, `.kiro/settings/mcp.json` | Low/medium: avoid unsupported `.kiro/agents` unless verified |
+| Kiro | specs, steering, hooks, MCP, supervised/autopilot, trusted commands, protected paths | agents, skills, prompts, MCP | `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json` | Low/medium: steering, specs, runtime hooks, and `.kiroignore` not yet emitted (requires external docs refresh) |
 
 ---
 
@@ -263,7 +263,7 @@ LazyAI requirements:
 - [ ] Generate `.kiro/steering/*.md`.
 - [ ] Generate steering frontmatter for inclusion modes.
 - [ ] Generate `.kiro/specs/<name>/requirements.md`, `design.md`, `tasks.md` when specs enabled.
-- [ ] Generate `.kiro/hooks/*` from canonical hooks where supported.
+- [ ] Generate `.kiro/hooks/*` from canonical hooks only after a source-verified native hook output contract exists. Current LazyAI Kiro hooks are instruction-only.
 - [ ] Generate `.kiro/settings/mcp.json`.
 - [ ] Generate `.kiroignore` for sensitive exclusions.
 - [ ] Warn that Supervised mode is not a sandbox.

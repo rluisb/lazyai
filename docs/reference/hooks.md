@@ -126,6 +126,6 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 | antigravity | **partial** | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | Beta support level; limited to pre-exec and stop events |
 | omp | **partial** | `.omp/hooks/pre/*.ts` | Beta support level; only `before_tool` surface (pre hooks) |
 | pi | **instruction_only** | `.pi/extensions/block-destructive-shell.ts` | No `.pi/hooks` directory emitted; only one extension runtime; all other hooks are markdown-only |
-| kiro | **instruction_only** | none | Capability declared in adapter metadata; no `.kiro/hooks` directory emitted |
+| kiro | **instruction_only** | none | Adapter hook capability is false; hook guidance is markdown-only and no `.kiro/hooks` directory is emitted |
 
 For each tool's managed output paths and MCP outputs, see [Tool Outputs](tool-outputs.md) and [Hook Template](../canonical/hook-template.md).

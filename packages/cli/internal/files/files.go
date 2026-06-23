@@ -44,6 +44,37 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+// SafeWriteFile writes data to path via temp-file + sync + rename for crash
+// safety, without creating a .bak backup. Use this when the caller manages its
+// own backup strategy or the file is regenerable.
+func SafeWriteFile(path string, data []byte, perm os.FileMode) error {
+	if err := EnsureDir(filepath.Dir(path)); err != nil {
+		return err
+	}
+	tmpPath := filepath.Join(filepath.Dir(path), fmt.Sprintf(".%s.%d.tmp", filepath.Base(path), time.Now().UnixNano()))
+	f, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perm)
+	if err != nil {
+		return aierror.Unknown(fmt.Sprintf("create temp file for: %s", path), err)
+	}
+	defer func() { _ = os.Remove(tmpPath) }()
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return aierror.Unknown(fmt.Sprintf("write temp file for: %s", path), err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return aierror.Unknown(fmt.Sprintf("sync temp file for: %s", path), err)
+	}
+	if err := f.Close(); err != nil {
+		return aierror.Unknown(fmt.Sprintf("close temp file for: %s", path), err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return aierror.Unknown(fmt.Sprintf("rename temp file for: %s", path), err)
+	}
+	tmpPath = "" // prevent deferred removal of the now-renamed file
+	return nil
+}
+
 // AtomicWriteFile writes data to path atomically.
 //
 // - ensures the target directory exists
@@ -255,18 +286,27 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return aierror.Unknown(fmt.Sprintf("copy failed: %s → %s", src, dst), err)
 	}
-	defer out.Close()
 
 	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
 		return aierror.Unknown(fmt.Sprintf("copy failed: %s → %s", src, dst), err)
 	}
 
-	// Copy permissions from source.
+	if err := out.Sync(); err != nil {
+		out.Close()
+		return aierror.Unknown(fmt.Sprintf("sync failed: %s → %s", src, dst), err)
+	}
+
+	if err := out.Close(); err != nil {
+		return aierror.Unknown(fmt.Sprintf("close failed: %s → %s", src, dst), err)
+	}
+
+	// Copy permissions from source (non-fatal: best effort).
 	info, err := os.Stat(src)
 	if err != nil {
-		return nil // non-fatal
+		return nil
 	}
-	os.Chmod(dst, info.Mode())
+	_ = os.Chmod(dst, info.Mode()) // best-effort; non-fatal on platforms that ignore mode
 
 	return nil
 }

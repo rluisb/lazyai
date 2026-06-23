@@ -20,7 +20,14 @@ import (
 func MergeManagedBlock(existing, newManagedContent []byte, startMarker, endMarker string) []byte {
 	existingStr := string(existing)
 	startIdx := strings.Index(existingStr, startMarker)
-	endIdx := strings.Index(existingStr, endMarker)
+	endIdx := -1
+	if startIdx >= 0 {
+		searchAfter := startIdx + len(startMarker)
+		relEnd := strings.Index(existingStr[searchAfter:], endMarker)
+		if relEnd >= 0 {
+			endIdx = searchAfter + relEnd
+		}
+	}
 
 	if startIdx == -1 || endIdx == -1 || endIdx <= startIdx {
 		// No existing managed block — append it.
@@ -72,7 +79,7 @@ func WriteManagedBlockToFile(destPath string, managedContent []byte, startMarker
 	modified := !bytesEqual(existing, merged)
 
 	if modified {
-		if err := files.WriteFile(destPath, merged, 0o644); err != nil {
+		if err := files.SafeWriteFile(destPath, merged, 0o644); err != nil {
 			return nil, false, fmt.Errorf("write %s: %w", destPath, err)
 		}
 	}

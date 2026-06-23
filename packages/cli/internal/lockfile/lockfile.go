@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
 )
 
 // Generated tracks a source file and its corresponding compiled output hash.
@@ -85,12 +87,8 @@ func (l *Lock) Save(aiDir string) error {
 		data = append(data, '\n')
 	}
 
-	if err := os.MkdirAll(aiDir, 0o755); err != nil {
-		return fmt.Errorf("create lock directory %q: %w", aiDir, err)
-	}
-
 	path := filepath.Join(aiDir, "lock.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := files.SafeWriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("write lockfile %q: %w", path, err)
 	}
 

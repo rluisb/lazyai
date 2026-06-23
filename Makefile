@@ -71,3 +71,12 @@ diffviewer-snapshot:
 snapshot: cli-snapshot diffviewer-snapshot
 
 all: vet test build
+
+homebrew-formula:
+	@echo "=== Rendering Homebrew formula ==="
+	@if [ -z "$(VERSION)" ]; then echo "ERROR: VERSION is required (e.g. VERSION=1.3.0)"; exit 1; fi
+	@if [ -z "$(SHA256_DARWIN_ARM64)" ]; then echo "ERROR: SHA256_DARWIN_ARM64 is required"; exit 1; fi
+	@if [ -z "$(SHA256_DARWIN_AMD64)" ]; then echo "ERROR: SHA256_DARWIN_AMD64 is required"; exit 1; fi
+	sed "s/{{VERSION}}/$(VERSION)/g; s/{{SHA256_DARWIN_ARM64}}/$(SHA256_DARWIN_ARM64)/g; s/{{SHA256_DARWIN_AMD64}}/$(SHA256_DARWIN_AMD64)/g" \
+		packaging/homebrew/lazyai-cli.rb.tmpl > lazyai-cli.rb
+	@echo "Rendered lazyai-cli.rb — copy to rluisb/homebrew-lazyai repository"

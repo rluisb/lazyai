@@ -4,7 +4,7 @@ Canonical installation docs live at <https://rluisb.github.io/lazyai/getting-sta
 
 ## Prerequisites
 
-- Go 1.26 or newer
+- Go 1.26 or newer (for `go install` path)
 - `$(go env GOPATH)/bin` on your `PATH`
 
 Check the install target with:
@@ -13,7 +13,22 @@ Check the install target with:
 go env GOPATH
 ```
 
-## Install released commands
+## Homebrew (macOS)
+
+```bash
+brew install rluisb/lazyai/lazyai-cli
+```
+
+Or tap first:
+
+```bash
+brew tap rluisb/lazyai
+brew install lazyai-cli
+```
+
+Only macOS (arm64 and amd64) is supported for Homebrew installation.
+
+## Go install
 
 Install the CLI:
 
@@ -21,12 +36,12 @@ Install the CLI:
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 ```
 
-
 Install the diff viewer utility:
 
 ```bash
 go install github.com/rluisb/lazyai/packages/diffviewer/cmd/lazyai-diffviewer@latest
 ```
+
 
 ## Verify installation
 

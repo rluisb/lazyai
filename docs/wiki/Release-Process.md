@@ -13,6 +13,17 @@ LazyAI has independent active Go modules under `packages/`, so release tags must
 
 Root `vX.Y.Z` tags do not version these submodules for Go users.
 
+## Homebrew install
+
+`lazyai-cli` is distributed through a dedicated Homebrew tap:
+
+- **Tap:** `rluisb/lazyai` (https://github.com/rluisb/homebrew-lazyai)
+- **Formula:** `lazyai-cli`
+- **Install:** `brew install rluisb/lazyai/lazyai-cli`
+
+Only macOS (arm64 and amd64) is supported for Homebrew installation.
+See the canonical [Release Process](https://rluisb.github.io/lazyai/development/release/) for the full release maintenance workflow.
+
 ## Release preparation checklist
 
 1. Confirm which package modules are being released.

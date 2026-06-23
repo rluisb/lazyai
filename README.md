@@ -16,6 +16,7 @@ verify adapter correctness.
 - optional runtime-adjacent local state (sessions, metrics, ledger, memory, secrets)
 
 It is Go-only (`go install`), with no npm or npx dependency for normal usage.
+macOS users can also install via Homebrew.
 
 ## Architecture overview
 
@@ -41,9 +42,25 @@ flowchart TD
 ## Quick start (project + full preset)
 
 Copy-paste flow for a first-time setup on a local project with OpenCode and Claude Code:
-
 ```bash
 go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
+
+cd my-app
+lazyai-cli init \
+  --scope project \
+  --tools opencode,claude-code \
+  --preset full \
+  --name my-app \
+  --no-interactive
+
+lazyai-cli compile
+lazyai-cli status
+```
+
+Or on macOS via Homebrew:
+
+```bash
+brew install rluisb/lazyai/lazyai-cli
 
 cd my-app
 lazyai-cli init \

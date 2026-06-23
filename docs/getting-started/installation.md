@@ -5,9 +5,30 @@
 - **Go 1.26+**
 - `$(go env GOPATH)/bin` on your `PATH` so installed binaries are discoverable
 
-## Install released commands
+## Homebrew (macOS)
 
-LazyAI does not currently ship a repository-local Homebrew tap or formula. Use the Go install paths below for supported releases, or build from source when working in the repository.
+Install `lazyai-cli` via the dedicated Homebrew tap:
+
+```bash
+brew install rluisb/lazyai/lazyai-cli
+```
+
+Or, if you prefer to tap first:
+
+```bash
+brew tap rluisb/lazyai
+brew install lazyai-cli
+```
+
+After installation, verify:
+
+```bash
+lazyai-cli --version
+```
+
+Only macOS (arm64 and amd64) is supported for Homebrew installation. Linux users should use `go install`.
+
+## Go install
 
 Install the CLI:
 

@@ -4,7 +4,18 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+func TestCatalogForCoversSupportedTools(t *testing.T) {
+	for _, tool := range types.SupportedToolIDs {
+		catalog := CatalogFor(tool)
+		if len(catalog.Frontier) == 0 && len(catalog.Balanced) == 0 && len(catalog.Speed) == 0 {
+			t.Fatalf("CatalogFor(%s) returned empty catalog", tool)
+		}
+	}
+}
 
 // The deny rules on OpenCode are load-bearing: the user has explicitly stated
 // "no Claude on OpenCode ever". This test guards both layers — provider

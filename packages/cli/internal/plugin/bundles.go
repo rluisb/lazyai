@@ -238,16 +238,7 @@ func listIDs(libFS fs.FS, dir string) ([]string, error) {
 }
 
 func adapterInstance(tool types.ToolId) (adapter.ToolAdapter, error) {
-	switch tool {
-	case types.ToolIdCopilot:
-		return &adapter.CopilotAdapter{}, nil
-	case types.ToolIdOmp:
-		return &adapter.OmpAdapter{}, nil
-	case types.ToolIdPi:
-		return &adapter.PiAdapter{}, nil
-	default:
-		return nil, fmt.Errorf("unsupported bundle tool %q", tool)
-	}
+	return adapter.NewBuiltinAdapter(tool)
 }
 
 func seedCanonicalMCP(libFS fs.FS, targetDir string) error {

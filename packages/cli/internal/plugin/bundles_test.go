@@ -7,7 +7,20 @@ import (
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
+	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
+
+func TestAdapterInstanceCoversSupportedTools(t *testing.T) {
+	for _, tool := range types.SupportedToolIDs {
+		a, err := adapterInstance(tool)
+		if err != nil {
+			t.Fatalf("adapterInstance(%s): %v", tool, err)
+		}
+		if a.ID() != tool {
+			t.Fatalf("adapterInstance(%s) returned %s", tool, a.ID())
+		}
+	}
+}
 
 func TestNormalizeTargetSupportsPhaseETargets(t *testing.T) {
 	for _, tc := range []struct {

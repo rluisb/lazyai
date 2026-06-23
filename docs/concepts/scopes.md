@@ -7,7 +7,7 @@
 | Scope | Best for | Canonical target | Notes |
 |---|---|---|---|
 | `project` | One repo, self-contained setup | `./.ai/` | Default day-to-day setup |
-| `global` | Personal defaults across projects | `~/.ai/` | Only OpenCode + Claude Code are supported globally |
+| `global` | Personal defaults across projects | `~/.ai/` | All 7 LazyAI-supported targets are available globally |
 | `workspace` | Multi-repo team coordination | `planning-repo/.ai/` | Planning repo becomes the hub |
 
 ## Project scope
@@ -39,24 +39,26 @@ lazyai-cli init \
 **What it is:** personal defaults shared across all projects on your machine.
 
 **When to use it:**
-
 - You want your own baseline AI operating system everywhere
-- You use OpenCode or Claude Code across many repos
+- You use any of the 7 supported tools across many repos
 - You want project repos to layer on top of a personal default config
-
 **Canonical target:** `~/.ai/`
 
 **Tool-native targets:**
 
-- `~/.config/opencode/`
-- `~/.claude/`
-
+- `~/.config/opencode/` — OpenCode
+- `~/.claude/` — Claude Code
+- `~/.copilot/` — GitHub Copilot
+- `~/.pi/` — Pi
+- `~/.omp/agent/` — OMP
+- `~/.kiro/` — Kiro
+- `~/.gemini/` — Antigravity
 **Example command:**
 
 ```bash
 lazyai-cli init \
   --scope global \
-  --tools opencode,claude-code \
+  --tools opencode,claude-code,copilot,pi,omp,kiro,antigravity \
   --name global \
   --preset minimal \
   --no-interactive

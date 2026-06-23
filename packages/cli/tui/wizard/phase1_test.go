@@ -239,8 +239,8 @@ func TestToolOptionsForScope_ReturnsSupportedTools(t *testing.T) {
 	t.Parallel()
 
 	globalOpts := toolOptionsForScope(types.SetupScopeGlobal)
-	if len(globalOpts) != 5 {
-		t.Errorf("global options count = %d, want 5", len(globalOpts))
+	if len(globalOpts) != 7 {
+		t.Errorf("global options count = %d, want 7", len(globalOpts))
 	}
 
 	projectOpts := toolOptionsForScope(types.SetupScopeProject)

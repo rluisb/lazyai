@@ -390,6 +390,18 @@ func rootsForTool(tool types.ToolId, opts Options) []rootSpec {
 			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"skills"}, []string{"AGENTS.md", "settings"}),
 			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"skills"}, []string{"AGENTS.md", "settings"}),
 		}
+	case types.ToolIdPi:
+		return []rootSpec{
+			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"skills"}, []string{"agents", "prompts", "extensions"}),
+			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"skills"}, []string{"agents", "prompts", "extensions"}),
+			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"skills"}, []string{"agents", "prompts", "extensions"}),
+		}
+	case types.ToolIdAntigravity:
+		return []rootSpec{
+			toolRootSpec(tool, types.SetupScopeGlobal, "global", opts, []string{"settings.json"}, []string{"hooks", "lazyai"}),
+			toolRootSpec(tool, types.SetupScopeProject, "project", opts, []string{"settings.json"}, []string{"hooks", "lazyai"}),
+			toolRootSpec(tool, types.SetupScopeWorkspace, "workspace", opts, []string{"settings.json"}, []string{"hooks", "lazyai"}),
+		}
 	}
 	return nil
 }

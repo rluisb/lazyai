@@ -58,6 +58,14 @@ func TestAdapter_ScopeParity(t *testing.T) {
 		{"copilot_project", &CopilotAdapter{}, types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".github") }},
 		{"copilot_workspace", &CopilotAdapter{}, types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".github") }},
 		// copilot_global is exercised separately below.
+
+		{"pi_project", &PiAdapter{}, types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".pi") }},
+		{"pi_workspace", &PiAdapter{}, types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".pi") }},
+		{"pi_global", &PiAdapter{}, types.SetupScopeGlobal, func(_, h string) string { return filepath.Join(h, ".pi") }},
+
+		{"antigravity_project", &AntigravityAdapter{}, types.SetupScopeProject, func(t, _ string) string { return filepath.Join(t, ".gemini") }},
+		{"antigravity_workspace", &AntigravityAdapter{}, types.SetupScopeWorkspace, func(t, _ string) string { return filepath.Join(t, ".gemini") }},
+		{"antigravity_global", &AntigravityAdapter{}, types.SetupScopeGlobal, func(_, h string) string { return filepath.Join(h, ".gemini") }},
 	}
 
 	for _, row := range rows {

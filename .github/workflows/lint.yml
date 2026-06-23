@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -33,10 +36,9 @@ jobs:
           cd packages/cli
           go vet ./...
 
-  staticcheck-advisory:
-    name: Staticcheck advisory
+  staticcheck:
+    name: Staticcheck
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -49,13 +51,10 @@ jobs:
       - name: Install staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
-      - name: Run staticcheck (advisory)
+      - name: Run staticcheck
         run: |
           cd packages/cli
-          staticcheck ./... || {
-            echo "::warning::staticcheck has pre-existing findings; advisory only"
-            exit 0
-          }
+          staticcheck ./...
   drift-scan:
     name: Banned-token drift scan
     runs-on: ubuntu-latest

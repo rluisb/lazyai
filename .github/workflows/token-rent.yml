@@ -16,6 +16,9 @@ on:
       - '.githooks/pre-commit'
       - '.github/workflows/token-rent.yml'
 
+permissions:
+  contents: read
+
 jobs:
   token-rent:
     runs-on: ubuntu-latest

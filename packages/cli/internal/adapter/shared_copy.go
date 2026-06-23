@@ -438,3 +438,26 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 	}
 	return nil
 }
+
+// trackedRecordPath computes a normalized path for a TrackedFile record.
+//
+// It attempts to make the path relative to workspaceRoot (the canonical
+// workspace or project root). When the file is under workspaceRoot, the
+// result is a slash-normalized relative path — byte-stable across platforms
+// and consistent with install-side records (CopyWithRecord,
+// WriteContentWithRecord).
+//
+// When the file is outside workspaceRoot (e.g. a global-scope config under
+// the user's home directory), filepath.Rel fails and the absolute path is
+// used instead. This is an intentional, documented exception: global/user-owned
+// paths are not under the project's control and must remain absolute to be
+// meaningful. Even in this fallback, filepath.ToSlash is applied so the
+// record is still slash-normalized.
+func trackedRecordPath(workspaceRoot, filePath string) string {
+	rel, err := filepath.Rel(workspaceRoot, filePath)
+	if err != nil || rel == "" || strings.HasPrefix(rel, "..") {
+		// Outside workspaceRoot or degenerate — keep absolute, slash-normalized.
+		return filepath.ToSlash(filePath)
+	}
+	return filepath.ToSlash(rel)
+}

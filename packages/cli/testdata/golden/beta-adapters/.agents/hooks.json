@@ -1,0 +1,24 @@
+{
+  "lazyai-block-destructive-shell": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".gemini/hooks/lazyai/block-destructive-shell.sh",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "run_command"
+      }
+    ]
+  },
+  "lazyai-objective-workflow-gate": {
+    "Stop": [
+      {
+        "command": ".gemini/hooks/lazyai/objective-workflow-gate.sh",
+        "type": "command"
+      }
+    ]
+  }
+}

@@ -198,6 +198,44 @@ func TestCompilerGolden(t *testing.T) {
 			if err != nil {
 				t.Fatalf("walking golden: %v", err)
 			}
+
+			// Reverse walk: detect extra files in output not present in golden.
+			err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, walkErr error) error {
+				if walkErr != nil {
+					return walkErr
+				}
+				if d.IsDir() {
+					return nil
+				}
+				rel, _ := filepath.Rel(tmpDir, path)
+				if shouldIgnoreGoldenExtra(rel) {
+					return nil
+				}
+				goldenPath := filepath.Join(projGoldenDir, rel)
+				if _, statErr := os.Stat(goldenPath); os.IsNotExist(statErr) {
+					t.Errorf("extra output file %s not in golden fixtures", rel)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("walking output for extras: %v", err)
+			}
 		})
 	}
+}
+
+func shouldIgnoreGoldenExtra(rel string) bool {
+	if rel == ".ai-setup.db" || rel == "AGENTS.md" || rel == ".mcp.json" {
+		return true
+	}
+	if rel == ".ai/populate-needed" || rel == filepath.Join(".ai", "populate-needed") {
+		return true
+	}
+	if rel == ".ai/lazyai.json" || rel == filepath.Join(".ai", "lazyai.json") {
+		return true
+	}
+	if rel == ".ai/mcp.json" || rel == filepath.Join(".ai", "mcp.json") {
+		return true
+	}
+	return strings.HasPrefix(rel, ".specify"+string(filepath.Separator)) || strings.HasPrefix(rel, ".specify/")
 }

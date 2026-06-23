@@ -46,7 +46,7 @@ func MergeJSONFile(path string, patch map[string]any) (backupPath string, err er
 	if err != nil {
 		return "", fmt.Errorf("marshal %s: %w", path, err)
 	}
-	if err := files.WriteFile(path, out, 0o644); err != nil {
+	if err := files.SafeWriteFile(path, out, 0o644); err != nil {
 		return "", err
 	}
 	return backupPath, nil
@@ -76,7 +76,7 @@ func MergeTOMLFile(path string, patch map[string]any) (backupPath string, err er
 	if err != nil {
 		return "", fmt.Errorf("marshal %s: %w", path, err)
 	}
-	if err := files.WriteFile(path, out, 0o644); err != nil {
+	if err := files.SafeWriteFile(path, out, 0o644); err != nil {
 		return "", err
 	}
 	return backupPath, nil

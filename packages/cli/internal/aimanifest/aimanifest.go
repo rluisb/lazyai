@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
 )
 
@@ -119,7 +120,7 @@ func (m *Manifest) Save(aiDir string) error {
 		return fmt.Errorf("marshaling manifest: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(Path(aiDir), data, 0o644); err != nil {
+	if err := files.SafeWriteFile(Path(aiDir), data, 0o644); err != nil {
 		return fmt.Errorf("writing manifest: %w", err)
 	}
 	return nil

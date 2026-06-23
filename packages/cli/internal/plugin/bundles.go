@@ -262,7 +262,7 @@ func seedCanonicalMCP(libFS fs.FS, targetDir string) error {
 	if err := files.EnsureDir(filepath.Dir(path)); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return files.SafeWriteFile(path, data, 0o644)
 }
 
 func writeSimplePluginManifest(path, version string) error {
@@ -279,7 +279,7 @@ func writeSimplePluginManifest(path, version string) error {
 	if err := files.EnsureDir(filepath.Dir(path)); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return files.SafeWriteFile(path, data, 0o644)
 }
 
 func copyCopilotHooks(srcDir, outDir string) error {

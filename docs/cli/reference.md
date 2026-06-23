@@ -49,6 +49,9 @@ Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup
 - [Cost](#cost)
 - [Ledger](#ledger)
 - [Validate](#validate)
+  - [validate agents](#validate-agents)
+  - [validate skills](#validate-skills)
+  - [validate evals](#validate-evals)
 - [Migration Note](#migration-note)
 - [Message](#message)
 - [Metrics](#metrics)
@@ -515,19 +518,23 @@ lazyai-cli list agents --verbose
 
 ### `build-plugin`
 
-Generate a Claude Code plugin directory from the embedded LazyAI library.
+Generate a distributable plugin bundle from the embedded LazyAI library.
+Supports four targets via `--target`: Claude Code (default), GitHub Copilot CLI,
+OMP, and Pi.
 
 **Flags:**
 
 | Flag | Description |
 |---|---|
+| `--target` | Bundle target: `claude` (default), `copilot-cli`, `omp`, or `pi` |
 | `--out` | Output directory (default: `./dist/plugin`) |
 | `--force` | Overwrite the output directory if it exists and is non-empty |
 
 **Example:**
 
 ```bash
-lazyai-cli build-plugin --out ./dist/lazyai-plugin --force
+lazyai-cli build-plugin --target claude --out ./dist/lazyai-plugin --force
+lazyai-cli build-plugin --target copilot-cli --out ./dist/copilot-plugin
 ```
 
 ---
@@ -863,18 +870,33 @@ lazyai-cli ledger show 5
 
 ## Validate
 
+The `validate` command runs structural validators over the canonical `.ai/`
+asset tree. With no subcommand it prints help; pass `--all` to run every
+validator in one pass, or use the `agents`, `skills`, and `evals` subcommands
+for filtered per-surface checks.
+
+**Flags:**
+
+| Flag | Description |
+|---|---|
+| `--all` | Run all validators (skills, agents, hooks, MCP, secrets, path safety) over the canonical `.ai/` tree and return an error on any error-severity issue |
+| `--profile` | Safety profile: `team` (inline secrets are errors) or `personal` (inline secrets are warnings). Defaults to the manifest profile, then `personal` |
+
 ### `validate agents`
 
-Validate `.opencode/agents/*.md` files.
+Validate `.ai/agents/*.md` files using the consolidated validation engine.
+
+The engine runs all validators over the canonical `.ai/` tree and then filters
+to agent-rule issues. Counts agent files as passed, surfaces error and warning
+findings, and exits with an error only when error-severity checks fail.
 
 **Checks:**
 
 - YAML frontmatter is present (**error**)
-- `# System Prompt` heading is present (**error**)
-- `vibe-lab:managed kind=agent` marker comment is present (**warning**)
-- At least one `## ` section heading appears after `# System Prompt` (**warning**)
-
-The command exits with an error only when error-severity checks fail.
+- `name` field is present and valid (**error**)
+- `description` field is present (**warning**)
+- Semantic body guidance for role, workflow, trigger, non-trigger, human gate,
+  handoff, evidence, and output (**warning**)
 
 **Example:**
 ```bash
@@ -885,17 +907,36 @@ lazyai-cli validate agents
 
 ### `validate skills`
 
-Validate `.opencode/skills/`. This command is currently a stub: after confirming the skills directory exists, it prints `Skill validation not yet implemented` and exits successfully.
+Validate `.ai/skills/` using the consolidated validation engine over the
+canonical `.ai/` tree. Filters to skill-rule issues, counts pass/fail across
+flat `*.md` files and `<name>/SKILL.md` directories, and returns an error on
+any error-severity failure.
 
-**Planned checks printed by the stub:**
+**Checks:**
 
-- Quick Reference section presence
-- Proper frontmatter format
-- Script references validity
+- YAML frontmatter is present (**error**)
+- `name` field is present and valid (**error**)
+- `description` field is present and non-empty (**error**)
+- Semantic body guidance for trigger, non-trigger, evidence, and output
+  (**warning**)
 
 **Example:**
 ```bash
 lazyai-cli validate skills
+```
+
+---
+
+### `validate evals`
+
+Validate `.ai/evals/cases/`, `.ai/evals/holdouts/`, and `.ai/evals/rubrics/`.
+Case and holdout files (`.yaml`/`.yml`) are schema-checked by the evals
+package; rubric directories are validated for structure. Counts pass/fail and
+returns an error on any failure.
+
+**Example:**
+```bash
+lazyai-cli validate evals
 ```
 
 ---

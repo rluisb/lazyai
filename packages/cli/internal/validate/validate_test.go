@@ -336,7 +336,7 @@ func TestValidateAgentsSemanticWarnings(t *testing.T) {
 	// Agent with only name and description — no role, steps, trigger, non_trigger, human_gate, handoff, evidence, output.
 	writeFile(t, filepath.Join(ai, "agents", "minimal.md"), "---\nname: minimal\ndescription: A minimal agent\n---\n# Minimal\n")
 	// Fully specified agent — should produce no semantic warnings.
-	writeFile(t, filepath.Join(ai, "agents", "full.md"), "---\nname: full\ndescription: A full agent\n---\n# Full\n\n## Role\nSpecialist agent.\n\n## Workflow\nFollow documented steps.\n\n## When to use\nUse when full validation is needed.\n\n## When not to use\nDo not use for unrelated work.\n\n## Human gate\nStop and ask for human approval.\n\n## Handoff\nWhen finished, hand off a summary to the next agent.\n\n## Evidence\nRecord source evidence.\n\n## Output\nReturn a structured report.\n")
+	writeFile(t, filepath.Join(ai, "agents", "full.md"), "---\nname: full\ndescription: A full agent\n---\n# Full\n\n## Role\nSpecialist agent.\n\n## Workflow\nFollow documented steps.\n\n## When to use\nUse when full validation is needed.\n\n## When not to use\nDo not use for unrelated work.\n\n## Human gate\nStop and ask for human approval.\n\n## Handoff\nWhen finished, hand off a structured report.\n\n## Evidence\nRecord source evidence.\n\n## Output\nReturn a structured report.\n")
 
 	report := All(Options{Root: dir, Profile: ProfilePersonal})
 
@@ -437,5 +437,41 @@ func TestValidateSemanticWarningsDoNotBlockHasErrors(t *testing.T) {
 	}
 	if report.Warnings() == 0 {
 		t.Fatal("expected at least one warning for skill with missing optional fields")
+	}
+}
+
+func TestValidateMCPCommandTrustWarning(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"fs":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem"]}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	// Must not error — valid command.
+	if hasError(report, "mcp") {
+		t.Fatalf("did not expect mcp error for valid command; issues: %+v", report.Issues)
+	}
+	// Must produce a trust warning.
+	var foundTrust bool
+	for _, issue := range report.Issues {
+		if issue.Code == "mcp.command_trust" {
+			foundTrust = true
+			if issue.Severity != SeverityWarning {
+				t.Fatalf("mcp.command_trust must be warning severity, got %q", issue.Severity)
+			}
+		}
+	}
+	if !foundTrust {
+		t.Fatal("expected mcp.command_trust warning for stdio command server")
+	}
+}
+
+func TestValidateMCPURLServerNoTrustWarning(t *testing.T) {
+	dir := t.TempDir()
+	ai := filepath.Join(dir, ".ai")
+	writeFile(t, filepath.Join(ai, "mcp.json"), `{"servers":{"remote":{"url":"http://localhost:8080/sse"}}}`)
+	report := All(Options{Root: dir, Profile: ProfilePersonal})
+	for _, issue := range report.Issues {
+		if issue.Code == "mcp.command_trust" {
+			t.Fatalf("URL-based server should not produce command trust warning; got: %+v", issue)
+		}
 	}
 }

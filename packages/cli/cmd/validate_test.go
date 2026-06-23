@@ -50,17 +50,18 @@ func TestValidateAllPassesOnCleanTree(t *testing.T) {
 
 func TestValidateAgentsPassesOnCanonicalShape(t *testing.T) {
 	dir := t.TempDir()
-	agentsDir := filepath.Join(dir, ".opencode", "agents")
+	agentsDir := filepath.Join(dir, ".ai", "agents")
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("mkdir agents dir: %v", err)
 	}
 
 	agentPath := filepath.Join(agentsDir, "canonical-agent.md")
 	agentContent := `---
+name: canonical-agent
 description: test agent
 ---
-<!-- vibe-lab:managed kind=agent role=architector -->
 # System Prompt
+
 ## Rules
 Use stable, minimal changes.
 `
@@ -81,7 +82,7 @@ Use stable, minimal changes.
 
 func TestValidateAgentsFailsOnMissingFrontmatter(t *testing.T) {
 	dir := t.TempDir()
-	agentsDir := filepath.Join(dir, ".opencode", "agents")
+	agentsDir := filepath.Join(dir, ".ai", "agents")
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("mkdir agents dir: %v", err)
 	}
@@ -107,17 +108,18 @@ func TestValidateAgentsFailsOnMissingFrontmatter(t *testing.T) {
 	}
 }
 
-func TestValidateAgentsFailsOnMissingSystemPrompt(t *testing.T) {
+func TestValidateAgentsFailsOnMissingName(t *testing.T) {
 	dir := t.TempDir()
-	agentsDir := filepath.Join(dir, ".opencode", "agents")
+	agentsDir := filepath.Join(dir, ".ai", "agents")
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("mkdir agents dir: %v", err)
 	}
 
-	agentPath := filepath.Join(agentsDir, "missing-system-prompt.md")
+	agentPath := filepath.Join(agentsDir, "no-name.md")
 	if err := os.WriteFile(agentPath, []byte(`---
 description: test
 ---
+# System Prompt
 ## Rules
 `), 0o644); err != nil {
 		t.Fatalf("write agent file: %v", err)
@@ -130,13 +132,13 @@ description: test
 		err = runValidateAgents(nil, nil)
 	})
 	if err == nil {
-		t.Fatalf("expected validation failure for missing system prompt")
+		t.Fatalf("expected validation failure for missing name")
 	}
 }
 
 func TestValidateSkillsPassesOnCanonicalShape(t *testing.T) {
 	dir := t.TempDir()
-	skillsDir := filepath.Join(dir, ".opencode", "skills")
+	skillsDir := filepath.Join(dir, ".ai", "skills")
 	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		t.Fatalf("mkdir skills dir: %v", err)
 	}
@@ -144,7 +146,6 @@ func TestValidateSkillsPassesOnCanonicalShape(t *testing.T) {
 	skillContent := `---
 name: review
 description: Conduct rigorous code review.
-trigger: /review
 ---
 # Review
 
@@ -167,7 +168,7 @@ Do the review.
 
 func TestValidateSkillsFailsOnMissingFrontmatter(t *testing.T) {
 	dir := t.TempDir()
-	skillsDir := filepath.Join(dir, ".opencode", "skills")
+	skillsDir := filepath.Join(dir, ".ai", "skills")
 	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		t.Fatalf("mkdir skills dir: %v", err)
 	}
@@ -191,7 +192,7 @@ func TestValidateSkillsFailsOnMissingFrontmatter(t *testing.T) {
 
 func TestValidateSkillsFailsOnMissingNameField(t *testing.T) {
 	dir := t.TempDir()
-	skillsDir := filepath.Join(dir, ".opencode", "skills")
+	skillsDir := filepath.Join(dir, ".ai", "skills")
 	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		t.Fatalf("mkdir skills dir: %v", err)
 	}
@@ -217,7 +218,7 @@ description: missing the name field
 
 func TestValidateSkillsSupportsDirSkillMdLayout(t *testing.T) {
 	dir := t.TempDir()
-	skillDir := filepath.Join(dir, ".opencode", "skills", "my-skill")
+	skillDir := filepath.Join(dir, ".ai", "skills", "my-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatalf("mkdir skill dir: %v", err)
 	}

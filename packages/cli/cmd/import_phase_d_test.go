@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ func TestImportWritesReportManifestAndRawPreservation(t *testing.T) {
 
 	withWorkingDir(t, dir)
 	cmd := newImportCommandForTest("", true, false)
-	_, _ = captureOutput(t, func() {
+	out, _ := captureOutput(t, func() {
 		if err := runImport(cmd, nil); err != nil {
 			t.Fatalf("runImport: %v", err)
 		}
@@ -54,6 +55,20 @@ func TestImportWritesReportManifestAndRawPreservation(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
 			t.Fatalf("expected native source kept at %s: %v", rel, err)
 		}
+	}
+	if !strings.Contains(out, "Trust model: imported canonical files and preserved raw snapshots come from external tool config.") {
+		t.Fatalf("expected trust-model output, got:\n%s", out)
+	}
+	reportBytes, err := os.ReadFile(filepath.Join(dir, ".ai", "migration-report.md"))
+	if err != nil {
+		t.Fatalf("read migration report: %v", err)
+	}
+	report := string(reportBytes)
+	if !strings.Contains(report, "## Trust model") {
+		t.Fatalf("expected trust model section in migration report, got:\n%s", report)
+	}
+	if !strings.Contains(report, "Run `lazyai-cli validate --all` after import") {
+		t.Fatalf("expected validate-after-import guidance in migration report, got:\n%s", report)
 	}
 }
 

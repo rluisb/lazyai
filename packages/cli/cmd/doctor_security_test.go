@@ -33,6 +33,9 @@ func TestBuildSecurityReportSandboxCaveats(t *testing.T) {
 	if len(report.MCPServers) != 1 || report.MCPServers[0].Name != "fs" {
 		t.Fatalf("expected fs server in inventory, got %+v", report.MCPServers)
 	}
+	if report.MCPServers[0].Command != "npx" {
+		t.Fatalf("expected command inventory to include npx, got %+v", report.MCPServers[0])
+	}
 }
 
 func TestBuildSecurityReportFlagsHookAndSecretRisks(t *testing.T) {

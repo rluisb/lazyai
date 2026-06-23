@@ -92,15 +92,28 @@ assert_contains "$append_output" "Entry appended" "ledger append works"
 verify_output=$(cd "$tmp_dir" && "$bin_path" ledger verify 2>&1) || true
 assert_contains "$verify_output" "Chain intact" "ledger verify works"
 
-rm -rf "$tmp_dir"
-rm -f "$bin_path"
 
 # ─── Test: Validate Command ───
 
 echo ""
 echo "🧪 Validate Command"
-validate_output=$(cd "$REPO_ROOT" && go run ./packages/cli/cmd/lazyai-cli validate agents 2>&1) || true
+validate_dir=$(mktemp -d)
+mkdir -p "$validate_dir/.ai/agents"
+cat > "$validate_dir/.ai/agents/smoke-agent.md" <<'EOF'
+---
+name: smoke-agent
+description: Smoke-test canonical agent
+---
+# System Prompt
+
+## Rules
+Use stable, minimal changes.
+EOF
+validate_output=$(cd "$validate_dir" && "$bin_path" validate agents 2>&1) || true
 assert_contains "$validate_output" "Agent Validation Results" "validate agents works"
+rm -rf "$validate_dir"
+rm -rf "$tmp_dir"
+rm -f "$bin_path"
 
 # ─── Summary ───
 

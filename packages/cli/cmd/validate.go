@@ -56,7 +56,7 @@ func init() {
 
 // runValidate dispatches the bare `validate` command. With --all it runs the
 // consolidated engine over .ai/; otherwise it prints help (subcommands handle
-// the legacy per-surface checks).
+// the per-surface checks).
 func runValidate(cmd *cobra.Command, args []string) error {
 	if !validateAllFlag {
 		return cmd.Help()
@@ -135,83 +135,51 @@ type ValidationResult struct {
 	Message  string `json:"message"`
 }
 
+// runValidateAgents validates agent files from the canonical .ai/agents
+// directory using the consolidated validation engine. This replaces the
+// legacy .opencode/agents check (FR-009, issue #408).
 func runValidateAgents(cmd *cobra.Command, args []string) error {
 	dir, _ := os.Getwd()
-	agentsDir := filepath.Join(dir, ".opencode", "agents")
+	aiDir := filepath.Join(dir, ".ai", "agents")
 
-	if _, err := os.Stat(agentsDir); os.IsNotExist(err) {
-		return fmt.Errorf("agents directory not found: %s", agentsDir)
+	if _, err := os.Stat(aiDir); os.IsNotExist(err) {
+		return fmt.Errorf("agents directory not found: %s (run 'lazyai-cli init' first)", aiDir)
 	}
 
+	// Use the consolidated validation engine over the canonical .ai/ tree.
+	profile := resolveValidateProfile(dir)
+	report := validate.All(validate.Options{Root: dir, Profile: profile})
+
+	// Filter to agent-related issues only.
 	var results []ValidationResult
 	var passCount, failCount int
 
-	entries, err := os.ReadDir(agentsDir)
-	if err != nil {
-		return err
+	// Count agent files in .ai/agents.
+	entries, err := os.ReadDir(aiDir)
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+				continue
+			}
+			passCount++
+		}
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+	for _, issue := range report.Issues {
+		if issue.Rule != "agent" {
 			continue
 		}
-
-		path := filepath.Join(agentsDir, entry.Name())
-		content, err := os.ReadFile(path)
-		if err != nil {
-			continue
+		sev := "warning"
+		if issue.Severity == validate.SeverityError {
+			sev = "error"
 		}
-
-		contentStr := string(content)
-		fileName := entry.Name()
-		hasError := false
-
-		// Check for frontmatter
-		if !strings.HasPrefix(contentStr, "---\n") {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "error",
-				Message:  "Missing YAML frontmatter",
-			})
+		results = append(results, ValidationResult{
+			File:     issue.File,
+			Severity: sev,
+			Message:  issue.Message,
+		})
+		if issue.Severity == validate.SeverityError {
 			failCount++
-			hasError = true
-		}
-
-		// Check for System Prompt
-		systemPromptIndex := strings.Index(contentStr, "# System Prompt")
-		if systemPromptIndex == -1 {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "error",
-				Message:  "Missing '# System Prompt' heading",
-			})
-			failCount++
-			hasError = true
-		}
-
-		// Check for managed marker
-		if !strings.Contains(contentStr, "vibe-lab:managed kind=agent") {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "warning",
-				Message:  "Missing 'vibe-lab:managed kind=agent' marker",
-			})
-		}
-
-		// Check for a section heading after System Prompt
-		if systemPromptIndex != -1 {
-			afterSystemPrompt := contentStr[systemPromptIndex:]
-			if !strings.Contains(afterSystemPrompt, "## ") {
-				results = append(results, ValidationResult{
-					File:     fileName,
-					Severity: "warning",
-					Message:  "Missing section heading after 'System Prompt'",
-				})
-			}
-		}
-
-		if !hasError {
-			passCount++
 		}
 	}
 
@@ -238,7 +206,6 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Printf("  Summary: %d passed, %d issues found\n", passCount, len(results))
 
-	// Append to ledger
 	status := "pass"
 	if failCount > 0 {
 		status = "fail"
@@ -256,90 +223,57 @@ func runValidateAgents(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// runValidateSkills validates skill files from the canonical .ai/skills
+// directory using the consolidated validation engine. This replaces the
+// legacy .opencode/skills check (FR-009, issue #408).
 func runValidateSkills(cmd *cobra.Command, args []string) error {
 	dir, _ := os.Getwd()
-	skillsDir := filepath.Join(dir, ".opencode", "skills")
+	aiDir := filepath.Join(dir, ".ai", "skills")
 
-	if _, err := os.Stat(skillsDir); os.IsNotExist(err) {
-		return fmt.Errorf("skills directory not found: %s", skillsDir)
+	if _, err := os.Stat(aiDir); os.IsNotExist(err) {
+		return fmt.Errorf("skills directory not found: %s (run 'lazyai-cli init' first)", aiDir)
 	}
 
-	entries, err := os.ReadDir(skillsDir)
-	if err != nil {
-		return err
-	}
+	// Use the consolidated validation engine over the canonical .ai/ tree.
+	profile := resolveValidateProfile(dir)
+	report := validate.All(validate.Options{Root: dir, Profile: profile})
 
+	// Filter to skill-related issues only.
 	var results []ValidationResult
 	var passCount, failCount int
 
-	for _, entry := range entries {
-		// Skills may be flat "<name>.md" files or "<name>/SKILL.md" directories.
-		var path, fileName string
-		if entry.IsDir() {
-			candidate := filepath.Join(skillsDir, entry.Name(), "SKILL.md")
-			if _, statErr := os.Stat(candidate); statErr != nil {
+	// Count skill files in .ai/skills (flat .md files and dir/SKILL.md).
+	entries, err := os.ReadDir(aiDir)
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				candidate := filepath.Join(aiDir, entry.Name(), "SKILL.md")
+				if _, statErr := os.Stat(candidate); statErr == nil {
+					passCount++
+				}
 				continue
 			}
-			path = candidate
-			fileName = filepath.Join(entry.Name(), "SKILL.md")
-		} else if strings.HasSuffix(entry.Name(), ".md") {
-			path = filepath.Join(skillsDir, entry.Name())
-			fileName = entry.Name()
-		} else {
+			if strings.HasSuffix(entry.Name(), ".md") {
+				passCount++
+			}
+		}
+	}
+
+	for _, issue := range report.Issues {
+		if issue.Rule != "skill" {
 			continue
 		}
-
-		content, readErr := os.ReadFile(path)
-		if readErr != nil {
-			continue
+		sev := "warning"
+		if issue.Severity == validate.SeverityError {
+			sev = "error"
 		}
-
-		contentStr := string(content)
-		hasError := false
-
-		// Check for frontmatter
-		if !strings.HasPrefix(contentStr, "---\n") {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "error",
-				Message:  "Missing YAML frontmatter",
-			})
+		results = append(results, ValidationResult{
+			File:     issue.File,
+			Severity: sev,
+			Message:  issue.Message,
+		})
+		if issue.Severity == validate.SeverityError {
 			failCount++
-			hasError = true
-		} else {
-			// Frontmatter must declare name + description (Agent Skills contract).
-			fm := frontmatterBlock(contentStr)
-			if !strings.Contains(fm, "name:") {
-				results = append(results, ValidationResult{
-					File:     fileName,
-					Severity: "error",
-					Message:  "Frontmatter missing 'name' field",
-				})
-				failCount++
-				hasError = true
-			}
-			if !strings.Contains(fm, "description:") {
-				results = append(results, ValidationResult{
-					File:     fileName,
-					Severity: "error",
-					Message:  "Frontmatter missing 'description' field",
-				})
-				failCount++
-				hasError = true
-			}
-		}
-
-		// Check for body content (at least one top-level Markdown heading).
-		if !strings.Contains(contentStr, "\n# ") && !strings.HasPrefix(contentStr, "# ") {
-			results = append(results, ValidationResult{
-				File:     fileName,
-				Severity: "warning",
-				Message:  "Missing a top-level '# ' heading in body",
-			})
-		}
-
-		if !hasError {
-			passCount++
 		}
 	}
 

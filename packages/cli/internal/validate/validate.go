@@ -364,7 +364,9 @@ func mcpServers(doc map[string]any) map[string]any {
 }
 
 // validateMCP checks .ai/mcp.json structure: parseable, a servers map exists,
-// and every server entry declares a command or url (FR-009).
+// and every server entry declares a command or url (FR-009). Stdio command
+// entries are flagged as trust warnings: MCP commands execute arbitrary
+// processes and should be reviewed before use (FR-011).
 func validateMCP(aiDir string, _ Profile, r *Report) {
 	path := filepath.Join(aiDir, "mcp.json")
 	if _, err := os.Stat(path); err != nil {
@@ -411,6 +413,14 @@ func validateMCP(aiDir string, _ Profile, r *Report) {
 			r.add(rel, "mcp", "", SeverityError, "server %q has blank 'command'", name)
 		} else if urlBlank {
 			r.add(rel, "mcp", "", SeverityError, "server %q has blank 'url'", name)
+		}
+
+		// Trust warning: stdio MCP commands execute arbitrary processes.
+		// This is a warning, not an error — local config is the default trust
+		// model, but users should review commands before enabling (FR-011).
+		if hasCmd && !cmdBlank {
+			r.add(rel, "mcp", "mcp.command_trust", SeverityWarning,
+				"server %q uses a stdio command (%s) — MCP commands execute arbitrary processes; review before enabling", name, cmdVal)
 		}
 	}
 }

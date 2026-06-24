@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -187,9 +188,143 @@ func TestScaffoldCompiledRootAppendsClaudeAgentsReferenceOnce(t *testing.T) {
 	if !strings.Contains(content, "# Existing Claude") {
 		t.Fatalf("existing content was not preserved: %q", content)
 	}
-	if count := strings.Count(content, claudeAgentsReference); count != 1 {
-		t.Fatalf("reference count = %d, want 1\n%s", count, content)
+	// The append path must inject the FUNCTIONAL @import (not a markdown
+	// comment), and it must appear exactly once after two compiles (#496).
+	if count := strings.Count(content, claudeImportToken); count != 1 {
+		t.Fatalf("functional import count = %d, want 1\n%s", count, content)
 	}
+}
+
+func TestScaffoldCompiledRootAppendsGeminiAgentsReferenceOnce(t *testing.T) {
+	targetDir := t.TempDir()
+	geminiPath := filepath.Join(targetDir, "GEMINI.md")
+	if err := os.WriteFile(geminiPath, []byte("# Existing Gemini\n"), 0o644); err != nil {
+		t.Fatalf("seed GEMINI.md: %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		records := []types.TrackedFile{}
+		if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+			TargetDir:        targetDir,
+			LibraryFS:        rootTestFS(),
+			Tools:            []types.ToolId{types.ToolIdAntigravity},
+			ProjectName:      "test-project",
+			FileRecords:      &records,
+			Strategy:         types.ConflictStrategySkip,
+			PerFileOverrides: map[string]types.ConflictStrategy{},
+			SetupScope:       types.SetupScopeProject,
+		}); err != nil {
+			t.Fatalf("ScaffoldCompiledRoot pass %d: %v", i, err)
+		}
+	}
+
+	got, err := os.ReadFile(geminiPath)
+	if err != nil {
+		t.Fatalf("read GEMINI.md: %v", err)
+	}
+	content := string(got)
+	if !strings.Contains(content, "# Existing Gemini") {
+		t.Fatalf("existing content was not preserved: %q", content)
+	}
+	// The append path must inject the FUNCTIONAL @import (not a markdown
+	// comment), and it must appear exactly once after two compiles (#496).
+	if count := strings.Count(content, geminiImportToken); count != 1 {
+		t.Fatalf("functional import count = %d, want 1\n%s", count, content)
+	}
+}
+
+// TestScaffoldCompiledRootContextDocIdempotent recompiles a freshly-generated
+// context doc and asserts (a) byte-identical content after the second compile,
+// (b) a single functional import line, and (c) no spurious extra TrackedFile
+// churn for that file (#496).
+func TestScaffoldCompiledRootContextDocIdempotent(t *testing.T) {
+	cases := []struct {
+		name     string
+		tool     types.ToolId
+		filename string
+		token    string
+	}{
+		{"claude", types.ToolIdClaudeCode, "CLAUDE.md", claudeImportToken},
+		{"gemini", types.ToolIdAntigravity, "GEMINI.md", geminiImportToken},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			docPath := filepath.Join(targetDir, c.filename)
+
+			// First compile: generates the fresh context doc.
+			records1 := []types.TrackedFile{}
+			if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+				TargetDir:        targetDir,
+				LibraryFS:        rootTestFS(),
+				Tools:            []types.ToolId{c.tool},
+				ProjectName:      "test-project",
+				FileRecords:      &records1,
+				Strategy:         types.ConflictStrategySkip,
+				PerFileOverrides: map[string]types.ConflictStrategy{},
+				SetupScope:       types.SetupScopeProject,
+			}); err != nil {
+				t.Fatalf("first compile: %v", err)
+			}
+			firstBytes, err := os.ReadFile(docPath)
+			if err != nil {
+				t.Fatalf("read after first compile: %v", err)
+			}
+			if count := strings.Count(string(firstBytes), c.token); count != 1 {
+				t.Fatalf("first compile: import count = %d, want 1\n%s", count, firstBytes)
+			}
+			firstHashes := contextDocTrackedHashes(records1, c.filename)
+			if len(firstHashes) != 1 {
+				t.Fatalf("first compile: expected exactly 1 tracked record for %s, got %d (%v)", c.filename, len(firstHashes), firstHashes)
+			}
+
+			// Second compile: must be a true no-op on the context doc.
+			records2 := []types.TrackedFile{}
+			if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+				TargetDir:        targetDir,
+				LibraryFS:        rootTestFS(),
+				Tools:            []types.ToolId{c.tool},
+				ProjectName:      "test-project",
+				FileRecords:      &records2,
+				Strategy:         types.ConflictStrategySkip,
+				PerFileOverrides: map[string]types.ConflictStrategy{},
+				SetupScope:       types.SetupScopeProject,
+			}); err != nil {
+				t.Fatalf("second compile: %v", err)
+			}
+			secondBytes, err := os.ReadFile(docPath)
+			if err != nil {
+				t.Fatalf("read after second compile: %v", err)
+			}
+			if !bytes.Equal(firstBytes, secondBytes) {
+				t.Fatalf("second compile changed %s (must be byte-identical)\n--- first ---\n%s\n--- second ---\n%s", c.filename, firstBytes, secondBytes)
+			}
+			if count := strings.Count(string(secondBytes), c.token); count != 1 {
+				t.Fatalf("second compile: import count = %d, want 1 (no duplicate)\n%s", count, secondBytes)
+			}
+			secondHashes := contextDocTrackedHashes(records2, c.filename)
+			if len(secondHashes) != 1 {
+				t.Fatalf("second compile: expected exactly 1 tracked record for %s, got %d (%v)", c.filename, len(secondHashes), secondHashes)
+			}
+			// The recorded hash must not churn: the same file content yields the
+			// same hash on both compiles.
+			if firstHashes[0] != secondHashes[0] {
+				t.Fatalf("tracked hash churn for %s: first=%s second=%s", c.filename, firstHashes[0], secondHashes[0])
+			}
+		})
+	}
+}
+
+// contextDocTrackedHashes returns the hashes of all TrackedFile records whose
+// path ends with the given context-doc filename (e.g. CLAUDE.md / GEMINI.md).
+func contextDocTrackedHashes(records []types.TrackedFile, filename string) []string {
+	var hashes []string
+	for _, r := range records {
+		if filepath.Base(r.Path) == filename {
+			hashes = append(hashes, r.Hash)
+		}
+	}
+	return hashes
 }
 
 func TestScaffoldCompiledRootCopilotUsesRootTemplate(t *testing.T) {

@@ -61,7 +61,7 @@ Gemini CLI surface under `.gemini/`.
 |---|---|---|---|
 | Skills (workspace) | `.agents/skills/<name>/SKILL.md` | AG `/docs/skills` — workspace skills at `<root>/.agents/skills/<name>/SKILL.md`; `name` optional, `description` required | Verified |
 | Skills (global) | `~/.gemini/config/skills/<name>/SKILL.md` | AG `/docs/skills` — global skills at `~/.gemini/config/skills/<name>/` | Verified (gap 1 closed: `antigravity.go` writes scope-aware skills dir) |
-| Hooks (IDE) | `.agents/hooks.json` + `.gemini/hooks/lazyai/*.sh` | AG `/docs/hooks` — `hooks.json` in `.agents/`; event-keyed (`PreToolUse`/`PostToolUse`/`PreInvocation`/`PostInvocation`/`Stop`), `matcher: run_command`, `{type:command, command, timeout}` | Verified (asset matches schema) |
+| Hooks (IDE) | `.agents/hooks.json` (workspace/project) or `~/.gemini/config/hooks.json` (global) + `.gemini/hooks/lazyai/*.sh` | AG `/docs/hooks` — `hooks.json` in `.agents/`; event-keyed (`PreToolUse`/`PostToolUse`/`PreInvocation`/`PostInvocation`/`Stop`), `matcher: run_command`, `{type:command, command, timeout}` | Verified (asset matches schema; global path pinned by `TestAntigravityAdapter_Install_GlobalHooksUseGeminiConfigDir` per #497) |
 | Hooks (CLI) | `.gemini/settings.json` `hooks` block | Gemini CLI `/docs/hooks` — `.gemini/settings.json` `hooks`, events `BeforeTool`/`AfterAgent`/…, `matcher: run_shell_command`, `$GEMINI_PROJECT_DIR/.gemini/hooks/…` | Verified (asset matches schema) |
 | MCP | `~/.gemini/config/mcp_config.json` | AG `/docs/mcp` — `~/.gemini/config/mcp_config.json`; `{mcpServers:{...}}`; stdio `command`, HTTP `serverUrl` (not `url`); `toAntigravityMcp` correctly emits `serverUrl` | Verified |
 | Root instructions | `GEMINI.md` (Gemini CLI, via scaffold) + `.agents/rules/lazyai.md` (Antigravity IDE workspace) + canonical root `AGENTS.md` | AG `/docs/rules-workflows` — workspace rules `.agents/rules/*.md`, global `~/.gemini/GEMINI.md`; Gemini CLI context file is `GEMINI.md` | Verified (gap 2 closed: GEMINI.md imports `@./AGENTS.md`; `.agents/rules/lazyai.md` imports `@/AGENTS.md`) |
@@ -83,6 +83,10 @@ Both exit criteria below were resolved and pinned by conformance tests:
    Global rules (`~/.gemini/GEMINI.md`) remain user-managed (same conservative policy as
    Claude's global `CLAUDE.md`). Pinned by `TestScaffoldCompiledRootAntigravityGeneratesGeminiMd`
    and `TestAntigravityAdapter_Install_EmitsWorkspaceRules`.
+3. **Global-scope hooks path** *(closed, #497).* `AntigravityAdapter.Install` now writes
+   global-scope `hooks.json` to `~/.gemini/config/hooks.json` (scope-aware `hooksJSONPath`,
+   mirroring the global skills dir); workspace/project keep `.agents/hooks.json`.
+   Pinned by `TestAntigravityAdapter_Install_GlobalHooksUseGeminiConfigDir`.
 
 **Decision:** all emitted surfaces verified and both gaps closed + pinned. Antigravity/Gemini
 promoted to **stable** (no beta adapters remain).

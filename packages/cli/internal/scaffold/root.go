@@ -32,6 +32,19 @@ const claudeContextDoc = "# CLAUDE.md\n\n" +
 	"imported below.\n\n" +
 	"@AGENTS.md\n"
 
+const geminiAgentsReference = "<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file."
+
+// geminiContextDoc is the body written to a generated GEMINI.md when the
+// Antigravity/Gemini target is selected and no GEMINI.md exists yet. Gemini CLI
+// reads GEMINI.md natively as its context file (a bare root AGENTS.md is not
+// discovered — #486 gap 2); the `@./AGENTS.md` memory import pulls in the
+// canonical instructions so there is a single source of truth.
+const geminiContextDoc = "# GEMINI.md\n\n" +
+	"Gemini CLI reads this file as the canonical project context file.\n" +
+	"The full agent instructions for this project live in AGENTS.md and are\n" +
+	"imported below.\n\n" +
+	"@./AGENTS.md\n"
+
 // memoryDocDestPath returns the absolute path where the tool's memory doc
 // (AGENTS.md / GEMINI.md / .github/copilot-instructions.md, or existing
 // CLAUDE.md compatibility reference updates) should land for the given scope.
@@ -160,6 +173,11 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 	for _, tool := range opts.Tools {
 		if tool == types.ToolIdClaudeCode {
 			if err := ensureClaudeContextDoc(opts); err != nil {
+				return err
+			}
+		}
+		if tool == types.ToolIdAntigravity {
+			if err := ensureGeminiContextDoc(opts); err != nil {
 				return err
 			}
 		}
@@ -326,6 +344,61 @@ func ensureClaudeContextDoc(opts ScaffoldCompiledRootOptions) error {
 	}
 	updated := content + separator + claudeAgentsReference + "\n"
 	return files.WriteFile(claudePath, []byte(updated), 0o644)
+}
+
+// ensureGeminiContextDoc guarantees a native GEMINI.md exists for the
+// Antigravity/Gemini target (#486 gap 2): Gemini CLI reads GEMINI.md as its
+// context file and neither Gemini CLI nor Antigravity discovers a bare root
+// AGENTS.md. When no GEMINI.md exists, a minimal one importing AGENTS.md
+// (`@./AGENTS.md`) is generated and tracked. When the user already has a
+// GEMINI.md, an AGENTS.md reference is appended (idempotently) instead of
+// clobbering their content. Only project/workspace scopes are touched — the
+// user's personal ~/.gemini/GEMINI.md global rules are never created or modified.
+func ensureGeminiContextDoc(opts ScaffoldCompiledRootOptions) error {
+	if opts.SetupScope != types.SetupScopeProject && opts.SetupScope != types.SetupScopeWorkspace && opts.SetupScope != "" {
+		return nil
+	}
+
+	recordRoot := opts.recordRoot()
+	geminiPath := filepath.Join(recordRoot, "GEMINI.md")
+	if !files.FileExists(geminiPath) {
+		if err := files.EnsureDir(filepath.Dir(geminiPath)); err != nil {
+			return err
+		}
+		if err := files.WriteFile(geminiPath, []byte(geminiContextDoc), 0o644); err != nil {
+			return err
+		}
+		if opts.FileRecords != nil {
+			hash, _ := files.FileHash(geminiPath)
+			relPath, _ := filepath.Rel(recordRoot, geminiPath)
+			if relPath == "" || strings.HasPrefix(relPath, "..") {
+				relPath = geminiPath
+			}
+			*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
+				Path:   relPath,
+				Hash:   hash,
+				Source: "compiled:" + string(types.ToolIdAntigravity),
+				Owner:  types.FileOwnerLibrary,
+			})
+		}
+		return nil
+	}
+
+	data, err := files.ReadFile(geminiPath)
+	if err != nil {
+		return err
+	}
+	content := string(data)
+	if strings.Contains(content, geminiAgentsReference) {
+		return nil
+	}
+
+	separator := "\n\n"
+	if strings.HasSuffix(content, "\n") {
+		separator = "\n"
+	}
+	updated := content + separator + geminiAgentsReference + "\n"
+	return files.WriteFile(geminiPath, []byte(updated), 0o644)
 }
 
 // ScaffoldCompiledRootOptions holds the options for compiling root files.

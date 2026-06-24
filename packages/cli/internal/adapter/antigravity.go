@@ -31,7 +31,14 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	settingsPath := filepath.Join(geminiDir, "settings.json")
 	hooksDir := filepath.Join(geminiDir, "hooks", "lazyai")
 	agentsRoot := filepath.Join(filepath.Dir(geminiDir), ".agents")
+	// Skills placement is scope-dependent. Workspace/project installs use the
+	// Antigravity workspace skills dir (.agents/skills). Global installs MUST use
+	// the documented global skills root (~/.gemini/config/skills), not
+	// ~/.agents/skills, which Antigravity does not discover (#486 gap 1).
 	skillsDir := filepath.Join(agentsRoot, "skills")
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		skillsDir = filepath.Join(geminiDir, "config", "skills")
+	}
 	if err := files.EnsureDir(geminiDir); err != nil {
 		return nil, err
 	}
@@ -112,6 +119,39 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		},
 	}); err != nil {
 		return nil, err
+	}
+
+	// Antigravity IDE discovers workspace rules from .agents/rules/*.md, not from
+	// a bare root AGENTS.md. Emit a thin rules file that imports the canonical
+	// AGENTS.md via the repo-relative @ mention so IDE workspaces pick up project
+	// instructions (#486 gap 2). Global rules live in ~/.gemini/GEMINI.md and are
+	// user-managed, so this is skipped at global scope.
+	if ctx.SetupScope != types.SetupScopeGlobal {
+		rulesDir := filepath.Join(agentsRoot, "rules")
+		if err := files.EnsureDir(rulesDir); err != nil {
+			return nil, err
+		}
+		rulesPath := filepath.Join(rulesDir, "lazyai.md")
+		rulesBody := []byte("# Project Rules\n\n" +
+			"Canonical agent instructions for this project live in AGENTS.md at the\n" +
+			"repository root. They are imported below so the Antigravity Agent applies\n" +
+			"them as a workspace rule.\n\n" +
+			"@/AGENTS.md\n")
+		if err := files.WriteFile(rulesPath, rulesBody, 0o644); err != nil {
+			return nil, err
+		}
+		relRulesPath, err := filepath.Rel(ctx.TargetDir, rulesPath)
+		if err != nil {
+			return nil, fmt.Errorf("record antigravity rules path: %w", err)
+		}
+		relRulesPath = filepath.ToSlash(relRulesPath)
+		rulesHash, err := files.FileHash(rulesPath)
+		if err != nil {
+			return nil, fmt.Errorf("hash antigravity rules: %w", err)
+		}
+		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+			Path: relRulesPath, Hash: rulesHash, Source: "compiled:antigravity-rules", Owner: types.FileOwnerLibrary,
+		})
 	}
 	return ctx.FileRecords, nil
 }

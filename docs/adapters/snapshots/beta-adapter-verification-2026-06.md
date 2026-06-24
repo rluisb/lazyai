@@ -13,7 +13,7 @@
 | Adapter | Verdict | Decision |
 |---|---|---|
 | OMP | All emitted surfaces verified against authoritative docs | **Promote beta → stable** |
-| Antigravity/Gemini | Most surfaces verified; 2 documented gaps remain | **Keep beta** |
+| Antigravity/Gemini | All surfaces verified; both 2026-06 gaps closed + pinned | **Promote beta → stable** |
 
 ---
 
@@ -60,23 +60,29 @@ Gemini CLI surface under `.gemini/`.
 | Emitted surface | Path emitted | Doc source | Verdict |
 |---|---|---|---|
 | Skills (workspace) | `.agents/skills/<name>/SKILL.md` | AG `/docs/skills` — workspace skills at `<root>/.agents/skills/<name>/SKILL.md`; `name` optional, `description` required | Verified |
-| Skills (global) | `~/.agents/skills/<name>/SKILL.md` | AG `/docs/skills` — global skills at `~/.gemini/config/skills/<name>/` | **Gap:** global path mismatch |
+| Skills (global) | `~/.gemini/config/skills/<name>/SKILL.md` | AG `/docs/skills` — global skills at `~/.gemini/config/skills/<name>/` | Verified (gap 1 closed: `antigravity.go` writes scope-aware skills dir) |
 | Hooks (IDE) | `.agents/hooks.json` + `.gemini/hooks/lazyai/*.sh` | AG `/docs/hooks` — `hooks.json` in `.agents/`; event-keyed (`PreToolUse`/`PostToolUse`/`PreInvocation`/`PostInvocation`/`Stop`), `matcher: run_command`, `{type:command, command, timeout}` | Verified (asset matches schema) |
 | Hooks (CLI) | `.gemini/settings.json` `hooks` block | Gemini CLI `/docs/hooks` — `.gemini/settings.json` `hooks`, events `BeforeTool`/`AfterAgent`/…, `matcher: run_shell_command`, `$GEMINI_PROJECT_DIR/.gemini/hooks/…` | Verified (asset matches schema) |
 | MCP | `~/.gemini/config/mcp_config.json` | AG `/docs/mcp` — `~/.gemini/config/mcp_config.json`; `{mcpServers:{...}}`; stdio `command`, HTTP `serverUrl` (not `url`); `toAntigravityMcp` correctly emits `serverUrl` | Verified |
-| Root instructions | root `AGENTS.md` (via scaffold) | AG `/docs/rules-workflows` — workspace rules `.agents/rules/*.md`, global `~/.gemini/GEMINI.md`; Gemini CLI context file is `GEMINI.md` | **Gap:** standalone root `AGENTS.md` not documented as discovered by either tool |
+| Root instructions | `GEMINI.md` (Gemini CLI, via scaffold) + `.agents/rules/lazyai.md` (Antigravity IDE workspace) + canonical root `AGENTS.md` | AG `/docs/rules-workflows` — workspace rules `.agents/rules/*.md`, global `~/.gemini/GEMINI.md`; Gemini CLI context file is `GEMINI.md` | Verified (gap 2 closed: GEMINI.md imports `@./AGENTS.md`; `.agents/rules/lazyai.md` imports `@/AGENTS.md`) |
 
 Capability flags `Plugins` (AG `/docs/plugins`: `.agents/plugins/<name>/` with
 `plugin.json` + skills/rules/hooks/mcp) and `Permissions` are host-support metadata; no
 plugin bundle or permissions file is emitted.
 
-### Remaining gaps (exit criteria to clear before promotion)
+### 2026-06 gaps — closed
 
-1. **Global-scope skills path.** Global installs write `~/.agents/skills/`, but Antigravity
-   discovers global skills at `~/.gemini/config/skills/`. Workspace scope is correct.
-2. **Root instructions.** LazyAI emits a standalone root `AGENTS.md`; Antigravity reads
-   `.agents/rules/*.md` (workspace) / `~/.gemini/GEMINI.md` (global), and Gemini CLI reads
-   `GEMINI.md`. Neither is documented to read a root `AGENTS.md` from this adapter's layout.
+Both exit criteria below were resolved and pinned by conformance tests:
 
-**Decision:** verification is partial. Antigravity/Gemini **stays beta** until the two gaps
-above are closed and pinned by conformance tests.
+1. **Global-scope skills path** *(closed).* `AntigravityAdapter.Install` now writes
+   global skills to `~/.gemini/config/skills/` (scope-aware `skillsDir`); workspace/project
+   keep `.agents/skills/`. Pinned by `TestAntigravityAdapter_Install_GlobalSkillsUseGeminiConfigDir`.
+2. **Root instructions** *(closed).* The canonical root `AGENTS.md` is now discovered by both
+   tools: the scaffold emits a `GEMINI.md` pointer (`@./AGENTS.md`) for Gemini CLI, and the
+   adapter emits `.agents/rules/lazyai.md` (`@/AGENTS.md`) for Antigravity IDE workspaces.
+   Global rules (`~/.gemini/GEMINI.md`) remain user-managed (same conservative policy as
+   Claude's global `CLAUDE.md`). Pinned by `TestScaffoldCompiledRootAntigravityGeneratesGeminiMd`
+   and `TestAntigravityAdapter_Install_EmitsWorkspaceRules`.
+
+**Decision:** all emitted surfaces verified and both gaps closed + pinned. Antigravity/Gemini
+promoted to **stable** (no beta adapters remain).

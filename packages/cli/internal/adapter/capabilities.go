@@ -144,16 +144,18 @@ func (a *OmpAdapter) Capabilities() Capability {
 	}
 }
 
-// Capabilities reports the Antigravity/Gemini adapter's surfaces. Kept beta:
-// workspace skills, IDE + CLI hooks, and MCP are docs-verified, but two gaps
-// remain (global-scope skills path, standalone root AGENTS.md discovery) — see
-// docs/adapters/snapshots/beta-adapter-verification-2026-06.md (matrix §1,
-// EC-006). Surfaces: .agents/skills, .agents/hooks.json + .gemini/settings.json
-// hooks, ~/.gemini/config/mcp_config.json MCP, plus permissions/plugins/config
+// Capabilities reports the Antigravity/Gemini adapter's surfaces. Promoted to
+// stable after the two #486 beta gaps were closed and pinned by conformance
+// tests: global-scope skills now write the documented ~/.gemini/config/skills
+// root, and root instructions are discovered (GEMINI.md for Gemini CLI via the
+// scaffold, .agents/rules/lazyai.md for Antigravity IDE workspaces). See
+// docs/adapters/snapshots/beta-adapter-verification-2026-06.md. Surfaces:
+// .agents/skills, .agents/hooks.json + .gemini/settings.json hooks,
+// ~/.gemini/config/mcp_config.json MCP, plus permissions/plugins/config
 // host-support metadata.
 func (a *AntigravityAdapter) Capabilities() Capability {
 	return Capability{
-		Support:          SupportBeta,
+		Support:          SupportStable,
 		RootInstructions: true,
 		Skills:           true,
 		Hooks:            true,

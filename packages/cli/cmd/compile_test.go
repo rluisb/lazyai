@@ -386,7 +386,7 @@ func TestCompileRejectsInvalidManifest(t *testing.T) {
 	}
 }
 
-func TestCompileSurfacesBetaAdapters(t *testing.T) {
+func TestCompileStableAdaptersHaveNoBetaLabel(t *testing.T) {
 	dir := t.TempDir()
 	seedStoreData(t, dir, func(data *types.StoreData) {
 		data.Config.Tools = []types.ToolId{types.ToolIdAntigravity}
@@ -402,8 +402,10 @@ func TestCompileSurfacesBetaAdapters(t *testing.T) {
 			t.Fatalf("runCompile: %v", err)
 		}
 	})
-	if !strings.Contains(stdout, "beta") {
-		t.Fatalf("expected beta label for OMP in compile output; got:\n%s", stdout)
+	// Antigravity was promoted to stable in #486, so compile output must not
+	// annotate it (or any now-stable adapter) with a beta/experimental label.
+	if strings.Contains(stdout, "(beta)") || strings.Contains(stdout, "(experimental)") {
+		t.Fatalf("expected no beta/experimental label for stable Antigravity; got:\n%s", stdout)
 	}
 }
 

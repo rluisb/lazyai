@@ -7,20 +7,20 @@
 
 | Level | Meaning | Adapters |
 |---|---|---|
-| **stable** | Official docs verified + golden tests + smoke tests | OpenCode, Claude Code, Copilot, Pi, Kiro, OMP |
-| **beta** | Official docs verified + golden tests, limited runtime smoke | Antigravity |
+| **stable** | Official docs verified + golden tests + smoke tests | OpenCode, Claude Code, Copilot, Pi, Kiro, OMP, Antigravity |
+| **beta** | Official docs verified + golden tests, limited runtime smoke | — |
 | **experimental** | Docs partially verified or host tool still moving quickly | — |
 | **deprecated** | Kept for migration only | — |
 
 **OMP promotion (2026-06-23, #486):** every emitted OMP surface was verified against the authoritative OMP (Oh My Pi) docs (`omp://`), clearing the docs-snapshot blocker. See [snapshots/beta-adapter-verification-2026-06.md](snapshots/beta-adapter-verification-2026-06.md).
 
-**Beta justification (Antigravity):** the Antigravity IDE / Gemini CLI docs are JS-rendered and were snapshot-verified by rendering; workspace skills, IDE + CLI hooks, and MCP are verified, but two gaps remain — global-scope skills path (`~/.agents/skills` vs `~/.gemini/config/skills/`) and standalone root `AGENTS.md` discovery — so it stays beta (matrix §1, EC-006).
+**Antigravity promotion (2026-06-23, #486):** the Antigravity IDE / Gemini CLI docs are JS-rendered and were snapshot-verified by rendering. All emitted surfaces are verified and the two former beta gaps are closed and pinned by conformance tests — global-scope skills now write `~/.gemini/config/skills/`, and root instructions are discovered (`GEMINI.md` for Gemini CLI, `.agents/rules/lazyai.md` for Antigravity IDE). No adapter remains below stable (EC-006 cleared).
 
 ## 2. Capability Matrix
 
 | Capability | OpenCode | Claude Code | Copilot | Pi | OMP | Antigravity | Kiro |
 |---|---|---|---|---|---|---|---|
-| **Support level** | stable | stable | stable | stable | stable | beta | stable |
+| **Support level** | stable | stable | stable | stable | stable | stable | stable |
 | Root instructions | yes | yes | yes | yes | yes | yes | yes |
 | Agents | yes | yes | yes | — | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
@@ -67,10 +67,10 @@ Each cell shows the output shape for the (tool, asset-kind) pair. See `output_ma
 | Copilot | yes | yes | yes (probes for CLI) |
 | Pi | yes | yes | yes |
 | OMP | yes | yes | yes |
-| Antigravity | yes | yes | yes (beta) |
+| Antigravity | yes | yes | yes |
 | Kiro | yes | yes | yes |
 
-All 7 LazyAI-supported targets support project, workspace, and global scopes. Antigravity global scope is beta.
+All 7 LazyAI-supported targets support project, workspace, and global scopes. Antigravity global-scope skills write the documented `~/.gemini/config/skills/` root (#486).
 
 ## 5. Headless Support
 
@@ -120,8 +120,8 @@ Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`)
 ### OMP — Stable (verified 2026-06-23, #486)
 OMP was promoted from beta to stable after every emitted surface (root `AGENTS.md`, `.omp/agents`, `.omp/skills`, `.omp/hooks/pre/*.ts`, `.omp/commands`, `.omp/mcp.json`) was verified against the authoritative OMP (Oh My Pi) docs (`omp://`). `.omp/prompts/` is still emitted best-effort (discovery not docs-confirmed). `CanRunHeadless()=false` (as with Pi).
 
-### Antigravity — Beta status, no agents
-Antigravity is dual-target (Antigravity IDE `.agents/*` + Gemini CLI `.gemini/settings.json`). Workspace skills (`.agents/skills/`), IDE hooks (`.agents/hooks.json`), CLI hooks (`.gemini/settings.json`), and MCP (`~/.gemini/config/mcp_config.json`, HTTP via `serverUrl`) are docs-verified. It does not emit agent files (`output_mapping.go:346-350`: `ShapeNone`). Two gaps keep it beta (#486): global-scope skills write `~/.agents/skills` vs documented `~/.gemini/config/skills/`, and the standalone root `AGENTS.md` is not documented as discovered by either tool (Antigravity reads `.agents/rules/`/`~/.gemini/GEMINI.md`; Gemini CLI reads `GEMINI.md`).
+### Antigravity — Stable (verified 2026-06-23, #486), no agents
+Antigravity is dual-target (Antigravity IDE `.agents/*` + Gemini CLI `.gemini/settings.json`). Workspace skills (`.agents/skills/`), global skills (`~/.gemini/config/skills/`), IDE hooks (`.agents/hooks.json`), CLI hooks (`.gemini/settings.json`), MCP (`~/.gemini/config/mcp_config.json`, HTTP via `serverUrl`), and root instructions (`GEMINI.md` importing `@./AGENTS.md` for Gemini CLI + `.agents/rules/lazyai.md` importing `@/AGENTS.md` for Antigravity IDE) are docs-verified. It does not emit agent files (`output_mapping.go:346-350`: `ShapeNone`). Promoted from beta to stable after the two #486 gaps (global-skills path, root-instructions discovery) were closed and pinned by conformance tests. Global rules (`~/.gemini/GEMINI.md`) remain user-managed.
 
 ### Copilot — No subagents, no commands
 Copilot does not support subagents or slash commands. It compensates with prompt templates, chat modes, and dual MCP output (VS Code + CLI).

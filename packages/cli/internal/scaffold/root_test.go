@@ -115,6 +115,47 @@ func TestScaffoldCompiledRootClaudeGeneratesClaudeMd(t *testing.T) {
 	}
 }
 
+func TestScaffoldCompiledRootAntigravityGeneratesGeminiMd(t *testing.T) {
+	targetDir := t.TempDir()
+	records := []types.TrackedFile{}
+
+	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:        targetDir,
+		LibraryFS:        rootTestFS(),
+		Tools:            []types.ToolId{types.ToolIdAntigravity},
+		ProjectName:      "test-project",
+		FileRecords:      &records,
+		Strategy:         types.ConflictStrategySkip,
+		PerFileOverrides: map[string]types.ConflictStrategy{},
+		SetupScope:       types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("ScaffoldCompiledRoot: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(targetDir, "AGENTS.md")); err != nil {
+		t.Fatalf("expected AGENTS.md: %v", err)
+	}
+	// #486 gap 2: Antigravity/Gemini target must get a native GEMINI.md (Gemini
+	// CLI does not discover a bare root AGENTS.md). It single-sources via the
+	// @./AGENTS.md import.
+	geminiBytes, err := os.ReadFile(filepath.Join(targetDir, "GEMINI.md"))
+	if err != nil {
+		t.Fatalf("expected generated GEMINI.md: %v", err)
+	}
+	if !strings.Contains(string(geminiBytes), "@./AGENTS.md") {
+		t.Fatalf("GEMINI.md must import AGENTS.md; got:\n%s", geminiBytes)
+	}
+	tracked := false
+	for _, f := range records {
+		if f.Path == "GEMINI.md" {
+			tracked = true
+		}
+	}
+	if !tracked {
+		t.Fatalf("generated GEMINI.md must be tracked; records=%v", records)
+	}
+}
+
 func TestScaffoldCompiledRootAppendsClaudeAgentsReferenceOnce(t *testing.T) {
 	targetDir := t.TempDir()
 	claudePath := filepath.Join(targetDir, "CLAUDE.md")

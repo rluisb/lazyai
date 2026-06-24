@@ -180,6 +180,77 @@ func TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl(t *testing.T) {
 	}
 }
 
+// TestAntigravityAdapter_Install_GlobalSkillsUseGeminiConfigDir pins #486 gap 1:
+// global-scope skills must be written to the documented ~/.gemini/config/skills
+// root, NOT ~/.agents/skills (which Antigravity does not discover globally).
+func TestAntigravityAdapter_Install_GlobalSkillsUseGeminiConfigDir(t *testing.T) {
+	homeDir := t.TempDir()
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Skills: []types.SkillId{types.SkillIdDiagnose},
+		},
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity Install (global) failed: %v", err)
+	}
+
+	assertFileExists(t, filepath.Join(homeDir, ".gemini", "config", "skills", "diagnose", "SKILL.md"))
+	if _, err := os.Stat(filepath.Join(homeDir, ".agents", "skills", "diagnose", "SKILL.md")); err == nil {
+		t.Fatalf("global skills must not be written to ~/.agents/skills")
+	}
+}
+
+// TestAntigravityAdapter_Install_EmitsWorkspaceRules pins #486 gap 2: project /
+// workspace installs must emit .agents/rules/lazyai.md importing the canonical
+// AGENTS.md via @/AGENTS.md so Antigravity IDE discovers project instructions.
+func TestAntigravityAdapter_Install_EmitsWorkspaceRules(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Skills: []types.SkillId{types.SkillIdDiagnose},
+		},
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity Install failed: %v", err)
+	}
+
+	rulesPath := filepath.Join(targetDir, ".agents", "rules", "lazyai.md")
+	assertFileExists(t, rulesPath)
+	body, err := os.ReadFile(rulesPath)
+	if err != nil {
+		t.Fatalf("read rules file: %v", err)
+	}
+	if !strings.Contains(string(body), "@/AGENTS.md") {
+		t.Fatalf(".agents/rules/lazyai.md must import @/AGENTS.md; got:\n%s", body)
+	}
+}
+
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {

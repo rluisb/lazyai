@@ -35,29 +35,44 @@ func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 	}
 }
 
-// TestBetaAdapterIsAntigravityOnly pins EC-006 / B.4 after #486: OMP was promoted
-// to stable once its emitted surfaces were verified against the authoritative
-// omp:// docs, so Antigravity/Gemini is the only adapter left below stable
-// (global-skills path + root-instructions gaps remain). See
+// TestNoBetaAdaptersRemain pins EC-006 / B.4 after #486: both formerly-beta
+// adapters were promoted to stable once their emitted surfaces were verified
+// against host docs (OMP via the authoritative omp:// docs; Antigravity once the
+// global-skills-path and root-instructions gaps were closed and pinned). No
+// registered adapter is below stable. See
 // docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
-func TestBetaAdapterIsAntigravityOnly(t *testing.T) {
+func TestNoBetaAdaptersRemain(t *testing.T) {
 	reg := NewRegistry()
-	beta := map[types.ToolId]bool{}
+	var beta []types.ToolId
 	for _, id := range reg.List() {
 		a, _ := reg.Get(id)
 		if a.Capabilities().IsBeta() {
-			beta[id] = true
+			beta = append(beta, id)
 		}
 	}
-	want := map[types.ToolId]bool{
-		types.ToolIdAntigravity: true,
+	if len(beta) != 0 {
+		t.Fatalf("expected no beta adapters after #486, got %v", beta)
 	}
-	if len(beta) != len(want) {
-		t.Fatalf("beta adapters = %v, want %v", beta, want)
+}
+
+// TestAntigravityCapabilitiesAreStableAndVerified pins #486: Antigravity is
+// stable and declares its verified emit surfaces once the two beta gaps closed.
+func TestAntigravityCapabilitiesAreStableAndVerified(t *testing.T) {
+	cap := (&AntigravityAdapter{}).Capabilities()
+	if cap.Support != SupportStable {
+		t.Errorf("Antigravity support = %q, want stable", cap.Support)
 	}
-	for id := range want {
-		if !beta[id] {
-			t.Errorf("expected %s to be beta", id)
+	if cap.IsBeta() {
+		t.Error("Antigravity must not be beta after #486 gaps closed")
+	}
+	for name, ok := range map[string]bool{
+		"RootInstructions": cap.RootInstructions,
+		"Skills":           cap.Skills,
+		"Hooks":            cap.Hooks,
+		"MCP":              cap.MCP,
+	} {
+		if !ok {
+			t.Errorf("Antigravity must declare verified surface %s", name)
 		}
 	}
 }

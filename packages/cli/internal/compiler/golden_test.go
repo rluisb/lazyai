@@ -225,7 +225,10 @@ func TestCompilerGolden(t *testing.T) {
 }
 
 func shouldIgnoreGoldenExtra(rel string) bool {
-	if rel == ".ai-setup.db" || rel == "AGENTS.md" || rel == ".mcp.json" {
+	// AGENTS.md and GEMINI.md are root memory docs that are gitignored repo-wide,
+	// so they cannot be committed as golden fixtures (their content is pinned by
+	// scaffold/root_test.go instead). Treat them as expected extras.
+	if rel == ".ai-setup.db" || rel == "AGENTS.md" || rel == "GEMINI.md" || rel == ".mcp.json" {
 		return true
 	}
 	if rel == ".ai/populate-needed" || rel == filepath.Join(".ai", "populate-needed") {

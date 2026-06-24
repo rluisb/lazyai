@@ -22,21 +22,21 @@ macOS users can also install via Homebrew.
 
 ```mermaid
 flowchart TD
-    A["`lazyai-cli init`"] --> B["Canonical `.ai/` source tree"]
-    B --> C["`.ai/lazyai.json` + `.ai/mcp.json`"]
-    C --> D["Embedded library + manifest resolver"]
-    D --> E["Managed-region writer + adapter pipeline"]
+    A["lazyai-cli init"] --> B["Canonical ai source tree"]
+    B --> C["lazyai.json and mcp.json"]
+    C --> D["Embedded library and manifest resolver"]
+    D --> E["Managed-region writer and adapter pipeline"]
     E --> F["Tool-native outputs"]
-    F --> G["`.opencode/`"]
-    F --> H["`.claude/`"]
-    F --> I["`.github/`"]
-    F --> J["`.pi/`"]
-    F --> K["`.omp/`"]
-    F --> L["`.kiro/`"]
-    F --> M["`.gemini/` + `.agents/`"]
-    E --> N["`.ai/lock.json`"]
-    B --> O["`.ai-setup.db` scoped state (legacy `.ai-setup.json` auto-imported)"]
-    N --> P["`lazyai-cli compile` idempotency"]
+    F --> G["opencode config"]
+    F --> H["claude config"]
+    F --> I["github config"]
+    F --> J["pi config"]
+    F --> K["omp config"]
+    F --> L["kiro config"]
+    F --> M["gemini and agents config"]
+    E --> N["ai lock metadata"]
+    B --> O["SQLite setup state"]
+    N --> P["compile idempotency"]
 ```
 
 ## Quick start (project + full preset)
@@ -177,39 +177,39 @@ Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are remov
 
 ```mermaid
 flowchart TD
-    A["`lazyai-cli init`"] --> B["Write canonical `.ai/` scaffold"]
-    B --> C["Resolve library + manifest"]
+    A["lazyai-cli init"] --> B["Write canonical ai scaffold"]
+    B --> C["Resolve library and manifest"]
     C --> D["Generate managed outputs"]
-    D --> E["Write `.ai-setup.db`"]
-    E --> F["`lazyai-cli compile`"]
-    F --> G["`.opencode/` / `.claude/` / `.github/` / `.pi/` / `.gemini/`"]
+    D --> E["Write SQLite setup state"]
+    E --> F["lazyai-cli compile"]
+    F --> G["Tool-native output directories"]
 ```
 
 ### 2) MCP registration flow
 
 ```mermaid
 flowchart TD
-    A[".ai/mcp.json"] --> B["`lazyai-cli init --enable-servers ...`"]
-    A --> C["`lazyai-cli server add <name>`"]
-    B --> D["`lazyai-cli compile`"]
+    A["ai mcp catalog"] --> B["lazyai-cli init with enabled servers"]
+    A --> C["lazyai-cli server add"]
+    B --> D["lazyai-cli compile"]
     C --> D
-    D --> E["`opencode.json`"]
-    D --> F["`.mcp.json` / `.claude/settings.local.json`"]
-    D --> G["`.vscode/mcp.json`"]
-    D --> H["Print export NAME=&lt;value&gt; guidance for required MCP variables"]
+    D --> E["opencode MCP config"]
+    D --> F["claude MCP config"]
+    D --> G["vscode MCP config"]
+    D --> H["Print environment variable guidance"]
 ```
 
 ### 3) Validate flow (`validate agents`)
 
 ```mermaid
 flowchart TD
-    A["`lazyai-cli validate agents`"] --> B["Frontmatter exists"]
+    A["lazyai-cli validate agents"] --> B["Frontmatter exists"]
     B -->|missing| F1["ERROR"]
-    B -->|present| C["`# System Prompt` heading exists"]
+    B -->|present| C["System Prompt heading exists"]
     C -->|missing| F2["ERROR"]
-    C -->|present| D["`vibe-lab:managed kind=agent` marker"]
+    C -->|present| D["Managed agent marker"]
     D -->|missing| W["WARNING"]
-    D -->|present| E["At least one `##` section heading after System Prompt"]
+    D -->|present| E["Section heading after System Prompt"]
     E -->|missing| W2["WARNING"]
     E -->|present| O["PASS"]
 ```

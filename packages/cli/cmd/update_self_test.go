@@ -78,14 +78,14 @@ func TestFetchReleaseByTagUsesTaggedEndpoint(t *testing.T) {
 
 func TestRunUpdateSelfDryRunSpecificTagPreservesExactTag(t *testing.T) {
 	origVersion := Version
-	origClient := http.DefaultClient
+	origNewAPIClient := newAPIClient
 	t.Cleanup(func() {
 		Version = origVersion
-		http.DefaultClient = origClient
+		newAPIClient = origNewAPIClient
 	})
 
 	Version = "v0.9.0"
-	http.DefaultClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	mockClient := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.URL.String() != "https://api.github.com/repos/rluisb/lazyai/releases/tags/release%2Ftrain%2Fv1.0.0" {
 			t.Fatalf("url = %s", req.URL.String())
 		}
@@ -103,6 +103,7 @@ func TestRunUpdateSelfDryRunSpecificTagPreservesExactTag(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader(body)),
 		}, nil
 	})}
+	newAPIClient = func() *http.Client { return mockClient }
 
 	cmd := newUpdateSelfTestCommand()
 	if err := cmd.Flags().Set("dry-run", "true"); err != nil {

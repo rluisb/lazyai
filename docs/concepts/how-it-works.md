@@ -11,13 +11,14 @@ The managed source of truth starts with `.ai/` for MCP/catalog state and `.speci
 ```text
 .ai/
 ├── mcp.json
+├── lazyai.json
+├── lock.json
 ├── populate-needed
 └── housekeeping/sync-state.json
 
 .specify/
 ├── memory/constitution.md
 └── templates/
-```
 
 These files are human-editable and version-controllable.
 
@@ -73,7 +74,7 @@ flowchart TD
 Every managed setup gets a manifest:
 
 ```text
-.ai-setup.json
+.ai-setup.db
 ```
 
 It tracks:
@@ -94,7 +95,7 @@ This powers `lazyai-cli status`, `lazyai-cli doctor`, and `lazyai-cli update`.
 | Tracked + unchanged | Safely overwritten with latest managed content |
 | Tracked + customized | Prompts/backs up before overwrite; `--force` auto-overwrites with backup |
 | Existing untracked collision | Prompts before replacement; replacement creates backup |
-| Newly expected file | Created and added to `.ai-setup.json` |
+| Newly expected file | Created and added to `.ai-setup.db` |
 | Tracked but missing | Reported as missing, not silently recreated |
 
 Backups are written under `.ai-setup-backup/` with relative paths preserved.

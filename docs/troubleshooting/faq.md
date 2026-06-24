@@ -20,11 +20,9 @@ Yes. LazyAI does not require Node, npm, npx, or pnpm for normal usage.
 
 ### What does `lazyai-cli doctor` check?
 
-- Whether `.ai-setup.json` exists and is readable
+- Whether `.ai-setup.db` exists and is readable
 - Whether tracked files exist and match their recorded hashes
 - Whether required tool-native directories are present
-- Drift between library source and installed skills (with `--skills-check`)
-- Migration drift against a clean LazyAI state (with `--migration-check`)
 
 ## Setup
 
@@ -52,7 +50,7 @@ Yes:
 lazyai-cli eject
 ```
 
-This removes `.ai-setup.json` and stops management, but leaves all generated files in place.
+This removes `.ai-setup.db` and stops management, but leaves all generated files in place.
 
 ### How do I add a tool after init?
 
@@ -65,7 +63,7 @@ lazyai-cli compile
 
 ### Can I change scope after setup?
 
-You must re-run `lazyai-cli init` with the desired scope. The previous `.ai-setup.json` will be replaced; back it up first if needed.
+You must re-run `lazyai-cli init` with the desired scope. The previous `.ai-setup.db` will be replaced; back it up first if needed.
 
 ### Does workspace scope modify my code repos?
 
@@ -123,11 +121,11 @@ go install github.com/rluisb/lazyai/packages/cli/cmd/lazyai-cli@latest
 
 ### `lazyai-cli init` fails with "unsupported tool"
 
-Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`, `pi`, `antigravity`. IDs are case-sensitive.
+Check that the tool ID is one of: `opencode`, `claude-code`, `copilot`, `pi`, `omp`, `antigravity`, `kiro`. IDs are case-sensitive.
 
 ### `lazyai-cli compile` does not generate files for a tool
 
-Verify the tool is listed in `.ai-setup.json` under `tools`. If missing, run `lazyai-cli add <tool>` and then `lazyai-cli compile`.
+Verify the tool is listed in `.ai-setup.db` under `tools`. If missing, run `lazyai-cli add <tool>` and then `lazyai-cli compile`.
 
 ### `lazyai-cli doctor` reports missing files after I deleted them
 

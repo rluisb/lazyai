@@ -59,6 +59,7 @@ func TestWriteStoreFromScaffoldResult_PersistsEnableServersAndOwnership(t *testi
 		SetupScope:       types.SetupScopeProject,
 		Features:         &features,
 		GitConventions:   &gitConventions,
+		CmdRunner:        func(name string, args ...string) ([]byte, error) { return nil, nil },
 	}
 	result := &scaffold.ScaffoldResult{Files: []types.TrackedFile{{
 		Path:   ".ai/mcp.json",

@@ -69,7 +69,7 @@ The docs site deploys to GitHub Pages at <https://rluisb.github.io/lazyai/>.
 ## Code style
 
 - **Go**: standard `gofmt`
-- Commit messages should follow the project commit pattern configured in `.ai-setup.json` when present.
+- Commit messages should follow the project commit pattern configured in `.ai-setup.db` when present.
 
 ## CI
 

@@ -36,8 +36,14 @@ func planRawPreservation(sourcePath, targetPath string, detections []migration.D
 			}
 			seen[key] = true
 
-			source := filepath.Join(sourcePath, file.Path)
-			destination := filepath.Join(targetPath, ".ai", "adapters", detection.AdapterID, "raw", file.Path)
+			source, err := files.SafeJoin(sourcePath, file.Path)
+			if err != nil {
+				return nil, fmt.Errorf("unsafe path %q: %w", file.Path, err)
+			}
+			destination, err := files.SafeJoin(filepath.Join(targetPath, ".ai", "adapters", detection.AdapterID, "raw"), file.Path)
+			if err != nil {
+				return nil, fmt.Errorf("unsafe destination path %q: %w", file.Path, err)
+			}
 			rel, err := filepath.Rel(targetPath, destination)
 			if err != nil {
 				rel = destination

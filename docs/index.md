@@ -40,7 +40,7 @@ flowchart TD
     CLI -->|"init / update"| AI[".ai/ (canonical source)"]
     CLI -->|"compile"| TOOLS["tool-native configs"]
     AI --> TOOLS
-    CLI -->|"doctor / status"| DB[".ai-setup.db / .ai-setup.json"]
+    CLI -->|"doctor / status"| DB[".ai-setup.db"]
     TOOLS --> OC[".opencode/ + opencode.json"]
     TOOLS --> CC[".claude/ + .mcp.json"]
     TOOLS --> CP[".github/ + .vscode/"]

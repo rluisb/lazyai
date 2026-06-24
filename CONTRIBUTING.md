@@ -38,7 +38,6 @@ The repo-local hooks then:
 ```
 packages/
 ├── cli/              # TUI CLI app (Bubble Tea + Cobra)
-├── orchestrator/     # MCP-based multi-agent orchestrator
 └── diffviewer/       # Terminal diff viewer
 ```
 

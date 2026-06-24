@@ -12,7 +12,7 @@ if [[ ! -x "$CLI_BIN" ]]; then
   exit 1
 fi
 
-TOOLS=("opencode" "claude-code" "copilot" "pi" "antigravity")
+TOOLS=("opencode" "claude-code" "copilot" "pi" "antigravity" "omp" "kiro")
 mkdir -p "$EVIDENCES_DIR"
 
 PRESETS=("minimal" "standard" "full")
@@ -99,6 +99,8 @@ run_scenario() {
   # Copy configs
   if [[ -d "$target_dir/.opencode" ]]; then cp -r "$target_dir/.opencode" "$evidence_out/configs/" 2>/dev/null || true; fi
   if [[ -d "$target_dir/.claude" ]]; then cp -r "$target_dir/.claude" "$evidence_out/configs/" 2>/dev/null || true; fi
+  cp -r "$target_dir/.omp" "$evidence_out/configs/dot-omp" 2>/dev/null || true
+  cp -r "$target_dir/.kiro" "$evidence_out/configs/dot-kiro" 2>/dev/null || true
 
   # Tarball project state
   (cd "$BASE_TMP_DIR" && tar -czf "$evidence_out/project_state.tar.gz" "$scenario_name")
@@ -106,7 +108,7 @@ run_scenario() {
   SCENARIO_ID=$((SCENARIO_ID + 1))
 }
 # Run all scenarios explicitly
-for t in opencode claude-code copilot pi antigravity; do
+for t in opencode claude-code copilot pi antigravity omp kiro; do
   run_scenario "$t" "standard" "empty"
 done
 for p in minimal standard full; do
@@ -114,4 +116,6 @@ for p in minimal standard full; do
 done
 run_scenario "claude-code" "full" "empty"
 run_scenario "copilot" "minimal" "git"
+run_scenario "omp" "full" "empty"
+run_scenario "kiro" "minimal" "git"
 echo "Test execution complete. Evidences stored in $EVIDENCES_DIR"

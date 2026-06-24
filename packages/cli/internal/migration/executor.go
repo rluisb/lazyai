@@ -212,12 +212,18 @@ func executeBackupAction(action MigrationAction, ctx *MigrationContext, backupPa
 		return nil
 	}
 
-	src := filepath.Join(ctx.SourcePath, action.SourcePath)
+	src, err := files.SafeJoin(ctx.SourcePath, action.SourcePath)
+	if err != nil {
+		return fmt.Errorf("unsafe source path %q: %w", action.SourcePath, err)
+	}
 	if !files.FileExists(src) {
 		return nil
 	}
 
-	dst := filepath.Join(backupPath, action.TargetPath)
+	dst, err := files.SafeJoin(backupPath, action.TargetPath)
+	if err != nil {
+		return fmt.Errorf("unsafe target path %q: %w", action.TargetPath, err)
+	}
 	if err := files.EnsureDir(filepath.Dir(dst)); err != nil {
 		return err
 	}
@@ -225,12 +231,18 @@ func executeBackupAction(action MigrationAction, ctx *MigrationContext, backupPa
 }
 
 func executeCreateAction(action MigrationAction, ctx *MigrationContext) error {
-	targetFullPath := filepath.Join(ctx.TargetPath, action.TargetPath)
+	targetFullPath, err := files.SafeJoin(ctx.TargetPath, action.TargetPath)
+	if err != nil {
+		return fmt.Errorf("unsafe target path %q: %w", action.TargetPath, err)
+	}
 	return files.EnsureDir(filepath.Dir(targetFullPath))
 }
 
 func executeModifyAction(action MigrationAction, ctx *MigrationContext) error {
-	targetFullPath := filepath.Join(ctx.TargetPath, action.TargetPath)
+	targetFullPath, err := files.SafeJoin(ctx.TargetPath, action.TargetPath)
+	if err != nil {
+		return fmt.Errorf("unsafe target path %q: %w", action.TargetPath, err)
+	}
 	return files.EnsureDir(filepath.Dir(targetFullPath))
 }
 

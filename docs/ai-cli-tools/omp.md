@@ -1,6 +1,6 @@
 # OMP setup
 
-OMP is a beta LazyAI target for OMP task agents, skills, commands, prompts, hook factories, MCP, compaction/session-oriented surfaces, and global OMP agent configuration.
+OMP is a stable LazyAI target for OMP task agents, skills, commands, prompts, hook factories, MCP, compaction/session-oriented surfaces, and global OMP agent configuration.
 
 ## Generated structure
 
@@ -63,7 +63,6 @@ lazyai-cli server doctor filesystem
 
 ## Readiness notes
 
-- Support level: beta.
+- Support level: stable.
 - Project, workspace, and global scopes are supported.
 - OMP has no chat-mode, template, or output-style surface in LazyAI output.
-- Beta means the adapter is implemented and tested, but host-tool documentation verification is still incomplete.

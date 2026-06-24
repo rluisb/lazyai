@@ -315,6 +315,124 @@ func TestScaffoldCompiledRootContextDocIdempotent(t *testing.T) {
 	}
 }
 
+// TestScaffoldCompiledRootContextDocIdempotentAlignStrategy extends the #496
+// idempotency coverage to the ConflictStrategyAlign path (the default used in
+// real compiles). The existing TestScaffoldCompiledRootContextDocIdempotent
+// pins the Skip strategy; this test confirms that under Align a second compile
+// (a) leaves the context doc byte-identical, (b) records exactly one
+// TrackedFile for the context doc (no double-tracking), and (c) does not grow
+// the context-doc record count between compiles (#500).
+func TestScaffoldCompiledRootContextDocIdempotentAlignStrategy(t *testing.T) {
+	cases := []struct {
+		name     string
+		tool     types.ToolId
+		filename string
+		token    string
+	}{
+		{"claude", types.ToolIdClaudeCode, "CLAUDE.md", claudeImportToken},
+		{"gemini", types.ToolIdAntigravity, "GEMINI.md", geminiImportToken},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			targetDir := t.TempDir()
+			docPath := filepath.Join(targetDir, c.filename)
+
+			records1 := []types.TrackedFile{}
+			if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+				TargetDir:        targetDir,
+				LibraryFS:        rootTestFS(),
+				Tools:            []types.ToolId{c.tool},
+				ProjectName:      "test-project",
+				FileRecords:      &records1,
+				Strategy:         types.ConflictStrategyAlign,
+				PerFileOverrides: map[string]types.ConflictStrategy{},
+				SetupScope:       types.SetupScopeProject,
+			}); err != nil {
+				t.Fatalf("first compile: %v", err)
+			}
+			firstBytes, err := os.ReadFile(docPath)
+			if err != nil {
+				t.Fatalf("read after first compile: %v", err)
+			}
+			firstHashes := contextDocTrackedHashes(records1, c.filename)
+			if len(firstHashes) != 1 {
+				t.Fatalf("first compile: expected exactly 1 tracked record for %s, got %d (%v)", c.filename, len(firstHashes), firstHashes)
+			}
+
+			records2 := []types.TrackedFile{}
+			if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+				TargetDir:        targetDir,
+				LibraryFS:        rootTestFS(),
+				Tools:            []types.ToolId{c.tool},
+				ProjectName:      "test-project",
+				FileRecords:      &records2,
+				Strategy:         types.ConflictStrategyAlign,
+				PerFileOverrides: map[string]types.ConflictStrategy{},
+				SetupScope:       types.SetupScopeProject,
+			}); err != nil {
+				t.Fatalf("second compile: %v", err)
+			}
+			secondBytes, err := os.ReadFile(docPath)
+			if err != nil {
+				t.Fatalf("read after second compile: %v", err)
+			}
+			if !bytes.Equal(firstBytes, secondBytes) {
+				t.Fatalf("second compile changed %s (must be byte-identical under Align)\n--- first ---\n%s\n--- second ---\n%s", c.filename, firstBytes, secondBytes)
+			}
+			secondHashes := contextDocTrackedHashes(records2, c.filename)
+			if len(secondHashes) != 1 {
+				t.Fatalf("second compile: expected exactly 1 tracked record for %s (no double-tracking), got %d (%v)", c.filename, len(secondHashes), secondHashes)
+			}
+			if firstHashes[0] != secondHashes[0] {
+				t.Fatalf("tracked hash churn for %s under Align: first=%s second=%s", c.filename, firstHashes[0], secondHashes[0])
+			}
+		})
+	}
+}
+
+// TestScaffoldCompiledRootGlobalScopeContextDocNoOp pins the #500 global-scope
+// no-op contract: at global scope, ensureToolContextDoc returns immediately
+// (it only touches project/workspace scope), so neither CLAUDE.md nor
+// GEMINI.md is created in the target or home dir, and recompiling produces no
+// context-doc churn. The memory doc (AGENTS.md) is still written to the tool's
+// global root, but the per-tool context docs must be skipped.
+func TestScaffoldCompiledRootGlobalScopeContextDocNoOp(t *testing.T) {
+	homeDir := t.TempDir()
+	targetDir := t.TempDir()
+
+	for _, tool := range []types.ToolId{types.ToolIdClaudeCode, types.ToolIdAntigravity} {
+		records := []types.TrackedFile{}
+		if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+			TargetDir:        targetDir,
+			HomeDir:          homeDir,
+			LibraryFS:        rootTestFS(),
+			Tools:            []types.ToolId{tool},
+			ProjectName:      "test-project",
+			FileRecords:      &records,
+			Strategy:         types.ConflictStrategySkip,
+			PerFileOverrides: map[string]types.ConflictStrategy{},
+			SetupScope:       types.SetupScopeGlobal,
+		}); err != nil {
+			t.Fatalf("global compile %s: %v", tool, err)
+		}
+
+		// No per-tool context doc should be created in the target dir.
+		for _, doc := range []string{"CLAUDE.md", "GEMINI.md"} {
+			if _, err := os.Stat(filepath.Join(targetDir, doc)); err == nil {
+				t.Fatalf("global scope must not create %s in target dir", doc)
+			}
+		}
+		// No per-tool context doc should be created in the home dir either —
+		// the user's personal ~/.claude/CLAUDE.md and ~/.gemini/GEMINI.md are
+		// never created or modified by ScaffoldCompiledRoot.
+		for _, doc := range []string{filepath.Join(".claude", "CLAUDE.md"), filepath.Join(".gemini", "GEMINI.md")} {
+			if _, err := os.Stat(filepath.Join(homeDir, doc)); err == nil {
+				t.Fatalf("global scope must not create %s in home dir", doc)
+			}
+		}
+	}
+}
+
 // contextDocTrackedHashes returns the hashes of all TrackedFile records whose
 // path ends with the given context-doc filename (e.g. CLAUDE.md / GEMINI.md).
 func contextDocTrackedHashes(records []types.TrackedFile, filename string) []string {

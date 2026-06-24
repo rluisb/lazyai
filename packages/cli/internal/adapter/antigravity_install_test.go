@@ -326,6 +326,135 @@ func TestAntigravityAdapter_Install_EmitsWorkspaceRules(t *testing.T) {
 	}
 }
 
+// TestAntigravityAdapter_Install_UnsupportedScopeReturnsEarlyNoWrite pins the
+// error-path contract (#500): an unsupported scope (e.g. an invalid scope
+// value) must return early without error and without writing any files. The
+// Install guard checks IsScopeSupported before touching the filesystem, so a
+// bogus scope short-circuits to a nil error with no side effects.
+func TestAntigravityAdapter_Install_UnsupportedScopeReturnsEarlyNoWrite(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	// Provide a valid library asset set so the only failure mode is the scope.
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScope("bogus"), // invalid → IsScopeSupported false
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("unsupported scope must return nil error, got: %v", err)
+	}
+	// No Gemini surface should have been written. The short-circuit happens
+	// before any EnsureDir, so not even the .gemini directory should exist.
+	assertNoGeminiArtifacts(t, targetDir)
+}
+
+// TestAntigravityAdapter_Install_MissingSettingsAssetSurfacesError pins the
+// error-path contract (#500): when the library is missing the required
+// antigravity/settings.json asset, Install must surface the read error rather
+// than silently skipping or writing an empty settings file.
+func TestAntigravityAdapter_Install_MissingSettingsAssetSurfacesError(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	// Deliberately omit antigravity/settings.json. Provide hooks.json so the
+	// failure is isolated to the settings asset read.
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err == nil {
+		t.Fatalf("expected error for missing antigravity/settings.json, got nil")
+	}
+	// The .gemini directory may be created by EnsureDir before the read fails,
+	// but settings.json itself must not be written.
+	assertFileNotWritten(t, filepath.Join(targetDir, ".gemini", "settings.json"))
+}
+
+// TestAntigravityAdapter_Install_InvalidSettingsJSONSurfacesError pins the
+// error-path contract (#500): when the library's antigravity/settings.json is
+// present but not valid JSON, Install must surface the parse error rather than
+// emitting a malformed settings file.
+func TestAntigravityAdapter_Install_InvalidSettingsJSONSurfacesError(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{not valid json")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err == nil {
+		t.Fatalf("expected error for invalid antigravity/settings.json, got nil")
+	}
+	// The invalid JSON must not have been propagated to the output settings.json.
+	assertFileNotWritten(t, filepath.Join(targetDir, ".gemini", "settings.json"))
+}
+
+// TestAntigravityAdapter_Install_MissingHooksAssetSurfacesError pins the
+// error-path contract (#500): when settings.json is valid but the
+// antigravity/hooks.json asset is missing, Install must surface the read error
+// for hooks.json rather than silently omitting the hook event configuration.
+func TestAntigravityAdapter_Install_MissingHooksAssetSurfacesError(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	// Deliberately omit antigravity/hooks.json.
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err == nil {
+		t.Fatalf("expected error for missing antigravity/hooks.json, got nil")
+	}
+}
+
+// assertNoGeminiArtifacts fails the test if any file was written under the
+// .gemini directory or the .agents/hooks.json hook config in the given root.
+func assertNoGeminiArtifacts(t *testing.T, root string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(root, ".gemini")); err == nil {
+		t.Fatalf("expected no .gemini directory under %s, but it was created", root)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".agents", "hooks.json")); err == nil {
+		t.Fatalf("expected no .agents/hooks.json under %s, but it was created", root)
+	}
+}
+
+// assertFileNotWritten fails the test if the given file exists on disk. Used to
+// verify error-path contracts where a failed read/parse must not leave a
+// (possibly malformed) output file behind.
+func assertFileNotWritten(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err == nil {
+		t.Fatalf("expected %s to not be written, but it exists", path)
+	}
+}
+
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {

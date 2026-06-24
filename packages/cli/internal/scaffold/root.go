@@ -318,45 +318,63 @@ func ScaffoldCompiledRoot(opts ScaffoldCompiledRootOptions) error {
 // Only project/workspace scopes are touched — the user's personal
 // ~/.claude/CLAUDE.md at global scope is never created or modified.
 func ensureClaudeContextDoc(opts ScaffoldCompiledRootOptions) error {
+	return ensureToolContextDoc(opts, "CLAUDE.md", claudeContextDoc, claudeImportToken, claudeContextAppend, types.ToolIdClaudeCode)
+}
+
+// ensureToolContextDoc is the shared implementation behind ensureClaudeContextDoc
+// and ensureGeminiContextDoc. It guarantees a native context doc (CLAUDE.md or
+// GEMINI.md) exists for tools that need a per-tool memory file. When the file
+// is missing, a minimal body importing AGENTS.md is generated and tracked. When
+// the user already owns the file, a functional import is appended (idempotently)
+// instead of clobbering their content. Only project/workspace scopes are
+// touched — personal config at global scope is never created or modified.
+//
+// importToken is the functional @mention that triggers the tool to pull in
+// AGENTS.md (e.g. "@AGENTS.md" for Claude, "@./AGENTS.md" for Gemini). It is
+// also the idempotency guard so a freshly-generated file is a no-op on
+// recompile (#496). appendBody is the full text appended to a user-owned file
+// that lacks the import — it leads with a short human-readable comment and
+// ends with importToken so the guard-matched token is the import itself.
+func ensureToolContextDoc(opts ScaffoldCompiledRootOptions, filename, body, importToken, appendBody string, toolID types.ToolId) error {
 	if opts.SetupScope != types.SetupScopeProject && opts.SetupScope != types.SetupScopeWorkspace && opts.SetupScope != "" {
 		return nil
 	}
 
 	recordRoot := opts.recordRoot()
-	claudePath := filepath.Join(recordRoot, "CLAUDE.md")
-	if !files.FileExists(claudePath) {
-		if err := files.EnsureDir(filepath.Dir(claudePath)); err != nil {
+	docPath := filepath.Join(recordRoot, filename)
+	if !files.FileExists(docPath) {
+		if err := files.EnsureDir(filepath.Dir(docPath)); err != nil {
 			return err
 		}
-		if err := files.WriteFile(claudePath, []byte(claudeContextDoc), 0o644); err != nil {
+		if err := files.WriteFile(docPath, []byte(body), 0o644); err != nil {
 			return err
 		}
-		return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
+		return recordContextDoc(opts, recordRoot, docPath, toolID)
 	}
 
-	data, err := files.ReadFile(claudePath)
+	data, err := files.ReadFile(docPath)
 	if err != nil {
 		return err
 	}
 	content := string(data)
 	// Guard on the functional @import token, not a markdown comment, so a
-	// freshly-generated file (already containing @AGENTS.md) is a no-op on
+	// freshly-generated file (already containing importToken) is a no-op on
 	// recompile and a user-owned file only gets one functional import (#496).
-	if strings.Contains(content, claudeImportToken) {
+	if strings.Contains(content, importToken) {
 		// No content change, but still (re)record the TrackedFile so the
 		// lockfile stays in sync on every compile — no drift (#496).
-		return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
+		return recordContextDoc(opts, recordRoot, docPath, toolID)
 	}
 
 	separator := "\n\n"
 	if strings.HasSuffix(content, "\n") {
 		separator = "\n"
 	}
-	updated := content + separator + claudeContextAppend + "\n"
-	if err := files.WriteFile(claudePath, []byte(updated), 0o644); err != nil {
+	updated := content + separator + appendBody + "\n"
+	if err := files.WriteFile(docPath, []byte(updated), 0o644); err != nil {
 		return err
 	}
-	return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
+	return recordContextDoc(opts, recordRoot, docPath, toolID)
 }
 
 // recordContextDoc appends a TrackedFile (relative path + current hash) for a
@@ -393,45 +411,7 @@ func recordContextDoc(opts ScaffoldCompiledRootOptions, recordRoot, absPath stri
 // clobbering their content. Only project/workspace scopes are touched — the
 // user's personal ~/.gemini/GEMINI.md global rules are never created or modified.
 func ensureGeminiContextDoc(opts ScaffoldCompiledRootOptions) error {
-	if opts.SetupScope != types.SetupScopeProject && opts.SetupScope != types.SetupScopeWorkspace && opts.SetupScope != "" {
-		return nil
-	}
-
-	recordRoot := opts.recordRoot()
-	geminiPath := filepath.Join(recordRoot, "GEMINI.md")
-	if !files.FileExists(geminiPath) {
-		if err := files.EnsureDir(filepath.Dir(geminiPath)); err != nil {
-			return err
-		}
-		if err := files.WriteFile(geminiPath, []byte(geminiContextDoc), 0o644); err != nil {
-			return err
-		}
-		return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
-	}
-
-	data, err := files.ReadFile(geminiPath)
-	if err != nil {
-		return err
-	}
-	content := string(data)
-	// Guard on the functional @import token, not a markdown comment, so a
-	// freshly-generated file (already containing @./AGENTS.md) is a no-op on
-	// recompile and a user-owned file only gets one functional import (#496).
-	if strings.Contains(content, geminiImportToken) {
-		// No content change, but still (re)record the TrackedFile so the
-		// lockfile stays in sync on every compile — no drift (#496).
-		return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
-	}
-
-	separator := "\n\n"
-	if strings.HasSuffix(content, "\n") {
-		separator = "\n"
-	}
-	updated := content + separator + geminiContextAppend + "\n"
-	if err := files.WriteFile(geminiPath, []byte(updated), 0o644); err != nil {
-		return err
-	}
-	return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
+	return ensureToolContextDoc(opts, "GEMINI.md", geminiContextDoc, geminiImportToken, geminiContextAppend, types.ToolIdAntigravity)
 }
 
 // ScaffoldCompiledRootOptions holds the options for compiling root files.

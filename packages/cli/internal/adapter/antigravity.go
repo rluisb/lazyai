@@ -57,18 +57,9 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		return nil, err
 	}
 
-	relPath, err := filepath.Rel(ctx.TargetDir, settingsPath)
-	if err != nil {
-		return nil, fmt.Errorf("record antigravity/settings.json path: %w", err)
+	if err := trackFile(ctx, settingsPath, "antigravity/settings.json"); err != nil {
+		return nil, err
 	}
-	relPath = filepath.ToSlash(relPath)
-	hash, err := files.FileHash(settingsPath)
-	if err != nil {
-		return nil, fmt.Errorf("hash antigravity/settings.json: %w", err)
-	}
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relPath, Hash: hash, Source: "antigravity/settings.json", Owner: types.FileOwnerLibrary,
-	})
 
 	hooksJSONPath := filepath.Join(agentsRoot, "hooks.json")
 	// Hook event configuration placement is scope-dependent, mirroring
@@ -104,18 +95,9 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		return nil, err
 	}
 
-	relHooksPath, err := filepath.Rel(ctx.TargetDir, hooksJSONPath)
-	if err != nil {
-		return nil, fmt.Errorf("record antigravity/hooks.json path: %w", err)
+	if err := trackFile(ctx, hooksJSONPath, "antigravity/hooks.json"); err != nil {
+		return nil, err
 	}
-	relHooksPath = filepath.ToSlash(relHooksPath)
-	hash, err = files.FileHash(hooksJSONPath)
-	if err != nil {
-		return nil, fmt.Errorf("hash antigravity/hooks.json: %w", err)
-	}
-	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-		Path: relHooksPath, Hash: hash, Source: "antigravity/hooks.json", Owner: types.FileOwnerLibrary,
-	})
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
@@ -148,18 +130,9 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		if err := files.WriteFile(rulesPath, rulesBody, 0o644); err != nil {
 			return nil, err
 		}
-		relRulesPath, err := filepath.Rel(ctx.TargetDir, rulesPath)
-		if err != nil {
-			return nil, fmt.Errorf("record antigravity rules path: %w", err)
+		if err := trackFile(ctx, rulesPath, "compiled:antigravity-rules"); err != nil {
+			return nil, err
 		}
-		relRulesPath = filepath.ToSlash(relRulesPath)
-		rulesHash, err := files.FileHash(rulesPath)
-		if err != nil {
-			return nil, fmt.Errorf("hash antigravity rules: %w", err)
-		}
-		ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
-			Path: relRulesPath, Hash: rulesHash, Source: "compiled:antigravity-rules", Owner: types.FileOwnerLibrary,
-		})
 	}
 	return ctx.FileRecords, nil
 }
@@ -190,4 +163,25 @@ func readJSONAsset(ctx *AdapterContext, sourcePath string) (map[string]any, erro
 		return nil, fmt.Errorf("parse %s: %w", sourcePath, err)
 	}
 	return payload, nil
+}
+
+// trackFile computes the workspace-relative path, hashes the file, and appends a
+// TrackedFile record. It replaces the hand-rolled filepath.Rel → ToSlash →
+// FileHash → append sequence repeated for settings.json, hooks.json, and rules
+// in Install (#499). The source label is used both as the TrackedFile.Source and
+// in error messages.
+func trackFile(ctx *AdapterContext, absPath, source string) error {
+	relPath, err := filepath.Rel(ctx.TargetDir, absPath)
+	if err != nil {
+		return fmt.Errorf("record %s path: %w", source, err)
+	}
+	relPath = filepath.ToSlash(relPath)
+	hash, err := files.FileHash(absPath)
+	if err != nil {
+		return fmt.Errorf("hash %s: %w", source, err)
+	}
+	ctx.FileRecords = append(ctx.FileRecords, types.TrackedFile{
+		Path: relPath, Hash: hash, Source: source, Owner: types.FileOwnerLibrary,
+	})
+	return nil
 }

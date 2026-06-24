@@ -26,24 +26,6 @@ func GlobalConfigDir() (string, error) {
 	return filepath.Join(home, ".config", "opencode"), nil
 }
 
-// GlobalSetupDir returns the directory for global-scope ai-setup installs.
-// This is the same as GlobalConfigDir.
-func GlobalSetupDir() (string, error) {
-	return GlobalConfigDir()
-}
-
-// ProjectSetupDir returns the project root directory.
-// For project scope, this is simply projectDir.
-func ProjectSetupDir(projectDir string) string {
-	return projectDir
-}
-
-// WorkspaceSetupDir returns the workspace directory.
-// For workspace scope, this is simply workspaceDir.
-func WorkspaceSetupDir(workspaceDir string) string {
-	return workspaceDir
-}
-
 // ResolveGlobalToolTargetDir returns the target directory for global-scope
 // configuration of a given tool, or empty string if the tool doesn't support global config.
 func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, error) {

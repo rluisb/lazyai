@@ -101,53 +101,6 @@ func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, wor
 	return "", fmt.Errorf("%w: unknown scope %q", errMemoryDocScopeUnsupported, scope)
 }
 
-// FeatureFlagsForTemplate converts types.FeatureFlags into a map suitable for
-// template conditional rendering, including legacy snake_case aliases.
-type FeatureFlagsForTemplate struct {
-	ContextEngineering bool
-	RPIWorkflow        bool
-	ChainOfThought     bool
-	TreeOfThoughts     bool
-	ADREnforcement     bool
-	QualityGates       bool
-	AgentHarness       bool
-	BugResolution      bool
-	PivotHandling      bool
-	GitConventions     bool
-
-	// Legacy snake_case aliases.
-	ContextEngineering_ bool
-	RPIWorkflow_        bool
-	ChainOfThought_     bool
-	TreeOfThoughts_     bool
-	ADREnforcement_     bool
-	QualityGates_       bool
-	AgentHarness_       bool
-	BugResolution_      bool
-	PivotHandling_      bool
-	GitConventions_     bool
-}
-
-// FragmentContext holds the template rendering context.
-// Ported from the TypeScript FragmentContext used in compiled-root.ts.
-type FragmentContext struct {
-	ProjectName         string
-	PlanningDir         string
-	PrimaryLanguage     string
-	Framework           string
-	WorkspaceType       string
-	ProjectInstructions string
-	TestFramework       string
-	PackageManager      string
-	TestCommand         string
-	LintCommand         string
-	BuildCommand        string
-	DevCommand          string
-	InstallCommand      string
-	ProjectDescription  string
-	Features            FeatureFlagsForTemplate
-}
-
 // ScaffoldCompiledRoot compiles and writes root AI tool configuration files.
 // This is a simplified version that reads a root template from the library and
 // performs basic variable substitution. The full template compiler (with fragment

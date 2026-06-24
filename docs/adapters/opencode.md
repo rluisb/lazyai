@@ -7,7 +7,7 @@
 
 ## Overview
 
-The OpenCode adapter generates native configuration for the [OpenCode](https://github.com/sst/opencode) CLI. It emits agents, skills, commands, chat modes, MCP configuration, hooks, and plugins into `.opencode/`.
+The OpenCode adapter generates native configuration for the [OpenCode](https://github.com/sst/opencode) CLI. It emits agents, skills, commands, OpenCode-specific mode files, MCP configuration, hooks, and plugins into `.opencode/`.
 
 ## Generated Files
 
@@ -16,11 +16,10 @@ The OpenCode adapter generates native configuration for the [OpenCode](https://g
 | `.opencode/agents/<name>.md` | Agent definitions (canonical agents with frontmatter rewrite) |
 | `.opencode/skills/<name>/SKILL.md` | Skill directories |
 | `.opencode/commands/<name>.md` | Slash commands |
-| `.opencode/modes/<name>.md` | Chat modes |
-| `.opencode/templates/<name>.md` | Speckit templates |
-| `.opencode/lazyai.mcp.jsonc` | Legacy MCP config (migration input only) |
+| `.opencode/modes/<name>.md` | OpenCode-specific mode files |
+| `.opencode/lazyai.mcp.jsonc` | Legacy MCP config (migration input only; not written by current compiler) |
 | `.opencode/plugins/` | Plugin hooks |
-| `opencode.json` | Root config with instructions, agents, permissions |
+| `opencode.json` | Root config with instructions, permissions, and MCP entries |
 | `AGENTS.md` | Root instructions |
 
 ## Supported Asset Types
@@ -29,9 +28,9 @@ The OpenCode adapter generates native configuration for the [OpenCode](https://g
 |---|---|---|
 | Agents | flat | `.opencode/agents/<name>.md` |
 | Skills | dir-per-item | `.opencode/skills/<name>/SKILL.md` |
-| Templates | flat | `.opencode/templates/<name>.md` |
+| Templates | none | — |
 | Commands | flat | `.opencode/commands/<name>.md` |
-| Chat modes | flat | `.opencode/modes/<name>.md` |
+| OpenCode modes | flat | `.opencode/modes/<name>.md` |
 | Output styles | none | — |
 | Prompts | none | — |
 
@@ -47,9 +46,14 @@ Hooks are installed as OpenCode plugins under `.opencode/plugins/`. The adapter 
 
 Skills are written as Agent Skills-compatible directories: `.opencode/skills/<name>/SKILL.md`. The adapter copies selected skills from the canonical library.
 
+## Mode Behavior
+
+Mode files are written under `.opencode/modes/<name>.md`. LazyAI currently treats this as an OpenCode-specific surface rather than a cross-tool abstraction.
+
 ## Agent Behavior
 
 Canonical agents are written as flat markdown files under `.opencode/agents/`. The adapter applies frontmatter rewrite for OpenCode compatibility. A default "guide" agent is always installed.
+
 
 ## Scope Support
 
@@ -67,7 +71,7 @@ Yes (`CanRunHeadless() = true`). The adapter supports headless init and validati
 
 - No prompts directory; prompts ship as commands
 - No output-styles concept
-- Legacy `lazyai.mcp.jsonc` maintained during migration
+- No documented template surface
 
 ## Test Coverage
 

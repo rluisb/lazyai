@@ -156,9 +156,8 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindTemplates: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindTemplates,
-				SourceSubdir: "templates", DestSubdir: "templates",
-				Shape: ShapeFlat,
-				Notes: "Speckit templates at .opencode/templates/",
+				Shape: ShapeNone,
+				Notes: "OpenCode has no documented template surface",
 			},
 			AssetKindCommands: {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindCommands,

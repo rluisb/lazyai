@@ -73,6 +73,8 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 
 ## Workflow delivery matrix
 
+Ownership decision: ADR-007 — Workflow Runtime Ownership (Accepted), recorded at `specs/adrs/007-workflow-runtime-ownership.md`. LazyAI generates and validates the workflow catalog; host tools execute. Workflows stay docs-only (`adapter_targets: [none]`) until a target's native/plugin surface is source-verified — no `workflows/` directory is emitted for any target today.
+
 | Target | Native workflow directory emitted today | Correct LazyAI delivery |
 |---|---|---|
 | OpenCode | No | Commands, skills, modes, instructions, or verified plugin helper |

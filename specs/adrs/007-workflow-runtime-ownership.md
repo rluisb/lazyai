@@ -1,7 +1,7 @@
 # ADR-007: Workflow Runtime Ownership — LazyAI Generates and Validates, Host Tools Execute
 
-**Date:** 2026-06-23  
-**Status:** Proposed  
+**Date:** 2026-06-23 (proposed); 2026-06-24 (accepted)  
+**Status:** Accepted  
 **Deciders:** LazyAI maintainers  
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 
@@ -217,6 +217,6 @@ Re-open this ADR if any of the following becomes true:
 
 ## Memory Update
 
-- [ ] If this ADR is accepted, update `specs/KNOWLEDGE_MAP.md` to reference the workflow ownership decision.
-- [ ] Cross-link this ADR from `docs/concepts/tools.md` workflow delivery matrix section.
+- [x] ADR accepted on 2026-06-24; `specs/KNOWLEDGE_MAP.md` references the workflow ownership decision.
+- [x] Cross-linked from `docs/concepts/tools.md` workflow delivery matrix section.
 - [ ] If a future implementation adds plugin/extension workflow helpers, update the per-target delivery model table above.

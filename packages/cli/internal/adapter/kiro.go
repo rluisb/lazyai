@@ -9,7 +9,8 @@ import (
 
 // KiroAdapter installs the Kiro IDE/CLI setup surface. Kiro CLI v3 discovers
 // custom agent profiles from .kiro/agents/<name>.md, skills from
-// .kiro/skills/<name>/SKILL.md, and prompt templates from .kiro/prompts/*.md.
+// .kiro/skills/<name>/SKILL.md, prompt templates from .kiro/prompts/*.md,
+// and native hooks from .kiro/hooks/<name>.json.
 type KiroAdapter struct{}
 
 func (a *KiroAdapter) ID() types.ToolId  { return types.ToolIdKiro }
@@ -74,6 +75,20 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		SelectionKey: "prompts",
 		ToDestPath: func(file string) string {
 			return filepath.Join(kiroDir, "prompts", filepath.Base(file))
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := files.EnsureDir(filepath.Join(kiroDir, "hooks")); err != nil {
+		return nil, err
+	}
+
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "kiro/hooks",
+		ToDestPath: func(file string) string {
+			return filepath.Join(kiroDir, "hooks", file)
 		},
 	}); err != nil {
 		return nil, err

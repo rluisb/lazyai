@@ -49,16 +49,14 @@ Each adapter's hook support is classified with one of five levels:
 | pi | stable | `Hooks: true` | **instruction_only** | No `.pi/hooks` directory emitted; only `block-destructive-shell` has an extension runtime at `.pi/extensions/*.ts`; all other hooks are markdown-only |
 | omp | beta | `Hooks: true` | **partial** | TypeScript hook factories at `.omp/hooks/pre/*.ts`; only `before_tool` surface (pre hooks); beta support level |
 | antigravity | beta | `Hooks: true` | **partial** | Shell scripts at `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json`; limited to pre-exec and stop events; beta support level |
-| kiro | stable | `Hooks: false` | **instruction_only** | Adapter does not declare runtime hook support; no `.kiro/hooks` directory is emitted; hook guidance is markdown-only |
+| kiro | stable | `Hooks: true` | **supported** | Native Kiro v3 hook JSON at `.kiro/hooks/*.json`; currently `block-destructive-shell` uses `PreToolUse` with source-verified trigger mapping |
 
 ### Notes
 
 - **Pi** declares `Hooks: true` but is `instruction_only`: most hook guidance is
   documented for agent awareness, and only the destructive-shell guard has an
   extension runtime.
-- **Kiro** does not declare runtime hook support (`Hooks: false`) and emits no
-  `.kiro/hooks` files; hook guidance remains markdown-only until a native output
-  contract is source-verified.
+- **Kiro** declares `Hooks: true` and emits native Kiro v3 hook JSON at `.kiro/hooks/*.json`. Only source-verified trigger mappings are emitted; currently the shipped Kiro runtime surface is `block-destructive-shell` on `PreToolUse`.
 - **OMP** and **Antigravity** are classified as `partial` because they emit hook
   files but are at `beta` support level and cover a limited subset of lifecycle
   events.
@@ -73,7 +71,7 @@ Each adapter's hook support is classified with one of five levels:
 |---|---|---|---|---|---|---|---|
 | `before_agent` | session.created | — | — | — | — | — | — |
 | `before_model` | — | — | — | — | — | — | — |
-| `before_tool` | tool.execute.before | PreToolUse | pre-exec | extension | hooks/pre/*.ts | pre-exec | — |
+| `before_tool` | tool.execute.before | PreToolUse | pre-exec | extension | hooks/pre/*.ts | pre-exec | PreToolUse |
 | `after_tool` | — | — | — | — | — | — | — |
 | `after_model` | session.idle | Stop | stop | — | — | stop | — |
 | `after_agent` | — | — | — | — | — | — | — |

@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Kiro IDE/CLI). It emits agents, skills, prompts, MCP configuration, and permissions into `.kiro/`. Hooks are instruction-only (described in agent/skill prompts) — no runtime hook files are emitted.
+The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Kiro IDE/CLI). It emits agents, skills, prompts, native Kiro v3 hook JSON, MCP configuration, and permissions/global-configuration metadata into `.kiro/`.
 
 ## Generated Files
 
@@ -16,6 +16,8 @@ The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Ki
 | `.kiro/agents/<name>.md` | Custom agent profiles (canonical agents with frontmatter) |
 | `.kiro/skills/<name>/SKILL.md` | Skill directories |
 | `.kiro/prompts/<name>.md` | Prompt templates |
+| `.kiro/hooks/<name>.json` | Native Kiro v3 hook descriptors |
+| `.kiro/hooks/*.sh` | Referenced shell hook scripts when a hook action runs a command |
 | `.kiro/settings/mcp.json` | MCP server configuration |
 
 ## Supported Asset Types
@@ -36,7 +38,7 @@ Kiro MCP is compiled via `CompileMCPForTool`. The adapter writes to `.kiro/setti
 
 ## Hook Behavior
 
-Kiro has no `.kiro/hooks` path. Hooks are instruction-only — described in agent and skill prompts rather than emitted as runtime hook files. The adapter does not install hook scripts or hook configuration files.
+Kiro emits native hook JSON files at `.kiro/hooks/<name>.json` using the Kiro CLI v3 hook schema. Only source-verified trigger mappings are emitted; currently the adapter emits `block-destructive-shell` with `PreToolUse` and `matcher: "shell"`. Referenced shell scripts are installed alongside the JSON file.
 
 ## Skill Behavior
 
@@ -64,8 +66,9 @@ No (`CanRunHeadless() = false`).
 
 ## Known Limitations
 
-- **No specs or steering** — Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). The adapter installs agents, skills, prompts, MCP, permissions, and global config, but specs and steering are intentionally absent.
-- **Hooks are instruction-only** — Kiro has no `.kiro/hooks` path. Hook behavior is described in agent and skill prompts rather than emitted as runtime hook files (`capabilities.go:163-164`).
+- **No specs or steering** — Kiro does not emit native specs or steering files; specs are user-authored workflow artifacts and steering remains unimplemented.
+- **No repo-local permissions file** — Kiro docs forbid cloned repos from injecting permission rules; `Permissions: true` is host-support metadata, not an emitted `.kiro/permissions.yaml`.
+- **No direct `.kiro/powers/` output** — Powers remain a future importable-package direction.
 - No templates, commands, chat modes, or output styles
 - No headless support
 - No plugin surface

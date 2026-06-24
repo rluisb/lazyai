@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "block-destructive-shell",
+      "description": "Blocks destructive shell commands (rm -rf /, mkfs, dd to devices, shutdown, reboot, halt) before they execute.",
+      "trigger": "PreToolUse",
+      "matcher": "shell",
+      "action": {
+        "type": "command",
+        "command": ".kiro/hooks/block-destructive-shell.sh"
+      },
+      "timeout": 10,
+      "enabled": true
+    }
+  ]
+}

@@ -29,6 +29,6 @@ Optional runtime-adjacent features remain optional.
 - OpenCode adapter must use current permissions and `steps`, not deprecated fields.
 - Copilot adapter must support `.github/copilot-instructions.md`, path instructions, skills, MCP, hooks, and optional plugin packaging.
 - Pi adapter must respect project trust and explicitly warn that Pi has no built-in sandbox.
-- Kiro adapter must keep hooks instruction-only until a native `.kiro/hooks` output contract is source-verified; current output prioritizes agents, skills, prompts, MCP, protected-path guidance, and warnings that Supervised mode is not a sandbox.
+- Kiro adapter emits native `.kiro/hooks/*.json` (Kiro v3 hook schema); specs and steering remain absent (user-authored / non-goal), repo-local permissions are forbidden, and direct `.kiro/powers/` is not emitted (Powers is a future importable-package direction only).
 - Antigravity adapter should use `.agents/skills` and `.agents/rules` as primary outputs, with global settings changes only by explicit consent.
 - OMP adapter should support `.omp/mcp.json`, plugins, skills, commands, hooks, compaction, and handoff; keep beta until docs snapshots are fully captured.

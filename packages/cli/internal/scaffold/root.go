@@ -19,7 +19,16 @@ import (
 // errMemoryDocScopeUnsupported is returned by memoryDocDestPath for Copilot × global.
 var errMemoryDocScopeUnsupported = errors.New("memory doc not supported at this scope")
 
-const claudeAgentsReference = "<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file."
+// claudeImportToken is the functional @import token written into CLAUDE.md so
+// Claude Code pulls in the canonical AGENTS.md instructions. The idempotency
+// guard checks for this token (NOT a markdown comment) so a freshly-generated
+// file is a true no-op on recompile (#496).
+const claudeImportToken = "@AGENTS.md"
+
+// claudeContextAppend is appended to a user-owned CLAUDE.md that lacks the
+// AGENTS.md import. It leads with a short human-readable comment and ends with
+// the functional @import so the guard-matched token is the import itself.
+const claudeContextAppend = "<!-- ai-setup: import canonical AGENTS.md for Claude Code -->\n@AGENTS.md"
 
 // claudeContextDoc is the body written to a generated CLAUDE.md when the Claude
 // Code target is selected and no CLAUDE.md exists yet. Claude Code reads
@@ -32,7 +41,16 @@ const claudeContextDoc = "# CLAUDE.md\n\n" +
 	"imported below.\n\n" +
 	"@AGENTS.md\n"
 
-const geminiAgentsReference = "<!-- ai-setup: AGENTS.md reference -->\nThis project uses [AGENTS.md](./AGENTS.md) as the canonical AI agent instruction file."
+// geminiImportToken is the functional @import token written into GEMINI.md so
+// Gemini CLI pulls in the canonical AGENTS.md instructions. The idempotency
+// guard checks for this token (NOT a markdown comment) so a freshly-generated
+// file is a true no-op on recompile (#496).
+const geminiImportToken = "@./AGENTS.md"
+
+// geminiContextAppend is appended to a user-owned GEMINI.md that lacks the
+// AGENTS.md import. It leads with a short human-readable comment and ends with
+// the functional @import so the guard-matched token is the import itself.
+const geminiContextAppend = "<!-- ai-setup: import canonical AGENTS.md for Gemini -->\n@./AGENTS.md"
 
 // geminiContextDoc is the body written to a generated GEMINI.md when the
 // Antigravity/Gemini target is selected and no GEMINI.md exists yet. Gemini CLI
@@ -313,20 +331,7 @@ func ensureClaudeContextDoc(opts ScaffoldCompiledRootOptions) error {
 		if err := files.WriteFile(claudePath, []byte(claudeContextDoc), 0o644); err != nil {
 			return err
 		}
-		if opts.FileRecords != nil {
-			hash, _ := files.FileHash(claudePath)
-			relPath, _ := filepath.Rel(recordRoot, claudePath)
-			if relPath == "" || strings.HasPrefix(relPath, "..") {
-				relPath = claudePath
-			}
-			*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
-				Path:   relPath,
-				Hash:   hash,
-				Source: "compiled:" + string(types.ToolIdClaudeCode),
-				Owner:  types.FileOwnerLibrary,
-			})
-		}
-		return nil
+		return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
 	}
 
 	data, err := files.ReadFile(claudePath)
@@ -334,16 +339,49 @@ func ensureClaudeContextDoc(opts ScaffoldCompiledRootOptions) error {
 		return err
 	}
 	content := string(data)
-	if strings.Contains(content, claudeAgentsReference) {
-		return nil
+	// Guard on the functional @import token, not a markdown comment, so a
+	// freshly-generated file (already containing @AGENTS.md) is a no-op on
+	// recompile and a user-owned file only gets one functional import (#496).
+	if strings.Contains(content, claudeImportToken) {
+		// No content change, but still (re)record the TrackedFile so the
+		// lockfile stays in sync on every compile — no drift (#496).
+		return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
 	}
 
 	separator := "\n\n"
 	if strings.HasSuffix(content, "\n") {
 		separator = "\n"
 	}
-	updated := content + separator + claudeAgentsReference + "\n"
-	return files.WriteFile(claudePath, []byte(updated), 0o644)
+	updated := content + separator + claudeContextAppend + "\n"
+	if err := files.WriteFile(claudePath, []byte(updated), 0o644); err != nil {
+		return err
+	}
+	return recordContextDoc(opts, recordRoot, claudePath, types.ToolIdClaudeCode)
+}
+
+// recordContextDoc appends a TrackedFile (relative path + current hash) for a
+// generated/updated context doc so the lockfile reflects the on-disk file on
+// every compile, including the idempotent no-op path. The FileHash error is
+// surfaced rather than swallowed (#496).
+func recordContextDoc(opts ScaffoldCompiledRootOptions, recordRoot, absPath string, tool types.ToolId) error {
+	if opts.FileRecords == nil {
+		return nil
+	}
+	hash, err := files.FileHash(absPath)
+	if err != nil {
+		return fmt.Errorf("hash %s: %w", absPath, err)
+	}
+	relPath, _ := filepath.Rel(recordRoot, absPath)
+	if relPath == "" || strings.HasPrefix(relPath, "..") {
+		relPath = absPath
+	}
+	*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
+		Path:   relPath,
+		Hash:   hash,
+		Source: "compiled:" + string(tool),
+		Owner:  types.FileOwnerLibrary,
+	})
+	return nil
 }
 
 // ensureGeminiContextDoc guarantees a native GEMINI.md exists for the
@@ -368,20 +406,7 @@ func ensureGeminiContextDoc(opts ScaffoldCompiledRootOptions) error {
 		if err := files.WriteFile(geminiPath, []byte(geminiContextDoc), 0o644); err != nil {
 			return err
 		}
-		if opts.FileRecords != nil {
-			hash, _ := files.FileHash(geminiPath)
-			relPath, _ := filepath.Rel(recordRoot, geminiPath)
-			if relPath == "" || strings.HasPrefix(relPath, "..") {
-				relPath = geminiPath
-			}
-			*opts.FileRecords = append(*opts.FileRecords, types.TrackedFile{
-				Path:   relPath,
-				Hash:   hash,
-				Source: "compiled:" + string(types.ToolIdAntigravity),
-				Owner:  types.FileOwnerLibrary,
-			})
-		}
-		return nil
+		return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
 	}
 
 	data, err := files.ReadFile(geminiPath)
@@ -389,16 +414,24 @@ func ensureGeminiContextDoc(opts ScaffoldCompiledRootOptions) error {
 		return err
 	}
 	content := string(data)
-	if strings.Contains(content, geminiAgentsReference) {
-		return nil
+	// Guard on the functional @import token, not a markdown comment, so a
+	// freshly-generated file (already containing @./AGENTS.md) is a no-op on
+	// recompile and a user-owned file only gets one functional import (#496).
+	if strings.Contains(content, geminiImportToken) {
+		// No content change, but still (re)record the TrackedFile so the
+		// lockfile stays in sync on every compile — no drift (#496).
+		return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
 	}
 
 	separator := "\n\n"
 	if strings.HasSuffix(content, "\n") {
 		separator = "\n"
 	}
-	updated := content + separator + geminiAgentsReference + "\n"
-	return files.WriteFile(geminiPath, []byte(updated), 0o644)
+	updated := content + separator + geminiContextAppend + "\n"
+	if err := files.WriteFile(geminiPath, []byte(updated), 0o644); err != nil {
+		return err
+	}
+	return recordContextDoc(opts, recordRoot, geminiPath, types.ToolIdAntigravity)
 }
 
 // ScaffoldCompiledRootOptions holds the options for compiling root files.

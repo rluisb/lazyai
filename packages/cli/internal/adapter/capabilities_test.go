@@ -102,16 +102,15 @@ func TestOmpCapabilitiesAreStableAndVerified(t *testing.T) {
 }
 
 // TestKiroCapabilitiesMatchMatrix spot-checks the verified Kiro surface: the
-// adapter emits agents, skills, prompts, MCP, and permissions, but does not
-// claim specs, steering, or hooks support. Hooks are instruction-only (no
-// runtime .kiro/hooks files emitted).
+// adapter emits agents, skills, prompts, hooks, MCP, and permissions, but does
+// not claim specs or steering support.
 func TestKiroCapabilitiesMatchMatrix(t *testing.T) {
 	cap := (&KiroAdapter{}).Capabilities()
 	if cap.Specs || cap.Steering {
 		t.Error("Kiro must not declare Specs or Steering")
 	}
-	if cap.Hooks {
-		t.Error("Kiro must not declare Hooks — hooks are instruction-only, no .kiro/hooks emitted")
+	if !cap.Hooks {
+		t.Error("Kiro must declare Hooks — native .kiro/hooks/*.json files are emitted")
 	}
 	if !cap.Agents || !cap.Skills || !cap.PromptTemplates {
 		t.Error("Kiro must declare Agents, Skills, and PromptTemplates")

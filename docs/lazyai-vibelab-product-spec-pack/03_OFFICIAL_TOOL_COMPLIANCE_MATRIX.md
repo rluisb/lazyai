@@ -320,7 +320,7 @@ LazyAI requirements:
 - [ ] Generate `.kiro/steering/*.md`. (Not yet implemented — requires external docs refresh.)
 - [ ] Generate steering frontmatter for inclusion modes. (Not yet implemented — requires external docs refresh.)
 - [ ] Generate `.kiro/specs/<name>/requirements.md`, `design.md`, `tasks.md` when specs enabled. (Not yet implemented — requires external docs refresh.)
-- [ ] Generate `.kiro/hooks/*` from canonical hooks only after a source-verified native hook output contract exists. Current LazyAI Kiro hooks are instruction-only.
+- [x] Generate `.kiro/hooks/*.json` from canonical hooks with source-verified Kiro v3 triggers only. Repo-local permissions are forbidden; Powers is a future importable-package direction.
 - [ ] Generate `.kiroignore` for sensitive exclusions. (Not yet implemented — requires external docs refresh.)
 - [x] Warn that Supervised mode is not a sandbox.
 - [x] Warn about broad trusted command wildcards.

@@ -12,7 +12,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 | Pi | `AGENTS.md` | `.pi/` | Yes (`.pi/agents`) | Yes (`.pi/skills`) | none (`.pi/extensions/*.ts`) | none |
 | OMP (beta) | `AGENTS.md` | `.omp/` | Yes (`.omp/agents`) | Yes (`.omp/skills`) | Yes (`.omp/hooks/pre/*.ts`) | `.omp/mcp.json` |
 | Antigravity (beta) | `AGENTS.md` | `.gemini/` + `.agents/` | none | Yes (`.agents/skills`) | Yes (`.gemini/hooks/lazyai/*` and `.agents/hooks.json`) | `~/.gemini/config/mcp_config.json` |
-| Kiro | `AGENTS.md` | `.kiro/` | Yes (`.kiro/agents`) | Yes (`.kiro/skills`) | none | `.kiro/settings/mcp.json` |
+| Kiro | `AGENTS.md` | `.kiro/` | Yes (`.kiro/agents`) | Yes (`.kiro/skills`) | Yes (`.kiro/hooks/*.json`) | `.kiro/settings/mcp.json` |
 
 ## OpenCode
 
@@ -190,7 +190,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 
 ## Kiro
 
-**Surface summary:** emits agents, skills, and prompt templates under `.kiro/`, plus MCP config; no commands, chat modes, or hook runtime.
+**Surface summary:** emits agents, skills, prompt templates, native Kiro v3 hook JSON, and MCP config under `.kiro/`; no commands or chat modes.
 
 - **Root instructions:** `AGENTS.md`.
 - **Config directory:** `.kiro/`
@@ -203,15 +203,18 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
     ├── agents/<agent>.md
     ├── skills/<skill>/SKILL.md
     ├── prompts/<prompt>.md
+    ├── hooks/block-destructive-shell.json
+    ├── hooks/block-destructive-shell.sh
     └── settings/mcp.json
 ```
 
 - **Agents surface:** `.kiro/agents/<name>.md` (Kiro CLI v3 custom agent profiles).
 - **Skills surface:** `.kiro/skills/<name>/SKILL.md`.
 - **Commands / prompts / chat modes:** prompts at `.kiro/prompts/*.md`; no commands or chat modes.
-- **Hook runtime surface:** none.
+- **Hook runtime surface:** `.kiro/hooks/*.json` plus any referenced hook scripts. Only source-verified Kiro v3 trigger mappings are emitted.
 - **MCP output files:** `.kiro/settings/mcp.json`.
 - **Global scope support:** `yes`.
+- **Non-goals:** no emitted `.kiro/specs/` or `.kiro/steering/`; no repo-local permissions file; no direct `.kiro/powers/` output.
 
 ## How outputs are generated
 

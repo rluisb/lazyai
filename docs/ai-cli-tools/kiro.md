@@ -1,6 +1,6 @@
 # Kiro setup
 
-Kiro is a stable LazyAI target for Kiro agent profiles, skills, prompt templates, permissions/global configuration metadata, and MCP.
+Kiro is a stable LazyAI target for Kiro agent profiles, skills, prompt templates, native Kiro v3 hooks, permissions/global configuration metadata, and MCP.
 
 ## Generated structure
 
@@ -11,6 +11,8 @@ Kiro is a stable LazyAI target for Kiro agent profiles, skills, prompt templates
     ├── agents/<agent>.md
     ├── skills/<skill>/SKILL.md
     ├── prompts/<prompt>.md
+    ├── hooks/block-destructive-shell.json
+    ├── hooks/block-destructive-shell.sh
     └── settings/mcp.json
 ```
 
@@ -30,6 +32,7 @@ flowchart LR
 | Custom agent profiles | canonical agent markdown under `.kiro/agents/` |
 | Skills | Agent Skills-compatible `SKILL.md` directories |
 | Prompts | prompt markdown under `.kiro/prompts/` |
+| Hooks | native Kiro v3 hook JSON under `.kiro/hooks/` |
 | MCP | `.ai/mcp.json` compiled to `.kiro/settings/mcp.json` |
 
 ## LazyAI options
@@ -59,5 +62,6 @@ lazyai-cli status
 
 - Support level: stable.
 - Project, workspace, and global scopes are supported.
+- LazyAI emits native Kiro v3 hooks at `.kiro/hooks/<name>.json` for source-verified trigger mappings only; today that is `block-destructive-shell` on `PreToolUse`.
 - LazyAI intentionally emits no `.kiro/workflows`, specs, steering, commands, chat modes, templates, or output styles.
-- Hooks are instruction-only in LazyAI's Kiro output; the adapter does not emit `.kiro/hooks` runtime files.
+- Repo-local permissions are forbidden (`Permissions: true` is host-support metadata), and direct `.kiro/powers/` output is not emitted.

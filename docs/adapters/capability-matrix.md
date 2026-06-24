@@ -25,7 +25,7 @@
 | Agents | yes | yes | yes | ✓ | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
 | Skills | yes | yes | yes | yes | yes | yes | yes |
-| Hooks | yes | yes | yes | yes | yes | yes | instruction-only |
+| Hooks | yes | yes | yes | yes | yes | yes | yes |
 | Commands | yes | yes | — | — | yes | — | — |
 | Prompt templates | — | — | yes | yes | — | — | yes |
 | Chat modes | yes | — | yes | — | — | — | — |
@@ -114,8 +114,8 @@ All 7 LazyAI-supported targets support project, workspace, and global scopes. An
 ### Pi — MCP is a no-op
 Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:81-83`). The adapter declares MCP capability for future compatibility, but no MCP configuration is emitted for Pi. Pi has no native MCP surface.
 
-### Kiro — No specs or steering; hooks are instruction-only
-Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). Hooks are instruction-only — no runtime `.kiro/hooks` files are emitted (`capabilities.go:163-164`). The adapter installs agents, skills, prompts, MCP, permissions, and global config, but specs, steering, and runtime hook files are intentionally absent.
+### Kiro — No specs or steering; permissions and Powers are non-goals
+Kiro emits native `.kiro/hooks/<name>.json` files using the Kiro CLI v3 hook schema. Specs are not emitted because they are user-authored workflow artifacts. Repo-local permissions are forbidden; `Permissions: true` is host-support metadata, not an emitted repo file. Direct `.kiro/powers/` output is not emitted; Powers remain a future importable-package direction.
 
 ### OMP — Stable (verified 2026-06-23, #486)
 OMP was promoted from beta to stable after every emitted surface (root `AGENTS.md`, `.omp/agents`, `.omp/skills`, `.omp/hooks/pre/*.ts`, `.omp/commands`, `.omp/mcp.json`) was verified against the authoritative OMP (Oh My Pi) docs (`omp://`). `.omp/prompts/` is still emitted best-effort (discovery not docs-confirmed). `CanRunHeadless()=false` (as with Pi).

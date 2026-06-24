@@ -39,6 +39,7 @@ func TestKiroAdapter_Install_EmitsAgentProfilesSkillsAndPrompts(t *testing.T) {
 		filepath.Join(targetDir, ".kiro", "skills", "diagnose", "SKILL.md"),
 		filepath.Join(targetDir, ".kiro", "prompts", "plan.md"),
 		filepath.Join(targetDir, ".kiro", "prompts", "implement.md"),
+		filepath.Join(targetDir, ".kiro", "hooks", "block-destructive-shell.json"),
 	}
 	for _, path := range expectedPaths {
 		assertExists(t, path)

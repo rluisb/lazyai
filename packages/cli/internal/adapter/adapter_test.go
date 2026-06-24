@@ -186,6 +186,29 @@ func createTestFS() fstest.MapFS {
   }
 }`),
 		},
+		"kiro/hooks/block-destructive-shell.json": &fstest.MapFile{
+			Data: []byte(`{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "block-destructive-shell",
+      "description": "Blocks destructive shell commands before they execute.",
+      "trigger": "PreToolUse",
+      "matcher": "shell",
+      "action": {
+        "type": "command",
+        "command": ".kiro/hooks/block-destructive-shell.sh"
+      },
+      "timeout": 10,
+      "enabled": true
+    }
+  ]
+}`),
+		},
+		"kiro/hooks/block-destructive-shell.sh": &fstest.MapFile{
+			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
+			Mode: 0o755,
+		},
 	}
 }
 

@@ -23,7 +23,7 @@ properties. The classification is grounded in the hook policy files under
 | `rpi-gate-check.yml` | CI/CD (pull_request, push) | Enforce RPI process gates on non-trivial PRs and main pushes | true | false | true | GitHub Actions |
 | `caveman-memory-promotion` | on_compaction, after_agent | Detect reusable knowledge in caveman summaries and route to memory-promotion review | false | true | false | opencode (plugin) |
 | `startup-self-heal` | before_agent | Run scoped health checks and regenerate CLI artifacts on drift | false | false | true | opencode (plugin) |
-| `block-destructive-shell` | before_tool | Block destructive shell commands (rm -rf /, mkfs, dd, shutdown, etc.) | true | false | false | opencode, claude, copilot, antigravity, omp, pi (extension) |
+| `block-destructive-shell` | before_tool | Block destructive shell commands (rm -rf /, mkfs, dd, shutdown, etc.) | true | false | false | opencode, claude, copilot, antigravity, omp, pi (extension), kiro |
 | `objective-workflow-gate` | after_model | Require verification evidence or explicit blocked reason in completion claims | true | false | true | opencode, claude, copilot, antigravity |
 | `session-start` | before_agent | Session bootstrap reminder policy (objective, handoff, verification seam) | false | false | false | instruction_only (all tools) |
 
@@ -38,10 +38,12 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 - **Purpose:** Block obvious destructive commands (for example `rm -rf /`, `mkfs`, `dd if=/dev/zero ...`, `shutdown`, `reboot`).
 - **Trigger event:**
   - Claude/OpenCode/Copilot/Antigravity: shell-tool pre-execution.
+  - Kiro: `PreToolUse` with `matcher: "shell"` in native `.kiro/hooks/block-destructive-shell.json`.
   - Pi/OMP: extension/tool-call hook points for `bash`/`tool_call`.
 - **Runtime behavior:**
   - OpenCode: plugin `event.type === "tool.execute.before"` in `.opencode/plugins/vibe-lab-hooks.js`.
   - Claude/Copilot/Antigravity: runtime JSON/stdin shell command descriptors in generated hook scripts.
+  - Kiro: command hook invokes `.kiro/hooks/block-destructive-shell.sh`; exit code `2` blocks the shell tool.
   - OMP/Pi: TypeScript hook factories in `.omp/hooks/pre/` and `.pi/extensions/` match destructive patterns.
 
 ### `objective-workflow-gate`
@@ -130,6 +132,6 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 | antigravity | **partial** | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | Beta support level; limited to pre-exec and stop events |
 | omp | **partial** | `.omp/hooks/pre/*.ts` | Beta support level; only `before_tool` surface (pre hooks) |
 | pi | **instruction_only** | `.pi/extensions/block-destructive-shell.ts` | No `.pi/hooks` directory emitted; only one extension runtime; all other hooks are markdown-only |
-| kiro | **instruction_only** | none | Adapter hook capability is false; hook guidance is markdown-only and no `.kiro/hooks` directory is emitted |
+| kiro | **supported** | `.kiro/hooks/*.json` + referenced hook scripts | Native Kiro v3 hook JSON; currently `block-destructive-shell` only, emitted for source-verified triggers only |
 
 For each tool's managed output paths and MCP outputs, see [Tool Outputs](tool-outputs.md) and [Hook Template](../canonical/hook-template.md).

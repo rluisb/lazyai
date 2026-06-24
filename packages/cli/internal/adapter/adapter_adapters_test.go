@@ -226,12 +226,14 @@ func TestKiroAdapter_Install_AgentsAndSkills(t *testing.T) {
 		".kiro/agents/reviewer.md",
 		".kiro/skills/diagnose/SKILL.md",
 		".kiro/skills/issue-triage/SKILL.md",
+		".kiro/hooks/block-destructive-shell.json",
 	} {
 		if _, err := os.Stat(filepath.Join(targetDir, rel)); err != nil {
 			t.Fatalf("expected %s: %v", rel, err)
 		}
 	}
-	assertMissing(t, filepath.Join(targetDir, ".kiro", "hooks"))
+	assertMissing(t, filepath.Join(targetDir, ".kiro", "specs"))
+	assertMissing(t, filepath.Join(targetDir, ".kiro", "steering"))
 }
 
 func TestAntigravityAdapter_Install_MinimalSurface(t *testing.T) {

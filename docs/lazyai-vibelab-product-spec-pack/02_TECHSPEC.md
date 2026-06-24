@@ -1033,15 +1033,15 @@ Bugfix specs may use:
 
 ### 12.4 Hooks
 
-LazyAI does not currently emit `.kiro/hooks` runtime files. Hook guidance for Kiro remains instruction-only until a native Kiro hook output contract is source-verified. When support is added, the compiler must define and test the native fields for:
+LazyAI emits native Kiro v3 hook JSON at `.kiro/hooks/<name>.json`. Only hooks with a source-verified Kiro v3 trigger mapping are emitted; canonical hooks without a verified trigger remain un-emitted. The compiler defines and tests the native fields for:
 
-- title;
-- description;
-- event;
-- optional tool name;
-- optional file pattern;
-- action type;
-- instructions or command.
+- `version`;
+- `hooks[].name`;
+- `hooks[].description`;
+- `hooks[].trigger`;
+- optional `matcher`;
+- `action.type` plus `command` or `prompt`;
+- optional `timeout` and `enabled`.
 
 ### 12.5 Security mapping
 

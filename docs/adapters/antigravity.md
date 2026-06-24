@@ -64,6 +64,13 @@ Antigravity does not emit agent files. The adapter has no agents surface.
 
 No (`CanRunHeadless() = false`).
 
+## Upgrading from Beta
+
+If you compiled Antigravity integration prior to its promotion to stable (before `v2.4.0`), your global-scope skills were written to `~/.agents/skills/`. 
+
+As a stable adapter, global skills are now correctly written to `~/.gemini/config/skills/`. 
+Re-running `lazyai compile` will write the skills to the new path. You can safely delete the old files from `~/.agents/skills/` if you do not use other AI coding tools like Kiro or OpenCode.
+
 ## Known Limitations
 
 - **No agents** — the adapter does not emit agent files (`output_mapping.go`: `ShapeNone`)

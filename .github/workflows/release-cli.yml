@@ -63,7 +63,7 @@ jobs:
           echo "Generated dist/lazyai-cli.rb"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.metadata.outputs.tag_name }}
           name: LazyAI CLI ${{ steps.metadata.outputs.version }}

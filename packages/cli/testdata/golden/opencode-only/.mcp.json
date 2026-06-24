@@ -1,0 +1,169 @@
+{
+  "mcpServers": {
+    "ai-memory": {
+      "description": "Long-term project memory, handoffs, and durable annotations for agent workflows",
+      "enabled": true,
+      "url": "http://127.0.0.1:49374/mcp",
+      "tools": [
+        "memory_query",
+        "memory_recent",
+        "memory_handoff_accept",
+        "memory_write_page",
+        "memory_auto_improve",
+        "memory_consolidate"
+      ],
+      "requiresInstall": true,
+      "installHint": "curl -fsSL https://raw.githubusercontent.com/akitaonrails/ai-memory/main/bin/ai-memory -o ~/.local/bin/ai-memory \u0026\u0026 chmod +x ~/.local/bin/ai-memory",
+      "preferred_interface": "hybrid",
+      "cli_equivalent": "ai-memory",
+      "token_policy": "hybrid",
+      "purpose": "Persistent project memory that survives agent sessions, enabling cross-session context handoff and durable knowledge capture",
+      "preferredUse": "Use for cross-session context handoff, durable project knowledge, and agent-to-agent memory sharing. Essential for multi-agent workflows that need shared state.",
+      "examples": [
+        "Storing architectural decisions as durable wiki pages",
+        "Handing off context between agent sessions via memory_handoff_accept",
+        "Querying prior decisions with memory_query before proposing new work",
+        "Auto-improving knowledge base with memory_auto_improve at session end"
+      ],
+      "antiExamples": [
+        "Storing transient conversation state better kept in session context",
+        "Replacing a proper database for structured application data",
+        "Using as a general-purpose key-value store"
+      ],
+      "securityNotes": "Runs as a local HTTP server. When exposed remotely, add an Authorization header and use HTTPS. The server stores data in ~/.ai-memory/ by default. Bearer auth is supported but not enforced by default.",
+      "adapterOutputDifferences": "Compiles to type:remote (OpenCode) or type:http (Claude Code) with URL and optional headers. Copilot emits type:sse. OMP and Antigravity emit serverUrl. All adapters preserve the URL-backed shape; no stdio command is generated."
+    },
+    "codegraph": {
+      "description": "Code knowledge graph for semantic exploration",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "enabled": true,
+      "tools": [
+        "codegraph_context",
+        "codegraph_search",
+        "codegraph_files"
+      ],
+      "requiresInstall": true,
+      "installHint": "bun install -g codegraph",
+      "preferred_interface": "hybrid",
+      "cli_equivalent": "codegraph",
+      "token_policy": "hybrid",
+      "purpose": "Semantic code search and knowledge graph exploration for understanding code structure and relationships",
+      "preferredUse": "Use for semantic code search, understanding code relationships, and exploring code structure beyond text matching. Essential for large codebases where grep is insufficient.",
+      "examples": [
+        "Finding all callers of a function with codegraph_search",
+        "Exploring module dependencies with codegraph_context",
+        "Understanding code architecture through relationship queries",
+        "Discovering related files across the project structure"
+      ],
+      "antiExamples": [
+        "Simple text search (use ripgrep or rg instead)",
+        "File read operations (use filesystem MCP or shell)",
+        "When the codegraph index is stale (re-run codegraph init first)"
+      ],
+      "securityNotes": "Runs a local server that indexes the repository. The index is stored in .codegraph/ and can be large for big repos. No network access. Requires bun to be installed.",
+      "adapterOutputDifferences": "Compiles to type:local (OpenCode) or stdio command (Claude Code, Copilot). All adapters emit the codegraph serve --mcp command. No URL-based variant exists."
+    },
+    "filesystem": {
+      "description": "Local filesystem read/write access",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "enabled": true,
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files"
+      ],
+      "preferred_interface": "cli",
+      "cli_equivalent": "lazyai-cli file ops / native shell",
+      "token_policy": "cli-first",
+      "purpose": "Read and write local files through MCP, enabling agent-driven file operations without shell access",
+      "preferredUse": "Use for file operations that need structured MCP tool access (read_file, write_file, list_directory). Prefer CLI for bulk operations or when shell access is available.",
+      "examples": [
+        "Reading a specific file by path with read_file",
+        "Writing generated code to a new file with write_file",
+        "Listing directory contents to discover project structure",
+        "Searching files by pattern with search_files"
+      ],
+      "antiExamples": [
+        "Bulk file operations (use shell commands instead)",
+        "Git operations (use gh CLI or native git)",
+        "Binary file manipulation (use dedicated tools)"
+      ],
+      "securityNotes": "Scoped to the project directory by default (the '.' argument). Changing the directory argument expands the access scope. Never run with a root-level or unrestricted path.",
+      "adapterOutputDifferences": "Compiles to type:local (OpenCode) or stdio command (Claude Code, Copilot). All adapters emit the npx command with args. No URL-based variant exists."
+    },
+    "obsidian": {
+      "description": "Obsidian vault read/write access for persistent knowledge",
+      "command": "ob",
+      "args": [
+        "mcp"
+      ],
+      "enabled": true,
+      "tools": [
+        "read_note",
+        "write_note",
+        "search_notes",
+        "list_notes"
+      ],
+      "requiresInstall": true,
+      "installHint": "npm install -g obsidian-cli",
+      "preferred_interface": "hybrid",
+      "cli_equivalent": "ob",
+      "token_policy": "cli-first",
+      "purpose": "Read, write, and search Obsidian vault notes through MCP for persistent personal knowledge management",
+      "preferredUse": "Use for reading and writing Obsidian notes when structured MCP access is needed. Prefer the ob CLI for bulk operations or when MCP is not available.",
+      "examples": [
+        "Reading a specific note by path with read_note",
+        "Creating a new note with write_note for durable knowledge capture",
+        "Searching notes by content with search_notes",
+        "Listing all notes in a vault directory"
+      ],
+      "antiExamples": [
+        "Bulk note imports or exports (use ob CLI directly)",
+        "When the vault is not local (Obsidian sync may cause conflicts)",
+        "Binary attachments or media files (use filesystem MCP instead)"
+      ],
+      "securityNotes": "Requires the Advanced URI plugin in Obsidian. The ob CLI communicates with the local Obsidian instance. Vault access is scoped to configured vaults. No network access beyond local Obsidian.",
+      "adapterOutputDifferences": "Compiles to type:local (OpenCode) or stdio command (Claude Code, Copilot). All adapters emit the ob mcp command. No URL-based variant exists."
+    },
+    "ripgrep": {
+      "description": "Fast code search via ripgrep",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-ripgrep"
+      ],
+      "enabled": true,
+      "tools": [
+        "search",
+        "list-files"
+      ],
+      "preferred_interface": "cli",
+      "cli_equivalent": "rg",
+      "token_policy": "cli-first",
+      "purpose": "High-performance regex code search across the project, powered by ripgrep",
+      "preferredUse": "Use for regex-based code search when you need structured results. Prefer native rg CLI for simple searches to save tokens.",
+      "examples": [
+        "Searching for a function definition across the codebase with regex patterns",
+        "Finding all files matching a glob pattern with list-files",
+        "Complex multi-pattern searches where structured results help"
+      ],
+      "antiExamples": [
+        "Simple substring searches (use rg directly via shell)",
+        "File existence checks (use find or shell test)",
+        "Semantic code search (use codegraph instead)"
+      ],
+      "securityNotes": "Runs npx mcp-ripgrep which downloads the package on first use. Searches are scoped to the project directory by the MCP server. No network access beyond initial package fetch.",
+      "adapterOutputDifferences": "Compiles to type:local (OpenCode) or stdio command (Claude Code, Copilot). All adapters emit the npx command with args. No URL-based variant exists."
+    }
+  }
+}

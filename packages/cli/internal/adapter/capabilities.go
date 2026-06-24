@@ -121,13 +121,16 @@ func (a *PiAdapter) Capabilities() Capability {
 	}
 }
 
-// Capabilities reports the OMP adapter's surfaces. Marked beta until OMP's
-// partially JS-rendered official docs are fully snapshot-verified (matrix §1,
-// EC-006). Surfaces: AGENTS/context root, agents, skills, commands, hooks,
-// MCP, plugins, compaction, handoff (sessions), global config.
+// Capabilities reports the OMP (Oh My Pi) adapter's surfaces. Promoted to stable
+// after every emitted surface was verified against the authoritative OMP docs
+// (the in-harness `omp://` documentation set); see
+// docs/adapters/snapshots/beta-adapter-verification-2026-06.md. Verified emit
+// surfaces: root AGENTS.md, .omp/agents, .omp/skills, .omp/hooks/pre/*.ts,
+// .omp/commands, .omp/mcp.json. Plugins/Compaction/Sessions/GlobalConfig are
+// host-support metadata (OMP supports them) rather than emitted files.
 func (a *OmpAdapter) Capabilities() Capability {
 	return Capability{
-		Support:          SupportBeta,
+		Support:          SupportStable,
 		RootInstructions: true,
 		Agents:           true,
 		Skills:           true,
@@ -141,10 +144,13 @@ func (a *OmpAdapter) Capabilities() Capability {
 	}
 }
 
-// Capabilities reports the Antigravity/Gemini adapter's surfaces. Marked beta
-// until its partially JS-rendered official docs are fully snapshot-verified
-// (matrix §1, EC-006). Surfaces: .agents/rules root instructions,
-// .agents/skills, hooks, MCP, plugins, permissions, settings (global config).
+// Capabilities reports the Antigravity/Gemini adapter's surfaces. Kept beta:
+// workspace skills, IDE + CLI hooks, and MCP are docs-verified, but two gaps
+// remain (global-scope skills path, standalone root AGENTS.md discovery) — see
+// docs/adapters/snapshots/beta-adapter-verification-2026-06.md (matrix §1,
+// EC-006). Surfaces: .agents/skills, .agents/hooks.json + .gemini/settings.json
+// hooks, ~/.gemini/config/mcp_config.json MCP, plus permissions/plugins/config
+// host-support metadata.
 func (a *AntigravityAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportBeta,

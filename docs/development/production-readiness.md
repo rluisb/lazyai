@@ -7,8 +7,8 @@ This page records the current production-readiness posture for LazyAI docs and s
 | Area | Status | Evidence |
 |---|---|---|
 | Supported AI CLI targets | Ready | Adapter registry includes OpenCode, Claude Code, Copilot, Pi, OMP, Kiro, and Antigravity. |
-| Stable adapters | Ready | OpenCode, Claude Code, Copilot, Pi, and Kiro are marked stable in adapter capabilities. |
-| Beta adapters | Watch | OMP and Antigravity are functional but beta while official host docs are still being snapshot-verified. |
+| Stable adapters | Ready | OpenCode, Claude Code, Copilot, Pi, Kiro, and OMP are marked stable in adapter capabilities. OMP was promoted from beta on 2026-06-23 after docs verification (#486). |
+| Beta adapters | Watch | Antigravity/Gemini is functional but beta: workspace skills, hooks, and MCP are docs-verified, but global-scope skills path and root-instructions discovery remain unverified (#486). |
 | Output mapping | Ready | `output_mapping.go` is the single source of truth for seven asset kinds across seven tools. |
 | Manifest contract | Ready | `.ai/lazyai.json` schema version is `1.0`; target enum is `opencode`, `claude`, `copilot`, `pi`, `omp`, `antigravity`, `kiro`. |
 | MCP compile | Mostly ready | OpenCode, Claude Code, Copilot, OMP, Kiro, and Antigravity emit configs; Pi is intentionally no-op. |
@@ -16,7 +16,7 @@ This page records the current production-readiness posture for LazyAI docs and s
 
 ## Tracked watchouts
 
-- Beta adapter exit criteria are tracked in [#486](https://github.com/rluisb/lazyai/issues/486): OMP and Antigravity stay beta until host docs snapshots and conformance tests justify promotion.
+- Beta adapter exit criteria are tracked in [#486](https://github.com/rluisb/lazyai/issues/486): OMP is now stable (docs-verified 2026-06-23); Antigravity stays beta until the global-skills path and root-`AGENTS.md` discovery gaps are closed and pinned by tests. See [adapter snapshot](../adapters/snapshots/beta-adapter-verification-2026-06.md).
 - Workflow helper ownership is tracked in [#487](https://github.com/rluisb/lazyai/issues/487): ADR-007 must be accepted or superseded before LazyAI emits workflow helpers, and LazyAI must not become a workflow runtime.
 
 ## Quality gates to run before release

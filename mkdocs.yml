@@ -146,6 +146,7 @@ nav:
           - OMP: adapters/omp.md
           - Antigravity: adapters/antigravity.md
           - Kiro: adapters/kiro.md
+          - Beta Verification (2026-06): adapters/snapshots/beta-adapter-verification-2026-06.md
   - CLI Reference:
       - Overview: cli/index.md
       - Command Reference: cli/reference.md

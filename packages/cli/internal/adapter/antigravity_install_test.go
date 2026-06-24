@@ -214,6 +214,81 @@ func TestAntigravityAdapter_Install_GlobalSkillsUseGeminiConfigDir(t *testing.T)
 	}
 }
 
+// TestAntigravityAdapter_Install_GlobalHooksUseGeminiConfigDir pins #497:
+// global-scope hooks.json must be written to the discoverable
+// ~/.gemini/config/hooks.json root, NOT ~/.agents/hooks.json (which
+// Antigravity does not discover globally), mirroring the scope-aware skills
+// path pinned by TestAntigravityAdapter_Install_GlobalSkillsUseGeminiConfigDir.
+func TestAntigravityAdapter_Install_GlobalHooksUseGeminiConfigDir(t *testing.T) {
+	homeDir := t.TempDir()
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Skills: []types.SkillId{types.SkillIdDiagnose},
+		},
+	}
+
+	adapter := &AntigravityAdapter{}
+	files, err := adapter.Install(ctx)
+	if err != nil {
+		t.Fatalf("Antigravity Install (global) failed: %v", err)
+	}
+
+	globalHooksPath := filepath.Join(homeDir, ".gemini", "config", "hooks.json")
+	assertFileExists(t, globalHooksPath)
+
+	// The legacy ~/.agents/hooks.json path must not be used at global scope.
+	if _, err := os.Stat(filepath.Join(homeDir, ".agents", "hooks.json")); err == nil {
+		t.Fatalf("global hooks.json must not be written to ~/.agents/hooks.json")
+	}
+
+	// Content must be the unmodified hooks asset payload.
+	content, err := os.ReadFile(globalHooksPath)
+	if err != nil {
+		t.Fatalf("read global hooks.json failed: %v", err)
+	}
+	if !strings.Contains(string(content), "block-destructive-shell.sh") {
+		t.Fatalf("global hooks.json missing hook command; got:\n%s", content)
+	}
+
+	// The TrackedFile record for hooks.json must reference the discoverable
+	// global path (rel-slashed), not the legacy ~/.agents path.
+	relExpected, err := filepath.Rel(targetDir, globalHooksPath)
+	if err != nil {
+		t.Fatalf("compute expected rel hooks path: %v", err)
+	}
+	relExpected = filepath.ToSlash(relExpected)
+	found := false
+	for _, tf := range files {
+		if tf.Source == "antigravity/hooks.json" {
+			found = true
+			if tf.Path != relExpected {
+				t.Fatalf("hooks.json record path = %q, want %q", tf.Path, relExpected)
+			}
+			if tf.Hash == "" {
+				t.Fatalf("hooks.json record missing hash")
+			}
+			if tf.Owner != types.FileOwnerLibrary {
+				t.Fatalf("hooks.json record owner = %q, want %q", tf.Owner, types.FileOwnerLibrary)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no TrackedFile record for antigravity/hooks.json")
+	}
+}
+
 // TestAntigravityAdapter_Install_EmitsWorkspaceRules pins #486 gap 2: project /
 // workspace installs must emit .agents/rules/lazyai.md importing the canonical
 // AGENTS.md via @/AGENTS.md so Antigravity IDE discovers project instructions.

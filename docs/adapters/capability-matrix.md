@@ -1,24 +1,26 @@
 # Adapter Capability Matrix
 
 > **Source of truth:** `packages/cli/internal/adapter/capabilities.go` (declarative `Capability` struct per adapter) and `packages/cli/internal/adapter/output_mapping.go` (per-tool asset-kind output targets).  
-> **Verification date:** 2026-06-22.
+> **Verification date:** 2026-06-23.
 
 ## 1. Support Levels
 
 | Level | Meaning | Adapters |
 |---|---|---|
-| **stable** | Official docs verified + golden tests + smoke tests | OpenCode, Claude Code, Copilot, Pi, Kiro |
-| **beta** | Official docs verified + golden tests, limited runtime smoke | OMP, Antigravity |
+| **stable** | Official docs verified + golden tests + smoke tests | OpenCode, Claude Code, Copilot, Pi, Kiro, OMP |
+| **beta** | Official docs verified + golden tests, limited runtime smoke | Antigravity |
 | **experimental** | Docs partially verified or host tool still moving quickly | — |
 | **deprecated** | Kept for migration only | — |
 
-**Beta justification (OMP, Antigravity):** Both tools have partially JS-rendered official documentation that has not yet been fully snapshot-verified (matrix §1, EC-006). The adapters are functional and tested, but the compliance surface may shift as official docs are fully captured.
+**OMP promotion (2026-06-23, #486):** every emitted OMP surface was verified against the authoritative OMP (Oh My Pi) docs (`omp://`), clearing the docs-snapshot blocker. See [snapshots/beta-adapter-verification-2026-06.md](snapshots/beta-adapter-verification-2026-06.md).
+
+**Beta justification (Antigravity):** the Antigravity IDE / Gemini CLI docs are JS-rendered and were snapshot-verified by rendering; workspace skills, IDE + CLI hooks, and MCP are verified, but two gaps remain — global-scope skills path (`~/.agents/skills` vs `~/.gemini/config/skills/`) and standalone root `AGENTS.md` discovery — so it stays beta (matrix §1, EC-006).
 
 ## 2. Capability Matrix
 
 | Capability | OpenCode | Claude Code | Copilot | Pi | OMP | Antigravity | Kiro |
 |---|---|---|---|---|---|---|---|
-| **Support level** | stable | stable | stable | stable | beta | beta | stable |
+| **Support level** | stable | stable | stable | stable | stable | beta | stable |
 | Root instructions | yes | yes | yes | yes | yes | yes | yes |
 | Agents | yes | yes | yes | — | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
@@ -115,11 +117,11 @@ Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:81-83`). Th
 ### Kiro — No specs or steering; hooks are instruction-only
 Kiro does not emit native specs or steering files (`capabilities_test.go:68-69`). Hooks are instruction-only — no runtime `.kiro/hooks` files are emitted (`capabilities.go:163-164`). The adapter installs agents, skills, prompts, MCP, permissions, and global config, but specs, steering, and runtime hook files are intentionally absent.
 
-### OMP — Beta status
-OMP is marked beta because its partially JS-rendered official documentation has not been fully snapshot-verified. The adapter is functional and tested, but the compliance surface may shift.
+### OMP — Stable (verified 2026-06-23, #486)
+OMP was promoted from beta to stable after every emitted surface (root `AGENTS.md`, `.omp/agents`, `.omp/skills`, `.omp/hooks/pre/*.ts`, `.omp/commands`, `.omp/mcp.json`) was verified against the authoritative OMP (Oh My Pi) docs (`omp://`). `.omp/prompts/` is still emitted best-effort (discovery not docs-confirmed). `CanRunHeadless()=false` (as with Pi).
 
 ### Antigravity — Beta status, no agents
-Antigravity is marked beta for the same JS-rendered docs reason. It does not emit agent files (`output_mapping.go:346-350`: `ShapeNone` for agents). Skills are written to `.agents/skills/` (not `.gemini/skills/`).
+Antigravity is dual-target (Antigravity IDE `.agents/*` + Gemini CLI `.gemini/settings.json`). Workspace skills (`.agents/skills/`), IDE hooks (`.agents/hooks.json`), CLI hooks (`.gemini/settings.json`), and MCP (`~/.gemini/config/mcp_config.json`, HTTP via `serverUrl`) are docs-verified. It does not emit agent files (`output_mapping.go:346-350`: `ShapeNone`). Two gaps keep it beta (#486): global-scope skills write `~/.agents/skills` vs documented `~/.gemini/config/skills/`, and the standalone root `AGENTS.md` is not documented as discovered by either tool (Antigravity reads `.agents/rules/`/`~/.gemini/GEMINI.md`; Gemini CLI reads `GEMINI.md`).
 
 ### Copilot — No subagents, no commands
 Copilot does not support subagents or slash commands. It compensates with prompt templates, chat modes, and dual MCP output (VS Code + CLI).

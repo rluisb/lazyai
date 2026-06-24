@@ -389,10 +389,10 @@ func TestCompileRejectsInvalidManifest(t *testing.T) {
 func TestCompileSurfacesBetaAdapters(t *testing.T) {
 	dir := t.TempDir()
 	seedStoreData(t, dir, func(data *types.StoreData) {
-		data.Config.Tools = []types.ToolId{types.ToolIdOmp}
+		data.Config.Tools = []types.ToolId{types.ToolIdAntigravity}
 	})
 	writeCanonicalMCPConfig(t, dir)
-	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"omp"}}).Save(filepath.Join(dir, ".ai")); err != nil {
+	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"antigravity"}}).Save(filepath.Join(dir, ".ai")); err != nil {
 		t.Fatalf("save manifest: %v", err)
 	}
 	cmd := newCompileCommand(dir, "", true) // dry-run

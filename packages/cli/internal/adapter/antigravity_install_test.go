@@ -148,6 +148,38 @@ func TestAntigravityAdapter_CompileMCP_WritesGeminiUserConfig(t *testing.T) {
 	}
 }
 
+// TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl pins the #486-verified
+// Antigravity MCP schema: HTTP servers must serialize as `serverUrl` (not `url`)
+// per https://antigravity.google/docs/mcp. See
+// docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
+func TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+	writeFile(t, filepath.Join(targetDir, ".ai", "mcp.json"), `{"servers":{"remote":{"url":"https://example.com/mcp/","enabled":true}}}`)
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.CompileMCP(CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("Antigravity CompileMCP failed: %v", err)
+	}
+
+	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("expected %s: %v", configPath, err)
+	}
+	content := string(data)
+	if !strings.Contains(content, `"serverUrl"`) || !strings.Contains(content, "https://example.com/mcp/") {
+		t.Fatalf("HTTP server must serialize as serverUrl:\n%s", content)
+	}
+	if strings.Contains(content, `"url"`) {
+		t.Fatalf("Antigravity MCP must not emit \"url\" for HTTP transport:\n%s", content)
+	}
+}
+
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {

@@ -2,14 +2,14 @@
 
 **Adapter ID:** `omp`  
 **Source:** `packages/cli/internal/adapter/omp.go`  
-**Status:** **beta**  
+**Status:** **stable**  
 **Config directory:** `.omp`
 
 ## Overview
 
-The OMP adapter generates native configuration for [OMP](https://ohmyposh.dev) (Oh My Posh / OMP CLI). It emits agents, skills, commands, prompts, hooks, and MCP configuration into `.omp/`.
+The OMP adapter generates native configuration for [OMP (Oh My Pi)](https://github.com/can1357/oh-my-pi), the AI coding-agent harness. It emits agents, skills, commands, prompts, hooks, and MCP configuration into `.omp/`.
 
-**Beta status:** OMP is marked beta because its partially JS-rendered official documentation has not been fully snapshot-verified (matrix §1, EC-006). The adapter is functional and tested, but the compliance surface may shift as official docs are fully captured.
+**Verification:** every emitted surface is source-verified against the authoritative OMP documentation (the in-harness `omp://` docs set). See [Beta adapter verification 2026-06](snapshots/beta-adapter-verification-2026-06.md). OMP was promoted from beta to stable on 2026-06-23 (#486).
 
 ## Generated Files
 
@@ -65,7 +65,7 @@ No (`CanRunHeadless() = false`).
 
 ## Known Limitations
 
-- **Beta status** — compliance surface may shift as official docs are fully snapshot-verified
+- `.omp/prompts/` is emitted but OMP prompt-template discovery is not docs-confirmed (best-effort)
 - No templates, chat modes, or output styles
 - No headless support
 

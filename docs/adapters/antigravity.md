@@ -9,7 +9,7 @@
 
 The Antigravity adapter generates native configuration for the Antigravity/Gemini CLI surface. It emits skills, hooks, settings, and a user-level MCP configuration into `.gemini/`, `.agents/`, and `~/.gemini/config/`.
 
-**Beta status:** Antigravity is marked beta because its partially JS-rendered official documentation has not been fully snapshot-verified (matrix §1, EC-006). The adapter is functional and tested, but the compliance surface may shift as official docs are fully captured.
+**Beta status (verified 2026-06-23, #486):** the Antigravity IDE and Gemini CLI docs are JS-rendered and were snapshot-verified by rendering — see [Beta adapter verification 2026-06](snapshots/beta-adapter-verification-2026-06.md). Workspace skills, IDE + CLI hooks, and MCP are verified against official docs. Two gaps keep it beta: (1) global-scope skills write `~/.agents/skills` but Antigravity reads global skills from `~/.gemini/config/skills/`; (2) the standalone root `AGENTS.md` is not documented as discovered (Antigravity reads `.agents/rules/*.md` and `~/.gemini/GEMINI.md`; Gemini CLI reads `GEMINI.md`).
 
 ## Generated Files
 
@@ -64,7 +64,7 @@ No (`CanRunHeadless() = false`).
 
 ## Known Limitations
 
-- **Beta status** — compliance surface may shift as official docs are fully snapshot-verified
+- **Beta status (#486)** — two verified gaps: global-scope skills path (`~/.agents/skills` vs `~/.gemini/config/skills/`) and undocumented root `AGENTS.md` discovery
 - **No agents** — the adapter does not emit agent files
 - No templates, commands, chat modes, output styles, or prompts
 - Skills written to `.agents/skills/` (shared location), not `.gemini/skills/`

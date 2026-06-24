@@ -35,9 +35,12 @@ func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 	}
 }
 
-// TestBetaAdaptersAreOmpAndAntigravity pins EC-006 / B.4: exactly OMP and
-// Antigravity are below stable until their docs snapshots are captured.
-func TestBetaAdaptersAreOmpAndAntigravity(t *testing.T) {
+// TestBetaAdapterIsAntigravityOnly pins EC-006 / B.4 after #486: OMP was promoted
+// to stable once its emitted surfaces were verified against the authoritative
+// omp:// docs, so Antigravity/Gemini is the only adapter left below stable
+// (global-skills path + root-instructions gaps remain). See
+// docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
+func TestBetaAdapterIsAntigravityOnly(t *testing.T) {
 	reg := NewRegistry()
 	beta := map[types.ToolId]bool{}
 	for _, id := range reg.List() {
@@ -47,7 +50,6 @@ func TestBetaAdaptersAreOmpAndAntigravity(t *testing.T) {
 		}
 	}
 	want := map[types.ToolId]bool{
-		types.ToolIdOmp:         true,
 		types.ToolIdAntigravity: true,
 	}
 	if len(beta) != len(want) {
@@ -56,6 +58,30 @@ func TestBetaAdaptersAreOmpAndAntigravity(t *testing.T) {
 	for id := range want {
 		if !beta[id] {
 			t.Errorf("expected %s to be beta", id)
+		}
+	}
+}
+
+// TestOmpCapabilitiesAreStableAndVerified pins #486: OMP is stable and declares
+// every surface verified against the authoritative omp:// docs.
+func TestOmpCapabilitiesAreStableAndVerified(t *testing.T) {
+	cap := (&OmpAdapter{}).Capabilities()
+	if cap.Support != SupportStable {
+		t.Errorf("OMP support = %q, want stable", cap.Support)
+	}
+	if cap.IsBeta() {
+		t.Error("OMP must not be beta after #486 verification")
+	}
+	for name, ok := range map[string]bool{
+		"RootInstructions": cap.RootInstructions,
+		"Agents":           cap.Agents,
+		"Skills":           cap.Skills,
+		"Hooks":            cap.Hooks,
+		"Commands":         cap.Commands,
+		"MCP":              cap.MCP,
+	} {
+		if !ok {
+			t.Errorf("OMP must declare verified surface %s", name)
 		}
 	}
 }

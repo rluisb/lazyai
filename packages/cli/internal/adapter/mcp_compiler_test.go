@@ -199,7 +199,7 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorServer(t *tes
 	if !strings.Contains(contents, `"orchestrator"`) {
 		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator entry:\n%s", contents)
 	}
-	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
+	if !strings.Contains(contents, `/placeholder/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
 		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command/args:\n%s", contents)
 	}
 	if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {
@@ -219,6 +219,7 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
     },
     "orchestrator-absolute": {
       "command": "/placeholder/lazyai-orchestrator",
+      "args": ["connect"]
     }
   }
 }`
@@ -238,7 +239,7 @@ func TestCompileOpenCodeMCP_PreservesUserProvidedLegacyOrchestratorCommands(t *t
 	if !strings.Contains(contents, `"lazyai-orchestrator"`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) {
 		t.Fatalf("compiled config did not preserve user-provided legacy orchestrator command:\n%s", contents)
 	}
-	if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) {
+	if !strings.Contains(contents, `/placeholder/lazyai-orchestrator`) {
 		t.Fatalf("compiled config did not preserve user-provided absolute legacy orchestrator command:\n%s", contents)
 	}
 }
@@ -264,7 +265,7 @@ func TestMCPCompilerPreservesUserProvidedLegacyOrchestratorCommandArgsForToolPay
 			t.Fatalf("marshal %s payload: %v", name, err)
 		}
 		contents := string(encoded)
-		if !strings.Contains(contents, `/tmp/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/tmp/project`) {
+		if !strings.Contains(contents, `/placeholder/lazyai-orchestrator`) || !strings.Contains(contents, `connect`) || !strings.Contains(contents, `--project`) || !strings.Contains(contents, `/placeholder/project`) {
 			t.Fatalf("%s payload did not preserve user-provided legacy orchestrator command/args: %s", name, contents)
 		}
 		if strings.Contains(contents, `--execution-mode`) || strings.Contains(contents, `a2a`) {

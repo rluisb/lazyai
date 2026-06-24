@@ -30,22 +30,6 @@ func DefaultRepoPermissions() RepoPermissions {
 	}
 }
 
-// ProjectStack describes the detected technology stack for a repository.
-type ProjectStack struct {
-	Language       string
-	Framework      string
-	TestFramework  string
-	PackageManager string
-	Description    string
-	Commands       struct {
-		Install string
-		Test    string
-		Lint    string
-		Build   string
-		Dev     string
-	}
-}
-
 // ScaffoldRepoRoots generates lightweight root files in each referenced repo.
 // Ported from src/scaffold/repo-roots.ts.
 func ScaffoldRepoRoots(repos []types.RepoInfo, planningRepoPath string, tools []types.ToolId, strategy types.ConflictStrategy, perFileOverrides map[string]types.ConflictStrategy) map[string][]types.TrackedFile {

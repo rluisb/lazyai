@@ -36,7 +36,7 @@ jobs:
         run: cd packages/cli && go test ./... -race -coverprofile=coverage.out
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: packages/cli/coverage.out
           # Advisory by design: the unit-test step above is the enforcing gate, so a

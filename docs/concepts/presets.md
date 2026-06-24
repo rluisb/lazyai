@@ -46,4 +46,4 @@ lazyai-cli init \
 
 ## Preset and tool selection
 
-Presets are independent of tool selection. You can use `minimal` with all three tools, or `full` with a single tool. The preset controls the content of generated rules and agent instructions; the tool selection controls which directories are created.
+Presets are independent of tool selection. You can use `minimal` with all seven tools, or `full` with a single tool. The preset controls the content of generated rules and agent instructions; the tool selection controls which directories are created.

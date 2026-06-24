@@ -180,7 +180,7 @@ flowchart TD
     A["`lazyai-cli init`"] --> B["Write canonical `.ai/` scaffold"]
     B --> C["Resolve library + manifest"]
     C --> D["Generate managed outputs"]
-    D --> E["Write `.ai-setup.json`"]
+    D --> E["Write `.ai-setup.db`"]
     E --> F["`lazyai-cli compile`"]
     F --> G["`.opencode/` / `.claude/` / `.github/` / `.pi/` / `.gemini/`"]
 ```
@@ -196,7 +196,7 @@ flowchart TD
     D --> E["`opencode.json`"]
     D --> F["`.mcp.json` / `.claude/settings.local.json`"]
     D --> G["`.vscode/mcp.json`"]
-    D --> H["Print `export NAME=""` commands for required MCP variables"]
+    D --> H["Print export NAME=&lt;value&gt; guidance for required MCP variables"]
 ```
 
 ### 3) Validate flow (`validate agents`)

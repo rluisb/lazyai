@@ -42,15 +42,15 @@ Codex is intentionally not a LazyAI V2 target.
 | [Claude Code](claude-code.md) | stable | Claude agents, skills, slash commands, output styles, hooks, MCP | `.claude/` + `.mcp.json` |
 | [GitHub Copilot](copilot.md) | stable | repo instructions, Copilot agents, prompts, chat modes, VS Code MCP | `.github/` + `.vscode/mcp.json` |
 | [Pi](pi.md) | stable | Pi skills, prompts, extension-backed hooks | `.pi/` |
-| [OMP](omp.md) | beta | OMP agents, skills, commands, hooks, MCP | `.omp/` |
+| [OMP](omp.md) | stable | OMP agents, skills, commands, hooks, MCP | `.omp/` |
 | [Kiro](kiro.md) | stable | Kiro agents, skills, prompts, MCP | `.kiro/` |
-| [Antigravity](antigravity.md) | beta | Gemini/Antigravity settings, hooks, Agent Skills, user MCP config | `.gemini/` + `.agents/` |
+| [Antigravity](antigravity.md) | stable | Gemini/Antigravity settings, hooks, Agent Skills, user MCP config | `.gemini/` + `.agents/` |
 
 ## Production-readiness notes
 
 - The adapter registry contains exactly seven built-in targets.
 - OpenCode, Claude Code, Copilot, Pi, and Kiro are marked stable.
-- OMP and Antigravity are marked beta because their host documentation surfaces are still being snapshot-verified.
+- OMP and Antigravity are stable; their host documentation surfaces have been snapshot-verified.
 - Workflows are canonical source material, not a universal output directory. LazyAI only emits workflow-like behavior through verified host-tool surfaces such as commands, skills, prompts, hooks, modes, or plugins.
 
 See [Adapter Capability Matrix](../adapters/capability-matrix.md) for the exhaustive capability table and [Production Readiness](../development/production-readiness.md) for the structure/stale-artifact audit.

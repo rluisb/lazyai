@@ -253,7 +253,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(config.CLITools) == 0 {
-		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity)")
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity, omp, kiro)")
 	}
 
 	// Drop tools that don't support the chosen scope (e.g. copilot × global).

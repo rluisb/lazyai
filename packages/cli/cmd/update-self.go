@@ -13,12 +13,16 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
-const latestReleaseURL = "https://api.github.com/repos/rluisb/lazyai/releases/latest"
-const releaseByTagURLFormat = "https://api.github.com/repos/rluisb/lazyai/releases/tags/%s"
+const (
+	latestReleaseURL      = "https://api.github.com/repos/rluisb/lazyai/releases/latest"
+	releaseByTagURLFormat = "https://api.github.com/repos/rluisb/lazyai/releases/tags/%s"
+)
 
 type githubRelease struct {
 	TagName string        `json:"tag_name"`
@@ -31,6 +35,17 @@ type githubAsset struct {
 }
 
 var plainSemverPattern = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+
+// newAPIClient returns the HTTP client used for GitHub API calls.
+// Tests override this to inject mock transports.
+var newAPIClient = func() *http.Client {
+	return &http.Client{Timeout: 30 * time.Second}
+}
+
+// newDownloadClient returns the HTTP client used for binary downloads.
+var newDownloadClient = func() *http.Client {
+	return &http.Client{Timeout: 120 * time.Second}
+}
 
 var updateSelfCmd = &cobra.Command{
 	Use:   "update-self",
@@ -62,7 +77,7 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 	}
 
 	currentVersion := normalizeVersion(Version)
-	client := http.DefaultClient
+	client := newAPIClient()
 	token := os.Getenv("GITHUB_TOKEN")
 
 	var release *githubRelease
@@ -95,7 +110,7 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Latest version: %s\n", displayVersion(latestVersion))
 	}
 
-	updateAvailable := currentVersion < latestVersion
+	updateAvailable := semver.Compare(currentVersion, latestVersion) < 0
 	if checkOnly {
 		if updateAvailable {
 			fmt.Printf("%s available (current: %s)\n", displayVersion(latestVersion), Version)
@@ -139,12 +154,13 @@ func runUpdateSelf(cmd *cobra.Command, args []string) error {
 	defer os.RemoveAll(tempDir)
 
 	binaryPath := filepath.Join(tempDir, assetName)
-	if err := downloadFile(client, token, binaryAsset.BrowserDownloadURL, binaryPath); err != nil {
+	dlClient := newDownloadClient()
+	if err := downloadFile(dlClient, token, binaryAsset.BrowserDownloadURL, binaryPath); err != nil {
 		return fmt.Errorf("downloading binary: %w", err)
 	}
 
 	checksumsPath := filepath.Join(tempDir, "checksums.txt")
-	if err := downloadFile(client, token, checksumsAsset.BrowserDownloadURL, checksumsPath); err != nil {
+	if err := downloadFile(dlClient, token, checksumsAsset.BrowserDownloadURL, checksumsPath); err != nil {
 		return fmt.Errorf("downloading checksums: %w", err)
 	}
 
@@ -205,7 +221,14 @@ func addGitHubHeaders(req *http.Request, token string) {
 }
 
 func normalizeVersion(version string) string {
-	return strings.TrimPrefix(strings.TrimSpace(version), "v")
+	v := strings.TrimSpace(version)
+	if strings.HasPrefix(v, "v") {
+		return v
+	}
+	if plainSemverPattern.MatchString(v) {
+		return "v" + v
+	}
+	return v
 }
 
 func requestedReleaseTag(version string) string {
@@ -344,7 +367,7 @@ func replaceRunningBinary(newBinaryPath string, verbose bool) error {
 
 	if runtime.GOOS == "windows" {
 		newPath := executablePath + ".new"
-		if err := copyFile(newBinaryPath, newPath, 0755); err != nil {
+		if err := copyFile(newBinaryPath, newPath, 0o755); err != nil {
 			return fmt.Errorf("writing replacement binary: %w", err)
 		}
 		fmt.Printf("Windows cannot replace a running executable. New binary written to %s\n", newPath)
@@ -365,7 +388,7 @@ func replaceRunningBinary(newBinaryPath string, verbose bool) error {
 	}
 	defer os.Remove(stagedPath)
 
-	if err := copyFile(newBinaryPath, stagedPath, 0755); err != nil {
+	if err := copyFile(newBinaryPath, stagedPath, 0o755); err != nil {
 		return fmt.Errorf("staging replacement binary: %w", err)
 	}
 	if verbose {

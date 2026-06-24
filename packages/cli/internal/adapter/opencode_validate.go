@@ -29,7 +29,17 @@ func (w ValidationWarning) String() string {
 // All failures are returned as ValidationWarning entries — the function never
 // propagates CLI errors as hard errors so init/update continue to exit 0.
 func ValidateOpenCodeInstall(ctx *AdapterContext) ([]ValidationWarning, error) {
-	return validateOpenCodeInstall(ctx, defaultCmdRunner)
+	return validateOpenCodeInstall(ctx, DefaultCmdRunner)
+}
+
+// ValidateOpenCodeInstallWith runs validation with a custom command runner.
+// Pass nil to use DefaultCmdRunner; callers that need to suppress external CLI
+// probes (e.g. tests) should pass a no-op CmdRunner.
+func ValidateOpenCodeInstallWith(ctx *AdapterContext, run CmdRunner) ([]ValidationWarning, error) {
+	if run == nil {
+		run = DefaultCmdRunner
+	}
+	return validateOpenCodeInstall(ctx, run)
 }
 
 func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWarning, error) {
@@ -83,6 +93,8 @@ func validateOpenCodeInstall(ctx *AdapterContext, run CmdRunner) ([]ValidationWa
 	return warnings, nil
 }
 
-func defaultCmdRunner(name string, args ...string) ([]byte, error) {
+// DefaultCmdRunner is the production command executor used when no override is
+// supplied. It runs the command and returns its combined stdout/stderr.
+var DefaultCmdRunner CmdRunner = func(name string, args ...string) ([]byte, error) {
 	return exec.Command(name, args...).CombinedOutput()
 }

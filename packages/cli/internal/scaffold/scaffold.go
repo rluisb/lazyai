@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -127,24 +126,26 @@ func ScaffoldAll(ctx *ScaffoldContext) (*ScaffoldResult, error) {
 	}
 	result.Files = append(result.Files, artifactRecords...)
 
-	// Step 8b: Post-install validation for OpenCode (no-op when binary absent).
-	// Skipped under go test to avoid hanging on external CLI probes.
-	if !testing.Testing() {
-		for _, tool := range ctx.Tools {
-			if tool == types.ToolIdOpenCode {
-				adapterCtx := &adapter.AdapterContext{
-					TargetDir:     ctx.TargetDir,
-					HomeDir:       ctx.HomeDir,
-					SetupScope:    ctx.SetupScope,
-					WorkspaceRoot: ctx.WorkspaceRoot,
-					LibraryFS:     ctx.LibraryFS,
-				}
-				warnings, _ := adapter.ValidateOpenCodeInstall(adapterCtx)
-				for _, w := range warnings {
-					scaffoldLog.Warn("OpenCode install validation warning", "warning", w)
-				}
-				break
+	// Step 8b: Post-install validation for OpenCode (no-op when binary absent
+	// or when ctx.CmdRunner is a no-op, e.g. in tests).
+	for _, tool := range ctx.Tools {
+		if tool == types.ToolIdOpenCode {
+			adapterCtx := &adapter.AdapterContext{
+				TargetDir:     ctx.TargetDir,
+				HomeDir:       ctx.HomeDir,
+				SetupScope:    ctx.SetupScope,
+				WorkspaceRoot: ctx.WorkspaceRoot,
+				LibraryFS:     ctx.LibraryFS,
 			}
+			runner := ctx.CmdRunner
+			if runner == nil {
+				runner = adapter.DefaultCmdRunner
+			}
+			warnings, _ := adapter.ValidateOpenCodeInstallWith(adapterCtx, runner)
+			for _, w := range warnings {
+				scaffoldLog.Warn("OpenCode install validation warning", "warning", w)
+			}
+			break
 		}
 	}
 

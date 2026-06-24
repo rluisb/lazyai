@@ -7,6 +7,7 @@ package scaffold
 import (
 	"io/fs"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
 	"github.com/rluisb/lazyai/packages/cli/internal/compiler"
 	reversa "github.com/rluisb/lazyai/packages/cli/internal/reversa/scout"
 	"github.com/rluisb/lazyai/packages/cli/internal/types"
@@ -120,6 +121,9 @@ type ScaffoldContext struct {
 	BuildCommand        string
 	CoverageThreshold   int
 	CodebaseMap         []compiler.CodebaseMapEntry
+	// CmdRunner overrides the default command executor for post-install
+	// validation. Nil uses the production default (adapter.DefaultCmdRunner).
+	CmdRunner adapter.CmdRunner
 }
 
 // ScaffoldResult holds the outcome of a scaffold run.

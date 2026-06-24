@@ -75,7 +75,7 @@ LazyAI is a Go CLI that keeps a canonical `.ai/` source tree and compiles it int
 - Canonical-first: edit `.ai/` sources, then compile to tool-native outputs.
 - Manifest-driven compile: `.ai/lazyai.json` is authoritative for target selection; `.ai/lock.json` records output hashes for idempotent writes.
 - Managed-region writes: generated files preserve user-owned content outside managed blocks and refuse drift without explicit force.
-- Adapter contract: direct-write adapters emit native layouts for the 7 supported targets; OMP and Antigravity remain beta-labeled surfaces.
+- Adapter contract: direct-write adapters emit native layouts for the 7 supported targets; OMP and Antigravity are stable surfaces.
 
 ## Conventions
 

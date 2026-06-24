@@ -1,6 +1,6 @@
 # Antigravity setup
 
-Antigravity is a beta LazyAI target for Gemini/Antigravity settings, hook scripts, Agent Skills, and user-level MCP configuration.
+Antigravity is a stable LazyAI target for Gemini/Antigravity settings, hook scripts, Agent Skills, and user-level MCP configuration.
 
 ## Generated structure
 
@@ -62,7 +62,7 @@ lazyai-cli doctor
 
 ## Readiness notes
 
-- Support level: beta.
+- Support level: stable.
 - Project, workspace, and global (`~/.gemini/`) scopes are supported.
 - MCP compile is project/workspace-scoped even though the output file is the user-level Gemini config (`~/.gemini/config/mcp_config.json`).
 - No custom agent, command, prompt, chat-mode, template, or output-style files are emitted for Antigravity.

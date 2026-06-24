@@ -194,6 +194,7 @@ func minimalScaffoldContext(t *testing.T, tools []types.ToolId) (*ScaffoldContex
 		Rules:          preset.RulesForPreset(types.PresetLevelStandard),
 		Infra:          types.ALL_INFRA[:],
 		SpecsDirs:      []string{"features", "bugfixes"},
+		CmdRunner:      func(name string, args ...string) ([]byte, error) { return nil, nil },
 	}
 
 	return ctx, targetDir

@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|---|---|
 | **Support level** | stable | stable | stable | stable | stable | stable | stable |
 | Root instructions | yes | yes | yes | yes | yes | yes | yes |
-| Agents | yes | yes | yes | — | yes | — | yes |
+| Agents | yes | yes | yes | ✓ | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
 | Skills | yes | yes | yes | yes | yes | yes | yes |
 | Hooks | yes | yes | yes | yes | yes | yes | instruction-only |

@@ -7,9 +7,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/files"
 	"github.com/spf13/cobra"
 )
 
@@ -145,7 +145,7 @@ var backupRestoreCmd = &cobra.Command{
 
 			// Create parent directory if needed
 			dir := filepath.Dir(destPath)
-			if err := os.MkdirAll(dir, 0755); err != nil {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
 				fmt.Printf("  ⚠️  Error creating directory %s: %v\n", dir, err)
 				continue
 			}
@@ -214,18 +214,7 @@ func addFileToTar(tw *tar.Writer, filePath string) error {
 // safeRestorePath joins a tar entry name under restoreRoot and rejects any
 // entry that would escape that root via absolute paths or ".." traversal.
 func safeRestorePath(restoreRoot, name string) (string, error) {
-	if filepath.IsAbs(name) {
-		return "", fmt.Errorf("absolute paths are not allowed")
-	}
-	dest := filepath.Join(restoreRoot, name)
-	rel, err := filepath.Rel(restoreRoot, dest)
-	if err != nil {
-		return "", err
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("path escapes restore root")
-	}
-	return dest, nil
+	return files.SafeJoin(restoreRoot, name)
 }
 
 func init() {

@@ -50,7 +50,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 - **Project/workspace scope support:** Yes
 - **Global scope support:** Yes — `~/.omp/agent/`
 - **Workflow delivery:** no verified native `.omp/workflows` surface; workflow helpers must use OMP skills, commands, hooks, agents, or verified extensions.
-- **Support level:** beta until OMP's official extension docs are fully snapshot-verified.
+- **Support level:** stable; OMP's official extension docs are snapshot-verified.
 
 ## Kiro
 
@@ -67,8 +67,8 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 - **Description:** shared root instructions plus selected emitted skills, minimal `.gemini` settings, hook surface, MCP config, plugin capabilities, and permissions metadata
 - **Root file:** `AGENTS.md`
 - **Config directory:** `.gemini/` plus `.agents/`
-- **Global scope support:** Yes (beta) — `~/.gemini/`
-- **Support level:** beta until Antigravity plugin docs and install locations are fully snapshot-verified.
+- **Global scope support:** Yes — `~/.gemini/`
+- **Support level:** stable; Antigravity plugin docs and install locations are snapshot-verified.
 - **Special behavior:** emits `.gemini/settings.json`, `.gemini/hooks/lazyai/*.sh`, selected Agent Skills at `.agents/skills/<name>/SKILL.md`, and MCP config at `~/.gemini/config/mcp_config.json`; no custom agent files are emitted for Antigravity
 
 ## Workflow delivery matrix
@@ -91,7 +91,7 @@ Ownership decision: ADR-007 — Workflow Runtime Ownership (Accepted), recorded 
 |---|---|---|---|---|---|---|---|
 | Project scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Global scope | Yes | Yes | Yes (probe-gated) | Yes | Yes | Yes | Yes (beta) |
+| Global scope | Yes | Yes | Yes (probe-gated) | Yes | Yes | Yes | Yes |
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.md` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.omp/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |

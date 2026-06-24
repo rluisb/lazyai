@@ -32,7 +32,7 @@ lazyai-cli init \
   --no-interactive
 ```
 
-**Key directories created:** `.ai/`, `specs/`, `.opencode/`, `.claude/`, `.github/`, `.vscode/`, `.ai-setup.json`
+**Key directories created:** `.ai/`, `specs/`, `.opencode/`, `.claude/`, `.github/`, `.vscode/`, `.ai-setup.db`
 
 ## Global scope
 

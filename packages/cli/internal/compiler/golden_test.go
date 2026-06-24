@@ -98,6 +98,7 @@ func TestCompilerGolden(t *testing.T) {
 					Agents:           types.ALL_AGENTS[:],
 					Skills:           types.ALL_SKILLS[:],
 					Rules:            types.ALL_RULES[:],
+					CmdRunner:        func(name string, args ...string) ([]byte, error) { return nil, nil },
 				}
 				_, err = scaffold.ScaffoldAll(scaffoldCtx)
 				if err != nil {
@@ -313,6 +314,7 @@ func TestCompilerGoldenAntigravitySemantics(t *testing.T) {
 				Agents:           types.ALL_AGENTS[:],
 				Skills:           types.ALL_SKILLS[:],
 				Rules:            types.ALL_RULES[:],
+				CmdRunner:        func(name string, args ...string) ([]byte, error) { return nil, nil },
 			}
 			if _, err := scaffold.ScaffoldAll(scaffoldCtx); err != nil {
 				t.Fatalf("ScaffoldAll: %v", err)

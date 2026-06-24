@@ -71,6 +71,14 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	})
 
 	hooksJSONPath := filepath.Join(agentsRoot, "hooks.json")
+	// Hook event configuration placement is scope-dependent, mirroring
+	// skillsDir: workspace/project installs use .agents/hooks.json, while global
+	// installs MUST write under the discoverable Gemini config root
+	// (~/.gemini/config/hooks.json). Antigravity does not discover
+	// ~/.agents/hooks.json globally (#497).
+	if ctx.SetupScope == types.SetupScopeGlobal {
+		hooksJSONPath = filepath.Join(geminiDir, "config", "hooks.json")
+	}
 
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,

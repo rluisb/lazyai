@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
 	"github.com/rluisb/lazyai/packages/cli/internal/migration"
 )
 
@@ -49,6 +50,18 @@ func runImport(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Resolve --tool alias (e.g. "claude" -> "claude-code") to the canonical
+	// adapter ID so it matches DetectionResult.AdapterID, which always uses the
+	// internal tool ID. toolFlagResolved stays empty when no --tool is given.
+	toolFlagResolved := ""
+	if toolFlag != "" {
+		resolved, ok, err := aimanifest.ResolveToolToken(toolFlag)
+		if err != nil || !ok {
+			return fmt.Errorf("unsupported tool %q", toolFlag)
+		}
+		toolFlagResolved = string(resolved)
+	}
+
 	strategy := migration.MergeStrategy(strategyStr)
 	if strategy == "" {
 		strategy = migration.MergeStrategySmart
@@ -73,17 +86,17 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(detections) == 0 {
-		if toolFlag != "" {
+		if toolFlagResolved != "" {
 			return fmt.Errorf("no %s setup detected in %s", toolFlag, sourcePath)
 		}
 		return fmt.Errorf("no existing AI setup detected in %s", sourcePath)
 	}
 
 	// Filter by --tool flag if specified.
-	if toolFlag != "" {
+	if toolFlagResolved != "" {
 		var filtered []migration.DetectionResult
 		for _, d := range detections {
-			if d.AdapterID == toolFlag {
+			if d.AdapterID == toolFlagResolved {
 				filtered = append(filtered, d)
 			}
 		}

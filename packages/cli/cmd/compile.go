@@ -142,8 +142,14 @@ func runCompile(cmd *cobra.Command, args []string) error {
 	// Determine which tools to compile for
 	var tools []types.ToolId
 	if toolFilter != "" {
-		// Single tool requested via flag
-		tools = []types.ToolId{types.ToolId(toolFilter)}
+		// Single tool requested via flag. Resolve aliases (e.g. "claude" ->
+		// claude-code) via the manifest alias table so --tool accepts the same
+		// short names as .ai/lazyai.json targets.
+		resolved, ok, err := aimanifest.ResolveToolToken(toolFilter)
+		if err != nil || !ok {
+			return fmt.Errorf("unsupported tool %q", toolFilter)
+		}
+		tools = []types.ToolId{resolved}
 	} else if len(manifestTargets) > 0 {
 		// V2: manifest is authoritative for target selection when present.
 		tools = manifestTargets

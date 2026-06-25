@@ -17,7 +17,8 @@ The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` 
 | `.pi/skills/<name>/SKILL.md` | Skill directories |
 | `.pi/prompts/<name>.md` | Prompt templates |
 | `.pi/extensions/<name>.ts` | TypeScript extensions (safety hooks) |
-| `.pi/settings.json` | Global/project settings |
+| `.pi/settings.json` | Project settings (resource references for extensions/skills/prompts) |
+| `~/.pi/agent/settings.json` | Global settings (same resource references, resolved relative to `~/.pi/agent`) |
 
 ## Supported Asset Types
 
@@ -51,10 +52,23 @@ Canonical agents are written as flat markdown files under `.pi/agents/`. Pi's su
 
 Prompt templates are copied as flat markdown files to `.pi/prompts/`. The adapter supports selection filtering.
 
+## Settings Behavior
+
+Pi uses JSON settings files with project settings overriding global settings on a per-key basis. LazyAI emits settings at both scopes:
+
+- **Project scope:** `.pi/settings.json` — paths resolve relative to `.pi`
+- **Global scope:** `~/.pi/agent/settings.json` — paths resolve relative to `~/.pi/agent`
+
+The adapter deep-merges the LazyAI-managed resource references (`extensions`, `skills`, `prompts`) into any existing settings via `configmerge.MergeJSONFile`, preserving user-authored keys and producing idempotent output on re-runs. A `.bak` sidecar is created on first touch.
+
+The default settings patch declares only resource directory references pointing at the on-disk subdirectories Install already populated. Model, theme, compaction, and other personal preferences stay user-owned. Sibling issues extend this patch map: #537 adds package configuration, #535 may add theme references, #533 may adjust extension references.
+
 ## Scope Support
 
 | Scope | Supported |
 |---|---|
+| Project | yes |
+| Workspace | yes |
 | Global | yes |
 
 ## Headless Support
@@ -72,5 +86,5 @@ No (`CanRunHeadless() = false`).
 
 | Test file | What it verifies |
 |---|---|
-| `pi_adapter_test.go` | Agents, skills, prompts, extensions; confirms no `.pi/hooks` path |
+| `pi_adapter_test.go` | Agents, skills, prompts, extensions; settings emission at project/global scope; idempotent merge; user-key preservation |
 | `adapter_adapters_test.go` | Full install from FS |

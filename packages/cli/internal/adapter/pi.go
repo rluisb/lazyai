@@ -83,6 +83,10 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		return nil, err
 	}
 
+	if err := writePiSettings(ctx, piDir); err != nil {
+		return nil, err
+	}
+
 	return ctx.FileRecords, nil
 }
 

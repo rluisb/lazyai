@@ -243,6 +243,34 @@ func TokenFor(id types.ToolId) string {
 	return string(id)
 }
 
+// ErrCodexUnsupported is returned by ResolveToolToken when the input is the
+// removed "codex" target, carrying the same V2-removal message used by the
+// manifest resolver so callers can surface a helpful error instead of a bare
+// "unknown target".
+var ErrCodexUnsupported = errors.New(`target "codex" is not supported in V2 (Codex was removed)`)
+
+// ResolveToolToken maps a single user-facing target token (alias or canonical
+// tool ID) to its internal types.ToolId, applying the same alias table the
+// manifest uses (targetAliases). The empty string resolves to the zero ToolId
+// with ok=false so callers can treat it as "no filter". "codex" is rejected
+// with an explicit V2-removal error rather than a generic unknown-token error.
+// This lets CLI flags such as --tool accept the same short names the manifest
+// accepts (e.g. "claude" -> claude-code) without duplicating the alias table.
+func ResolveToolToken(raw string) (types.ToolId, bool, error) {
+	token := strings.ToLower(strings.TrimSpace(raw))
+	if token == "" {
+		return "", false, nil
+	}
+	if token == "codex" {
+		return "", false, ErrCodexUnsupported
+	}
+	id, ok := targetAliases[token]
+	if !ok {
+		return "", false, fmt.Errorf("unknown target %q", raw)
+	}
+	return id, true, nil
+}
+
 // ForTools returns a starter manifest whose targets are the given tools. When
 // tools is empty it falls back to Default() (all seven targets).
 func ForTools(tools []types.ToolId) *Manifest {

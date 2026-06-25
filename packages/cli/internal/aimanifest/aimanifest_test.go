@@ -195,3 +195,54 @@ func TestDefaultManifestFileShape(t *testing.T) {
 		t.Fatalf("manifest file missing: %v", err)
 	}
 }
+
+func TestResolveToolTokenAliases(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    types.ToolId
+		wantOk  bool
+		wantErr bool
+	}{
+		{"empty", "", "", false, false},
+		{"whitespace only", "  ", "", false, false},
+		{"claude alias", "claude", types.ToolIdClaudeCode, true, false},
+		{"claude-code canonical", "claude-code", types.ToolIdClaudeCode, true, false},
+		{"opencode", "opencode", types.ToolIdOpenCode, true, false},
+		{"copilot", "copilot", types.ToolIdCopilot, true, false},
+		{"pi", "pi", types.ToolIdPi, true, false},
+		{"omp", "omp", types.ToolIdOmp, true, false},
+		{"antigravity", "antigravity", types.ToolIdAntigravity, true, false},
+		{"kiro", "kiro", types.ToolIdKiro, true, false},
+		{"uppercase normalized", "CLAUDE", types.ToolIdClaudeCode, true, false},
+		{"codex rejected", "codex", "", false, true},
+		{"unknown rejected", "gemini", "", false, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			id, ok, err := ResolveToolToken(tc.input)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("want error for %q, got nil", tc.input)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %q: %v", tc.input, err)
+			}
+			if ok != tc.wantOk {
+				t.Fatalf("ok = %v, want %v for %q", ok, tc.wantOk, tc.input)
+			}
+			if ok && id != tc.want {
+				t.Fatalf("id = %q, want %q for %q", id, tc.want, tc.input)
+			}
+		})
+	}
+}
+
+func TestResolveToolTokenCodexErrorIsSentinel(t *testing.T) {
+	_, _, err := ResolveToolToken("codex")
+	if !errors.Is(err, ErrCodexUnsupported) {
+		t.Fatalf("want ErrCodexUnsupported, got %v", err)
+	}
+}

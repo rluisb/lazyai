@@ -295,6 +295,29 @@ func TestCompileWithSupportedToolDryRunSucceeds(t *testing.T) {
 	}
 }
 
+func TestCompileWithToolAliasResolvesToCanonical(t *testing.T) {
+	dir := t.TempDir()
+	seedStoreData(t, dir, func(data *types.StoreData) {
+		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode}
+	})
+	writeCanonicalMCPConfig(t, dir)
+
+	// "claude" is a manifest alias for claude-code; --tool must accept it and
+	// compile only for Claude Code.
+	cmd := newCompileCommand(dir, "claude", true)
+	stdout, _ := captureOutput(t, func() {
+		if err := runCompile(cmd, nil); err != nil {
+			t.Fatalf("runCompile with alias %q: %v", "claude", err)
+		}
+	})
+	if !strings.Contains(stdout, "Claude Code") {
+		t.Fatalf("stdout = %q, want Claude Code dry-run compile output", stdout)
+	}
+	if strings.Contains(stdout, "OpenCode") {
+		t.Fatalf("stdout = %q, did not expect OpenCode output when filtering for claude", stdout)
+	}
+}
+
 func TestCompileDryRunDoesNotWriteFilesOrStoreRecords(t *testing.T) {
 	dir := t.TempDir()
 	seedStoreData(t, dir, func(data *types.StoreData) {

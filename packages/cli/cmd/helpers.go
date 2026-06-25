@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/adapter"
+	"github.com/rluisb/lazyai/packages/cli/internal/aimanifest"
 	"github.com/rluisb/lazyai/packages/cli/internal/db"
 	"github.com/rluisb/lazyai/packages/cli/internal/library"
 	"github.com/rluisb/lazyai/packages/cli/internal/preset"
@@ -25,8 +27,17 @@ func getLibraryDir() string {
 	return dir
 }
 
+// validateToolFlag validates the --tool flag value, accepting the same alias
+// tokens the manifest accepts (e.g. "claude" resolves to claude-code) via
+// aimanifest.ResolveToolToken. The empty string is allowed (no filter). An
+// unknown token lists the supported tool IDs deterministically; "codex" gets
+// the explicit V2-removal message from the resolver.
 func validateToolFlag(tool string) error {
-	if tool == "" || types.IsValidToolId(types.ToolId(tool)) {
+	if tool == "" {
+		return nil
+	}
+	_, ok, err := aimanifest.ResolveToolToken(tool)
+	if err == nil && ok {
 		return nil
 	}
 	supported := adapter.NewRegistry().List()
@@ -35,6 +46,14 @@ func validateToolFlag(tool string) error {
 		supportedStrings[i] = string(id)
 	}
 	sort.Strings(supportedStrings)
+	if err != nil {
+		// codex gets the explicit V2-removal message; other resolver errors
+		// are surfaced as unsupported-tool errors with the supported list.
+		if errors.Is(err, aimanifest.ErrCodexUnsupported) {
+			return fmt.Errorf("%s (supported tools: %s)", err.Error(), strings.Join(supportedStrings, ", "))
+		}
+		return fmt.Errorf("unsupported tool %q (supported tools: %s)", tool, strings.Join(supportedStrings, ", "))
+	}
 	return fmt.Errorf("unsupported tool %q (supported tools: %s)", tool, strings.Join(supportedStrings, ", "))
 }
 

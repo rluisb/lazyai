@@ -2,6 +2,9 @@
   "extensions": [
     "extensions"
   ],
+  "packages": [
+    "."
+  ],
   "prompts": [
     "prompts"
   ],

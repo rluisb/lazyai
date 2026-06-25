@@ -92,14 +92,25 @@ Pi does not include a built-in sandbox. Built-in tools and extensions run with t
 
 ## Settings Behavior
 
-Pi uses JSON settings files with project settings overriding global settings on a per-key basis. LazyAI emits settings at both scopes:
+Pi uses JSON settings files with project settings overriding global settings on
+a per-key basis. LazyAI emits settings at both scopes:
 
 - **Project scope:** `.pi/settings.json` — paths resolve relative to `.pi`
 - **Global scope:** `~/.pi/agent/settings.json` — paths resolve relative to `~/.pi/agent`
 
-The adapter deep-merges the LazyAI-managed resource references (`extensions`, `skills`, `prompts`) into any existing settings via `configmerge.MergeJSONFile`, preserving user-authored keys and producing idempotent output on re-runs. A `.bak` sidecar is created on first touch.
+The adapter deep-merges the LazyAI-managed resource references (`extensions`,
+`skills`, `prompts`) and package references into any existing settings via
+`configmerge.MergeJSONFile`, preserving user-authored keys and producing
+idempotent output on re-runs. A `.bak` sidecar is created on first touch.
 
-The default settings patch declares only resource directory references pointing at the on-disk subdirectories Install already populated. Model, theme, compaction, and other personal preferences stay user-owned. Sibling issues extend this patch map: #537 adds package configuration, #533 may adjust extension references.
+The default settings patch keeps Pi's direct resource arrays (`extensions`, `skills`, `prompts`) and adds a `packages` reference to the compiled `.pi` package root so Pi can also load the generated tree through its native package mechanism.
+
+Package roots are scope-sensitive because `settings.json` lives in different directories:
+
+- **Project/workspace:** `.` resolves to the `.pi/` root, which contains `extensions/`, `skills/`, and `prompts/`
+- **Global:** `..` resolves from `~/.pi/agent/settings.json` to the `~/.pi/` root, which contains the same resource directories
+
+Model, theme, compaction, and other personal preferences stay user-owned.
 
 ## System Prompt Behavior
 
@@ -140,13 +151,13 @@ No (`CanRunHeadless() = false`).
 - No `.pi/hooks` path; hooks ship as TypeScript extensions
 - Pi project trust is not a sandbox, and generated `.pi/*` resources may be ignored in non-interactive runs until trust is configured
 - Extension-local `node_modules/` are not installed by the adapter (operator runs `npm install`)
-- `settings.json` `"packages"` and arbitrary-path `"extensions"` entries are unsupported until #537
+- Package filters, remote package sources, and arbitrary-path `"extensions"` entries are still user-managed; the adapter only emits a local package-root reference for the compiled `.pi` tree
 - **Themes are out-of-scope** — Pi's `theme` setting is a user UI preference (not compiled); the `themes` resource reference has no backing library assets to point at (see Theme Behavior)
 
 ## Test Coverage
 
 | Test file | What it verifies |
 |---|---|
-| `pi_adapter_test.go` | Agents, skills, prompts, flat + directory-layout extensions, settings emission at project/global scope, system prompts, non-leakage between surfaces, and no `theme`/`themes` settings keys emitted |
+| `pi_adapter_test.go` | Agents, skills, prompts, flat + directory-layout extensions, settings emission at project/global scope, package-root references, system prompts, non-leakage between surfaces, and no `theme`/`themes` settings keys emitted |
 | `adapter_adapters_test.go` | Full install from FS |
 | `scope_test.go` | `IsScopeSupported` returns true for all three Pi scopes |

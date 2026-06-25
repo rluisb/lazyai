@@ -106,6 +106,7 @@ func TestPiAdapter_Install_ProjectEmitsSettings(t *testing.T) {
 	assertPiResourceArray(t, m, "extensions", []string{"extensions"})
 	assertPiResourceArray(t, m, "skills", []string{"skills"})
 	assertPiResourceArray(t, m, "prompts", []string{"prompts"})
+	assertPiResourceArray(t, m, "packages", []string{"."})
 
 	// settings.json must be tracked as a TrackedFile.
 	var found bool
@@ -138,6 +139,7 @@ func TestPiAdapter_Install_GlobalEmitsAgentSettings(t *testing.T) {
 
 	m := decodePiSettings(t, settingsPath)
 	assertPiResourceArray(t, m, "extensions", []string{"extensions"})
+	assertPiResourceArray(t, m, "packages", []string{".."})
 }
 
 func TestPiAdapter_Install_SettingsIdempotent(t *testing.T) {
@@ -198,6 +200,7 @@ func TestPiAdapter_Install_SettingsPreservesUserKeys(t *testing.T) {
 	}
 	// LazyAI-managed keys added.
 	assertPiResourceArray(t, m, "extensions", []string{"extensions"})
+	assertPiResourceArray(t, m, "packages", []string{"."})
 }
 
 func TestPiAdapter_Install_EmitsSystemPromptFiles(t *testing.T) {

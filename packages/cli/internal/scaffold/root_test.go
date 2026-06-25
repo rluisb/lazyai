@@ -55,6 +55,10 @@ func TestMemoryDocDestPath(t *testing.T) {
 		{"copilot_project", types.ToolIdCopilot, types.SetupScopeProject, filepath.Join(target, ".github", "copilot-instructions.md"), false},
 		{"copilot_workspace", types.ToolIdCopilot, types.SetupScopeWorkspace, filepath.Join(workspaceRoot, ".github", "copilot-instructions.md"), false},
 		{"copilot_global", types.ToolIdCopilot, types.SetupScopeGlobal, "", true},
+		// omp: project scope must land at .omp/AGENTS.md (native provider, priority 100)
+		{"omp_project", types.ToolIdOmp, types.SetupScopeProject, filepath.Join(target, ".omp", "AGENTS.md"), false},
+		{"omp_workspace", types.ToolIdOmp, types.SetupScopeWorkspace, filepath.Join(workspaceRoot, "AGENTS.md"), false},
+		{"omp_global", types.ToolIdOmp, types.SetupScopeGlobal, filepath.Join(home, ".omp", "agent", "AGENTS.md"), false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -71,6 +75,85 @@ func TestMemoryDocDestPath(t *testing.T) {
 			}
 			if got != c.want {
 				t.Errorf("got %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestScaffoldCompiledRootOmpProjectLandsInOmpDir asserts M8: OMP project-scope
+// root instructions land at .omp/AGENTS.md (native provider, priority 100) and
+// NOT at bare AGENTS.md (agents-md provider, priority 10).
+func TestScaffoldCompiledRootOmpProjectLandsInOmpDir(t *testing.T) {
+	targetDir := t.TempDir()
+	records := []types.TrackedFile{}
+
+	if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+		TargetDir:        targetDir,
+		LibraryFS:        rootTestFS(),
+		Tools:            []types.ToolId{types.ToolIdOmp},
+		ProjectName:      "test-project",
+		FileRecords:      &records,
+		Strategy:         types.ConflictStrategySkip,
+		PerFileOverrides: map[string]types.ConflictStrategy{},
+		SetupScope:       types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("ScaffoldCompiledRoot: %v", err)
+	}
+
+	// Must land at .omp/AGENTS.md (native provider, priority 100).
+	ompAgentsPath := filepath.Join(targetDir, ".omp", "AGENTS.md")
+	if _, err := os.Stat(ompAgentsPath); err != nil {
+		t.Fatalf("expected %s to exist, got: %v", ompAgentsPath, err)
+	}
+
+	// Must NOT land at bare AGENTS.md (agents-md provider, priority 10).
+	bareAgentsPath := filepath.Join(targetDir, "AGENTS.md")
+	if _, err := os.Stat(bareAgentsPath); err == nil {
+		t.Fatalf("bare AGENTS.md must not exist for OMP project scope; found at %s", bareAgentsPath)
+	}
+
+	// TrackedFile record must reference the .omp/AGENTS.md path.
+	found := false
+	for _, r := range records {
+		if r.Path == filepath.Join(".omp", "AGENTS.md") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("TrackedFile record for .omp/AGENTS.md not found; records: %v", records)
+	}
+}
+
+// TestScaffoldCompiledRootOmpDoesNotAffectOtherTargets asserts that OMP's
+// .omp/AGENTS.md redirect leaves OpenCode and ClaudeCode at their bare root.
+func TestScaffoldCompiledRootOmpDoesNotAffectOtherTargets(t *testing.T) {
+	for _, tool := range []types.ToolId{types.ToolIdOpenCode, types.ToolIdClaudeCode} {
+		tool := tool
+		t.Run(string(tool), func(t *testing.T) {
+			targetDir := t.TempDir()
+			records := []types.TrackedFile{}
+			if err := ScaffoldCompiledRoot(ScaffoldCompiledRootOptions{
+				TargetDir:        targetDir,
+				LibraryFS:        rootTestFS(),
+				Tools:            []types.ToolId{tool},
+				ProjectName:      "test-project",
+				FileRecords:      &records,
+				Strategy:         types.ConflictStrategySkip,
+				PerFileOverrides: map[string]types.ConflictStrategy{},
+				SetupScope:       types.SetupScopeProject,
+			}); err != nil {
+				t.Fatalf("ScaffoldCompiledRoot(%s): %v", tool, err)
+			}
+			// Bare AGENTS.md must exist for non-OMP tools.
+			bareAgentsPath := filepath.Join(targetDir, "AGENTS.md")
+			if _, err := os.Stat(bareAgentsPath); err != nil {
+				t.Fatalf("tool %s: expected bare AGENTS.md at %s, got: %v", tool, bareAgentsPath, err)
+			}
+			// .omp/AGENTS.md must NOT exist for non-OMP tools.
+			ompAgentsPath := filepath.Join(targetDir, ".omp", "AGENTS.md")
+			if _, err := os.Stat(ompAgentsPath); err == nil {
+				t.Fatalf("tool %s: .omp/AGENTS.md must not exist; found at %s", tool, ompAgentsPath)
 			}
 		})
 	}

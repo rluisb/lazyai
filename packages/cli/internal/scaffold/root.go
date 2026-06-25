@@ -78,7 +78,13 @@ const geminiContextDoc = "# GEMINI.md\n\n" +
 func memoryDocDestPath(tool types.ToolId, scope types.SetupScope, targetDir, workspaceRoot, homeDir, outputFile string) (string, error) {
 	switch scope {
 	case types.SetupScopeProject, "":
-		return filepath.Join(targetDir, outputFile), nil
+		dest := outputFile
+		// OMP at project scope: emit to .omp/AGENTS.md (native provider, priority 100)
+		// instead of bare AGENTS.md (agents-md provider, priority 10) — M8 fix.
+		if tool == types.ToolIdOmp {
+			dest = filepath.Join(".omp", filepath.Base(outputFile))
+		}
+		return filepath.Join(targetDir, dest), nil
 	case types.SetupScopeWorkspace:
 		root := targetDir
 		if workspaceRoot != "" {

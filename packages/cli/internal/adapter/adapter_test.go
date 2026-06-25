@@ -94,6 +94,12 @@ func createTestFS() fstest.MapFS {
 		"pi/extensions/extension-dir/package.json": &fstest.MapFile{
 			Data: []byte("{\n  \"name\": \"extension-dir\",\n  \"version\": \"1.0.0\",\n  \"dependencies\": {}\n}\n"),
 		},
+		"pi/SYSTEM.md": &fstest.MapFile{
+			Data: []byte("# Pi System Prompt\n\nProject-specific system prompt that replaces the default."),
+		},
+		"pi/APPEND_SYSTEM.md": &fstest.MapFile{
+			Data: []byte("# Pi Appended System Prompt\n\nAppended to the default system prompt."),
+		},
 		"commands/rpi.toml": &fstest.MapFile{
 			Data: []byte("name = \"rpi\"\ndescription = \"Start RPI\"\nprompt = \"Begin RPI\"\n"),
 		},

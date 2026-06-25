@@ -200,6 +200,53 @@ func TestPiAdapter_Install_SettingsPreservesUserKeys(t *testing.T) {
 	assertPiResourceArray(t, m, "extensions", []string{"extensions"})
 }
 
+func TestPiAdapter_Install_EmitsSystemPromptFiles(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	// SYSTEM.md and APPEND_SYSTEM.md land at the .pi root, not in a subdir.
+	systemPath := filepath.Join(targetDir, ".pi", "SYSTEM.md")
+	appendPath := filepath.Join(targetDir, ".pi", "APPEND_SYSTEM.md")
+	assertExists(t, systemPath)
+	assertExists(t, appendPath)
+
+	got, err := os.ReadFile(systemPath)
+	if err != nil {
+		t.Fatalf("read SYSTEM.md: %v", err)
+	}
+	if !strings.Contains(string(got), "Pi System Prompt") {
+		t.Fatalf("SYSTEM.md content mismatch: %q", got)
+	}
+
+	got, err = os.ReadFile(appendPath)
+	if err != nil {
+		t.Fatalf("read APPEND_SYSTEM.md: %v", err)
+	}
+	if !strings.Contains(string(got), "Pi Appended System Prompt") {
+		t.Fatalf("APPEND_SYSTEM.md content mismatch: %q", got)
+	}
+}
+
+func TestPiAdapter_Install_OmitsSystemPromptsWhenSourceAbsent(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	if testFS, ok := ctx.LibraryFS.(fstest.MapFS); ok {
+		delete(testFS, "pi/SYSTEM.md")
+		delete(testFS, "pi/APPEND_SYSTEM.md")
+	}
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	assertMissing(t, filepath.Join(targetDir, ".pi", "SYSTEM.md"))
+	assertMissing(t, filepath.Join(targetDir, ".pi", "APPEND_SYSTEM.md"))
+}
+
 func TestPiAdapter_Install_ExtensionDirectoryLayout(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 
@@ -233,4 +280,18 @@ func TestPiAdapter_Install_ExtensionDirectoryLayout(t *testing.T) {
 	if !names["extension-dir"] {
 		t.Errorf("directory extension entry missing; got %v", names)
 	}
+}
+
+func TestPiAdapter_Install_DoesNotEmitExtensionsAsSystemPrompts(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	// The pi/ source directory also contains extensions/, but the system-prompt
+	// copy must only pick up SYSTEM.md / APPEND_SYSTEM.md — never .ts files.
+	assertMissing(t, filepath.Join(targetDir, ".pi", "block-destructive-shell.ts"))
+	assertExists(t, filepath.Join(targetDir, ".pi", "extensions", "block-destructive-shell.ts"))
 }

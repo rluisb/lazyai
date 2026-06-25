@@ -43,7 +43,7 @@ var ToolOverrideMap = map[string]ToolOverrides{
 	},
 	string(types.ToolIdPi): {
 		Description: "This project uses Pi with LazyAI integration.",
-		Notes:       "## Pi-Specific Notes\n\n- Agents: `.pi/agents/<name>.md`\n- Skills: `.pi/skills/<name>/SKILL.md`\n- Prompts: `.pi/prompts/<name>.md`\n- Safety hooks ship as `.pi/extensions/*.ts`.",
+		Notes:       "## Pi-Specific Notes\n\n- Agents: `.pi/agents/<name>.md`\n- Skills: `.pi/skills/<name>/SKILL.md`\n- Prompts: `.pi/prompts/<name>.md`\n- Safety hooks ship as `.pi/extensions/*.ts`\n- System prompt: `.pi/SYSTEM.md` (replaces default) / `.pi/APPEND_SYSTEM.md` (appends).",
 	},
 	string(types.ToolIdOmp): {
 		Description: "This project uses OMP with LazyAI integration.",

@@ -22,13 +22,14 @@ import (
 type AssetKind string
 
 const (
-	AssetKindAgents       AssetKind = "agents"
-	AssetKindSkills       AssetKind = "skills"
-	AssetKindTemplates    AssetKind = "templates"
-	AssetKindCommands     AssetKind = "commands"
-	AssetKindChatModes    AssetKind = "chatmodes"
-	AssetKindOutputStyles AssetKind = "output-styles"
-	AssetKindPrompts      AssetKind = "prompts"
+	AssetKindAgents        AssetKind = "agents"
+	AssetKindSkills        AssetKind = "skills"
+	AssetKindTemplates     AssetKind = "templates"
+	AssetKindCommands      AssetKind = "commands"
+	AssetKindChatModes     AssetKind = "chatmodes"
+	AssetKindOutputStyles  AssetKind = "output-styles"
+	AssetKindPrompts       AssetKind = "prompts"
+	AssetKindSystemPrompts AssetKind = "system-prompts"
 )
 
 // AllAssetKinds returns every supported asset kind in a stable order.
@@ -41,6 +42,7 @@ func AllAssetKinds() []AssetKind {
 		AssetKindChatModes,
 		AssetKindOutputStyles,
 		AssetKindPrompts,
+		AssetKindSystemPrompts,
 	}
 }
 
@@ -141,6 +143,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Shape: ShapeNone,
 				Notes: "Claude Code has no prompts directory; prompts ship as commands",
 			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdClaudeCode, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "Claude Code has no project system-prompt file; use CLAUDE.md context",
+			},
 		},
 		types.ToolIdOpenCode: {
 			AssetKindAgents: {
@@ -179,6 +186,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Tool: types.ToolIdOpenCode, Kind: AssetKindPrompts,
 				Shape: ShapeNone,
 				Notes: "OpenCode prompts ship as commands",
+			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdOpenCode, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "OpenCode has no project system-prompt file; use AGENTS.md context",
 			},
 		},
 		types.ToolIdCopilot: {
@@ -221,6 +233,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Shape: ShapeRewriteExt, RewriteSuffix: ".prompt.md",
 				Notes: "Copilot prompts at .github/prompts/<name>.prompt.md",
 			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdCopilot, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "Copilot has no project system-prompt file; use .github/copilot-instructions.md",
+			},
 		},
 		types.ToolIdPi: {
 			AssetKindAgents: {
@@ -259,6 +276,13 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				SourceSubdir: "prompts", DestSubdir: "prompts",
 				Shape: ShapeFlat,
 				Notes: "Pi loads prompt templates from .pi/prompts/<name>.md",
+			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdPi, Kind: AssetKindSystemPrompts,
+				SourceSubdir: "pi", DestSubdir: ".",
+				Shape:       ShapeFlat,
+				IncludeFile: isPiSystemPromptFile,
+				Notes:       "Pi reads .pi/SYSTEM.md (replaces default prompt) and .pi/APPEND_SYSTEM.md (appends); distinct from AGENTS.md context files",
 			},
 		},
 		types.ToolIdOmp: {
@@ -300,6 +324,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Shape: ShapeFlat,
 				Notes: "OMP loads prompt templates from .omp/prompts/<name>.md",
 			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdOmp, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "OMP has no project system-prompt file; use AGENTS.md context",
+			},
 		},
 		types.ToolIdKiro: {
 			AssetKindAgents: {
@@ -340,6 +369,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Shape:        ShapeFlat,
 				Notes:        "Kiro CLI reads prompts from .kiro/prompts/<name>.md",
 			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdKiro, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "Kiro has no project system-prompt file; use .kiro/steering or agent specs",
+			},
 		},
 		types.ToolIdAntigravity: {
 			AssetKindAgents: {
@@ -376,6 +410,11 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Tool: types.ToolIdAntigravity, Kind: AssetKindPrompts,
 				Shape: ShapeNone,
 				Notes: "Antigravity has no prompt surface",
+			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdAntigravity, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "Antigravity has no project system-prompt file; use GEMINI.md context",
 			},
 		},
 	}

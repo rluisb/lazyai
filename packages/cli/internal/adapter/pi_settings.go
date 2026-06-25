@@ -33,7 +33,7 @@ func writePiSettings(ctx *AdapterContext, piDir string) error {
 		return err
 	}
 
-	patch := defaultPiSettingsPatch()
+	patch := defaultPiSettingsPatch(ctx.SetupScope)
 
 	if _, err := configmerge.MergeJSONFile(settingsPath, patch); err != nil {
 		return err
@@ -53,19 +53,28 @@ func piSettingsPath(piDir string, scope types.SetupScope) string {
 }
 
 // defaultPiSettingsPatch returns the LazyAI-managed settings keys for Pi.
-// Only resource references are declared by default; model/theme/compaction
-// settings stay user-owned. Sibling issues extend this map:
-//   - #537 adds package configuration entries.
-//   - #535 adds theme references if theme support lands.
-//   - #533 may add/adjust extension references.
-func defaultPiSettingsPatch() map[string]any {
+// Resource directories are still copied locally, and settings keeps the direct
+// resource arrays Pi already understands (`extensions`, `skills`, `prompts`).
+// The `packages` key adds a package-root reference so Pi can load the compiled
+// `.pi` tree through its package mechanism as well.
+//
+// Package roots are scope-sensitive because settings.json lives in different
+// directories:
+//   - project/workspace: `.pi/settings.json` → package root is `.`
+//   - global: `~/.pi/agent/settings.json` → package root is `..` (the `~/.pi`
+//     directory that contains `extensions/`, `skills/`, and `prompts/`)
+func defaultPiSettingsPatch(scope types.SetupScope) map[string]any {
 	return map[string]any{
-		// Point Pi at the LazyAI-installed resource directories. Paths in
-		// .pi/settings.json resolve relative to .pi; paths in the global
-		// ~/.pi/agent/settings.json resolve relative to ~/.pi/agent, so
-		// the relative references stay identical across scopes.
 		"extensions": []any{"extensions"},
 		"skills":     []any{"skills"},
 		"prompts":    []any{"prompts"},
+		"packages":   []any{defaultPiPackageRoot(scope)},
 	}
+}
+
+func defaultPiPackageRoot(scope types.SetupScope) string {
+	if scope == types.SetupScopeGlobal {
+		return ".."
+	}
+	return "."
 }

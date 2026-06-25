@@ -62,7 +62,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 				map[string]any{
 					"hooks": []any{
 						map[string]any{
-							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/block-destructive-shell.sh",
+							"command": hookScriptCommand(hooksDir, "block-destructive-shell.sh", isGlobal),
 							"type":    "command",
 						},
 					},
@@ -73,7 +73,7 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 				map[string]any{
 					"hooks": []any{
 						map[string]any{
-							"command": "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/objective-workflow-gate.sh",
+							"command": hookScriptCommand(hooksDir, "objective-workflow-gate.sh", isGlobal),
 							"type":    "command",
 						},
 					},
@@ -210,6 +210,19 @@ func (a *ClaudeCodeAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, e
 	displayInstallSummary(ctx, claudeDir, isGlobal)
 
 	return ctx.FileRecords, nil
+}
+
+// hookScriptCommand returns the command string for a hook entry in settings.json.
+// At global scope the scripts reside at an absolute path inside hooksDir, so
+// we reference them directly — ${CLAUDE_PROJECT_DIR:-$PWD} would resolve to the
+// current project at runtime, not to the home directory where the scripts are
+// actually installed. At project/workspace scope the env-var form is correct
+// because the scripts are installed alongside settings.json in the same project.
+func hookScriptCommand(hooksDir, script string, isGlobal bool) string {
+	if isGlobal {
+		return filepath.Join(hooksDir, script)
+	}
+	return "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/" + script
 }
 
 // installClaudeMCPViaCLI calls `claude mcp add-json` for each enabled MCP server

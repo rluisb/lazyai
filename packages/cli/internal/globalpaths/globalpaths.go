@@ -33,6 +33,10 @@ func ResolveGlobalToolTargetDir(tool types.ToolId, homeDir string) (string, erro
 	case types.ToolIdOpenCode:
 		return filepath.Join(homeDir, ".config", "opencode"), nil
 	case types.ToolIdOmp:
+		// OMP may relocate its agent directory via PI_CODING_AGENT_DIR.
+		if dir := os.Getenv("PI_CODING_AGENT_DIR"); dir != "" {
+			return dir, nil
+		}
 		return filepath.Join(homeDir, ".omp", "agent"), nil
 	case types.ToolIdKiro:
 		return filepath.Join(homeDir, ".kiro"), nil

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 )
@@ -411,33 +412,58 @@ func TestWithFileLock_RemovesStaleLock(t *testing.T) {
 
 	acquired := make(chan time.Time, 2)
 	errors := make(chan error, 2)
-	release := make(chan struct{}, 2)
+	completed := 0
+	releaseFirst := make(chan struct{})
+	var releaseFirstOnce sync.Once
+	t.Cleanup(func() { releaseFirstOnce.Do(func() { close(releaseFirst) }) })
+	var firstHolder sync.Once
+	waitForAcquire := func(label string) time.Time {
+		t.Helper()
+		deadline := time.After(10 * time.Second)
+		for {
+			select {
+			case at := <-acquired:
+				return at
+			case err := <-errors:
+				if err != nil {
+					t.Fatalf("WithFileLock before %s: %v", label, err)
+				}
+				completed++
+			case <-deadline:
+				t.Fatalf("timed out waiting for %s lock acquisition", label)
+				return time.Time{}
+			}
+		}
+	}
 
 	for i := 0; i < 2; i++ {
 		go func() {
-			errors <- WithFileLock(lockPath, 2*time.Second, time.Minute, func() error {
+			errors <- WithFileLock(lockPath, 10*time.Second, time.Minute, func() error {
 				acquired <- time.Now()
-				<-release
+				wait := false
+				firstHolder.Do(func() { wait = true })
+				if wait {
+					<-releaseFirst
+				}
 				return nil
 			})
 		}()
 	}
 
-	first := <-acquired
+	first := waitForAcquire("first")
+
 	select {
 	case second := <-acquired:
 		t.Fatalf("second lock acquired before first was released: first=%s second=%s", first, second)
 	default:
 	}
-
-	release <- struct{}{}
-	second := <-acquired
+	releaseFirstOnce.Do(func() { close(releaseFirst) })
+	second := waitForAcquire("second")
 	if !second.After(first) {
 		t.Fatalf("second lock acquired too early: first=%s second=%s", first, second)
 	}
-	release <- struct{}{}
 
-	for i := 0; i < 2; i++ {
+	for ; completed < 2; completed++ {
 		if err := <-errors; err != nil {
 			t.Fatalf("WithFileLock: %v", err)
 		}

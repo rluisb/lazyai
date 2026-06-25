@@ -85,6 +85,15 @@ func createTestFS() fstest.MapFS {
 		"pi/extensions/block-destructive-shell.ts": &fstest.MapFile{
 			Data: []byte("import type { ExtensionAPI } from \"@earendil-works/pi-coding-agent\";\n\nexport default function blockDestructiveShell(pi: ExtensionAPI): void {\n  pi.on(\"tool_call\", async (event, ctx) => {\n    if (event.toolName !== \"bash\") return;\n    const cmd = String(event.input.command ?? \"\");\n    if (!/\\brm\\s+-rf\\s+\\//.test(cmd)) return;\n    if (ctx.hasUI) {\n      const allow = await ctx.ui.confirm(\"Dangerous command\", `This deletes from root:\\n${cmd}\\n\\nProceed?`);\n      if (allow) return;\n    }\n    return { block: true, reason: \"rm -rf / blocked by safety policy\" };\n  });\n}\n"),
 		},
+		"pi/extensions/extension-dir/index.ts": &fstest.MapFile{
+			Data: []byte("import type { ExtensionAPI } from \"@earendil-works/pi-coding-agent\";\n\nexport default function (pi: ExtensionAPI): void {\n  pi.on(\"session_start\", async (_e, ctx) => ctx.ui.notify(\"loaded\", \"info\"));\n}\n"),
+		},
+		"pi/extensions/extension-dir/helper.ts": &fstest.MapFile{
+			Data: []byte("export function helper(): string { return \"hi\"; }\n"),
+		},
+		"pi/extensions/extension-dir/package.json": &fstest.MapFile{
+			Data: []byte("{\n  \"name\": \"extension-dir\",\n  \"version\": \"1.0.0\",\n  \"dependencies\": {}\n}\n"),
+		},
 		"commands/rpi.toml": &fstest.MapFile{
 			Data: []byte("name = \"rpi\"\ndescription = \"Start RPI\"\nprompt = \"Begin RPI\"\n"),
 		},

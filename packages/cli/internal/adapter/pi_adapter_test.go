@@ -199,3 +199,38 @@ func TestPiAdapter_Install_SettingsPreservesUserKeys(t *testing.T) {
 	// LazyAI-managed keys added.
 	assertPiResourceArray(t, m, "extensions", []string{"extensions"})
 }
+
+func TestPiAdapter_Install_ExtensionDirectoryLayout(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	// Flat extension keeps working.
+	assertExists(t, filepath.Join(targetDir, ".pi", "extensions", "block-destructive-shell.ts"))
+
+	// Directory-layout extension ships intact with index.ts, helper modules,
+	// and co-located package.json (Pi auto-discovers <name>/index.ts).
+	extDir := filepath.Join(targetDir, ".pi", "extensions", "extension-dir")
+	assertExists(t, filepath.Join(extDir, "index.ts"))
+	assertExists(t, filepath.Join(extDir, "helper.ts"))
+	assertExists(t, filepath.Join(extDir, "package.json"))
+
+	// The directory entry must be present alongside the flat file entry.
+	entries, err := os.ReadDir(filepath.Join(targetDir, ".pi", "extensions"))
+	if err != nil {
+		t.Fatalf("read extensions dir: %v", err)
+	}
+	names := map[string]bool{}
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+	if !names["block-destructive-shell.ts"] {
+		t.Errorf("flat extension entry missing; got %v", names)
+	}
+	if !names["extension-dir"] {
+		t.Errorf("directory extension entry missing; got %v", names)
+	}
+}

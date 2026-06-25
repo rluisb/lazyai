@@ -46,9 +46,9 @@ Each adapter's hook support is classified with one of five levels:
 | opencode | stable | `Hooks: true` | **supported** | Full plugin runtime (`vibe-lab-hooks.js`); events: `session.created`, `tool.execute.before`, `session.idle`, `experimental.session.compacting` |
 | claude | stable | `Hooks: true` | **supported** | Shell command hooks at `.claude/hooks/*.sh`; events: `PreToolUse`, `Stop`; wired via `.claude/settings.json` |
 | copilot | stable | `Hooks: true` | **partial** | JSON descriptors + shell scripts at `.github/hooks/*.{json,sh}`; project scope only; limited to pre-exec and stop events |
-| pi | stable | `Hooks: true` | **instruction_only** | No `.pi/hooks` directory emitted; only `block-destructive-shell` has an extension runtime at `.pi/extensions/*.ts`; all other hooks are markdown-only |
-| omp | beta | `Hooks: true` | **partial** | TypeScript hook factories at `.omp/hooks/pre/*.ts`; only `before_tool` surface (pre hooks); beta support level |
-| antigravity | beta | `Hooks: true` | **partial** | Shell scripts at `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json`; limited to pre-exec and stop events; beta support level |
+| pi | stable | `Hooks: true` | **instruction_only** | No `.pi/hooks` directory emitted; only the `block-destructive-shell` has an extension runtime at `.pi/extensions/*.ts`; all other hooks are markdown-only |
+| omp | stable | `Hooks: true` | **partial** | TypeScript hook factories at `.omp/hooks/pre/*.ts`; only `before_tool` surface (pre hooks); stable support level |
+| antigravity | stable | `Hooks: true` | **partial** | Shell scripts at `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json`; limited to pre-exec and stop events; stable support level |
 | kiro | stable | `Hooks: true` | **supported** | Native Kiro v3 hook JSON at `.kiro/hooks/*.json`; currently `block-destructive-shell` uses `PreToolUse` with source-verified trigger mapping |
 
 ### Notes
@@ -58,8 +58,8 @@ Each adapter's hook support is classified with one of five levels:
   extension runtime.
 - **Kiro** declares `Hooks: true` and emits native Kiro v3 hook JSON at `.kiro/hooks/*.json`. Only source-verified trigger mappings are emitted; currently the shipped Kiro runtime surface is `block-destructive-shell` on `PreToolUse`.
 - **OMP** and **Antigravity** are classified as `partial` because they emit hook
-  files but are at `beta` support level and cover a limited subset of lifecycle
-  events.
+  files but cover a limited subset of lifecycle events. Both are at `stable`
+  support level (promoted 2026-06-23, #486).
 - **Copilot** is `partial` because hooks are project-scope only (not global) and
   limited to pre-exec and stop events.
 

@@ -65,7 +65,6 @@ No (`CanRunHeadless() = false`).
 
 ## Known Limitations
 
-- `.omp/prompts/` is emitted but OMP prompt-template discovery is not docs-confirmed (best-effort)
 - No templates, chat modes, or output styles
 - No headless support
 

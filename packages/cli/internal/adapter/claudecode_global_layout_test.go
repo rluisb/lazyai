@@ -2,7 +2,10 @@ package adapter
 
 import (
 	"bytes"
+	"encoding/json"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -212,6 +215,106 @@ func TestClaudeCode_DefaultAgentScopeParity(t *testing.T) {
 			orch := filepath.Join(root, "agents", "orchestrator.md")
 			if files.FileExists(orch) {
 				t.Errorf("orchestrator agent present at %q", orch)
+			}
+		})
+	}
+}
+
+// TestClaudeCode_HookCommandScopeAware is the regression guard for issue #547:
+// at global scope the hook command paths must reference the actual install
+// location (~/.claude/hooks/<x>.sh, an absolute path), not the project-relative
+// ${CLAUDE_PROJECT_DIR:-$PWD} form. At project scope the env-var form is
+// unchanged — the scripts live beside settings.json in .claude/hooks/.
+func TestClaudeCode_HookCommandScopeAware(t *testing.T) {
+	cases := []struct {
+		name       string
+		scope      types.SetupScope
+		claudeRoot func(target, home string) string
+		checkCmd   func(t *testing.T, cmd, claudeRoot string)
+	}{
+		{
+			name:       "global",
+			scope:      types.SetupScopeGlobal,
+			claudeRoot: func(_, h string) string { return filepath.Join(h, ".claude") },
+			checkCmd: func(t *testing.T, cmd, root string) {
+				t.Helper()
+				wantPrefix := filepath.Join(root, "hooks") + string(filepath.Separator)
+				if !strings.HasPrefix(cmd, wantPrefix) {
+					t.Errorf("global hook command %q does not start with install dir %q", cmd, wantPrefix)
+				}
+				if strings.Contains(cmd, "${CLAUDE_PROJECT_DIR") {
+					t.Errorf("global hook command %q must not use ${CLAUDE_PROJECT_DIR} (resolves to project, not home)", cmd)
+				}
+			},
+		},
+		{
+			name:       "project",
+			scope:      types.SetupScopeProject,
+			claudeRoot: func(target, _ string) string { return filepath.Join(target, ".claude") },
+			checkCmd: func(t *testing.T, cmd, _ string) {
+				t.Helper()
+				const wantPrefix = "${CLAUDE_PROJECT_DIR:-$PWD}/.claude/hooks/"
+				if !strings.HasPrefix(cmd, wantPrefix) {
+					t.Errorf("project hook command %q does not start with %q", cmd, wantPrefix)
+				}
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx, target, home := newScopeTestContext(t, c.scope)
+
+			if _, err := (&ClaudeCodeAdapter{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			root := c.claudeRoot(target, home)
+			settingsPath := filepath.Join(root, "settings.json")
+
+			raw, err := os.ReadFile(settingsPath)
+			if err != nil {
+				t.Fatalf("read settings.json: %v", err)
+			}
+
+			var settings map[string]any
+			if err := json.Unmarshal(raw, &settings); err != nil {
+				t.Fatalf("parse settings.json: %v", err)
+			}
+
+			hooks, ok := settings["hooks"].(map[string]any)
+			if !ok {
+				t.Fatal("settings.json missing 'hooks' key")
+			}
+
+			// Extract the command from each hook event entry.
+			for _, event := range []string{"PreToolUse", "Stop"} {
+				entries, ok := hooks[event].([]any)
+				if !ok || len(entries) == 0 {
+					t.Errorf("hooks[%q] missing or empty", event)
+					continue
+				}
+				group, ok := entries[0].(map[string]any)
+				if !ok {
+					t.Errorf("hooks[%q][0] not an object", event)
+					continue
+				}
+				innerHooks, ok := group["hooks"].([]any)
+				if !ok || len(innerHooks) == 0 {
+					t.Errorf("hooks[%q][0].hooks missing or empty", event)
+					continue
+				}
+				h, ok := innerHooks[0].(map[string]any)
+				if !ok {
+					t.Errorf("hooks[%q][0].hooks[0] not an object", event)
+					continue
+				}
+				cmd, ok := h["command"].(string)
+				if !ok {
+					t.Errorf("hooks[%q][0].hooks[0].command not a string", event)
+					continue
+				}
+				c.checkCmd(t, cmd, root)
 			}
 		})
 	}

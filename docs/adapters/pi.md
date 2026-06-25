@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` CLI). It emits agents, skills, prompts, and TypeScript extensions into `.pi/`. Pi supports project, workspace, and global scopes.
+The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` CLI). It emits Pi-native `.pi/` resources — agents, skills, prompts, TypeScript extensions, system prompts, and settings — and supports project, workspace, and global scopes. Pi is distinct from OMP (Oh My Pi): OMP has its own `.omp/` layout, native hooks/commands, and MCP compilation, none of which are emitted by the Pi adapter.
 
 ## Generated Files
 
@@ -74,6 +74,22 @@ Canonical agents are written as flat markdown files under `.pi/agents/`. Pi's su
 
 Prompt templates are copied as flat markdown files to `.pi/prompts/`. The adapter supports selection filtering.
 
+## Trust Behavior
+
+Pi project trust is an **input-loading guard**, not a sandbox. Pi checks project-local `.pi/` resources — including `settings.json`, `extensions/`, `skills/`, `prompts/`, `themes/`, `SYSTEM.md`, and `APPEND_SYSTEM.md` — against the saved trust decision for the directory (or a parent). If no decision exists, Pi follows `defaultProjectTrust` from global settings; the default is `"ask"`, which prompts interactively.
+
+**Non-interactive runs:** Pi's non-interactive modes (`-p`, `--mode json`, `--mode rpc`) do not show a trust prompt. Without an applicable saved trust decision:
+
+- `defaultProjectTrust: "ask"` and `"never"` ignore project-local `.pi/*` resources
+- `defaultProjectTrust: "always"` trusts them
+- `--approve` / `-a` and `--no-approve` / `-na` override trust for one run
+
+This means LazyAI-generated `.pi/*` resources may be silently ignored in non-interactive Pi sessions until trust is configured.
+
+## No Built-in Sandbox
+
+Pi does not include a built-in sandbox. Built-in tools and extensions run with the permissions of the Pi process. `lazyai-cli doctor` warns about this explicitly for Pi.
+
 ## Settings Behavior
 
 Pi uses JSON settings files with project settings overriding global settings on a per-key basis. LazyAI emits settings at both scopes:
@@ -122,7 +138,7 @@ No (`CanRunHeadless() = false`).
 - **MCP is a no-op** — no MCP configuration is emitted for Pi, and the adapter intentionally does not declare MCP capability
 - No templates, commands, or chat modes
 - No `.pi/hooks` path; hooks ship as TypeScript extensions
-- Pi project trust is not a sandbox (Pi loads trusted project resources, but execution still runs with user permissions)
+- Pi project trust is not a sandbox, and generated `.pi/*` resources may be ignored in non-interactive runs until trust is configured
 - Extension-local `node_modules/` are not installed by the adapter (operator runs `npm install`)
 - `settings.json` `"packages"` and arbitrary-path `"extensions"` entries are unsupported until #537
 - **Themes are out-of-scope** — Pi's `theme` setting is a user UI preference (not compiled); the `themes` resource reference has no backing library assets to point at (see Theme Behavior)
@@ -133,4 +149,4 @@ No (`CanRunHeadless() = false`).
 |---|---|
 | `pi_adapter_test.go` | Agents, skills, prompts, flat + directory-layout extensions, settings emission at project/global scope, system prompts, non-leakage between surfaces, and no `theme`/`themes` settings keys emitted |
 | `adapter_adapters_test.go` | Full install from FS |
-| `adapter_adapters_test.go` | Full install from FS |
+| `scope_test.go` | `IsScopeSupported` returns true for all three Pi scopes |

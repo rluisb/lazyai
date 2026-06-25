@@ -63,8 +63,8 @@ func TestGetLibraryFS_OpenCodeAssetsAreEmbedded(t *testing.T) {
 		{"opencode/commands/review.md", "description:"},
 		{"opencode/commands/test.md", "description:"},
 		{"opencode/commands/commit.md", "description:"},
-		{"opencode/modes/plan.md", "tools:"},
-		{"opencode/modes/audit.md", "tools:"},
+		{"opencode/modes/plan.md", "permission:"},
+		{"opencode/modes/audit.md", "permission:"},
 	}
 	for _, c := range cases {
 		data, err := fs.ReadFile(libFS, c.path)

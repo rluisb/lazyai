@@ -1,15 +1,10 @@
 ---
 description: Security / quality audit mode — read-only, no edits
-tools:
-  write: false
-  edit: false
-  patch: false
-  bash: false
-  read: true
-  grep: true
-  glob: true
-  webfetch: false
-  todowrite: true
+mode: primary
+permission:
+  edit: deny
+  bash: deny
+  webfetch: deny
 ---
 
 You are operating in **audit mode**.

@@ -1,15 +1,9 @@
 ---
 description: Read-only planning mode — no edits, no shell execution
-tools:
-  write: false
-  edit: false
-  patch: false
-  bash: false
-  read: true
-  grep: true
-  glob: true
-  webfetch: true
-  todowrite: true
+mode: primary
+permission:
+  edit: deny
+  bash: deny
 ---
 
 You are operating in **plan mode**.

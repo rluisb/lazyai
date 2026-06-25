@@ -453,8 +453,20 @@ func TestCompileAntigravityMCP_ProjectScopeWritesGlobalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CompileMCPForTool failed: %v", err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("expected 1 tracked file record, got %d", len(records))
+	if len(records) != 2 {
+		t.Fatalf("expected 2 tracked file records (mcp_config.json + settings.json), got %d", len(records))
+	}
+	var sawConfig, sawSettings bool
+	for _, r := range records {
+		switch r.Source {
+		case "compiled:mcp:antigravity":
+			sawConfig = true
+		case "compiled:mcp:antigravity:settings":
+			sawSettings = true
+		}
+	}
+	if !sawConfig || !sawSettings {
+		t.Fatalf("expected both antigravity mcp_config and settings records; got %#v", records)
 	}
 
 	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")

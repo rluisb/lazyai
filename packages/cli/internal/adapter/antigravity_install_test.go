@@ -128,11 +128,14 @@ func TestAntigravityAdapter_CompileMCP_WritesGeminiUserConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Antigravity CompileMCP failed: %v", err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("expected one tracked file, got %d", len(records))
+	if len(records) != 2 {
+		t.Fatalf("expected two tracked files (mcp_config.json + settings.json), got %d", len(records))
 	}
 	if records[0].Source != "compiled:mcp:antigravity" {
-		t.Fatalf("unexpected source %q", records[0].Source)
+		t.Fatalf("unexpected source for first record %q", records[0].Source)
+	}
+	if records[1].Source != "compiled:mcp:antigravity:settings" {
+		t.Fatalf("unexpected source for second record %q", records[1].Source)
 	}
 
 	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")
@@ -148,10 +151,11 @@ func TestAntigravityAdapter_CompileMCP_WritesGeminiUserConfig(t *testing.T) {
 	}
 }
 
-// TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl pins the #486-verified
-// Antigravity MCP schema: HTTP servers must serialize as `serverUrl` (not `url`)
-// per https://antigravity.google/docs/mcp. See
-// docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
+// TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl pins the Antigravity
+// desktop-IDE MCP schema (serverUrl key, mcp_config.json) per
+// https://antigravity.google/docs/mcp (docs/adapters/snapshots/beta-adapter-verification-2026-06.md).
+// The Gemini CLI discoverable form is asserted separately in
+// TestAntigravityAdapter_CompileMCP_RemoteServerGeminiCLIDiscoverable.
 func TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl(t *testing.T) {
 	targetDir := t.TempDir()
 	homeDir := t.TempDir()
@@ -166,6 +170,7 @@ func TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl(t *testing.T) {
 		t.Fatalf("Antigravity CompileMCP failed: %v", err)
 	}
 
+	// Desktop-IDE path: mcp_config.json must use serverUrl.
 	configPath := filepath.Join(homeDir, ".gemini", "config", "mcp_config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -173,10 +178,49 @@ func TestAntigravityAdapter_CompileMCP_HTTPUsesServerUrl(t *testing.T) {
 	}
 	content := string(data)
 	if !strings.Contains(content, `"serverUrl"`) || !strings.Contains(content, "https://example.com/mcp/") {
-		t.Fatalf("HTTP server must serialize as serverUrl:\n%s", content)
+		t.Fatalf("Antigravity desktop mcp_config.json must serialize as serverUrl:\n%s", content)
 	}
 	if strings.Contains(content, `"url"`) {
-		t.Fatalf("Antigravity MCP must not emit \"url\" for HTTP transport:\n%s", content)
+		t.Fatalf("Antigravity desktop mcp_config.json must not emit \"url\" for HTTP transport:\n%s", content)
+	}
+}
+
+// TestAntigravityAdapter_CompileMCP_RemoteServerGeminiCLIDiscoverable asserts
+// that remote MCP servers are written to the Gemini CLI-discoverable
+// settings.json with httpUrl (Streamable HTTP) per the official schema:
+// https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json
+// Fixes #546: previously only mcp_config.json+serverUrl was written, which the
+// open-source Gemini CLI does not read.
+func TestAntigravityAdapter_CompileMCP_RemoteServerGeminiCLIDiscoverable(t *testing.T) {
+	targetDir := t.TempDir()
+	homeDir := t.TempDir()
+	writeFile(t, filepath.Join(targetDir, ".ai", "mcp.json"), `{"servers":{"myserver":{"url":"https://api.example.com/mcp","headers":{"Authorization":"Bearer tok"},"enabled":true}}}`)
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.CompileMCP(CompileContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeProject,
+	}); err != nil {
+		t.Fatalf("Antigravity CompileMCP failed: %v", err)
+	}
+
+	// Gemini CLI reads mcpServers from settings.json, not mcp_config.json.
+	settingsPath := filepath.Join(targetDir, ".gemini", "settings.json")
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("expected settings.json at %s: %v", settingsPath, err)
+	}
+	content := string(data)
+
+	for _, want := range []string{"mcpServers", "myserver", "httpUrl", "https://api.example.com/mcp", "Authorization"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("settings.json missing Gemini CLI MCP key %q:\n%s", want, content)
+		}
+	}
+	// Gemini CLI settings.json must NOT use serverUrl (Antigravity desktop-only key).
+	if strings.Contains(content, `"serverUrl"`) {
+		t.Fatalf("settings.json must not emit \"serverUrl\" (Antigravity desktop key, not Gemini CLI):\n%s", content)
 	}
 }
 

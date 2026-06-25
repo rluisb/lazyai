@@ -741,3 +741,93 @@ func TestTrackedRecordPath_Normalization(t *testing.T) {
 		}
 	})
 }
+
+// TestToKiroMcp_RemoteNoType verifies that remote Kiro MCP entries emit {url, headers}
+// with NO "type" key, per https://kiro.dev/docs/mcp/configuration.
+func TestToKiroMcp_RemoteNoType(t *testing.T) {
+	servers := map[string]McpServer{
+		"my-remote": {
+			URL: "https://example.com/mcp",
+			Headers: map[string]string{
+				"Authorization": "Bearer token",
+			},
+		},
+	}
+	result := toKiroMcp(servers)
+
+	mcpServers, ok := result["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatalf("mcpServers not a map[string]any: %T", result["mcpServers"])
+	}
+	entry, ok := mcpServers["my-remote"].(map[string]any)
+	if !ok {
+		t.Fatalf("my-remote entry not a map[string]any: %T", mcpServers["my-remote"])
+	}
+
+	// Must have url
+	if got, ok := entry["url"]; !ok || got != "https://example.com/mcp" {
+		t.Errorf("url = %v, want %q", got, "https://example.com/mcp")
+	}
+	// Must have headers
+	if _, ok := entry["headers"]; !ok {
+		t.Error("headers missing from remote entry")
+	}
+	// Must NOT have type
+	if _, ok := entry["type"]; ok {
+		t.Errorf("type key must not be present in Kiro remote MCP entry, got %v", entry["type"])
+	}
+}
+
+// TestToKiroMcp_RemoteNoHeadersWhenNil verifies that headers is omitted when nil.
+func TestToKiroMcp_RemoteNoHeadersWhenNil(t *testing.T) {
+	servers := map[string]McpServer{
+		"bare-remote": {URL: "https://example.com/mcp"},
+	}
+	result := toKiroMcp(servers)
+
+	mcpServers := result["mcpServers"].(map[string]any)
+	entry := mcpServers["bare-remote"].(map[string]any)
+
+	if _, ok := entry["type"]; ok {
+		t.Error("type key must not be present")
+	}
+	if _, ok := entry["headers"]; ok {
+		t.Error("headers key must not be present when nil")
+	}
+	if got := entry["url"]; got != "https://example.com/mcp" {
+		t.Errorf("url = %v, want https://example.com/mcp", got)
+	}
+}
+
+// TestToKiroMcp_LocalShape verifies that local/stdio Kiro MCP entries emit
+// {command, args, env} matching the documented local server shape.
+func TestToKiroMcp_LocalShape(t *testing.T) {
+	servers := map[string]McpServer{
+		"fs": {
+			Command: "npx",
+			Args:    []string{"-y", "@modelcontextprotocol/server-filesystem", "."},
+			Env:     map[string]string{"DEBUG": "1"},
+		},
+	}
+	result := toKiroMcp(servers)
+
+	mcpServers := result["mcpServers"].(map[string]any)
+	entry := mcpServers["fs"].(map[string]any)
+
+	if got := entry["command"]; got != "npx" {
+		t.Errorf("command = %v, want npx", got)
+	}
+	args, ok := entry["args"].([]string)
+	if !ok || len(args) != 3 {
+		t.Errorf("args = %v, unexpected", entry["args"])
+	}
+	if _, ok := entry["env"]; !ok {
+		t.Error("env missing from local entry")
+	}
+	if _, ok := entry["type"]; ok {
+		t.Error("type key must not be present in local entry")
+	}
+	if _, ok := entry["url"]; ok {
+		t.Error("url key must not be present in local entry")
+	}
+}

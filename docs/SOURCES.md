@@ -57,6 +57,7 @@ This registry lists official documentation used to derive product and adapter re
 
 ### OpenCode
 - OpenCode docs root: https://opencode.ai/docs
+- OpenCode config: https://opencode.ai/docs/config/
 - OpenCode agents: https://opencode.ai/docs/agents/
 - OpenCode rules: https://opencode.ai/docs/rules/
 - OpenCode MCP servers: https://opencode.ai/docs/mcp-servers/

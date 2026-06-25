@@ -46,7 +46,7 @@ Each cell shows the output shape for the (tool, asset-kind) pair. See `output_ma
 |---|---|---|---|---|---|---|---|
 | **Agents** | flat → `.opencode/agents/` | flat → `.claude/agents/` | flat → `.github/agents/` | flat → `.pi/agents/` | flat → `.omp/agents/` | none | flat → `.kiro/agents/` |
 | **Skills** | dir-per-item → `.opencode/skills/` | dir-per-item → `.claude/skills/` | dir-per-item → `.github/skills/` | dir-per-item → `.pi/skills/` | dir-per-item → `.omp/skills/` | dir-per-item → `.agents/skills/` | dir-per-item → `.kiro/skills/` |
-| **Templates** | flat → `.opencode/templates/` | flat → `.claude/templates/` | flat → `.github/instructions/` | none | none | none | none |
+| **Templates** | none | flat → `.claude/templates/` | flat → `.github/instructions/` | none | none | none | none |
 | **Commands** | flat → `.opencode/commands/` | flat → `.claude/commands/` | none | none | flat → `.omp/commands/` | none | none |
 | **Chat modes** | flat → `.opencode/modes/` | none | flat → `.github/chatmodes/` | none | none | none | none |
 | **Output styles** | none | flat → `.claude/output-styles/` | none | none | none | none | none |

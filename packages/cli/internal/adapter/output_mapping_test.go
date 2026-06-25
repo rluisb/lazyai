@@ -38,9 +38,9 @@ func TestOutputTargetsAllKnownTools(t *testing.T) {
 	}
 }
 
-func TestOutputMappingSpeckitTemplatesShipForEveryTool(t *testing.T) {
+func TestOutputMappingSpeckitTemplatesShipOnlyForSupportedTools(t *testing.T) {
 	for _, tool := range []types.ToolId{
-		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
+		types.ToolIdClaudeCode, types.ToolIdCopilot,
 	} {
 		target, ok := LookupOutputTarget(tool, AssetKindTemplates)
 		if !ok {
@@ -58,6 +58,14 @@ func TestOutputMappingSpeckitTemplatesShipForEveryTool(t *testing.T) {
 			t.Errorf("tool %q templates DestSubdir=%q does not look like a templates dir",
 				tool, target.DestSubdir)
 		}
+	}
+
+	target, ok := LookupOutputTarget(types.ToolIdOpenCode, AssetKindTemplates)
+	if !ok {
+		t.Fatalf("tool %q has no AssetKindTemplates entry", types.ToolIdOpenCode)
+	}
+	if target.Shape != ShapeNone {
+		t.Fatalf("tool %q templates Shape=%q, want %q", types.ToolIdOpenCode, target.Shape, ShapeNone)
 	}
 }
 

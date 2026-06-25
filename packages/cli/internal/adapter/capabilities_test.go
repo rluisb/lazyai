@@ -7,8 +7,10 @@ import (
 )
 
 // TestEveryRegisteredAdapterReportsCapabilities ensures the capability model
-// is populated for all 7 V2 targets: every adapter must support MCP and carry
-// a recognized support level.
+// is populated for all 7 V2 targets: every adapter must carry a recognized
+// support level and emit root instructions. MCP is expected for every adapter
+// except Pi, whose CompileMCP is an intentional no-op (Pi has no native MCP
+// surface; see issue #531).
 func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 	reg := NewRegistry()
 	ids := reg.List()
@@ -26,11 +28,14 @@ func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 		default:
 			t.Errorf("%s: unrecognized support level %q", id, cap.Support)
 		}
-		if !cap.MCP {
-			t.Errorf("%s: every V2 target must support MCP", id)
-		}
 		if !cap.RootInstructions {
 			t.Errorf("%s: every V2 target must emit root instructions", id)
+		}
+		if id != types.ToolIdPi && !cap.MCP {
+			t.Errorf("%s: every V2 target except Pi must support MCP", id)
+		}
+		if id == types.ToolIdPi && cap.MCP {
+			t.Error("Pi must not declare MCP: CompileMCP is a no-op (issue #531)")
 		}
 	}
 }
@@ -117,6 +122,33 @@ func TestKiroCapabilitiesMatchMatrix(t *testing.T) {
 	}
 	if cap.Support != SupportStable {
 		t.Errorf("Kiro support = %q, want stable", cap.Support)
+	}
+}
+
+// TestPiCapabilitiesMatchEmittedSurfaces pins #531: Pi capability metadata must
+// match the surfaces the adapter actually emits. Declared: root instructions
+// (AGENTS.md), agents (.pi/agents), skills, hooks (as .pi/extensions), prompts,
+// plugins (host-support), compaction (host-support). Not declared: MCP
+// (CompileMCP is a no-op) and GlobalConfig (no .pi/settings.json emitted yet).
+func TestPiCapabilitiesMatchEmittedSurfaces(t *testing.T) {
+	cap := (&PiAdapter{}).Capabilities()
+	if cap.Support != SupportStable {
+		t.Errorf("Pi support = %q, want stable", cap.Support)
+	}
+	if !cap.RootInstructions {
+		t.Error("Pi must declare RootInstructions (AGENTS.md)")
+	}
+	if !cap.Agents {
+		t.Error("Pi must declare Agents — adapter installs .pi/agents/<name>.md")
+	}
+	if !cap.Skills || !cap.Hooks || !cap.PromptTemplates {
+		t.Error("Pi must declare Skills, Hooks (as extensions), and PromptTemplates")
+	}
+	if cap.MCP {
+		t.Error("Pi must not declare MCP: CompileMCP is a no-op (issue #531)")
+	}
+	if cap.GlobalConfig {
+		t.Error("Pi must not declare GlobalConfig: adapter does not emit .pi/settings.json (issue #531)")
 	}
 }
 

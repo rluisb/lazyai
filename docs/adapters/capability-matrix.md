@@ -22,22 +22,23 @@
 |---|---|---|---|---|---|---|---|
 | **Support level** | stable | stable | stable | stable | stable | stable | stable |
 | Root instructions | yes | yes | yes | yes | yes | yes | yes |
-| Agents | yes | yes | yes | ✓ | yes | — | yes |
+| Agents | yes | yes | yes | yes | yes | — | yes |
 | Subagents | yes | yes | — | — | — | — | — |
 | Skills | yes | yes | yes | yes | yes | yes | yes |
 | Hooks | yes | yes | yes | yes | yes | yes | yes |
 | Commands | yes | yes | — | — | yes | — | — |
 | Prompt templates | — | — | yes | yes | yes | — | yes |
 | Chat modes | yes | — | yes | — | — | — | — |
-| MCP | yes | yes | yes | yes | yes | yes | yes |
+| MCP | yes | yes | yes | no | yes | yes | yes |
 | Permissions | yes | yes | — | — | — | yes | yes |
 | Plugins | yes | yes | yes | yes | yes | yes | — |
 | Specs | — | — | — | — | — | — | — |
 | Steering | — | — | — | — | — | — | — |
 | Compaction | — | — | — | yes | yes | — | — |
 | Sessions | — | — | — | — | yes | — | — |
-| Global config | yes | yes | — | yes | no | yes | yes |
+| Global config | yes | yes | — | no | no | yes | yes |
 
+> **Pi notes (#531):** `Agents` is `yes` — the adapter installs `.pi/agents/<name>.md`. `MCP` is `no` — `CompileMCP` is a no-op (Pi has no native MCP surface). `GlobalConfig` is `no` — the adapter does not currently emit `.pi/settings.json`. Both may flip when follow-up settings/MCP work lands.
 > **Global config note (OMP):** `GlobalConfig` is intentionally `false` for OMP. OMP supports global agent configuration (`omp://settings.md`), but the adapter does not emit it — it is user-managed. This conservative claim was set in #523 and must not be reverted to `yes`.
 
 ## 3. Asset Output Mapping
@@ -116,7 +117,7 @@ All 7 LazyAI-supported targets support project, workspace, and global scopes. An
 ## 8. Key Limitations
 
 ### Pi — MCP is a no-op
-Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:81-83`). The adapter declares MCP capability for future compatibility, but no MCP configuration is emitted for Pi. Pi has no native MCP surface.
+Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:89-91`). The adapter declares `MCP: false` because no MCP configuration is emitted for Pi. Pi has no native MCP surface.
 
 ### Kiro — No specs or steering; permissions and Powers are non-goals
 Kiro emits native `.kiro/hooks/<name>.json` files using the Kiro CLI v3 hook schema. Specs are not emitted because they are user-authored workflow artifacts. Repo-local permissions are forbidden; `Permissions: true` is host-support metadata, not an emitted repo file. Direct `.kiro/powers/` output is not emitted; Powers remain a future importable-package direction.

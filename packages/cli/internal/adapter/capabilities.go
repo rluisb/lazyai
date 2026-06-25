@@ -104,20 +104,25 @@ func (a *CopilotAdapter) Capabilities() Capability {
 	}
 }
 
-// Capabilities reports the Pi adapter's surfaces. Matrix §1: AGENTS.md rules,
-// skills, prompt templates, hooks, MCP (where supported), compaction,
-// packages (plugins), settings (global config).
+// Capabilities reports the Pi adapter's surfaces. Emitted files: root AGENTS.md,
+// .pi/agents/<name>.md, .pi/skills/<name>/SKILL.md, .pi/prompts/<name>.md, and
+// .pi/extensions/*.ts (safety hooks; Pi has no .pi/hooks path). Plugins and
+// Compaction are host-support metadata (Pi supports packages and compaction
+// natively) rather than emitted files. MCP is intentionally false: CompileMCP is
+// a no-op because Pi has no native MCP surface. GlobalConfig is false because the
+// adapter does not currently emit .pi/settings.json.
 func (a *PiAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportStable,
 		RootInstructions: true,
+		Agents:           true,
 		Skills:           true,
 		Hooks:            true,
 		PromptTemplates:  true,
-		MCP:              true,
+		MCP:              false,
 		Plugins:          true,
 		Compaction:       true,
-		GlobalConfig:     true,
+		GlobalConfig:     false,
 	}
 }
 

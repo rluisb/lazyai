@@ -157,6 +157,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 - **MCP output files:** `.omp/mcp.json`.
 - **Global scope support:** `yes`.
 - **Maturity note:** **stable** (all emitted surfaces verified against authoritative OMP docs; see [../adapters/snapshots/beta-adapter-verification-2026-06.md](../adapters/snapshots/beta-adapter-verification-2026-06.md)).
+- **Non-goals:** `.omp/tools/` and `.omp/extensions/` are documented OMP-native discovery surfaces (see `omp://custom-tools.md` and `omp://extension-loading.md`) but are not emitted by LazyAI; executable-module generation is out of current product scope and user-authored tools/extension modules remain user-managed.
 
 ## Antigravity
 

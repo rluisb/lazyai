@@ -44,6 +44,12 @@ global agent configuration (`omp://settings.md`) is user-managed and the adapter
 does not emit it, so the capability is set to false (conservative claim, see
 issue #523). This matches how the matrix treats e.g. Pi's MCP no-op.
 
+`.omp/tools/` and `.omp/extensions/` are documented OMP-native discovery surfaces
+(`omp://custom-tools.md` and `omp://extension-loading.md`) but are intentionally
+not emitted by the adapter. Executable-module generation is out of current product
+scope; user-authored tools and extension modules remain user-managed. This is a
+documented non-goal, not an unverified gap (#524).
+
 **Decision:** OMP meets the stable bar (official docs verified + golden tests
 `omp_adapter_test.go` + install smoke). `CanRunHeadless()=false` is not a blocker — Pi is
 stable with the same constraint. Promoted to **stable**.

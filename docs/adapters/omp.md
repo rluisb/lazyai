@@ -67,6 +67,7 @@ No (`CanRunHeadless() = false`).
 
 - No templates, chat modes, or output styles
 - No headless support
+- `.omp/tools/` and `.omp/extensions/` are documented OMP-native discovery surfaces (see `omp://custom-tools.md` and `omp://extension-loading.md`), but the adapter does not emit them; executable-module generation is out of current product scope. User-authored tools and extension modules remain user-managed.
 
 ## Test Coverage
 

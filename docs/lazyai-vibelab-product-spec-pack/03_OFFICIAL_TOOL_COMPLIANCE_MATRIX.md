@@ -242,6 +242,7 @@ LazyAI requirements:
 - [x] Mark adapter as stable (all emitted surfaces verified against authoritative OMP docs; see `docs/adapters/snapshots/beta-adapter-verification-2026-06.md`).
 - [ ] No global scope support (project/workspace only).
 - [ ] No headless support.
+- [ ] No `.omp/tools/` or `.omp/extensions/` emission. (Documented OMP-native discovery surfaces per `omp://custom-tools.md` and `omp://extension-loading.md`; executable-module generation is out of current product scope — user-managed, not an unverified gap. See #524.)
 
 Conformance tests:
 
@@ -442,6 +443,6 @@ Adapters currently at `beta` must satisfy these additional criteria before promo
 | Claude Code | stable | — | None |
 | GitHub Copilot | stable | — | None |
 | Pi | stable | — | None |
-| OMP | stable | 2026-06-23 | Plugin bundle and handoff/compaction assets not yet emitted (non-blocking; see compliance checklist §6) |
+| OMP | stable | 2026-06-23 | Plugin bundle and handoff/compaction assets not yet emitted; `.omp/tools/` and `.omp/extensions/` intentionally not emitted — executable-module generation out of scope (non-blocking; see compliance checklist §6, #524) |
 | Antigravity | stable | 2026-06-23 | None (both 2026-06 gaps closed + pinned) |
 | Kiro | stable | — | Steering, specs, hooks, `.kiroignore` not yet emitted (requires external docs refresh) |

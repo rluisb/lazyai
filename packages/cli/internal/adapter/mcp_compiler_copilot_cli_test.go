@@ -39,8 +39,8 @@ func TestToCopilotCLIMcp_StdioServer(t *testing.T) {
 	}
 }
 
-// TestToCopilotCLIMcp_SseServer verifies the CLI-shape payload for a remote SSE server.
-func TestToCopilotCLIMcp_SseServer(t *testing.T) {
+// TestToCopilotCLIMcp_HttpServer verifies the CLI-shape payload for a remote HTTP server.
+func TestToCopilotCLIMcp_HttpServer(t *testing.T) {
 	servers := map[string]McpServer{
 		"remote": {
 			URL:     "https://mcp.example.com",
@@ -50,13 +50,13 @@ func TestToCopilotCLIMcp_SseServer(t *testing.T) {
 	got := toCopilotCLIMcp(servers)
 	mcpServers := got["mcpServers"].(map[string]any)
 	entry := mcpServers["remote"].(map[string]any)
-	if entry["type"] != "sse" {
-		t.Errorf("expected type=sse, got %v", entry["type"])
+	if entry["type"] != "http" {
+		t.Errorf("expected type=http (Copilot CLI uses streamable HTTP, not deprecated SSE), got %v", entry["type"])
 	}
 	if entry["url"] != "https://mcp.example.com" {
 		t.Errorf("unexpected url: %v", entry["url"])
 	}
-	// SSE servers carry headers but no env placeholder expansion at this layer.
+	// Remote servers carry headers but no env placeholder expansion at this layer.
 }
 
 // TestToCopilotCLIMcp_EnvPreserved verifies env vars survive the transform.
@@ -217,6 +217,7 @@ func TestCompileCopilotVSCodeMcp_RemoteURL_UsesHTTPType(t *testing.T) {
 		t.Fatalf("expected one API_KEY input prompt, got %+v", parsed.Inputs)
 	}
 }
+
 func TestCompileCopilotVSCodeMcp_WritesInputsSortedByID(t *testing.T) {
 	targetDir := t.TempDir()
 	home := t.TempDir()

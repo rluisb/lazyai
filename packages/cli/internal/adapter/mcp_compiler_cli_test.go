@@ -64,6 +64,36 @@ func TestCompileClaudeCodeMCP_GlobalScope(t *testing.T) {
 	}
 }
 
+// TestCompileClaudeCodeMCP_GlobalScope_WithServers_NoClaude verifies that at global
+// scope with MCP servers configured but `claude` not on PATH, compile still returns
+// no files and no error (warning is emitted, behavior is unchanged).
+func TestCompileClaudeCodeMCP_GlobalScope_WithServers_NoClaude(t *testing.T) {
+	// Ensure `claude` is not on PATH.
+	t.Setenv("PATH", t.TempDir())
+
+	servers := map[string]McpServer{
+		"filesystem": {
+			Command: "npx",
+			Args:    []string{"-y", "@modelcontextprotocol/server-filesystem"},
+			Enabled: boolPtr(true),
+		},
+	}
+
+	ctx := CompileContext{
+		SetupScope: types.SetupScopeGlobal,
+		TargetDir:  t.TempDir(),
+	}
+
+	records, err := compileClaudeCodeMCP(ctx, servers)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	// No files should be written even when servers are present (DriveCLI path handles global).
+	if len(records) > 0 {
+		t.Errorf("global scope should not write files, got %d records", len(records))
+	}
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

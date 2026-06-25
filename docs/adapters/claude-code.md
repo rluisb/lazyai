@@ -70,7 +70,7 @@ Yes (`CanRunHeadless() = true`). The adapter supports headless init and validati
 
 - No chat modes concept
 - No prompts directory; prompts ship as commands
-- Global scope MCP is settings.json-only (no `.mcp.json`)
+- Global scope MCP is applied via `claude mcp add-json -s user` → `~/.claude.json` (DriveCLI); if `claude` is not on PATH, no MCP is registered at global scope
 
 ## Test Coverage
 

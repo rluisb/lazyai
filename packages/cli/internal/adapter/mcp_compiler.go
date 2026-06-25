@@ -281,7 +281,7 @@ func toOpenCodeMcp(servers map[string]McpServer) map[string]any {
 func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
 	// Claude Code has two distinct config surfaces:
 	//   - project: <target>/.mcp.json (user-committed project-scope MCP file)
-	//   - global:  ~/.claude/settings.json (mcpServers merged by init's Install)
+	//   - global:  ~/.claude.json via `claude mcp add-json -s user` (DriveCLI path)
 	// When LocalSecrets is set, route the project catalog to the gitignored
 	// .claude/settings.local.json instead of the committed .mcp.json, and at
 	// global scope write to ~/.claude/settings.local.json (ai-setup convention).
@@ -289,9 +289,16 @@ func compileClaudeCodeMCP(ctx CompileContext, servers map[string]McpServer) ([]t
 		return writeClaudeSettingsLocal(ctx, servers)
 	}
 
-	// Default path: at global, skip (settings.json merge at init time covers it).
+	// Global MCP is reconciled via DriveCLI (`claude mcp add-json -s user` → ~/.claude.json).
+	// Nothing is written here; warn if servers are configured but `claude` is not on PATH.
 	if ctx.SetupScope == types.SetupScopeGlobal {
-		adapterLog.Info("mcpServers live in settings.json; skipping", "operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope)
+		if len(servers) > 0 {
+			if _, found := LookupClaudeBinary(); !found {
+				adapterLog.Warn("global MCP servers configured but `claude` not on PATH; nothing was applied",
+					"operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope)
+			}
+		}
+		adapterLog.Info("global MCP reconciled via `claude mcp add-json -s user` -> ~/.claude.json; nothing written here", "operation", "compile", "tool", types.ToolIdClaudeCode, "scope", ctx.SetupScope)
 		return ctx.FileRecords, nil
 	}
 

@@ -109,8 +109,9 @@ func (a *CopilotAdapter) Capabilities() Capability {
 // .pi/extensions/*.ts (safety hooks; Pi has no .pi/hooks path). Plugins and
 // Compaction are host-support metadata (Pi supports packages and compaction
 // natively) rather than emitted files. MCP is intentionally false: CompileMCP is
-// a no-op because Pi has no native MCP surface. GlobalConfig is false because the
-// adapter does not currently emit .pi/settings.json.
+// a no-op because Pi has no native MCP surface. GlobalConfig is true because the
+// adapter emits Pi settings.json for project/workspace scope and ~/.pi/agent/settings.json
+// for global scope.
 func (a *PiAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportStable,
@@ -122,7 +123,7 @@ func (a *PiAdapter) Capabilities() Capability {
 		MCP:              false,
 		Plugins:          true,
 		Compaction:       true,
-		GlobalConfig:     false,
+		GlobalConfig:     true,
 	}
 }
 

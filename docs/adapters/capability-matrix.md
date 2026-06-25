@@ -36,9 +36,9 @@
 | Steering | — | — | — | — | — | — | — |
 | Compaction | — | — | — | yes | yes | — | — |
 | Sessions | — | — | — | — | yes | — | — |
-| Global config | yes | yes | — | no | no | yes | yes |
+| Global config | yes | yes | — | yes | no | yes | yes |
 
-> **Pi notes (#531):** `Agents` is `yes` — the adapter installs `.pi/agents/<name>.md`. `MCP` is `no` — `CompileMCP` is a no-op (Pi has no native MCP surface). `GlobalConfig` is `no` — the adapter does not currently emit `.pi/settings.json`. Both may flip when follow-up settings/MCP work lands.
+> **Pi notes (#531/#532):** `Agents` is `yes` — the adapter installs `.pi/agents/<name>.md`. `MCP` is `no` — `CompileMCP` is a no-op (Pi has no native MCP surface). `GlobalConfig` is now `yes` — the adapter emits `.pi/settings.json` for project/workspace scope and `~/.pi/agent/settings.json` for global scope.
 > **Global config note (OMP):** `GlobalConfig` is intentionally `false` for OMP. OMP supports global agent configuration (`omp://settings.md`), but the adapter does not emit it — it is user-managed. This conservative claim was set in #523 and must not be reverted to `yes`.
 
 ## 3. Asset Output Mapping
@@ -96,7 +96,7 @@ All 7 LazyAI-supported targets support project, workspace, and global scopes. An
 | OpenCode | `CompileMCPForTool` | `.opencode/lazyai.mcp.jsonc` (legacy), `.opencode/mcp.json` | Preserves user-authored servers across re-runs |
 | Claude Code | `CompileMCPForTool` | `.mcp.json` (project), `settings.json` merge (global) | CLI-driven `claude mcp add-json` with fallback to direct-write |
 | Copilot | `CompileMCPForTool` | `.vscode/mcp.json` (project), `~/.copilot/mcp-config.json` (CLI) | Dual output: VS Code + CLI; CLI probe-gated |
-| Pi | **no-op** (`CompileMCP` returns `ctx.FileRecords`) | — | Pi has no native MCP surface; MCP capability is declared for future use |
+| Pi | **no-op** (`CompileMCP` returns `ctx.FileRecords`) | — | Pi has no native MCP surface; capability is intentionally `no` |
 | OMP | `CompileMCPForTool` | `.omp/mcp.json` | Standard compile path |
 | Antigravity | `CompileMCPForTool` | `~/.gemini/config/mcp_config.json` | User-level Gemini MCP config |
 | Kiro | `CompileMCPForTool` | `.kiro/settings/mcp.json` | Standard compile path |

@@ -125,11 +125,11 @@ func TestKiroCapabilitiesMatchMatrix(t *testing.T) {
 	}
 }
 
-// TestPiCapabilitiesMatchEmittedSurfaces pins #531: Pi capability metadata must
-// match the surfaces the adapter actually emits. Declared: root instructions
-// (AGENTS.md), agents (.pi/agents), skills, hooks (as .pi/extensions), prompts,
-// plugins (host-support), compaction (host-support). Not declared: MCP
-// (CompileMCP is a no-op) and GlobalConfig (no .pi/settings.json emitted yet).
+// TestPiCapabilitiesMatchEmittedSurfaces pins Pi capability metadata to the
+// adapter's current emitted surfaces. Declared: root instructions (AGENTS.md),
+// agents (.pi/agents), skills, hooks (as .pi/extensions), prompts, plugins
+// (host-support), compaction (host-support), and GlobalConfig (.pi/settings.json
+// plus ~/.pi/agent/settings.json). Not declared: MCP (CompileMCP is a no-op).
 func TestPiCapabilitiesMatchEmittedSurfaces(t *testing.T) {
 	cap := (&PiAdapter{}).Capabilities()
 	if cap.Support != SupportStable {
@@ -147,8 +147,8 @@ func TestPiCapabilitiesMatchEmittedSurfaces(t *testing.T) {
 	if cap.MCP {
 		t.Error("Pi must not declare MCP: CompileMCP is a no-op (issue #531)")
 	}
-	if cap.GlobalConfig {
-		t.Error("Pi must not declare GlobalConfig: adapter does not emit .pi/settings.json (issue #531)")
+	if !cap.GlobalConfig {
+		t.Error("Pi must declare GlobalConfig: adapter emits .pi/settings.json and ~/.pi/agent/settings.json (issue #532)")
 	}
 }
 

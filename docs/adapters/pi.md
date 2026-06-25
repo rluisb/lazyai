@@ -96,6 +96,15 @@ Both are distinct from generic root instructions (`AGENTS.md`/`CLAUDE.md`), whic
 
 These files require project trust before Pi loads them interactively.
 
+## Theme Behavior
+
+Pi's settings.json has two theme-related keys: `theme` (singular, a UI preference string like `"dark"` or `"light"`) and `themes` (plural, a resource-reference array of theme file/directory paths). LazyAI emits neither:
+
+- **`theme` (singular)** is a user-owned UI preference. Compiling it would overwrite the user's chosen theme on every re-run, violating the managed-region principle that user-owned content is preserved.
+- **`themes` (plural)** is a resource reference (like `extensions`/`skills`/`prompts`) that tells Pi where to load theme JSON assets from. LazyAI does not author or ship Pi theme assets, so emitting `"themes": ["themes"]` would point Pi at a directory with no backing assets — a no-op with no value.
+
+If theme asset compilation is added in the future, the `themes` resource reference should be added to the settings patch (alongside `extensions`/`skills`/`prompts`) and a matching output-mapping surface should be added.
+
 ## Scope Support
 
 | Scope | Supported |
@@ -116,10 +125,12 @@ No (`CanRunHeadless() = false`).
 - Pi project trust is not a sandbox (Pi loads trusted project resources, but execution still runs with user permissions)
 - Extension-local `node_modules/` are not installed by the adapter (operator runs `npm install`)
 - `settings.json` `"packages"` and arbitrary-path `"extensions"` entries are unsupported until #537
+- **Themes are out-of-scope** — Pi's `theme` setting is a user UI preference (not compiled); the `themes` resource reference has no backing library assets to point at (see Theme Behavior)
 
 ## Test Coverage
 
 | Test file | What it verifies |
 |---|---|
-| `pi_adapter_test.go` | Agents, skills, prompts, flat + directory-layout extensions, settings emission at project/global scope, system prompts, and non-leakage between surfaces |
+| `pi_adapter_test.go` | Agents, skills, prompts, flat + directory-layout extensions, settings emission at project/global scope, system prompts, non-leakage between surfaces, and no `theme`/`themes` settings keys emitted |
+| `adapter_adapters_test.go` | Full install from FS |
 | `adapter_adapters_test.go` | Full install from FS |

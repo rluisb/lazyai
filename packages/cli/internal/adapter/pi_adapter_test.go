@@ -295,3 +295,36 @@ func TestPiAdapter_Install_DoesNotEmitExtensionsAsSystemPrompts(t *testing.T) {
 	assertMissing(t, filepath.Join(targetDir, ".pi", "block-destructive-shell.ts"))
 	assertExists(t, filepath.Join(targetDir, ".pi", "extensions", "block-destructive-shell.ts"))
 }
+
+// TestPiAdapter_Install_DoesNotEmitThemes asserts that the Pi adapter does not
+// create a .pi/themes/ directory, does not write a settings.json containing
+// theme or themes keys, and does not emit any theme-related assets. Pi theme
+// support is intentionally out-of-scope: Pi's `theme` setting is a user-owned
+// UI preference, and the `themes` resource reference has no backing library
+// assets. See docs/adapters/pi.md "Theme Behavior" and issue #535.
+func TestPiAdapter_Install_DoesNotEmitThemes(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.Selections = AdapterSelections{
+		Agents: []types.AgentId{types.AgentIdResearcher},
+		Skills: []types.SkillId{types.SkillIdIssueTriage},
+	}
+
+	adapter := &PiAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Pi Install failed: %v", err)
+	}
+
+	// No .pi/themes directory should be created.
+	assertMissing(t, filepath.Join(targetDir, ".pi", "themes"))
+
+	// No settings.json with theme/themes keys should be emitted by Install.
+	// (The settings write path is owned by #532; even if it exists, it must
+	// not include theme or themes keys.)
+	settingsPath := filepath.Join(targetDir, ".pi", "settings.json")
+	if data, err := os.ReadFile(settingsPath); err == nil {
+		body := string(data)
+		if strings.Contains(body, `"theme"`) || strings.Contains(body, `"themes"`) {
+			t.Fatalf("Pi settings.json must not contain theme or themes keys: %s", body)
+		}
+	}
+}

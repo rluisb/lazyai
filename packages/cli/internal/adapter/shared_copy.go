@@ -334,10 +334,10 @@ func copyLibraryDirectoryFromFS(opts CopyLibraryDirectoryOption, libFS fs.FS) er
 		}
 
 		// Extract file ID (filename without extension) for selection filtering.
-		// Chatmodes use a compound extension ".chatmode.md" — strip it explicitly.
+		// Custom agent files use a compound extension ".agent.md" — strip it explicitly.
 		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
 		if opts.SelectionKey == "chatmodes" {
-			fileIDVal = strings.TrimSuffix(fileIDVal, ".chatmode")
+			fileIDVal = strings.TrimSuffix(fileIDVal, ".agent")
 		}
 		switch opts.SelectionKey {
 		case "agents":
@@ -410,10 +410,10 @@ func copyLibraryDirectoryFromDisk(opts CopyLibraryDirectoryOption, sourceDir str
 		}
 
 		// Extract file ID (filename without extension) for selection filtering.
-		// Chatmodes use a compound extension ".chatmode.md" — strip it explicitly.
+		// Custom agent files use a compound extension ".agent.md" — strip it explicitly.
 		fileIDVal := strings.TrimSuffix(file, filepath.Ext(file))
 		if opts.SelectionKey == "chatmodes" {
-			fileIDVal = strings.TrimSuffix(fileIDVal, ".chatmode")
+			fileIDVal = strings.TrimSuffix(fileIDVal, ".agent")
 		}
 		switch opts.SelectionKey {
 		case "agents":

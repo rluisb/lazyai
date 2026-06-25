@@ -131,8 +131,8 @@ const (
 	PromptIdResearch     PromptId = "research"
 )
 
-// ChatModeId identifies a GitHub Copilot chat mode (markdown file under
-// <githubDir>/chatmodes/).
+// ChatModeId identifies a GitHub Copilot custom agent (markdown file under
+// <githubDir>/agents/).
 type ChatModeId string
 
 const (

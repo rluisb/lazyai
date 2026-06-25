@@ -801,7 +801,7 @@ func toCopilotVSCodeMcp(servers map[string]McpServer) map[string]any {
 // "mcpServers" top-level key. Unlike VS Code, the standalone CLI reads
 // env variables from the process environment directly — no "inputs" prompts.
 func toCopilotCLIMcp(servers map[string]McpServer) map[string]any {
-	entries, _ := toCopilotServerEntries(servers, "sse")
+	entries, _ := toCopilotServerEntries(servers, "http")
 	return map[string]any{"mcpServers": entries}
 }
 

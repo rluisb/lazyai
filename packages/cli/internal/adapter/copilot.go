@@ -120,14 +120,29 @@ func (a *CopilotAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, erro
 			return nil, err
 		}
 	}
-	// Copy chat modes to .github/chatmodes/<name>.chatmode.md.
-	chatmodesDir := filepath.Join(githubDir, "chatmodes")
+	// Build the set of canonical agent basenames already emitted to agentsDir so
+	// that chatmode-derived files never overwrite them. Canonical agents are
+	// authoritative: if a chatmode shares a name with a canonical agent, the
+	// chatmode copy is silently skipped.
+	canonicalAgentNames := map[string]bool{}
+	if canonicalEntries, rdErr := os.ReadDir(agentsDir); rdErr == nil {
+		for _, e := range canonicalEntries {
+			if !e.IsDir() {
+				canonicalAgentNames[e.Name()] = true
+			}
+		}
+	}
+	// Copy custom agents (formerly chat modes) to .github/agents/<name>.agent.md,
+	// skipping any whose destination basename collides with a canonical agent.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "chatmodes",
 		SelectionKey: "chatmodes",
 		ToDestPath: func(file string) string {
-			return filepath.Join(chatmodesDir, filepath.Base(file))
+			return filepath.Join(agentsDir, filepath.Base(file))
+		},
+		IncludeFile: func(file string) bool {
+			return !canonicalAgentNames[filepath.Base(file)]
 		},
 	}); err != nil {
 		return nil, err

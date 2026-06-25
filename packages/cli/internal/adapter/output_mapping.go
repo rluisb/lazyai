@@ -219,9 +219,9 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 			},
 			AssetKindChatModes: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindChatModes,
-				SourceSubdir: "chatmodes", DestSubdir: "chatmodes",
+				SourceSubdir: "chatmodes", DestSubdir: "agents",
 				Shape: ShapeFlat,
-				Notes: "Copilot chat modes at .github/chatmodes/<name>.chatmode.md",
+				Notes: "Copilot custom agents (migrated from chat modes) at .github/agents/<name>.agent.md",
 			},
 			AssetKindOutputStyles: {
 				Tool: types.ToolIdCopilot, Kind: AssetKindOutputStyles,

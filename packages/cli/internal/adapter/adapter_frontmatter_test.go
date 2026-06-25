@@ -180,8 +180,9 @@ func TestCopilotAgentMarkdownContent_BaselineNoTier(t *testing.T) {
 }
 
 // TestCopilotAdapter_DefaultSevenBaselineAgentsOnly installs with an empty
-// selection and asserts .github/agents contains exactly the seven baseline
-// .agent.md files and zero .agent.yaml files.
+// selection and asserts .github/agents contains the 8 canonical baseline
+// .agent.md files plus architect.agent.md (migrated chat mode), totalling 9.
+// reviewer.agent.md must be the canonical agent, not the chat-mode file.
 func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
 	ctx, targetDir := createTestAdapterContext(t)
 	ctx.LibraryFS = createTestFS()
@@ -207,7 +208,10 @@ func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
 			yamlFiles = append(yamlFiles, ent.Name())
 		}
 	}
+	// 8 canonical agents + architect (chat mode); reviewer chat mode is skipped
+	// because canonical reviewer takes precedence.
 	want := []string{
+		"architect.agent.md",
 		"deployer.agent.md",
 		"evidence-verifier.agent.md",
 		"guide.agent.md",
@@ -223,5 +227,17 @@ func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
 	}
 	if len(yamlFiles) != 0 {
 		t.Errorf("unexpected .agent.yaml files: %v", yamlFiles)
+	}
+	// Verify reviewer.agent.md is the canonical agent content, not the chat-mode
+	// version. The canonical reviewer carries the managed agent marker emitted
+	// by copilotAgentMarkdownContent; the chat-mode version does not.
+	reviewerPath := filepath.Join(agentsDir, "reviewer.agent.md")
+	reviewerContent, err := os.ReadFile(reviewerPath)
+	if err != nil {
+		t.Fatalf("read reviewer.agent.md: %v", err)
+	}
+	// The canonical reviewer description from createTestFS: "Test reviewer agent."
+	if !strings.Contains(string(reviewerContent), "Test reviewer agent.") {
+		t.Errorf("reviewer.agent.md does not contain canonical description; got:\n%s", reviewerContent)
 	}
 }

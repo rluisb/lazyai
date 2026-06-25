@@ -109,11 +109,11 @@ func createTestFS() fstest.MapFS {
 		"commands/plan.toml": &fstest.MapFile{
 			Data: []byte("name = \"plan\"\ndescription = \"Plan work\"\nprompt = \"Make plan\"\n"),
 		},
-		"chatmodes/architect.chatmode.md": &fstest.MapFile{
-			Data: []byte("---\ndescription: Architect mode\n---\nArchitect instructions."),
+		"chatmodes/architect.agent.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Architect mode\ntools: ['codebase']\n---\nArchitect instructions."),
 		},
-		"chatmodes/reviewer.chatmode.md": &fstest.MapFile{
-			Data: []byte("---\ndescription: Reviewer mode\n---\nReviewer instructions."),
+		"chatmodes/reviewer.agent.md": &fstest.MapFile{
+			Data: []byte("---\ndescription: Reviewer mode\ntools: ['search']\n---\nReviewer instructions."),
 		},
 		"opencode/commands/review.md": &fstest.MapFile{
 			Data: []byte("---\ndescription: Review branch\n---\n\nReview body."),

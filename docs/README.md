@@ -31,4 +31,4 @@ Optional runtime-adjacent features remain optional.
 - Pi adapter must respect project trust and explicitly warn that Pi has no built-in sandbox.
 - Kiro adapter emits native `.kiro/hooks/*.json` (Kiro v3 hook schema); specs and steering remain absent (user-authored / non-goal), repo-local permissions are forbidden, and direct `.kiro/powers/` is not emitted (Powers is a future importable-package direction only).
 - Antigravity adapter should use `.agents/skills` and `.agents/rules` as primary outputs, with global settings changes only by explicit consent.
-- OMP adapter should support `.omp/mcp.json`, plugins, skills, commands, hooks, compaction, and handoff; keep beta until docs snapshots are fully captured.
+- OMP adapter should support `.omp/mcp.json`, plugins, skills, commands, hooks, compaction, and handoff; stable since 2026-06-23 (all emitted surfaces verified against authoritative OMP docs, #486).

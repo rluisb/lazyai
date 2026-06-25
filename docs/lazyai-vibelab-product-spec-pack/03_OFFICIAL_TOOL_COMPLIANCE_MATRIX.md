@@ -14,8 +14,8 @@ This matrix turns official tool docs into adapter requirements. Each adapter mus
 | Claude Code | stable | `CLAUDE.md`, `.claude`, skills, subagents, hooks, MCP, permissions, plugins, managed settings, commands, output styles | agents, skills, rules, hooks, MCP, commands, output styles | `CLAUDE.md`, `.claude/*`, `.mcp.json` | Low: `CLAUDE.md` generated; DriveCLI and LocalSecrets paths tested |
 | GitHub Copilot | stable | repo instructions, path instructions, custom agents, skills, hooks, MCP, plugins, prompt templates, chat modes | rules, agents, skills, hooks, MCP, prompts, chat modes | `.github/*`, `.vscode/mcp.json`, `~/.copilot/mcp-config.json` | Medium: many surfaces differ between IDE, CLI, cloud; global scope probe-gated |
 | Pi | stable | settings, project trust, skills, prompts, TypeScript extensions, compaction, packages, subagents | skills, prompts, hooks, rules, agents | `.pi/*`, `.agents/skills`, `AGENTS.md` | Medium: project trust and no sandbox must be explicit; MCP is a no-op |
-| OMP | beta | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff, prompts | agents, skills, hooks, MCP, commands, handoff, prompts | `.omp/*`, `AGENTS.md` | Medium: beta until official docs snapshots are fully captured |
-| Antigravity/Gemini | beta | `.agents/skills`, hooks, MCP, plugins, permissions, sandbox/settings | skills, hooks, MCP, root instructions | `.gemini/*`, `.agents/skills/*`, `.agents/hooks.json` | Medium: beta until official docs snapshots are fully captured; no `.agents/rules` or `GEMINI.md` emitted |
+| OMP | stable | AGENTS/context, plugins, skills, commands, hooks, MCP, compaction, handoff, prompts | agents, skills, hooks, MCP, commands, handoff, prompts | `.omp/*`, `AGENTS.md` | Low: all emitted surfaces verified against authoritative OMP docs (see `docs/adapters/snapshots/beta-adapter-verification-2026-06.md`); plugin bundle and handoff/compaction assets not yet emitted |
+| Antigravity/Gemini | stable | `.agents/skills`, hooks, MCP, plugins, permissions, sandbox/settings | skills, hooks, MCP, root instructions | `.gemini/*`, `.agents/skills/*`, `.agents/hooks.json` | Low: all emitted surfaces verified against official Antigravity/Gemini docs; both 2026-06 gaps closed + pinned |
 | Kiro | stable | agents, skills, prompts, MCP, permissions | agents, skills, prompts, MCP | `.kiro/agents/*`, `.kiro/skills/*`, `.kiro/prompts/*`, `.kiro/settings/mcp.json` | Low/medium: steering, specs, runtime hooks, and `.kiroignore` not yet emitted (requires external docs refresh) |
 
 ---
@@ -235,11 +235,11 @@ LazyAI requirements:
 - [x] Generate `.omp/mcp.json` (via `compileOmpMCP`; reuses Claude Code MCP format).
 - [x] Generate `.omp/skills/*/SKILL.md`.
 - [x] Generate `.omp/commands/*` (canonical slash commands).
-- [x] Generate `.omp/prompts/*.md` (prompt templates).
+- [x] Generate `.omp/prompts/*.md` (prompt templates; discovery docs-confirmed via `omp://config-usage.md` §6).
 - [x] Generate `.omp/hooks/pre/*.ts` (TypeScript hook factories for OMP).
 - [ ] Generate plugin bundle optionally. (Not yet implemented.)
 - [ ] Compile handoff/compaction assets. (Not yet implemented.)
-- [x] Mark adapter as beta until official docs snapshots are fully captured.
+- [x] Mark adapter as stable (all emitted surfaces verified against authoritative OMP docs; see `docs/adapters/snapshots/beta-adapter-verification-2026-06.md`).
 - [ ] No global scope support (project/workspace only).
 - [ ] No headless support.
 
@@ -281,7 +281,7 @@ LazyAI requirements:
 - [x] Generate MCP config (`~/.gemini/config/mcp_config.json` via `compileAntigravityMCP`).
 - [x] Do not write user-global settings without explicit consent (merge preserves user keys).
 - [x] Warn about permissions/sandbox assumptions.
-- [x] Mark adapter as beta/experimental until docs snapshots are fully captured.
+- [x] Mark adapter as stable (all emitted surfaces verified against official Antigravity/Gemini docs; both 2026-06 gaps closed + pinned).
 - [ ] No global scope support (project/workspace only).
 - [ ] No headless support.
 
@@ -424,7 +424,7 @@ An adapter can be marked stable only when:
 
 ### 10.1 Beta graduation criteria
 
-Adapters currently at `beta` (OMP, Antigravity) must satisfy these additional criteria before promotion to `stable`:
+Adapters currently at `beta` must satisfy these additional criteria before promotion to `stable`:
 
 - Official docs snapshots are fully captured (no partially JS-rendered gaps).
 - All required outputs from the compliance checklist are implemented (no `[ ]` items).
@@ -442,6 +442,6 @@ Adapters currently at `beta` (OMP, Antigravity) must satisfy these additional cr
 | Claude Code | stable | — | None |
 | GitHub Copilot | stable | — | None |
 | Pi | stable | — | None |
-| OMP | beta | — | Plugin bundle, handoff/compaction assets; official docs snapshots not fully captured |
-| Antigravity | beta | — | `.agents/rules/*.md`, `GEMINI.md` not emitted; official docs snapshots not fully captured |
+| OMP | stable | 2026-06-23 | Plugin bundle and handoff/compaction assets not yet emitted (non-blocking; see compliance checklist §6) |
+| Antigravity | stable | 2026-06-23 | None (both 2026-06 gaps closed + pinned) |
 | Kiro | stable | — | Steering, specs, hooks, `.kiroignore` not yet emitted (requires external docs refresh) |

@@ -98,7 +98,7 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 - **Purpose:** Before local commits, enforce token-rent budget checks.
 - **Trigger event:** pre-commit.
 - **Runtime behavior:**
-  - `.githooks/pre-commit` (active local hook): runs `token-rent-check` only. Skips if `go` is not available.
+  - `.githooks/pre-commit` (active local hook): runs `token-rentcheck` only. Skips if `go` is not available.
   - `.husky/pre-commit` (optional, if configured): enforces RPI gate attestation (human gate approval check) locally.
   - CI (`.github/workflows/rpi-gate-check.yml`): enforces RPI gate attestation on pull_request and push to main/master.
 - **Note:** RPI gate attestation is primarily enforced via CI. The `.husky/pre-commit` hook provides optional local enforcement; the `.githooks/pre-commit` hook handles token-rent only.
@@ -129,8 +129,8 @@ Each shipped hook is defined in `packages/cli/library/hooks/`, `packages/cli/lib
 | opencode | **supported** | `.opencode/plugins/vibe-lab-hooks.js` | Full plugin runtime; events: `session.created`, `tool.execute.before`, `session.idle`, `experimental.session.compacting` |
 | claude | **supported** | `.claude/hooks/*.sh` + `.claude/settings.json` | Shell command hooks wired via `PreToolUse` and `Stop` settings |
 | copilot | **partial** | `.github/hooks/*.{json,sh}` | Project scope only; limited to pre-exec and stop events |
-| antigravity | **partial** | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | Beta support level; limited to pre-exec and stop events |
-| omp | **partial** | `.omp/hooks/pre/*.ts` | Beta support level; only `before_tool` surface (pre hooks) |
+| antigravity | **partial** | `.gemini/hooks/lazyai/*.sh` + `.agents/hooks.json` + `.gemini/settings.json` | Stable support level; limited to pre-exec and stop events |
+| omp | **partial** | `.omp/hooks/pre/*.ts` | Stable support level; only `before_tool` surface (pre hooks) |
 | pi | **instruction_only** | `.pi/extensions/block-destructive-shell.ts` | No `.pi/hooks` directory emitted; only one extension runtime; all other hooks are markdown-only |
 | kiro | **supported** | `.kiro/hooks/*.json` + referenced hook scripts | Native Kiro v3 hook JSON; currently `block-destructive-shell` only, emitted for source-verified triggers only |
 

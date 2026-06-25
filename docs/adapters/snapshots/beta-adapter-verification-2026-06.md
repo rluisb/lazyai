@@ -35,7 +35,7 @@ snapshot-verified") no longer applies.
 | Hooks | `.omp/hooks/pre/*.ts` | `omp://hooks.md` — JS/TS hook factories discovered via `hookCapability` from `.omp/hooks/pre/*.ts`; default-export `HookAPI` factory | Verified |
 | Commands | `.omp/commands/<name>.md` | `omp://slash-command-internals.md` — native provider scans `.omp/commands/*.md`; frontmatter `description` + `$ARGUMENTS`/`$1` template body | Verified |
 | MCP | `.omp/mcp.json` | `omp://mcp-config.md` — native project MCP at `.omp/mcp.json`; `{mcpServers, disabledServers?}`; stdio/http/sse transports | Verified |
-| Prompts | `.omp/prompts/<name>.md` | not covered by a dedicated prompts doc | **Emitted but discovery unverified** — capability does not declare `PromptTemplates`; treat as best-effort |
+| Prompts | `.omp/prompts/<name>.md` | `omp://config-usage.md` §6 — native `.omp` provider loads prompt templates from `prompts/*.md` (project `<cwd>/.omp/prompts/*.md` and user `~/.omp/agent/prompts/*.md`); expanded as prompt-template commands at prompt time (see `omp://slash-command-internals.md` §4-5) | Verified |
 
 Capability flags `Plugins`, `Compaction`, `Sessions` are host-support metadata
 (OMP supports them — `omp://marketplace.md`, `compaction.md`, `session.md`),

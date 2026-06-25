@@ -27,7 +27,7 @@
 | Skills | yes | yes | yes | yes | yes | yes | yes |
 | Hooks | yes | yes | yes | yes | yes | yes | yes |
 | Commands | yes | yes | — | — | yes | — | — |
-| Prompt templates | — | — | yes | yes | — | — | yes |
+| Prompt templates | — | — | yes | yes | yes | — | yes |
 | Chat modes | yes | — | yes | — | — | — | — |
 | MCP | yes | yes | yes | yes | yes | yes | yes |
 | Permissions | yes | yes | — | — | — | yes | yes |
@@ -36,7 +36,9 @@
 | Steering | — | — | — | — | — | — | — |
 | Compaction | — | — | — | yes | yes | — | — |
 | Sessions | — | — | — | — | yes | — | — |
-| Global config | yes | yes | — | yes | yes | yes | yes |
+| Global config | yes | yes | — | yes | no | yes | yes |
+
+> **Global config note (OMP):** `GlobalConfig` is intentionally `false` for OMP. OMP supports global agent configuration (`omp://settings.md`), but the adapter does not emit it — it is user-managed. This conservative claim was set in #523 and must not be reverted to `yes`.
 
 ## 3. Asset Output Mapping
 
@@ -71,6 +73,8 @@ Each cell shows the output shape for the (tool, asset-kind) pair. See `output_ma
 | Kiro | yes | yes | yes |
 
 All 7 LazyAI-supported targets support project, workspace, and global scopes. Antigravity global-scope skills write the documented `~/.gemini/config/skills/` root (#486).
+
+> **Scope vs. GlobalConfig (OMP):** global *scope* (writing files to `~/.omp/agent/`) is supported; `GlobalConfig` (emitting global agent configuration) is not — see the note in §2 and issue #523.
 
 ## 5. Headless Support
 
@@ -118,7 +122,7 @@ Pi's `CompileMCP` method returns `ctx.FileRecords` unchanged (`pi.go:81-83`). Th
 Kiro emits native `.kiro/hooks/<name>.json` files using the Kiro CLI v3 hook schema. Specs are not emitted because they are user-authored workflow artifacts. Repo-local permissions are forbidden; `Permissions: true` is host-support metadata, not an emitted repo file. Direct `.kiro/powers/` output is not emitted; Powers remain a future importable-package direction.
 
 ### OMP — Stable (verified 2026-06-23, #486)
-OMP was promoted from beta to stable after every emitted surface (root `AGENTS.md`, `.omp/agents`, `.omp/skills`, `.omp/hooks/pre/*.ts`, `.omp/commands`, `.omp/mcp.json`) was verified against the authoritative OMP (Oh My Pi) docs (`omp://`). `.omp/prompts/` is still emitted best-effort (discovery not docs-confirmed). `CanRunHeadless()=false` (as with Pi).
+OMP was promoted from beta to stable after every emitted surface (root `AGENTS.md`, `.omp/agents`, `.omp/skills`, `.omp/hooks/pre/*.ts`, `.omp/commands`, `.omp/prompts`, `.omp/mcp.json`) was verified against the authoritative OMP (Oh My Pi) docs (`omp://`). `.omp/prompts/*.md` discovery is docs-confirmed via `omp://config-usage.md` §6 (native `.omp` provider loads `prompts/*.md`). `GlobalConfig` is intentionally `false`: OMP's global agent configuration (`omp://settings.md`) is user-managed and the adapter does not emit it (conservative claim, #523). `CanRunHeadless()=false` (as with Pi).
 
 ### Antigravity — Stable (verified 2026-06-23, #486), no agents
 Antigravity is dual-target (Antigravity IDE `.agents/*` + Gemini CLI `.gemini/settings.json`). Workspace skills (`.agents/skills/`), global skills (`~/.gemini/config/skills/`), IDE hooks (`.agents/hooks.json`), CLI hooks (`.gemini/settings.json`), MCP (`~/.gemini/config/mcp_config.json`, HTTP via `serverUrl`), and root instructions (`GEMINI.md` importing `@./AGENTS.md` for Gemini CLI + `.agents/rules/lazyai.md` importing `@/AGENTS.md` for Antigravity IDE) are docs-verified. It does not emit agent files (`output_mapping.go:346-350`: `ShapeNone`). Promoted from beta to stable after the two #486 gaps (global-skills path, root-instructions discovery) were closed and pinned by conformance tests. Global rules (`~/.gemini/GEMINI.md`) remain user-managed.

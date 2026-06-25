@@ -1,6 +1,6 @@
 # Pi setup
 
-Pi is a stable LazyAI target for Pi skills, prompt templates, markdown agent profiles consumed by Pi extensions, and extension-backed safety hooks.
+Pi is a stable LazyAI target for Pi agents, skills, prompt templates, TypeScript extensions, system prompts, and settings.
 
 ## Generated structure
 
@@ -11,17 +11,21 @@ Pi is a stable LazyAI target for Pi skills, prompt templates, markdown agent pro
     ├── agents/<agent>.md
     ├── skills/<skill>/SKILL.md
     ├── prompts/<prompt>.md
-    └── extensions/<extension>.ts
-```
+    ├── extensions/<extension>.ts
+    ├── extensions/<extension>/index.ts
+    ├── SYSTEM.md
+    ├── APPEND_SYSTEM.md
+    └── settings.json
 
 ```mermaid
 flowchart LR
     AI[".ai/ canonical source"] --> A[".pi/agents"]
     AI --> S[".pi/skills"]
     AI --> P[".pi/prompts"]
-    LIB["Pi library hooks"] --> E[".pi/extensions/*.ts"]
+    LIB["Pi library assets"] --> E[".pi/extensions"]
+    LIB --> Y[".pi/SYSTEM.md + APPEND_SYSTEM.md"]
+    AI --> Z[".pi/settings.json"]
     MCP[".ai/mcp.json"] -. no emitted config .-> N["Pi MCP no-op"]
-```
 
 ## Pi concepts LazyAI uses
 
@@ -31,8 +35,10 @@ flowchart LR
 | Agent profiles | canonical agent markdown under `.pi/agents/` |
 | Skills | Agent Skills-compatible `SKILL.md` directories |
 | Prompts | prompt markdown under `.pi/prompts/` |
-| Extensions | TypeScript extension files under `.pi/extensions/` |
-| MCP | declared capability only; no Pi MCP config is emitted today |
+| Extensions | TypeScript extensions under `.pi/extensions/` (flat files or directory `index.ts` layouts) |
+| System prompts | `.pi/SYSTEM.md` and `.pi/APPEND_SYSTEM.md` |
+| Settings | `.pi/settings.json` / `~/.pi/agent/settings.json` resource references |
+| MCP | no capability declared; no Pi MCP config is emitted |
 
 ## LazyAI options
 
@@ -60,5 +66,7 @@ lazyai-cli doctor
 
 - Support level: stable.
 - Project, workspace, and global (`~/.pi/`) scopes are supported.
-- Pi has no `.pi/hooks` directory; LazyAI emits safety behavior as `.pi/extensions/*.ts`.
+- Pi has no `.pi/hooks` directory; LazyAI emits safety behavior as `.pi/extensions/`.
 - `lazyai-cli compile --tool pi` reads canonical MCP state but emits no MCP file for Pi.
+- Pi settings compilation emits resource references for `extensions`, `skills`, `prompts`, and a local package-root reference; theme preferences remain user-owned.
+- Pi can load `.pi/SYSTEM.md` and `.pi/APPEND_SYSTEM.md`; LazyAI emits both when present in the Pi library.

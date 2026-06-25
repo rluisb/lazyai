@@ -7,7 +7,7 @@
 
 ## Overview
 
-The Pi adapter generates native configuration for [Pi](https://pi.ai) (the `pi` CLI). It emits Pi-native `.pi/` resources — agents, skills, prompts, TypeScript extensions, system prompts, and settings — and supports project, workspace, and global scopes. Pi is distinct from OMP (Oh My Pi): OMP has its own `.omp/` layout, native hooks/commands, and MCP compilation, none of which are emitted by the Pi adapter.
+The Pi adapter generates native configuration for [Pi](https://pi.dev/docs/latest) (the `pi` CLI). It emits Pi-native `.pi/` resources — agents, skills, prompts, TypeScript extensions, system prompts, and settings — and supports project, workspace, and global scopes. Pi is distinct from OMP (Oh My Pi): OMP has its own `.omp/` layout, native hooks/commands, and MCP compilation, none of which are emitted by the Pi adapter.
 
 ## Generated Files
 
@@ -55,10 +55,10 @@ Pi auto-discovers both layouts from `.pi/extensions/` (project-local) and `~/.pi
 
 Co-located `package.json` files are copied verbatim so directory extensions can declare dependencies. However, LazyAI does **not** run `npm install` or resolve `node_modules/` — dependency installation is the operator's responsibility after compile. Pi resolves imports from `node_modules/` at runtime once installed.
 
-The following Pi extension reference mechanisms are **out of scope** for this adapter and explicitly unsupported until the settings/package contract lands (#532/#537):
+The following Pi extension/package mechanisms are **out of scope** for this adapter and remain user-managed:
 
 - `settings.json` `"extensions"` array entries pointing at arbitrary local paths outside `.pi/extensions/`
-- `settings.json` `"packages"` array (npm/git package-managed extensions)
+- remote or third-party `"packages"` entries (npm/git package-managed extensions)
 
 Library extensions must live under `pi/extensions/` and ship as source (`.ts`); the adapter does not transpile or bundle.
 

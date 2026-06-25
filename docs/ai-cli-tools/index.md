@@ -41,7 +41,7 @@ Codex is intentionally not a LazyAI V2 target.
 | [OpenCode](opencode.md) | stable | OpenCode-native agents, skills, commands, modes, plugins, MCP | `.opencode/` + `opencode.json` |
 | [Claude Code](claude-code.md) | stable | Claude agents, skills, slash commands, output styles, hooks, MCP | `.claude/` + `.mcp.json` |
 | [GitHub Copilot](copilot.md) | stable | repo instructions, Copilot agents, prompts, chat modes, VS Code MCP | `.github/` + `.vscode/mcp.json` |
-| [Pi](pi.md) | stable | Pi skills, prompts, extension-backed hooks | `.pi/` |
+| [Pi](pi.md) | stable | Pi agents, skills, prompts, extensions, system prompts, settings | `.pi/` |
 | [OMP](omp.md) | stable | OMP agents, skills, commands, hooks, MCP | `.omp/` |
 | [Kiro](kiro.md) | stable | Kiro agents, skills, prompts, MCP | `.kiro/` |
 | [Antigravity](antigravity.md) | stable | Gemini/Antigravity settings, hooks, Agent Skills, user MCP config | `.gemini/` + `.agents/` |

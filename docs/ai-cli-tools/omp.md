@@ -1,6 +1,6 @@
 # OMP setup
 
-OMP is a stable LazyAI target for OMP task agents, skills, commands, prompts, hook factories, MCP, compaction/session-oriented surfaces, and global OMP agent configuration.
+OMP is a stable LazyAI target for OMP task agents, skills, commands, prompts, hook factories, MCP, and compaction/session-oriented surfaces.
 
 ## Generated structure
 

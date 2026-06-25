@@ -37,10 +37,12 @@ snapshot-verified") no longer applies.
 | MCP | `.omp/mcp.json` | `omp://mcp-config.md` — native project MCP at `.omp/mcp.json`; `{mcpServers, disabledServers?}`; stdio/http/sse transports | Verified |
 | Prompts | `.omp/prompts/<name>.md` | not covered by a dedicated prompts doc | **Emitted but discovery unverified** — capability does not declare `PromptTemplates`; treat as best-effort |
 
-Capability flags `Plugins`, `Compaction`, `Sessions`, `GlobalConfig` are host-support
-metadata (OMP supports them — `omp://marketplace.md`, `compaction.md`, `session.md`,
-`settings.md`), not surfaces the adapter emits files for. This matches how the matrix
-treats e.g. Pi's MCP no-op.
+Capability flags `Plugins`, `Compaction`, `Sessions` are host-support metadata
+(OMP supports them — `omp://marketplace.md`, `compaction.md`, `session.md`),
+not surfaces the adapter emits files for. `GlobalConfig` is **not** claimed: OMP's
+global agent configuration (`omp://settings.md`) is user-managed and the adapter
+does not emit it, so the capability is set to false (conservative claim, see
+issue #523). This matches how the matrix treats e.g. Pi's MCP no-op.
 
 **Decision:** OMP meets the stable bar (official docs verified + golden tests
 `omp_adapter_test.go` + install smoke). `CanRunHeadless()=false` is not a blocker — Pi is

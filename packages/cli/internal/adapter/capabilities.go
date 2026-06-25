@@ -126,8 +126,10 @@ func (a *PiAdapter) Capabilities() Capability {
 // (the in-harness `omp://` documentation set); see
 // docs/adapters/snapshots/beta-adapter-verification-2026-06.md. Verified emit
 // surfaces: root AGENTS.md, .omp/agents, .omp/skills, .omp/hooks/pre/*.ts,
-// .omp/commands, .omp/mcp.json. Plugins/Compaction/Sessions/GlobalConfig are
-// host-support metadata (OMP supports them) rather than emitted files.
+// .omp/commands, .omp/mcp.json. Plugins/Compaction/Sessions are host-support
+// metadata (OMP supports them) rather than emitted files. GlobalConfig is
+// intentionally false: OMP's global agent configuration is user-managed and the
+// adapter does not emit it (conservative claim, see issue #523).
 func (a *OmpAdapter) Capabilities() Capability {
 	return Capability{
 		Support:          SupportStable,
@@ -140,7 +142,7 @@ func (a *OmpAdapter) Capabilities() Capability {
 		Plugins:          true,
 		Compaction:       true,
 		Sessions:         true,
-		GlobalConfig:     true,
+		GlobalConfig:     false,
 	}
 }
 

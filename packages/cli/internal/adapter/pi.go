@@ -69,6 +69,22 @@ func (a *PiAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 		return nil, err
 	}
 
+	// Pi system-prompt files: .pi/SYSTEM.md replaces the default prompt and
+	// .pi/APPEND_SYSTEM.md appends to it. Both are project-root files under
+	// .pi/, distinct from AGENTS.md/CLAUDE.md context files. Sourced from the
+	// pi/ library directory alongside extensions; only the two system-prompt
+	// basenames are copied.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "pi",
+		ToDestPath: func(file string) string {
+			return filepath.Join(piDir, filepath.Base(file))
+		},
+		IncludeFile: isPiSystemPromptFile,
+	}); err != nil {
+		return nil, err
+	}
+
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",

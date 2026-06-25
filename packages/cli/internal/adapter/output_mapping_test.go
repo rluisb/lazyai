@@ -189,3 +189,45 @@ func TestOutputMappingDirPerItemShape(t *testing.T) {
 		}
 	}
 }
+
+func TestOutputMappingPiSystemPromptsShapeFlat(t *testing.T) {
+	target, ok := LookupOutputTarget(types.ToolIdPi, AssetKindSystemPrompts)
+	if !ok {
+		t.Fatal("pi has no system-prompts target")
+	}
+	if target.Shape != ShapeFlat {
+		t.Fatalf("pi system-prompts Shape=%q, want %q", target.Shape, ShapeFlat)
+	}
+	if target.SourceSubdir != "pi" {
+		t.Errorf("pi system-prompts SourceSubdir=%q, want %q", target.SourceSubdir, "pi")
+	}
+	if target.DestSubdir != "." {
+		t.Errorf("pi system-prompts DestSubdir=%q, want %q (tool root)", target.DestSubdir, ".")
+	}
+	if target.IncludeFile == nil {
+		t.Fatal("pi system-prompts IncludeFile filter is nil; must restrict to SYSTEM.md / APPEND_SYSTEM.md")
+	}
+	if !target.IncludeFile("SYSTEM.md") || !target.IncludeFile("APPEND_SYSTEM.md") {
+		t.Error("IncludeFile must accept SYSTEM.md and APPEND_SYSTEM.md")
+	}
+	if target.IncludeFile("block-destructive-shell.ts") {
+		t.Error("IncludeFile must reject non-system-prompt files from pi/")
+	}
+}
+
+func TestOutputMappingSystemPromptsShapeNoneForNonPiTools(t *testing.T) {
+	for _, tool := range []types.ToolId{
+		types.ToolIdClaudeCode, types.ToolIdOpenCode, types.ToolIdCopilot,
+		types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity,
+	} {
+		target, ok := LookupOutputTarget(tool, AssetKindSystemPrompts)
+		if !ok {
+			t.Errorf("tool %q has no system-prompts entry", tool)
+			continue
+		}
+		if target.Shape != ShapeNone {
+			t.Errorf("tool %q system-prompts Shape=%q, want %q (only Pi has system-prompt files)",
+				tool, target.Shape, ShapeNone)
+		}
+	}
+}

@@ -2,7 +2,10 @@
 // Ported from the TypeScript shared.ts utilities.
 package adapter
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+)
 
 // Managed block markers for idempotent root AGENTS.md patching.
 const (
@@ -47,6 +50,15 @@ var canonicalAgentIDs = map[string]struct{}{
 func isCanonicalAgentFile(file string) bool {
 	_, ok := canonicalAgentIDs[fileID(file)]
 	return ok
+}
+
+// isPiSystemPromptFile reports whether a library file is one of Pi's
+// project system-prompt files: SYSTEM.md (replaces the default prompt) or
+// APPEND_SYSTEM.md (appends to the default). Both live at the .pi root and
+// are distinct from AGENTS.md / CLAUDE.md context files.
+func isPiSystemPromptFile(file string) bool {
+	base := filepath.Base(file)
+	return base == "SYSTEM.md" || base == "APPEND_SYSTEM.md"
 }
 
 func isDefaultAgentFile(file string) bool {

@@ -21,7 +21,7 @@ The OMP adapter generates native configuration for [OMP (Oh My Pi)](https://gith
 | `.omp/prompts/<name>.md` | Prompt templates |
 | `.omp/hooks/pre/<name>.ts` | TypeScript hook factories |
 | `.omp/mcp.json` | MCP server configuration |
-| `AGENTS.md` | Root instructions |
+| `.omp/AGENTS.md` | Root instructions (project scope; native provider, priority 100) |
 
 ## Supported Asset Types
 
@@ -46,6 +46,10 @@ OMP discovers TypeScript hook factories from `.omp/hooks/pre/*.ts`. The adapter 
 ## Skill Behavior
 
 Skills are written as Agent Skills-compatible directories: `.omp/skills/<name>/SKILL.md`. The adapter copies selected skills from the canonical library.
+
+## Root Instructions Behavior
+
+Project-scope root instructions land at `.omp/AGENTS.md`, which is read by OMP's native context provider at priority 100. This is higher precedence than the generic `agents-md` provider (which reads bare `AGENTS.md` at priority 10). Workspace and global scopes are unaffected.
 
 ## Agent Behavior
 
@@ -74,3 +78,4 @@ No (`CanRunHeadless() = false`).
 | Test file | What it verifies |
 |---|---|
 | `omp_adapter_test.go` | Agents + skills, commands + prompts, hooks, global scope, MCP compile |
+| `scaffold/root_test.go` | #560: `TestScaffoldCompiledRootOmpProjectLandsInOmpDir` — project-scope root at `.omp/AGENTS.md`; `TestScaffoldCompiledRootOmpDoesNotAffectOtherTargets` |

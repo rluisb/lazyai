@@ -1,6 +1,6 @@
 # GitHub Copilot setup
 
-GitHub Copilot is a stable LazyAI target for repository instructions, Copilot agent markdown, Agent Skills, prompts, chat modes, hooks, and MCP for VS Code or Copilot CLI.
+GitHub Copilot is a stable LazyAI target for repository instructions, Copilot custom agents (`.agent.md`), Agent Skills, prompts, hooks, and MCP for VS Code or Copilot CLI.
 
 ## Generated structure
 
@@ -12,7 +12,6 @@ GitHub Copilot is a stable LazyAI target for repository instructions, Copilot ag
 │   ├── skills/<skill>/SKILL.md
 │   ├── instructions/<instruction>.instructions.md
 │   ├── prompts/<prompt>.prompt.md
-│   ├── chatmodes/<mode>.chatmode.md
 │   └── hooks/<hook>.{json,sh}
 └── .vscode/mcp.json
 ```
@@ -22,7 +21,6 @@ flowchart LR
     AI[".ai/ canonical source"] --> I[".github/copilot-instructions.md"]
     AI --> A[".github/agents/*.agent.md"]
     AI --> P[".github/prompts/*.prompt.md"]
-    AI --> CM[".github/chatmodes/*.chatmode.md"]
     MCP[".ai/mcp.json"] --> V[".vscode/mcp.json"]
     MCP --> U["~/.copilot/mcp-config.json when probe passes"]
 ```
@@ -36,8 +34,7 @@ flowchart LR
 | Agents | canonical agents rendered as `.agent.md` |
 | Skills | Agent Skills-compatible `SKILL.md` directories |
 | Prompts | prompts rewritten with `.prompt.md` suffix |
-| Chat modes | chat mode markdown under `.github/chatmodes/` |
-| MCP | `.vscode/mcp.json`; optional `~/.copilot/mcp-config.json` for CLI |
+| MCP | `.vscode/mcp.json`; optional `~/.copilot/mcp-config.json` for CLI (remote servers use `http` transport) |
 
 ## LazyAI options
 
@@ -66,5 +63,5 @@ lazyai-cli compile --tool copilot
 
 - Support level: stable.
 - Project, workspace, and global scopes are supported; global Copilot MCP is probe-gated on a Copilot CLI/home directory.
-- Copilot has no slash-command surface; use prompts and chat modes instead.
+- Copilot has no slash-command surface; use prompts and custom agents (`.agent.md`) instead.
 - Project/workspace hook assets are emitted under `.github/hooks/`; no verified global hook surface is emitted.

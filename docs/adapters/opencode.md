@@ -48,7 +48,7 @@ Skills are written as Agent Skills-compatible directories: `.opencode/skills/<na
 
 ## Mode Behavior
 
-Mode files are written under `.opencode/modes/<name>.md`. LazyAI currently treats this as an OpenCode-specific surface rather than a cross-tool abstraction.
+Mode files are written under `.opencode/modes/<name>.md`. Each file uses current OpenCode frontmatter: `mode: primary` declares the mode type and `permission:` (with `edit`/`bash`/`webfetch` set to `deny`) replaces the deprecated `tools:` boolean map. LazyAI currently treats this as an OpenCode-specific surface rather than a cross-tool abstraction.
 
 ## Agent Behavior
 
@@ -81,3 +81,4 @@ Yes (`CanRunHeadless() = true`). The adapter supports headless init and validati
 | `opencode_frontmatter_test.go` | Frontmatter rewrite for OpenCode agents |
 | `opencode_validate_test.go` | Validation of generated opencode.json |
 | `opencode_plugin_test.go` | Plugin installation |
+| `internal/library/integration_test.go` | #561: mode files contain `permission:` key; deprecated `tools:` map is absent |

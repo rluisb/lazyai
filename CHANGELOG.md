@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-25
+
 ### Added
 - **AI CLI readiness guide** (docs). New `docs/ai-cli-tools/readiness.md` covering
   tool-specific setup prerequisites, capability expectations, and verification
@@ -11,6 +13,19 @@ All notable changes to this project will be documented in this file.
 - **Global scope for Pi and Antigravity targets**. `lazyai-cli init --scope global`
   now emits Pi and Antigravity outputs to `~/.pi/` and `~/.gemini/` respectively,
   matching the existing global-scope behavior for other targets (#390).
+- **Pi settings + package-root references**. The Pi adapter now emits
+  `.pi/settings.json` / `~/.pi/agent/settings.json` with managed resource
+  references for `extensions`, `skills`, and `prompts`, plus a scope-correct local
+  `packages` reference for the compiled `.pi` tree (#532, #537).
+- **Pi system prompts**. LazyAI now compiles `.pi/SYSTEM.md` and
+  `.pi/APPEND_SYSTEM.md` from Pi library assets so Pi projects can replace or
+  append to the host default prompt intentionally (#534).
+
+### Changed
+- **Pi extension layouts**. The Pi adapter now preserves both flat
+  `.pi/extensions/<name>.ts` files and directory-layout
+  `.pi/extensions/<name>/index.ts` trees, including co-located `package.json`
+  files when present (#533).
 
 ### Fixed
 - **Round-1 production-readiness remediation**: merged issue fixes for MCP/runtime
@@ -40,6 +55,9 @@ All notable changes to this project will be documented in this file.
   path-separator assumptions that broke on Windows (#388).
 - **Kiro hook capability docs**: Aligned Kiro hook capability documentation with
   the actual adapter surface (instruction-only, no `.kiro/hooks` directory) (#389).
+- **Pi capability/docs alignment**: Corrected Pi capability metadata to match the
+  emitted surfaces, documented themes as intentionally out-of-scope, and aligned
+  the Pi setup pages with the current adapter behavior (#531, #535, #536).
 
 ## [1.3.0] - 2026-06-22
 

@@ -434,6 +434,34 @@ func toClaudeCodeMcp(servers map[string]McpServer) map[string]any {
 	return map[string]any{"mcpServers": toClaudeCodeMcpInner(servers)}
 }
 
+// toKiroMcp serializes MCP servers in Kiro's documented format.
+// Remote servers: {url, headers} — NO type field (kiro.dev/docs/mcp/configuration).
+// Local servers: {command, args, env} — mirrors toClaudeCodeMcpInner's local shape.
+func toKiroMcp(servers map[string]McpServer) map[string]any {
+	mcpServers := make(map[string]any)
+	for name, server := range servers {
+		if server.URL != "" {
+			entry := map[string]any{
+				"url": server.URL,
+			}
+			if server.Headers != nil {
+				entry["headers"] = server.Headers
+			}
+			mcpServers[name] = entry
+			continue
+		}
+		entry := map[string]any{
+			"command": server.Command,
+			"args":    server.Args,
+		}
+		if server.Env != nil {
+			entry["env"] = server.Env
+		}
+		mcpServers[name] = entry
+	}
+	return map[string]any{"mcpServers": mcpServers}
+}
+
 // ---------------------------------------------------------------------------
 // Kiro MCP compilation
 // ---------------------------------------------------------------------------
@@ -452,7 +480,7 @@ func compileKiroMCP(ctx CompileContext, servers map[string]McpServer) ([]types.T
 	settingsDir := filepath.Join(kiroRoot, "settings")
 	_ = files.EnsureDir(settingsDir)
 	mcpPath := filepath.Join(settingsDir, "mcp.json")
-	content := toClaudeCodeMcp(servers) // reuse identical format
+	content := toKiroMcp(servers)
 	if err := WriteJSONFile(mcpPath, content); err != nil {
 		return ctx.FileRecords, err
 	}

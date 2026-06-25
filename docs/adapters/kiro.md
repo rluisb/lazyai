@@ -7,7 +7,9 @@
 
 ## Overview
 
-The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Kiro IDE/CLI). It emits agents, skills, prompts, native Kiro v3 hook JSON, MCP configuration, and permissions/global-configuration metadata into `.kiro/`.
+The Kiro adapter generates native configuration for [Kiro CLI v3](https://kiro.dev/docs/cli/v3/agent-config). It emits agents, skills, prompts, native Kiro v3 hook JSON, MCP configuration, and permissions/global-configuration metadata into `.kiro/`.
+
+**Target: Kiro CLI.** All paths and schemas are verified against the `kiro.dev/docs/cli/` tree (not the Kiro IDE docs). The CLI and IDE are distinct product surfaces.
 
 ## Generated Files
 
@@ -34,7 +36,7 @@ The Kiro adapter generates native configuration for [Kiro](https://kiro.dev) (Ki
 
 ## MCP Behavior
 
-Kiro MCP is compiled via `CompileMCPForTool`. The adapter writes to `.kiro/settings/mcp.json` with standard compile path.
+Kiro MCP is compiled via `CompileMCPForTool`. The adapter writes to `.kiro/settings/mcp.json` using a dedicated `toKiroMcp()` serializer. Local (stdio) servers emit `{command, args, env}`; remote servers emit `{url, headers}` — matching Kiro's documented schema exactly (`kiro.dev/docs/mcp/configuration`). No `type` field is emitted for remote entries.
 
 ## Hook Behavior
 
@@ -46,11 +48,11 @@ Skills are written as Agent Skills-compatible directories: `.kiro/skills/<name>/
 
 ## Agent Behavior
 
-Canonical agents are written as flat markdown files under `.kiro/agents/`. A default "guide" agent is always installed. Kiro CLI v3 discovers custom agent profiles from this directory. Agent files include frontmatter with `description` and markdown body.
+Canonical agents are written as flat markdown files under `.kiro/agents/`. A default "guide" agent is always installed. Kiro CLI v3 discovers agent profiles from `.kiro/agents/` (workspace) and `~/.kiro/agents/` (global) per `kiro.dev/docs/cli/v3/agent-config` (updated 2026-06-17). Agent files use YAML frontmatter (minimum: `description`) with the markdown body as the system prompt.
 
 ## Prompt Behavior
 
-Prompt templates are copied as flat markdown files to `.kiro/prompts/`. The adapter supports selection filtering.
+Prompt templates are copied as flat markdown files to `.kiro/prompts/`. Kiro CLI stores reusable prompts here and references them via `@name` (`kiro.dev/docs/cli/chat/manage-prompts`). The adapter supports selection filtering.
 
 ## Scope Support
 
@@ -79,3 +81,4 @@ No (`CanRunHeadless() = false`).
 |---|---|
 | `kiro_adapter_test.go` | Agent profiles, skills, prompts; confirms no `.kiro/workflows` |
 | `adapter_adapters_test.go` | Full install from FS |
+| `mcp_compiler_test.go` | #556: `KiroRemoteOmitsTypeField` — remote MCP entry has `url`+`headers`, no `type`; `KiroLocalUsesCommandArgs` |

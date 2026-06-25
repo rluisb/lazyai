@@ -7,7 +7,7 @@
 
 ## Overview
 
-The GitHub Copilot adapter generates native configuration for [GitHub Copilot](https://github.com/features/copilot) across IDE, CLI, and cloud surfaces. It emits agents, skills, instructions, prompts, chat modes, hooks, and MCP configuration into `.github/` and `.vscode/`.
+The GitHub Copilot adapter generates native configuration for [GitHub Copilot](https://github.com/features/copilot) across IDE, CLI, and cloud surfaces. It emits agents, skills, instructions, prompts, hooks, and MCP configuration into `.github/` and `.vscode/`. All agent output — both canonical agents and library chatmode sources — lands at `.github/agents/<name>.agent.md`. The legacy `.github/chatmodes/` path is not used.
 
 ## Generated Files
 
@@ -17,22 +17,20 @@ The GitHub Copilot adapter generates native configuration for [GitHub Copilot](h
 | `.github/skills/<name>/SKILL.md` | Skill directories |
 | `.github/instructions/<name>.instructions.md` | Path-specific instructions (from templates) |
 | `.github/prompts/<name>.prompt.md` | Prompt templates with `.prompt.md` extension |
-| `.github/chatmodes/<name>.chatmode.md` | Chat mode definitions |
 | `.github/hooks/<name>.json` | Hook configuration (project scope only) |
 | `.github/hooks/<name>.sh` | Hook scripts (project scope only) |
 | `.vscode/mcp.json` | VS Code MCP server configuration |
-| `~/.copilot/mcp-config.json` | Copilot CLI MCP configuration (probe-gated) |
+| `~/.copilot/mcp-config.json` | Copilot CLI MCP configuration (probe-gated); remote servers use `http` transport |
 | `.github/copilot-instructions.md` | Repository instructions |
 
 ## Supported Asset Types
 
 | Asset kind | Shape | Destination |
 |---|---|---|
-| Agents | flat | `.github/agents/<name>.agent.md` |
+| Agents | flat | `.github/agents/<name>.agent.md` (canonical agents + library chatmode sources combined) |
 | Skills | dir-per-item | `.github/skills/<name>/SKILL.md` |
 | Templates | flat | `.github/instructions/<name>.instructions.md` |
 | Prompts | rewrite-ext | `.github/prompts/<name>.prompt.md` |
-| Chat modes | flat | `.github/chatmodes/<name>.chatmode.md` |
 | Commands | none | — |
 | Output styles | none | — |
 
@@ -40,7 +38,7 @@ The GitHub Copilot adapter generates native configuration for [GitHub Copilot](h
 
 Copilot MCP is compiled via `CompileMCPForTool` with dual output:
 - **VS Code:** `.vscode/mcp.json` — written at project/workspace scope unconditionally
-- **CLI:** `~/.copilot/mcp-config.json` — written when the Copilot CLI probe passes (binary found or `~/.copilot/` exists); deep-merge preserves user-authored servers
+- **CLI:** `~/.copilot/mcp-config.json` — written when the Copilot CLI probe passes (binary found or `~/.copilot/` exists); deep-merge preserves user-authored servers; remote servers serialized with `type: "http"` (SSE deprecated)
 
 At global scope, only the CLI output is written (no project directory for `.vscode/mcp.json`).
 
@@ -83,6 +81,6 @@ Yes (`CanRunHeadless() = true`). The adapter supports headless init.
 
 | Test file | What it verifies |
 |---|---|
-| `copilot_chatmodes_test.go` | Chat mode installation |
+| `copilot_chatmodes_test.go` | Custom agent installation at `.github/agents/`; verifies deprecated `.github/chatmodes/` path is never written |
 | `copilot_skill_tier_test.go` | Skill tier resolution (Frontier, Speed, Balanced) |
 | `adapter_adapters_test.go` | Full install from FS |

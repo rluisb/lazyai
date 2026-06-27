@@ -1,7 +1,7 @@
 # How We Work (Constitution)
 
 <!-- GENERATED FILE — do not edit manually. Run bin/inject to regenerate. -->
-<!-- Source hash: 54f27d588e2df18790b85c2a4d84258e307bba20c844131f042edd288aff8a0e -->
+<!-- Source hash: 1e257827c93ff68e51891ea5dea1a947ba23296ae2f05e31526a864e39f54ae5 -->
 
 <!-- constitution.md -->
 # How We Work (Constitution)
@@ -165,8 +165,8 @@ Respect the project's existing architecture, paradigm, and naming before applyin
 
 - Claude Code supports skills, agents, rules, and lifecycle hooks.
 - OpenCode supports skills, agents, commands, chat modes, and plugins; hook behavior maps to TypeScript/JavaScript plugins.
-- Copilot uses `.github/agents/*.agent.md` for default agents and `.github/copilot-instructions.md` for project instructions. When skills are selected, skill-to-agent conversions are emitted as `.agent.yaml` files.
-- OMP/Pi receives shared markdown context and skills; project-local hook support is not assumed.
+- Copilot uses `.github/agents/<name>.agent.md` for canonical agents; selected LazyAI skills use Agent Skills directories instead of legacy `.github/agents/<name>.agent.yaml` or `.github/agents/<name>.agent.md` outputs.
+- Pi emits `.pi/extensions/*.ts` hook extensions and receives shared markdown context and skills; OMP receives shared markdown context and skills.
 - Antigravity is minimal `.gemini/settings.json` plus `.gemini/hooks/` scripts; no separate skills or agents are emitted.
 - If a capability cannot be represented for one CLI, document the limitation in the artifact and make `lazyai-cli doctor` warn.
 

@@ -69,7 +69,7 @@ All notable changes to this project will be documented in this file.
   (idempotent compile); the writer only rewrites managed regions and refuses to
   overwrite drifted files without `--force`.
 - **Adapter capability model** grounded in the official tool compliance matrix;
-  OMP and Antigravity surfaced as `(beta)` in compile output and doctor advisories.
+  OMP and Antigravity surfaced with full capability metadata; both targets are stable (SupportStable).
 - **Validation hardening**: `validate --all` over the canonical `.ai/` tree
   (skills/agents/hooks/MCP), a profile-aware secret scanner (error under `team`,
   warning under `personal`), and symlink path-escape detection. The standard
@@ -151,6 +151,11 @@ All notable changes to this project will be documented in this file.
 - Fixed workspace artifact routing to correct roots.
 - Fixed Claude Code agent description frontmatter emission on install.
 - Fixed contract validator false positives.
+
+### Removed (retroactive annotation)
+- **Orchestrator Dashboard / `ai-setup-orchestrator` binary** (superseded): The dashboard and `ai-setup-orchestrator` binary shipped in this release were subsequently excised by spec 025 (LazyAI runtime refactor). The binary no longer exists in the repo; the Doctor diagnostic for stale MCP entries (see line above) remains relevant for existing installations.
+- **Gemini-extension target** (`library/gemini/`, `internal/geminiext/`, `build-gemini-extension` command, spec 017): removed (code absent from repo; Gemini-extension is no longer a compile target).
+- **Codex compile target** (`library/codex/`, `internal/adapter/codex.go`, spec 018): removed (code absent from repo; Codex is no longer a compile target).
 
 ## [1.0.0] - 2026-05-04
 

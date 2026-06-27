@@ -17,7 +17,7 @@ records the selection and surfaces the install hint. You install the binary your
 lazyai-cli init
 
 # Non-interactive
-lazyai-cli init --cli-tools gh,ai-memory,codegraph --no-interactive
+lazyai-cli init --tools gh,ai-memory,codegraph --no-interactive
 ```
 
 ## Cataloged tools

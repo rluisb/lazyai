@@ -100,8 +100,8 @@ var costShowCmd = &cobra.Command{
 
 var costAgentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Show costs by agent",
-	Long:  `Show cost breakdown by agent.`,
+	Short: "Show dispatch activity by agent",
+	Long:  `Show dispatch counts by agent. Cost is tracked at the session level (see "cost show"); it is not attributable per agent.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := EnsureDB()
 		if err != nil {
@@ -109,12 +109,18 @@ var costAgentCmd = &cobra.Command{
 		}
 		defer SafeCloseDB(database)
 
-		fmt.Println("Costs by Agent")
+		fmt.Println("Dispatches by Agent")
 		fmt.Println("═══════════════════════════════════════════════════════════════")
 
-		// Get dispatches with agent info
+		// Aggregate dispatch activity per agent. Note: cost_usd is a session-level
+		// column (see the sessions table), not per-dispatch, so it is intentionally
+		// not reported here to avoid misattributing a session's cost across the
+		// multiple agents dispatched within it. Use "cost show" for session costs.
 		rows, err := database.Query(`
-			SELECT agent, COUNT(*) as count, AVG(cost_usd) as avg_cost
+			SELECT agent,
+			       COUNT(*) AS count,
+			       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+			       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
 			FROM agent_dispatches
 			GROUP BY agent
 			ORDER BY count DESC
@@ -130,24 +136,21 @@ var costAgentCmd = &cobra.Command{
 		count := 0
 		for rows.Next() {
 			var agent string
-			var dispatchCount int
-			var avgCost float64
+			var dispatchCount, completed, failed int
 
-			if err := rows.Scan(&agent, &dispatchCount, &avgCost); err != nil {
+			if err := rows.Scan(&agent, &dispatchCount, &completed, &failed); err != nil {
 				continue
 			}
 
 			count++
-			fmt.Printf("  %s: %d dispatches", agent, dispatchCount)
-			if avgCost > 0 {
-				fmt.Printf(" | avg $%.4f", avgCost)
-			}
-			fmt.Println()
+			fmt.Printf("  %s: %d dispatches (%d completed, %d failed)\n", agent, dispatchCount, completed, failed)
 		}
 
 		if count == 0 {
 			fmt.Println("  No dispatch data found.")
 		}
+
+		fmt.Println("\nNote: per-agent cost is unavailable; cost is tracked per session. Run \"cost show\".")
 
 		return nil
 	},

@@ -94,7 +94,7 @@ Ownership decision: ADR-007 — Workflow Runtime Ownership (Accepted), recorded 
 | Global scope | Yes | Yes | Yes (probe-gated) | Yes | Yes | Yes | Yes |
 | Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.md` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.omp/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | — | `.gemini/hooks/lazyai/*.sh` + settings hooks |
+| Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | `.kiro/hooks/*.json` | `.gemini/hooks/lazyai/*.sh` + settings hooks |
 | MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | Capability only; no config currently written | `.omp/mcp.json` / OMP config | `.kiro/settings/mcp.json` | `~/.gemini/config/mcp_config.json` |
 | Workflow directory | — | — | — | — | — | — | — |
 
@@ -105,7 +105,7 @@ lazyai-cli init --tools opencode,claude-code,copilot,pi,omp,kiro,antigravity
 You can add a tool later:
 
 ```bash
-lazyai-cli add copilot
+lazyai-cli add --tools copilot
 ```
 
 Then recompile managed MCP output:

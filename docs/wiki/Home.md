@@ -1,6 +1,6 @@
 # LazyAI
 
-LazyAI scaffolds a canonical, multi-tool AI development environment from one Go CLI. It keeps source-of-truth AI project files under `.ai/` and compiles them into native formats for OpenCode, Claude Code, and GitHub Copilot.
+LazyAI scaffolds a canonical, multi-tool AI development environment from one Go CLI. It keeps source-of-truth AI project files under `.ai/` and compiles them into native formats for OpenCode, Claude Code, GitHub Copilot, Pi, OMP, Antigravity, and Kiro.
 
 > **Canonical docs:** GitHub Pages at <https://rluisb.github.io/lazyai/>. This Wiki is a concise bootstrap mirror for quick installation, package, release, migration, and troubleshooting notes.
 

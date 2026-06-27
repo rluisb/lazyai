@@ -3,7 +3,7 @@
 **Feature ID:** 030
 **Feature name:** kiro-cli-v3-output-gaps
 **Date:** 2026-06-24
-**Status:** Draft
+**Status:** Done
 **Owner:** rluisb
 **Constitution:** [../../docs/canonical/constitution.md](../../docs/canonical/constitution.md)
 **Tracking issue:** [#517](https://github.com/rluisb/lazyai/issues/517)
@@ -14,7 +14,7 @@
 
 ## Context & Evidence
 
-LazyAI is a canonical `.ai/` source compiler that emits tool-native config; it is not an agent runtime. The Kiro adapter today emits four surfaces, verified against the codebase:
+LazyAI is a canonical `.ai/` source compiler that emits tool-native config; it is not an agent runtime. The Kiro adapter today emits five surfaces, verified against the codebase:
 
 | Surface | Path | Source |
 |---|---|---|
@@ -22,10 +22,11 @@ LazyAI is a canonical `.ai/` source compiler that emits tool-native config; it i
 | Skills | `.kiro/skills/<name>/SKILL.md` | `packages/cli/internal/adapter/kiro.go` |
 | Prompts | `.kiro/prompts/<name>.md` | `packages/cli/internal/adapter/kiro.go` |
 | MCP | `.kiro/settings/mcp.json` | `packages/cli/internal/adapter/mcp_compiler.go:compileKiroMCP` |
+| Hooks | `.kiro/hooks/<name>.json` | `packages/cli/internal/adapter/kiro.go` |
 
-Kiro CLI v3 docs (verified 2026-06-24) introduce native surfaces the adapter does not cover:
+Kiro CLI v3 docs (verified 2026-06-24) introduced native surfaces the adapter did not cover; Hooks are now implemented (see table above):
 
-- **Hooks** — `https://kiro.dev/docs/cli/v3/hooks/`: standalone `.kiro/hooks/<name>.json`, schema `{"version":"v1","hooks":[…]}`, 11 triggers, `command`/`agent` action types. Feature-overview lists hooks as "Enhanced" with a new JSON schema. LazyAI currently declares `Hooks: false` and tests assert `.kiro/hooks` is **absent** (`capabilities_test.go`, `kiro_adapter_test.go`, `adapter_adapters_test.go`). Docs (`docs/README.md`, `docs/adapters/capability-matrix.md`) still say Kiro hooks are "instruction-only until source-verified" — that condition is now satisfied.
+- **Hooks** — `https://kiro.dev/docs/cli/v3/hooks/`: standalone `.kiro/hooks/<name>.json`, schema `{"version":"v1","hooks":[…]}`, 11 triggers, `command`/`agent` action types. Feature-overview lists hooks as "Enhanced" with a new JSON schema. Implemented: `KiroAdapter.Capabilities().Hooks` is `true`; `.kiro/hooks/<name>.json` is emitted by `packages/cli/internal/adapter/kiro.go`.
 - **Specs** — `https://kiro.dev/docs/cli/v3/specs/`: `.kiro/specs/<name>/{requirements,design,tasks}.md`, created interactively via `/spec new <name>`. These are user-authored workflow artifacts, not compiler output.
 - **Permissions** — `https://kiro.dev/docs/cli/v3/permissions/`: permission files live at `~/.kiro/settings/permissions.yaml` and `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Docs state: "A cloned repo cannot inject permission rules." LazyAI must not emit a repo-local permissions file.
 - **Powers** — `https://kiro.dev/docs/powers/`: importable packages (`POWER.md` + optional `mcp.json` + `steering/`), installed via marketplace, GitHub URL, or local folder import. No auto-discovered `.kiro/powers/` repo path is documented.
@@ -45,10 +46,10 @@ Verified design facts driving scope:
 **So that** my Kiro CLI actually enforces the LazyAI safety/workflow hooks at runtime instead of only describing them in prose.
 
 **Acceptance criteria**
-- [ ] Given a project with `kiro` selected and hook assets chosen, when I run `compile`, then `.kiro/hooks/<name>.json` files are written.
-- [ ] Given an emitted hook file, when parsed as JSON, then it conforms to the Kiro v3 schema: top-level `version: "v1"` and a `hooks` array whose entries carry a valid `trigger` (one of the 11 documented triggers) and an `action` with `type` ∈ {`command`,`agent`}.
-- [ ] Given an emitted `command` hook, when inspected, then its referenced command/script is present and runnable (no dangling reference).
-- [ ] Given a re-run of `compile` with no source change, then the hook write is a no-op (idempotent; no drift).
+- [x] Given a project with `kiro` selected and hook assets chosen, when I run `compile`, then `.kiro/hooks/<name>.json` files are written.
+- [x] Given an emitted hook file, when parsed as JSON, then it conforms to the Kiro v3 schema: top-level `version: "v1"` and a `hooks` array whose entries carry a valid `trigger` (one of the 11 documented triggers) and an `action` with `type` ∈ {`command`,`agent`}.
+- [x] Given an emitted `command` hook, when inspected, then its referenced command/script is present and runnable (no dangling reference).
+- [x] Given a re-run of `compile` with no source change, then the hook write is a no-op (idempotent; no drift).
 
 ### P2 — Adapter metadata and docs match reality
 **As a** maintainer reading capability metadata and docs
@@ -56,9 +57,9 @@ Verified design facts driving scope:
 **So that** capability/conformance tests are honest and contributors are not misled.
 
 **Acceptance criteria**
-- [ ] Given `KiroAdapter.Capabilities()`, when read, then `Hooks` is `true`.
-- [ ] Given `capabilities_test.go`, when run, then it asserts Kiro declares `Hooks` and still rejects `Specs` and `Steering`.
-- [ ] Given `docs/README.md`, `docs/adapters/capability-matrix.md`, `docs/reference/hooks.md`, and `docs/reference/tool-outputs.md`, when read, then Kiro hooks are documented as supported (not "instruction-only"), and the Kiro non-goals (specs, repo-local permissions, direct `.kiro/powers`) are stated.
+- [x] Given `KiroAdapter.Capabilities()`, when read, then `Hooks` is `true`.
+- [x] Given `capabilities_test.go`, when run, then it asserts Kiro declares `Hooks` and still rejects `Specs` and `Steering`.
+- [x] Given `docs/README.md`, `docs/adapters/capability-matrix.md`, `docs/reference/hooks.md`, and `docs/reference/tool-outputs.md`, when read, then Kiro hooks are documented as supported (not "instruction-only"), and the Kiro non-goals (specs, repo-local permissions, direct `.kiro/powers`) are stated.
 
 ### P3 — Powers packaging direction is recorded (no code yet)
 **As a** maintainer
@@ -66,7 +67,7 @@ Verified design facts driving scope:
 **So that** we do not guess an unverified `.kiro/powers/` output path.
 
 **Acceptance criteria**
-- [ ] Given the docs, when read, then Powers is documented as an importable-package future option, not an emitted directory.
+- [x] Given the docs, when read, then Powers is documented as an importable-package future option, not an emitted directory.
 
 ---
 

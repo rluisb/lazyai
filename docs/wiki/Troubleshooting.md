@@ -52,9 +52,8 @@ That local manifest name remains part of the current managed project state. The 
 Preview and apply updates:
 
 ```bash
-lazyai-cli update --check
 lazyai-cli update
-lazyai-cli doctor --skills-check
+lazyai-cli doctor
 ```
 
 Use `lazyai-cli eject` only if you want to stop LazyAI management while leaving generated files in place.

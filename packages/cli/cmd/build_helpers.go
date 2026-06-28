@@ -7,8 +7,7 @@ import (
 
 // preflightOutDir validates that outDir is safe to write into. If it does
 // not exist, nothing to do. If it exists and is empty, nothing to do. If
-// it exists and is non-empty, require force (and wipe it). Shared between
-// `build-plugin` (spec 016) and `build-gemini-extension` (spec 017).
+// it exists and is non-empty, require force (and wipe it). Used by `build-plugin` (spec 016).
 func preflightOutDir(outDir string, force bool) error {
 	info, err := os.Stat(outDir)
 	if os.IsNotExist(err) {

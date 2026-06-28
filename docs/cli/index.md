@@ -35,7 +35,6 @@ lazyai-cli compile
 
 ```bash
 lazyai-cli update-self
-lazyai-cli update --check
 lazyai-cli update
 lazyai-cli doctor
 ```
@@ -44,8 +43,6 @@ lazyai-cli doctor
 
 ```bash
 lazyai-cli doctor
-lazyai-cli doctor --skills-check
-lazyai-cli doctor --migration-check
 ```
 
 ## Global flags
@@ -58,18 +55,3 @@ lazyai-cli doctor --migration-check
 
 Flags such as `--dry-run`, `--force`, `--json`, and `--no-interactive` are command-specific, not global.
 
-## TOML defaults
-
-You can set CLI defaults in `.ai-setup.toml` (project) or `~/.config/lazyai/config.toml` (global):
-
-```toml
-default_scope = "project"
-default_tools = ["opencode", "claude-code"]
-install_mode = "symlink"
-
-[wizard]
-preset = "standard"
-show_preview = true
-```
-
-Precedence: `CLI flags > project TOML > global TOML > built-in defaults`.

@@ -20,9 +20,9 @@
 | 014 | Copilot global MCP compile (`~/.copilot/mcp-config.json` + VS Code mcp.json split) | ✅ Complete | `feature/go-migration` |
 | 015 | Claude Code `--local-secrets` flag routing MCP to `.claude/settings.local.json` | ✅ Complete | `feature/go-migration` |
 | 016 | `ai-setup build-plugin` — generate Claude Code plugin from library (agents + skills + commands + output styles) | ✅ Complete | `feature/go-migration` |
-| 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ✅ Complete | `feature/go-migration` |
-| 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ✅ Complete | `feature/go-migration` |
-| 019 | Orchestrator Go runtime + ai-setup integration — Go binary `ai-setup-orchestrator` replaces `npx -y @ai-setup/orchestrator`; release assets/download/cache support implemented; A2A deferred/opt-in | ✅ Complete | `feature/orchestrator-a2a-rewrite` |
+| 017 | Gemini deep setup — `library/gemini/` restructure + `ai-setup build-gemini-extension` generator + LookPath validation | ~~✅ Complete~~ **Removed** | `feature/go-migration` — feature removed (code absent); `build_gemini_extension.go`, `internal/geminiext`, `library/gemini/` are all absent from the repo |
+| 018 | Codex deep setup — `--skip-git-repo-check` validation fix + `library/codex/` AGENTS.override template + `codex mcp list` post-install summary | ~~✅ Complete~~ **Removed** | `feature/go-migration` — feature removed (code absent); Codex is no longer a compile target; `internal/adapter/codex.go`, `library/codex/` are all absent |
+| 019 | Orchestrator Go runtime + ai-setup integration — Go binary `ai-setup-orchestrator` replaces `npx -y @ai-setup/orchestrator`; release assets/download/cache support implemented; A2A deferred/opt-in | ~~✅ Complete~~ **Superseded** | `feature/orchestrator-a2a-rewrite` — removed; see spec 025 (LazyAI runtime refactor excised the orchestrator binary) |
 | 020 | Go/TS setup parity audit and alignment | ✅ Complete | archived top-level spec |
 | 021 | Parity verification and gap report | ✅ Complete | archived top-level spec |
 | 022 | Speckit workflow alignment | ✅ Complete | archived top-level spec; workspace-root follow-up noted in tasks |
@@ -86,14 +86,14 @@
 | `packages/cli/internal/scaffold/gitignore.go#CheckGitignoreGuidance` | Appends `.claude/settings.local.json` to existing `.gitignore` when `--local-secrets` is set; idempotent (spec 015) |
 | `packages/cli/internal/plugin/plugin.go#Build` | Generates a Claude Code plugin directory from the library FS: manifest, agents (forbidden-field stripping), skills (flat → `<name>/SKILL.md`), commands, output styles (spec 016) |
 | `packages/cli/cmd/build_plugin.go` | `lazyai-cli build-plugin --out <path> [--force]` cobra subcommand (spec 016) |
-| `packages/cli/cmd/build_helpers.go#preflightOutDir` | Shared out-dir preflight logic reused by `build-plugin` and `build-gemini-extension` (spec 017) |
-| `packages/cli/internal/library/embed.go#ResolveGeminiCommandsSubdir` | Resolves preferred `gemini/commands` with fallback to legacy top-level `commands/` for one release (spec 017) |
-| `packages/cli/internal/geminiext/geminiext.go#Build` | Generates a Gemini CLI extension directory: `gemini-extension.json`, raw `GEMINI.md`, commands (with namespacing), static-only `mcpServers` (spec 017) |
-| `packages/cli/cmd/build_gemini_extension.go` | `lazyai-cli build-gemini-extension --out <path> [--force]` cobra subcommand (spec 017) |
-| `packages/cli/internal/library/embed.go#CodexAssetsDir` | Per-tool dir helper for `library/codex/`; `CodexAgentsOverrideTemplate` constant points to the starter template (spec 018) |
-| `packages/cli/internal/adapter/codex.go#writeCodexAgentsOverride` | Copies `library/codex/AGENTS.override.template.md` into the config root on first install; never overwrites user-authored content (spec 018) |
-| `packages/cli/internal/adapter/codex.go#displayCodexInstallSummary` | Post-install summary via `codex mcp list --json` with plaintext fallback; matches the Claude Code summary pattern from spec 012 (spec 018) |
-| `packages/cli/internal/adapter/codex.go#codexExecValidationArgs` | Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix) |
+| ~~`packages/cli/cmd/build_helpers.go#preflightOutDir`~~ | ~~Shared out-dir preflight logic reused by `build-plugin` and `build-gemini-extension` (spec 017)~~ — **removed** (`build-gemini-extension` no longer exists; function retained for `build-plugin` only, spec 016) |
+| ~~`packages/cli/internal/library/embed.go#ResolveGeminiCommandsSubdir`~~ | ~~Resolves preferred `gemini/commands` with fallback to legacy top-level `commands/` for one release (spec 017)~~ — **removed** (code absent; Gemini-extension feature removed) |
+| ~~`packages/cli/internal/geminiext/geminiext.go#Build`~~ | ~~Generates a Gemini CLI extension directory: `gemini-extension.json`, raw `GEMINI.md`, commands (with namespacing), static-only `mcpServers` (spec 017)~~ — **removed** (code absent) |
+| ~~`packages/cli/cmd/build_gemini_extension.go`~~ | ~~`lazyai-cli build-gemini-extension --out <path> [--force]` cobra subcommand (spec 017)~~ — **removed** (code absent) |
+| ~~`packages/cli/internal/library/embed.go#CodexAssetsDir`~~ | ~~Per-tool dir helper for `library/codex/`; `CodexAgentsOverrideTemplate` constant points to the starter template (spec 018)~~ — **removed** (code absent; Codex no longer a compile target) |
+| ~~`packages/cli/internal/adapter/codex.go#writeCodexAgentsOverride`~~ | ~~Copies `library/codex/AGENTS.override.template.md` into the config root on first install; never overwrites user-authored content (spec 018)~~ — **removed** (code absent) |
+| ~~`packages/cli/internal/adapter/codex.go#displayCodexInstallSummary`~~ | ~~Post-install summary via `codex mcp list --json` with plaintext fallback; matches the Claude Code summary pattern from spec 012 (spec 018)~~ — **removed** (code absent) |
+| ~~`packages/cli/internal/adapter/codex.go#codexExecValidationArgs`~~ | ~~Argv builder for `RunHeadlessValidation`; includes `--skip-git-repo-check` so the probe succeeds against non-repo workspaces (spec 018 fix)~~ — **removed** (code absent) |
 | `library/claudecode/commands/` | Claude Code slash command templates (review, test, commit) |
 | `library/claudecode/output-styles/` | Claude Code output style templates (terse, explanatory) |
 

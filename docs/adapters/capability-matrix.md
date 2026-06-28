@@ -95,7 +95,7 @@ All 7 LazyAI-supported targets support project, workspace, and global scopes. An
 
 | Tool | MCP compile | Output location | Notes |
 |---|---|---|---|
-| OpenCode | `CompileMCPForTool` | `.opencode/lazyai.mcp.jsonc` (legacy), `.opencode/mcp.json` | Preserves user-authored servers across re-runs |
+| OpenCode | `CompileMCPForTool` | `opencode.json` (root `mcp` key) | Preserves user-authored servers across re-runs |
 | Claude Code | `CompileMCPForTool` | `.mcp.json` (project), `settings.json` merge (global) | CLI-driven `claude mcp add-json` with fallback to direct-write; global hooks path and MCP scope gaps fixed in #558/#559 |
 | Copilot | `CompileMCPForTool` | `.vscode/mcp.json` (project), `~/.copilot/mcp-config.json` (CLI) | Dual output: VS Code + CLI; CLI probe-gated; CLI remote transport fixed to `http` in #557 |
 | Pi | **no-op** (`CompileMCP` returns `ctx.FileRecords`) | — | Pi has no native MCP surface; capability is intentionally `no` |

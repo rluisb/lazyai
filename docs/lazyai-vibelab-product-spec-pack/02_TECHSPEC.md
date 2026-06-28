@@ -1208,7 +1208,7 @@ Rejected by default:
 
 ### 15.3 MCP server inventory report
 
-`lazyai-cli doctor mcp` output:
+`lazyai-cli doctor mcp` output (planned / not yet implemented — MCP inventory is included in standard `doctor` output):
 
 ```text
 MCP servers:
@@ -1389,6 +1389,7 @@ Contract:
 
 ```bash
 lazyai-cli compile [--target t] [--all] [--dry-run] [--diff] [--write]
+# Note: --diff and --write are planned / not yet implemented.
 ```
 
 Contract:
@@ -1401,6 +1402,7 @@ Contract:
 
 ```bash
 lazyai-cli validate [skills|agents|hooks|mcp|adapters|generated|official-docs]
+# Note: official-docs subcommand is planned / not yet implemented.
 ```
 
 Contract:
@@ -1412,6 +1414,7 @@ Contract:
 
 ```bash
 lazyai-cli doctor [--target t] [--security] [--mcp] [--json]
+# Note: --security and --mcp flags are planned / not yet implemented.
 ```
 
 Contract:

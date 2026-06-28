@@ -51,7 +51,7 @@ OpenCode projects no longer get Fortnite-only runtime content by default:
 2. Verify the generated OpenCode config now points at `implementer`:
 
    ```bash
-   grep -n 'default_agent' .opencode/opencode.jsonc
+   grep -n 'default_agent' .opencode/opencode.json
    ```
 
 3. Remove any local automation that hard-codes `loop-driver`, `orchestrator`, or `.opencode/STARTUP.md`.

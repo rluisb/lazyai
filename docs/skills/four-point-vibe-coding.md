@@ -24,5 +24,5 @@ Use this skill when starting a new task or context window in any CLI agent.
 
 ## Notes
 
-- CLI-agnostic. Works in Claude Code, opencode, and Pi.
+- CLI-agnostic. Works in Claude Code, opencode, and OMP/Pi.
 - Keep prompts short; lean on the canonical files for detail.

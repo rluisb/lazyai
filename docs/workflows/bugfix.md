@@ -53,7 +53,7 @@ Choose and record the TDD mode before editing. Regression coverage is required u
 
 - Claude Code: markdown workflow only; existing diagnose/test-first skills and agents perform the work.
 - OpenCode: markdown workflow only; no runtime orchestration is claimed.
-- Pi: markdown-only guidance.
+- OMP/Pi: markdown-only guidance.
 
 ## Exit Gate
 

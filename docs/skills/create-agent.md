@@ -38,7 +38,7 @@ Use `packages/cli/library/canonical/agents/` existing agent files as the shape r
 - One agent per focused change.
 - Do not add `model`, provider, color, or host-only settings to canonical frontmatter.
 - Do not duplicate skills inside an agent prompt; reference skill names when useful.
-- Pi agent adapter support is documented as limited unless `lazyai-cli doctor` verifies it.
+- OMP/Pi agent adapter support is documented as limited unless `lazyai-cli doctor` verifies it.
 
 ## Verification Checklist
 

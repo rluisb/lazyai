@@ -62,7 +62,7 @@ n/a
 
 - Claude Code: Coordinator agent orchestrates Researcher and Verifier sub-agents.
 - OpenCode: Skill / plugin mapping
-- Pi: Markdown instructions provided to the agent.
+- OMP/Pi: Markdown instructions provided to the agent.
 
 ## Exit Gate
 

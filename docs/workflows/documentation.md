@@ -49,7 +49,7 @@ n/a — no behavior change unless the docs generation path itself is executable 
 
 - Claude Code: markdown workflow only; docs remain repo artifacts, not runtime behavior.
 - OpenCode: markdown workflow only.
-- Pi: markdown-only guidance.
+- OMP/Pi: markdown-only guidance.
 
 ## Exit Gate
 

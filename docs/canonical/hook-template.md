@@ -13,7 +13,7 @@ Use for `.agents/hooks/<name>/POLICY.md` plus optional runtime scripts.
 
 - Claude Code: `<EventName>`
 - OpenCode plugin: `<event.name>`
-- Pi: <supported | unsupported | markdown-only>
+- OMP/Pi: <supported | unsupported | markdown-only>
 
 ## Decision
 
@@ -25,7 +25,7 @@ Use for `.agents/hooks/<name>/POLICY.md` plus optional runtime scripts.
 
 - Claude Code: generated command hook reads JSON from stdin and returns JSON or exit code.
 - OpenCode: generated TypeScript plugin implements the mapped event.
-- Pi: markdown-only or unsupported unless `bin/doctor` verifies a runtime adapter.
+- OMP/Pi: markdown-only or unsupported unless `bin/doctor` verifies a runtime adapter.
 
 ## Fail-Closed Semantics
 

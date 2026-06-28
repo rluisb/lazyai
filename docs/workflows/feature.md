@@ -54,7 +54,7 @@ Choose and record a TDD mode before code changes. If no red test is practical, r
 
 - Claude Code: workflow is consumed as markdown context; implementation uses existing skills/agents/hooks.
 - OpenCode: workflow is consumed as markdown context; no workflow runtime is claimed.
-- Pi: markdown-only guidance; no workflow or hook runtime support is claimed.
+- OMP/Pi: markdown-only guidance; no workflow or hook runtime support is claimed.
 
 ## Exit Gate
 

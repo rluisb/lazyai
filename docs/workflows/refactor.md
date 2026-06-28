@@ -52,7 +52,7 @@ Choose and record a TDD mode when coverage needs tightening around the invariant
 
 - Claude Code: markdown workflow only; existing planning/reviewer skills enforce the invariant mindset.
 - OpenCode: markdown workflow only; no runtime claims.
-- Pi: markdown-only guidance.
+- OMP/Pi: markdown-only guidance.
 
 ## Exit Gate
 

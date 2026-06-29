@@ -73,7 +73,7 @@ func CatalogFor(t types.ToolId) Catalog {
 		return OpenCodeCatalog
 	case types.ToolIdCopilot:
 		return CopilotCatalog
-	case types.ToolIdPi, types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity:
+	case types.ToolIdPi, types.ToolIdOmp, types.ToolIdKiro, types.ToolIdAntigravity, types.ToolIdCodex:
 		return OpenCodeCatalog
 	default:
 		return Catalog{}

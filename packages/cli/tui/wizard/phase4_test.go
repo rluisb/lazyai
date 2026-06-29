@@ -76,7 +76,7 @@ func TestWizardOptionDescriptionsCoverVisibleChoices(t *testing.T) {
 		descriptions map[string]string
 	}{
 		{"scope", []string{"global", "workspace", "project"}, scopeDescriptions},
-		{"tools", []string{"opencode", "claude-code", "copilot", "pi", "omp", "kiro", "antigravity"}, toolDescriptions},
+		{"tools", []string{"opencode", "claude-code", "copilot", "pi", "omp", "kiro", "antigravity", "codex"}, toolDescriptions},
 		{"preset", []string{"minimal", "standard", "full", "custom"}, presetDescriptions},
 		{"features", []string{"qualityGates", "rpiWorkflow", "chainOfThought", "bugResolution", "contextEngineering", "treeOfThoughts", "adrEnforcement", "agentHarness", "pivotHandling", "adversarialDesign"}, featureDescriptions},
 		{"branch patterns", []string{"{type}/{ticket}-{description}", "{type}/{ticket}/{description}", "{type}/{description}", "{ticket}/{description}", "{description}", "custom"}, branchPatternDescriptions},

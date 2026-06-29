@@ -27,7 +27,7 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("scope", "", "Setup scope (global, workspace, project)")
 	initCmd.Flags().String("workspace-root", "", "Workspace root directory for AI tool configs (workspace scope)")
-	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot, pi, omp, kiro, antigravity)")
+	initCmd.Flags().StringSlice("tools", []string{}, "Tools to configure (opencode, claude-code, copilot, pi, omp, kiro, antigravity, codex)")
 	initCmd.Flags().StringSlice("enable-servers", []string{}, "MCP servers to enable (for example: filesystem, ai-memory, ripgrep)")
 	initCmd.Flags().String("preset", "", "Preset configuration name (minimal, standard, full, custom)")
 	initCmd.Flags().StringSlice("features", []string{}, "Features to enable")
@@ -253,7 +253,7 @@ func runInitNonInteractive(config *wizard.WizardConfig) error {
 		return fmt.Errorf("--scope is required in non-interactive mode (global | workspace | project)")
 	}
 	if len(config.CLITools) == 0 {
-		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity, omp, kiro)")
+		return fmt.Errorf("--tools is required in non-interactive mode (opencode, claude-code, copilot, pi, antigravity, omp, kiro, codex)")
 	}
 
 	// Drop tools that don't support the chosen scope (e.g. copilot × global).

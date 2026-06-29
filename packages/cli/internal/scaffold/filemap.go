@@ -12,4 +12,5 @@ var RootFileByTool = map[types.ToolId]string{
 	types.ToolIdOmp:         "AGENTS.md",
 	types.ToolIdKiro:        "AGENTS.md",
 	types.ToolIdAntigravity: "AGENTS.md",
+	types.ToolIdCodex:       "AGENTS.md",
 }

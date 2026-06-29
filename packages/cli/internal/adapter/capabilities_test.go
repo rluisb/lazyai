@@ -7,15 +7,15 @@ import (
 )
 
 // TestEveryRegisteredAdapterReportsCapabilities ensures the capability model
-// is populated for all 7 V2 targets: every adapter must carry a recognized
+// is populated for all 8 V2 targets: every adapter must carry a recognized
 // support level and emit root instructions. MCP is expected for every adapter
 // except Pi, whose CompileMCP is an intentional no-op (Pi has no native MCP
 // surface; see issue #531).
 func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 	reg := NewRegistry()
 	ids := reg.List()
-	if len(ids) != 7 {
-		t.Fatalf("registry has %d adapters, want 7 (V2 targets): %v", len(ids), ids)
+	if len(ids) != 8 {
+		t.Fatalf("registry has %d adapters, want 8 (V2 targets): %v", len(ids), ids)
 	}
 	for _, id := range ids {
 		a, err := reg.Get(id)
@@ -40,12 +40,11 @@ func TestEveryRegisteredAdapterReportsCapabilities(t *testing.T) {
 	}
 }
 
-// TestNoBetaAdaptersRemain pins EC-006 / B.4 after #486: both formerly-beta
-// adapters were promoted to stable once their emitted surfaces were verified
-// against host docs (OMP via the authoritative omp:// docs; Antigravity once the
-// global-skills-path and root-instructions gaps were closed and pinned). No
-// registered adapter is below stable. See
-// docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
+// TestNoBetaAdaptersRemain pins EC-006 / B.4: the only adapter permitted below
+// stable is the newly-added Codex adapter, whose emitted surfaces are verified
+// against official Codex docs and covered by golden/unit tests but still lack
+// runtime smoke against the Codex binary (SupportBeta). Every other adapter
+// must remain stable. See docs/adapters/snapshots/beta-adapter-verification-2026-06.md.
 func TestNoBetaAdaptersRemain(t *testing.T) {
 	reg := NewRegistry()
 	var beta []types.ToolId
@@ -55,8 +54,8 @@ func TestNoBetaAdaptersRemain(t *testing.T) {
 			beta = append(beta, id)
 		}
 	}
-	if len(beta) != 0 {
-		t.Fatalf("expected no beta adapters after #486, got %v", beta)
+	if len(beta) != 1 || beta[0] != types.ToolIdCodex {
+		t.Fatalf("expected only codex below stable, got %v", beta)
 	}
 }
 

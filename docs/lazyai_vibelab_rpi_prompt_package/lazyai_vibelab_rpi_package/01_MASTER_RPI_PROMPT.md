@@ -160,7 +160,7 @@ Inspect:
 packages/cli/internal/adapter/
 ```
 
-Confirm all 7 targets:
+Confirm all 8 targets:
 
 ```text
 opencode
@@ -170,6 +170,7 @@ pi
 omp
 kiro
 antigravity
+codex
 ```
 
 For each adapter, identify:

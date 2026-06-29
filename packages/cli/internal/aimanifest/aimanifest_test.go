@@ -48,8 +48,8 @@ func TestResolveTargets(t *testing.T) {
 		{"claude alias", []string{"claude"}, []types.ToolId{types.ToolIdClaudeCode}, false},
 		{"claude-code canonical", []string{"claude-code"}, []types.ToolId{types.ToolIdClaudeCode}, false},
 		{"dedup", []string{"claude", "claude-code"}, []types.ToolId{types.ToolIdClaudeCode}, false},
-		{"all seven", []string{"opencode", "claude", "copilot", "pi", "omp", "antigravity", "kiro"}, nil, false},
-		{"codex rejected", []string{"codex"}, nil, true},
+		{"all eight", []string{"opencode", "claude", "copilot", "pi", "omp", "antigravity", "kiro", "codex"}, nil, false},
+		{"codex canonical", []string{"codex"}, []types.ToolId{types.ToolIdCodex}, false},
 		{"unknown rejected", []string{"vim"}, nil, true},
 	}
 	for _, tc := range tests {
@@ -181,8 +181,8 @@ func TestForToolsMapsTokens(t *testing.T) {
 }
 
 func TestForToolsEmptyFallsBackToDefault(t *testing.T) {
-	if got := ForTools(nil); len(got.Targets) != 7 {
-		t.Fatalf("want 7 default targets, got %v", got.Targets)
+	if got := ForTools(nil); len(got.Targets) != 8 {
+		t.Fatalf("want 8 default targets, got %v", got.Targets)
 	}
 }
 
@@ -215,7 +215,7 @@ func TestResolveToolTokenAliases(t *testing.T) {
 		{"antigravity", "antigravity", types.ToolIdAntigravity, true, false},
 		{"kiro", "kiro", types.ToolIdKiro, true, false},
 		{"uppercase normalized", "CLAUDE", types.ToolIdClaudeCode, true, false},
-		{"codex rejected", "codex", "", false, true},
+		{"codex canonical", "codex", types.ToolIdCodex, true, false},
 		{"unknown rejected", "gemini", "", false, true},
 	}
 	for _, tc := range tests {
@@ -237,12 +237,5 @@ func TestResolveToolTokenAliases(t *testing.T) {
 				t.Fatalf("id = %q, want %q for %q", id, tc.want, tc.input)
 			}
 		})
-	}
-}
-
-func TestResolveToolTokenCodexErrorIsSentinel(t *testing.T) {
-	_, _, err := ResolveToolToken("codex")
-	if !errors.Is(err, ErrCodexUnsupported) {
-		t.Fatalf("want ErrCodexUnsupported, got %v", err)
 	}
 }

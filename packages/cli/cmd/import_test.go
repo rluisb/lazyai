@@ -7,7 +7,7 @@ func TestImportWithUnsupportedToolFailsBeforeDetection(t *testing.T) {
 	cmd := newImportCommand("gemini", true, true)
 
 	err := runImport(cmd, []string{sourceDir})
-	if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: antigravity, claude-code, copilot, kiro, omp, opencode, pi)" {
+	if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: antigravity, claude-code, codex, copilot, kiro, omp, opencode, pi)" {
 		t.Fatalf("runImport error = %v, want unsupported-tool error", err)
 	}
 }

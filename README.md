@@ -12,7 +12,7 @@ verify adapter correctness.
 - `.ai/lazyai.json`, `.ai/mcp.json`, and canonical asset trees under `.ai/`
 - `.ai/lock.json` compile metadata for idempotent managed outputs
 - scoped installation state (`.ai-setup.db`; legacy `.ai-setup.json` auto-imported on first use)
-- compiler/adapters that emit tool-native output for the 7 supported targets
+- compiler/adapters that emit tool-native output for the 8 supported targets
 - optional runtime-adjacent local state (sessions, metrics, ledger, memory, secrets)
 
 It is Go-only (`go install`), with no npm or npx dependency for normal usage.
@@ -106,6 +106,7 @@ lazyai-cli compile
 | `omp` | OMP task-agent surface (`.omp/agents/*`) and skills (`.omp/skills/*`). |
 | `kiro` | Kiro CLI agent profiles (`.kiro/agents/*`), skills, and `.kiro/settings/mcp.json`. |
 | `antigravity` | `.gemini` configuration and hook surface (`.gemini/hooks/...`). |
+| `codex` | OpenAI Codex CLI surface: `AGENTS.md` instructions, MCP servers in `.codex/config.toml`, subagents (`.codex/agents/*.toml`), hooks (`.codex/hooks.json`), and Agent Skills (`.agents/skills/*`). |
 
 For tool-by-tool generated structure, LazyAI options, diagrams, and examples, see the MkDocs section `docs/ai-cli-tools/`.
 
@@ -120,7 +121,7 @@ Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are remov
 
 | Command | Description |
 |---|---|
-| `add` | Add artifacts to an existing setup (`--tools`, `--agents`, `--skills`). `--tools` accepts `opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, `antigravity`. |
+| `add` | Add artifacts to an existing setup (`--tools`, `--agents`, `--skills`). `--tools` accepts `opencode`, `claude-code`, `copilot`, `pi`, `omp`, `kiro`, `antigravity`, `codex`. |
 | `build-plugin` | Generate plugin bundles from embedded library assets (`--target {claude,copilot-cli,omp,pi}`). |
 | `compile` | Compile canonical `.ai/` sources (`lazyai.json`, `mcp.json`, agents/skills/hooks/prompts) into tool-native outputs and refresh `.ai/lock.json` (`--tool`, `--dry-run`, `--validate-contracts`). |
 | `completion` | Generate shell completion scripts. |

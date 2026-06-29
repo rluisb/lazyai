@@ -324,6 +324,7 @@ func toolOptionsForScope(scope types.SetupScope) []huh.Option[string] {
 		huh.NewOption("OMP", string(types.ToolIdOmp)),
 		huh.NewOption("Kiro", string(types.ToolIdKiro)),
 		huh.NewOption("Antigravity", string(types.ToolIdAntigravity)),
+		huh.NewOption("Codex", string(types.ToolIdCodex)),
 	}
 	if scope == "" {
 		return all

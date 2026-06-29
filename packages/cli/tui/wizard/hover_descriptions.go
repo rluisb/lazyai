@@ -90,6 +90,7 @@ var toolDescriptions = map[string]string{
 	"omp":         "Adds OMP-compatible skills, agents, and rules.",
 	"kiro":        "Adds Kiro steering and agent assets.",
 	"antigravity": "Adds Antigravity rules and generated configuration.",
+	"codex":       "Adds OpenAI Codex CLI config: AGENTS.md, MCP in .codex/config.toml, subagents, and hooks.",
 }
 
 var skillDescriptions = map[string]string{

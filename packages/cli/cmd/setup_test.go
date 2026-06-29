@@ -156,7 +156,7 @@ func TestRunSetupListOutputsDeterministicJSON(t *testing.T) {
 	for _, target := range result.Targets {
 		gotTargets = append(gotTargets, target.ID)
 	}
-	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,kiro,omp,opencode,pi"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,codex,copilot,kiro,omp,opencode,pi"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 	if len(result.Agents) != 1 || result.Agents[0].ID != "test-agent" {
@@ -306,7 +306,7 @@ func TestRunSetupDryRunGlobalAllFiltersToSupportedTargets(t *testing.T) {
 		gotTargets = append(gotTargets, target.ID)
 	}
 	sort.Strings(gotTargets)
-	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,copilot,kiro,omp,opencode,pi"; got != want {
+	if got, want := strings.Join(gotTargets, ","), "antigravity,claude-code,codex,copilot,kiro,omp,opencode,pi"; got != want {
 		t.Fatalf("targets = %q, want %q", got, want)
 	}
 }

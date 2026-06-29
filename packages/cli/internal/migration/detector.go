@@ -43,6 +43,9 @@ var DetectionPatterns = map[string][]string{
 	"antigravity": {
 		".agents",
 	},
+	"codex": {
+		".codex",
+	},
 }
 
 // AdapterNames maps adapter IDs to human-readable names.
@@ -54,6 +57,7 @@ var AdapterNames = map[string]string{
 	"omp":         "OMP",
 	"kiro":        "Kiro",
 	"antigravity": "Antigravity",
+	"codex":       "Codex",
 }
 
 // fileTypePatterns categorizes files by their path/name.

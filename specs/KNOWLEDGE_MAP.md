@@ -42,6 +42,7 @@
 | Reversa Confidence Scale | `specs/standards/confidence-scale.md` | Active | 🟢🟡🔴 confidence scale for `/populate` and AI-inferred content — meaning, evidence rules, write behavior, and human-escalation criteria |
 | Skill Quality Guidelines | `docs/concepts/skill-quality.md` | Active | Structural and semantic quality requirements for skill definitions — trigger guidance, misuse guidance, evidence requirements, output format. |
 | Agent Contracts | `docs/concepts/agent-contracts.md` | Active | Contract boundaries for agent definitions — role/purpose, trigger/misuse, workflow, evidence requirements, human gates, handoff, output. |
+| Upstream Tool Systems Reference | `docs/ai-cli-tools/tool-systems/` | Active | Source-verified reference (official docs, 2026-06-29) for how built-in tools, custom tools, and MCP work inside five researched upstream AI CLIs (Kiro, Claude Code, Antigravity, Pi, OMP — OpenCode/Copilot not yet covered). Offline-readable; index has cross-tool matrices + install-critical misconfiguration risks. |
 
 ## Key Architecture Decisions
 

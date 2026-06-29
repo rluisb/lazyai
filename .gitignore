@@ -18,8 +18,8 @@ docs/llm.txt
 .ai/
 !packages/cli/testdata/projects/**/.ai/
 .claude/*
-# Allow the lazyai-design-system skill to be tracked even though .claude/ is ignored.
-# The wildcard above (vs .claude/) is required so negations below can re-include subpaths.
+# Re-include .claude/skills/ so the generated per-skill adapters (symlinks into
+# .agents/skills/) stay tracked even though .claude/ is otherwise ignored.
 !.claude/skills/
 
 .codex/

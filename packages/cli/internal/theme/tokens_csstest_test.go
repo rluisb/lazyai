@@ -15,7 +15,7 @@ import (
 )
 
 // TestCSSTokenParity verifies bidirectional parity between the design-system
-// CSS at .claude/skills/tui-lazy-ai-design-system/colors_and_type.css and the
+// CSS token fixture (internal/theme/testdata/colors_and_type.css) and the
 // exported color constants in this package. Both sides MUST agree on the token
 // set and the hex value for each token.
 //
@@ -64,7 +64,10 @@ func TestCSSTokenParity(t *testing.T) {
 	}
 }
 
-// designSystemCSSPath returns the absolute path to colors_and_type.css.
+// designSystemCSSPath returns the absolute path to the design-system token
+// fixture (colors_and_type.css). It lives in this package's testdata/ rather
+// than under .claude/skills/, which bin/inject manages as a generated symlink
+// farm and would otherwise prune the fixture on every run.
 func designSystemCSSPath(t *testing.T) string {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
@@ -72,9 +75,7 @@ func designSystemCSSPath(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 	// file = .../packages/cli/internal/theme/tokens_csstest_test.go
-	// Walk up to the repo root: theme -> internal -> cli -> packages -> root
-	root := filepath.Join(filepath.Dir(file), "..", "..", "..", "..")
-	cssPath := filepath.Join(root, ".claude", "skills", "tui-lazy-ai-design-system", "colors_and_type.css")
+	cssPath := filepath.Join(filepath.Dir(file), "testdata", "colors_and_type.css")
 	abs, err := filepath.Abs(cssPath)
 	if err != nil {
 		t.Fatalf("filepath.Abs: %v", err)
@@ -228,5 +229,7 @@ func equalIgnoreCase(a, b string) bool {
 
 // Sanity check: package-level types are reachable and `color.Color` is
 // satisfied by the existing constants.
-var _ color.Color = Primary
-var _ = fmt.Sprintf // silence unused-import warning
+var (
+	_ color.Color = Primary
+	_             = fmt.Sprintf // silence unused-import warning
+)

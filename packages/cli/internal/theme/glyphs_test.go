@@ -3,10 +3,9 @@ package theme
 import "testing"
 
 // TestGlyphConstants verifies that every canonical glyph constant is the
-// expected Unicode codepoint. Drift here means the design system + the TUI
-// have desynchronized — either the constant is wrong, or the design-system
-// skill at .claude/skills/tui-lazy-ai-design-system/README.md needs to be
-// updated to match (FR-016). Failing this test is a defect on whichever side
+// expected Unicode codepoint. These constants are the source of truth for TUI
+// iconography (FR-016); drift here means a glyph was changed without updating
+// the dependent rendering. Failing this test is a defect on whichever side
 // changed without co-update.
 func TestGlyphConstants(t *testing.T) {
 	cases := []struct {

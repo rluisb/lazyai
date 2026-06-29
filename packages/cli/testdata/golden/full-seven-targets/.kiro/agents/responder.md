@@ -2,7 +2,14 @@
 name: responder
 description: Site Reliability Engineer agent. Incident response, SLO tracking, error budget analysis.
 role: responder
-mode: all
+tools:
+  - read
+  - edit
+  - shell
+  - search
+  - web
+  - mcp
+  - spawn
 temperature: 0.2
 steps: 14
 ---

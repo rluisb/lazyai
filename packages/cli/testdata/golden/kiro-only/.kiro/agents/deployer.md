@@ -2,7 +2,14 @@
 name: deployer
 description: Infrastructure, deployment, and CI/CD operations agent.
 role: deployer
-mode: all
+tools:
+  - read
+  - edit
+  - shell
+  - search
+  - web
+  - mcp
+  - spawn
 temperature: 0.2
 steps: 14
 ---

@@ -2,7 +2,9 @@
 name: evidence-verifier
 description: Verify claims against source evidence. Given a claim and source material, determine whether the claim is supported, contradicted, or inconclusive.
 role: evidence-verifier
-mode: all
+tools:
+  - read
+  - search
 temperature: 0.1
 steps: 14
 skills:

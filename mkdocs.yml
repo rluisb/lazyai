@@ -130,6 +130,14 @@ nav:
       - OMP: ai-cli-tools/omp.md
       - Kiro: ai-cli-tools/kiro.md
       - Antigravity: ai-cli-tools/antigravity.md
+      - Tool Systems (upstream):
+          - Overview: ai-cli-tools/tool-systems/index.md
+          - Kiro: ai-cli-tools/tool-systems/kiro.md
+          - Claude Code: ai-cli-tools/tool-systems/claude-code.md
+          - Antigravity: ai-cli-tools/tool-systems/antigravity.md
+          - Pi: ai-cli-tools/tool-systems/pi.md
+          - OMP: ai-cli-tools/tool-systems/omp.md
+          - Agent Tools Matrix: ai-cli-tools/tool-systems/agent-tools-matrix.md
   - Reference:
       - Tool Outputs: reference/tool-outputs.md
       - Agents: reference/agents.md

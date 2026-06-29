@@ -29,15 +29,15 @@ spawn
 
 Semantics:
 
-| Token | Meaning |
-|---|---|
-| `read` | File/content read |
-| `edit` | File write/edit |
-| `shell` | Shell/process execution |
+| Token    | Meaning                          |
+| -------- | -------------------------------- |
+| `read`   | File/content read                |
+| `edit`   | File write/edit                  |
+| `shell`  | Shell/process execution          |
 | `search` | Search/grep/glob-style discovery |
-| `web` | Web fetch/search |
-| `mcp` | MCP tools |
-| `spawn` | Subagent/delegation |
+| `web`    | Web fetch/search                 |
+| `mcp`    | MCP tools                        |
+| `spawn`  | Subagent/delegation              |
 
 ### 2. Canonical agent metadata
 
@@ -170,4 +170,5 @@ Project-wide gates and adapter-specific tests are deferred to PR CI and follow-u
 This plan is ready for human approval before implementation.
 
 <!-- The human approver records approval here. Do NOT let an AI author this line. -->
-Human Gate: PENDING
+
+Human Gate: APPROVED by rluisb at 2026-06-29T18:25:00-03:00

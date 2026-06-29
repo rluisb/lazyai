@@ -1,12 +1,11 @@
 package theme
 
 // Canonical Unicode glyphs used across the design system. Status communication
-// in the TUI is always glyph + color together — never color alone (Article III
-// of the inferred design-system constitution; mirrors the rule in
-// .claude/skills/tui-lazy-ai-design-system/README.md §Iconography).
+// in the TUI is always glyph + color together — never color alone.
 //
-// Adding a glyph here without a corresponding entry in the design-system skill
-// (or vice versa) is a defect on the side that has not yet caught up.
+// These constants are the source of truth for TUI iconography (FR-016); adding
+// or changing a glyph here is a deliberate design-system change, and
+// TestGlyphConstants guards their codepoints.
 const (
 	GlyphSuccess  = "✓"
 	GlyphError    = "✗"

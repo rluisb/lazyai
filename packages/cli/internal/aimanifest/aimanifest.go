@@ -63,8 +63,7 @@ type Manifest struct {
 	Safety   *Safety                   `json:"safety,omitempty"`
 }
 
-// targetAliases maps manifest target tokens to internal tool IDs. Codex is
-// intentionally absent: V2 supports exactly the seven tokens below.
+// targetAliases maps manifest target tokens to internal tool IDs.
 var targetAliases = map[string]types.ToolId{
 	"opencode":    types.ToolIdOpenCode,
 	"claude":      types.ToolIdClaudeCode,
@@ -74,6 +73,7 @@ var targetAliases = map[string]types.ToolId{
 	"omp":         types.ToolIdOmp,
 	"antigravity": types.ToolIdAntigravity,
 	"kiro":        types.ToolIdKiro,
+	"codex":       types.ToolIdCodex,
 }
 
 // canonicalToken is the preferred manifest token for each tool ID (the inverse
@@ -86,6 +86,7 @@ var canonicalToken = map[types.ToolId]string{
 	types.ToolIdOmp:         "omp",
 	types.ToolIdAntigravity: "antigravity",
 	types.ToolIdKiro:        "kiro",
+	types.ToolIdCodex:       "codex",
 }
 
 // Path returns the manifest path for the given canonical .ai/ directory.
@@ -163,9 +164,6 @@ func (m *Manifest) resolveTargetsWithTokens() ([]types.ToolId, map[types.ToolId]
 	out := make([]types.ToolId, 0, len(m.Targets))
 	for _, raw := range m.Targets {
 		token := strings.ToLower(strings.TrimSpace(raw))
-		if token == "codex" {
-			return nil, nil, fmt.Errorf("target %q is not supported in V2 (Codex was removed)", raw)
-		}
 		id, ok := targetAliases[token]
 		if !ok {
 			return nil, nil, fmt.Errorf("unknown target %q", raw)
@@ -212,10 +210,10 @@ func (m *Manifest) EnabledTargets() ([]types.ToolId, error) {
 	return out, nil
 }
 
-// Default returns a starter manifest enabling all seven targets with safe
+// Default returns a starter manifest enabling all supported targets with safe
 // defaults. Used by `init` to scaffold .ai/lazyai.json.
 func Default() *Manifest {
-	targets := []string{"opencode", "claude", "copilot", "pi", "omp", "antigravity", "kiro"}
+	targets := []string{"opencode", "claude", "copilot", "pi", "omp", "antigravity", "kiro", "codex"}
 	sort.Strings(targets)
 	return &Manifest{
 		Schema:  "https://lazyai.dev/schemas/lazyai.schema.json",
@@ -243,26 +241,16 @@ func TokenFor(id types.ToolId) string {
 	return string(id)
 }
 
-// ErrCodexUnsupported is returned by ResolveToolToken when the input is the
-// removed "codex" target, carrying the same V2-removal message used by the
-// manifest resolver so callers can surface a helpful error instead of a bare
-// "unknown target".
-var ErrCodexUnsupported = errors.New(`target "codex" is not supported in V2 (Codex was removed)`)
-
 // ResolveToolToken maps a single user-facing target token (alias or canonical
 // tool ID) to its internal types.ToolId, applying the same alias table the
 // manifest uses (targetAliases). The empty string resolves to the zero ToolId
-// with ok=false so callers can treat it as "no filter". "codex" is rejected
-// with an explicit V2-removal error rather than a generic unknown-token error.
+// with ok=false so callers can treat it as "no filter".
 // This lets CLI flags such as --tool accept the same short names the manifest
 // accepts (e.g. "claude" -> claude-code) without duplicating the alias table.
 func ResolveToolToken(raw string) (types.ToolId, bool, error) {
 	token := strings.ToLower(strings.TrimSpace(raw))
 	if token == "" {
 		return "", false, nil
-	}
-	if token == "codex" {
-		return "", false, ErrCodexUnsupported
 	}
 	id, ok := targetAliases[token]
 	if !ok {
@@ -272,7 +260,7 @@ func ResolveToolToken(raw string) (types.ToolId, bool, error) {
 }
 
 // ForTools returns a starter manifest whose targets are the given tools. When
-// tools is empty it falls back to Default() (all seven targets).
+// tools is empty it falls back to Default() (all supported targets).
 func ForTools(tools []types.ToolId) *Manifest {
 	if len(tools) == 0 {
 		return Default()

@@ -191,3 +191,25 @@ func (a *KiroAdapter) Capabilities() Capability {
 		GlobalConfig:     true,
 	}
 }
+
+// Capabilities reports the Codex adapter's verified surfaces. Codex reads
+// AGENTS.md root instructions, custom subagents from .codex/agents/<name>.toml,
+// MCP from .codex/config.toml [mcp_servers.*], lifecycle hooks from
+// .codex/hooks.json, and Agent Skills from .agents/skills/<name>/SKILL.md.
+// Support is Beta: surfaces are verified against official docs and covered by
+// golden/unit tests, but runtime smoke against the Codex binary is pending.
+func (a *CodexAdapter) Capabilities() Capability {
+	return Capability{
+		Support:          SupportBeta,
+		RootInstructions: true,
+		Subagents:        true,
+		Skills:           true,
+		Hooks:            true,
+		MCP:              true,
+		Permissions:      true,
+		Plugins:          true,
+		Compaction:       true,
+		Sessions:         true,
+		GlobalConfig:     true,
+	}
+}

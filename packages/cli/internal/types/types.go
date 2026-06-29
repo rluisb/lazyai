@@ -52,6 +52,7 @@ const (
 	ToolIdOmp         ToolId = "omp"
 	ToolIdKiro        ToolId = "kiro"
 	ToolIdAntigravity ToolId = "antigravity"
+	ToolIdCodex       ToolId = "codex"
 )
 
 // SupportedToolIDs is the canonical ordered set of LazyAI compile targets.
@@ -64,6 +65,7 @@ var SupportedToolIDs = []ToolId{
 	ToolIdOmp,
 	ToolIdKiro,
 	ToolIdAntigravity,
+	ToolIdCodex,
 }
 
 // AgentId identifies a canonical agent role.

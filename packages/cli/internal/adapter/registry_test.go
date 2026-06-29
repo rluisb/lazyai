@@ -19,6 +19,7 @@ func TestRegistryGet_UnsupportedToolListsRegisteredToolsDeterministically(t *tes
 	wantSupported := []types.ToolId{
 		types.ToolIdAntigravity,
 		types.ToolIdClaudeCode,
+		types.ToolIdCodex,
 		types.ToolIdCopilot,
 		types.ToolIdKiro,
 		types.ToolIdOmp,

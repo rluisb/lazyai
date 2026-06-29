@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -46,14 +45,6 @@ func validateToolFlag(tool string) error {
 		supportedStrings[i] = string(id)
 	}
 	sort.Strings(supportedStrings)
-	if err != nil {
-		// codex gets the explicit V2-removal message; other resolver errors
-		// are surfaced as unsupported-tool errors with the supported list.
-		if errors.Is(err, aimanifest.ErrCodexUnsupported) {
-			return fmt.Errorf("%s (supported tools: %s)", err.Error(), strings.Join(supportedStrings, ", "))
-		}
-		return fmt.Errorf("unsupported tool %q (supported tools: %s)", tool, strings.Join(supportedStrings, ", "))
-	}
 	return fmt.Errorf("unsupported tool %q (supported tools: %s)", tool, strings.Join(supportedStrings, ", "))
 }
 

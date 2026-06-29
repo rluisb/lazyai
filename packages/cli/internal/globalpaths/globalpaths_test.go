@@ -76,7 +76,7 @@ func TestIsGlobalSupportedTool(t *testing.T) {
 		{types.ToolIdPi, true},
 		{types.ToolIdAntigravity, true},
 		{types.ToolId("gemini"), false},
-		{types.ToolId("codex"), false},
+		{types.ToolIdCodex, true},
 	}
 	for _, c := range cases {
 		got := IsGlobalSupportedTool(c.tool)

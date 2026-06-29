@@ -53,6 +53,8 @@ func builtinAdapter(id types.ToolId) (ToolAdapter, error) {
 		return &KiroAdapter{}, nil
 	case types.ToolIdAntigravity:
 		return &AntigravityAdapter{}, nil
+	case types.ToolIdCodex:
+		return &CodexAdapter{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported tool %q", id)
 	}

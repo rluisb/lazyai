@@ -160,7 +160,7 @@ func TestScanProducesDeterministicTargetOrdering(t *testing.T) {
 	for _, target := range inventory.CurrentState.Targets {
 		got = append(got, target.ID)
 	}
-	want := []string{"antigravity", "claude-code", "copilot", "kiro", "omp", "opencode", "pi"}
+	want := []string{"antigravity", "claude-code", "codex", "copilot", "kiro", "omp", "opencode", "pi"}
 	if len(got) != len(want) {
 		t.Fatalf("target count = %d, want %d", len(got), len(want))
 	}

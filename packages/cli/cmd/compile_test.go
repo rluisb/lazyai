@@ -213,7 +213,7 @@ func TestCompileWithUnsupportedToolFailsFastBeforeConfigValidation(t *testing.T)
 
 	stdout, stderr := captureOutput(t, func() {
 		err := runCompile(cmd, nil)
-		if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: antigravity, claude-code, copilot, kiro, omp, opencode, pi)" {
+		if err == nil || err.Error() != "unsupported tool \"gemini\" (supported tools: antigravity, claude-code, codex, copilot, kiro, omp, opencode, pi)" {
 			t.Fatalf("runCompile error = %v, want unsupported-tool error", err)
 		}
 	})
@@ -397,8 +397,8 @@ func TestCompileRejectsInvalidManifest(t *testing.T) {
 		data.Config.Tools = []types.ToolId{types.ToolIdOpenCode}
 	})
 	writeCanonicalMCPConfig(t, dir)
-	// Codex is rejected in V2.
-	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"codex"}}).Save(filepath.Join(dir, ".ai")); err != nil {
+	// "gemini" is not a supported target token, so the manifest is invalid.
+	if err := (&aimanifest.Manifest{Version: aimanifest.SchemaVersion, Targets: []string{"gemini"}}).Save(filepath.Join(dir, ".ai")); err != nil {
 		t.Fatalf("save manifest: %v", err)
 	}
 	cmd := newCompileCommand(dir, "", false)

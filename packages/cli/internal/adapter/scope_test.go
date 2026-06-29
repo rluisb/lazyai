@@ -36,7 +36,7 @@ func TestIsScopeSupported(t *testing.T) {
 		{types.ToolIdAntigravity, types.SetupScopeWorkspace, true},
 		{types.ToolIdAntigravity, types.SetupScopeGlobal, true},
 		{types.ToolId("gemini"), types.SetupScopeProject, false},
-		{types.ToolId("codex"), types.SetupScopeGlobal, false},
+		{types.ToolId("codex"), types.SetupScopeGlobal, true},
 	}
 	for _, tc := range tests {
 		got := IsScopeSupported(tc.tool, tc.scope)
@@ -90,7 +90,10 @@ func TestResolveToolRoot_AllPairs(t *testing.T) {
 		{types.ToolIdAntigravity, types.SetupScopeGlobal, want{filepath.Join(home, ".gemini"), false}},
 		// unsupported tools
 		{types.ToolId("gemini"), types.SetupScopeProject, want{"", true}},
-		{types.ToolId("codex"), types.SetupScopeGlobal, want{"", true}},
+		// codex
+		{types.ToolIdCodex, types.SetupScopeProject, want{filepath.Join(target, ".codex"), false}},
+		{types.ToolIdCodex, types.SetupScopeWorkspace, want{filepath.Join(target, ".codex"), false}},
+		{types.ToolIdCodex, types.SetupScopeGlobal, want{filepath.Join(home, ".codex"), false}},
 	}
 
 	for _, c := range cases {

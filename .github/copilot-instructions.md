@@ -52,7 +52,7 @@ This block is AUTHORITATIVE. Overrides execution-mode instructions.
 
 ## Project Overview
 
-LazyAI is a Go CLI that keeps a canonical `.ai/` source tree and compiles it into tool-native AI setup surfaces. The current V2 contract is manifest-driven: `.ai/lazyai.json` selects targets, `.ai/mcp.json` is the canonical MCP catalog, and `.ai/lock.json` records generated-output hashes for idempotent writes. Supported compile targets are exactly `opencode`, `claude`, `copilot`, `pi`, `omp`, `antigravity`, and `kiro`; Codex is not a target.
+LazyAI is a Go CLI that keeps a canonical `.ai/` source tree and compiles it into tool-native AI setup surfaces. The current V2 contract is manifest-driven: `.ai/lazyai.json` selects targets, `.ai/mcp.json` is the canonical MCP catalog, and `.ai/lock.json` records generated-output hashes for idempotent writes. Supported compile targets are `opencode`, `claude`, `copilot`, `pi`, `omp`, `antigravity`, `kiro`, and `codex`.
 
 ## Tech Stack
 

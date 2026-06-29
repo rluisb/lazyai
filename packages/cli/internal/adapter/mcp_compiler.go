@@ -106,8 +106,10 @@ func CompileMCPForTool(toolId types.ToolId, ctx CompileContext) ([]types.Tracked
 		return compileOmpMCP(ctx, enabledServers)
 	case types.ToolIdAntigravity:
 		return compileAntigravityMCP(ctx, enabledServers)
+	case types.ToolIdCodex:
+		return compileCodexMCP(ctx, enabledServers)
 	default:
-		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, kiro, antigravity)", toolId)
+		return ctx.FileRecords, fmt.Errorf("unsupported tool %q (supported tools: opencode, claude-code, copilot, pi, omp, kiro, antigravity, codex)", toolId)
 	}
 }
 
@@ -571,6 +573,83 @@ func compileAntigravityMCP(ctx CompileContext, servers map[string]McpServer) ([]
 	})
 
 	return ctx.FileRecords, nil
+}
+
+// ---------------------------------------------------------------------------
+// Codex MCP compilation
+// ---------------------------------------------------------------------------
+
+// compileCodexMCP writes the canonical MCP catalog into the Codex
+// configuration file at .codex/config.toml as [mcp_servers.<name>] tables.
+// The merge is user-preserving and idempotent: existing user keys (model,
+// sandbox_mode, etc.) and unmanaged servers are kept; managed server names
+// override on collision. See https://developers.openai.com/codex/mcp and
+// /codex/config-reference.
+func compileCodexMCP(ctx CompileContext, servers map[string]McpServer) ([]types.TrackedFile, error) {
+	codexRoot, err := ResolveToolRoot(types.ToolIdCodex, ctx.SetupScope, ctx.toAdapterContext())
+	if err != nil {
+		return nil, err
+	}
+	if err := files.EnsureDir(codexRoot); err != nil {
+		return ctx.FileRecords, err
+	}
+	cfgPath := filepath.Join(codexRoot, "config.toml")
+	if _, err := configmerge.MergeTOMLFile(cfgPath, toCodexMcp(servers)); err != nil {
+		return ctx.FileRecords, fmt.Errorf("merge %s: %w", cfgPath, err)
+	}
+	hash, _ := files.FileHash(cfgPath)
+	return append(ctx.FileRecords, types.TrackedFile{
+		Path: trackedRecordPath(mcpWorkspaceRoot(ctx), cfgPath), Hash: hash, Source: "compiled:mcp:codex", Owner: types.FileOwnerUser,
+	}), nil
+}
+
+// toCodexMcp converts the canonical servers into a Codex config.toml patch
+// under the top-level `mcp_servers` table. STDIO servers (command set) emit
+// command/args/env; streamable HTTP servers (url set) emit url/http_headers.
+// Tool allow-lists map to enabled_tools.
+func toCodexMcp(servers map[string]McpServer) map[string]any {
+	mcpServers := make(map[string]any)
+	for name, server := range servers {
+		entry := make(map[string]any)
+		switch {
+		case server.URL != "":
+			entry["url"] = server.URL
+			if len(server.Headers) > 0 {
+				headers := make(map[string]any, len(server.Headers))
+				for k, v := range server.Headers {
+					headers[k] = v
+				}
+				entry["http_headers"] = headers
+			}
+		case server.Command != "":
+			entry["command"] = server.Command
+			if len(server.Args) > 0 {
+				args := make([]any, len(server.Args))
+				for i, arg := range server.Args {
+					args[i] = arg
+				}
+				entry["args"] = args
+			}
+			if len(server.Env) > 0 {
+				env := make(map[string]any, len(server.Env))
+				for k, v := range server.Env {
+					env[k] = v
+				}
+				entry["env"] = env
+			}
+		default:
+			continue
+		}
+		if len(server.Tools) > 0 {
+			tools := make([]any, len(server.Tools))
+			for i, t := range server.Tools {
+				tools[i] = t
+			}
+			entry["enabled_tools"] = tools
+		}
+		mcpServers[name] = entry
+	}
+	return map[string]any{"mcp_servers": mcpServers}
 }
 
 // toAntigravityMcp converts servers to the Antigravity desktop-IDE mcp_config.json

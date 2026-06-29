@@ -417,6 +417,50 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Notes: "Antigravity has no project system-prompt file; use GEMINI.md context",
 			},
 		},
+		types.ToolIdCodex: {
+			AssetKindAgents: {
+				Tool: types.ToolIdCodex, Kind: AssetKindAgents,
+				SourceSubdir: "canonical/agents", DestSubdir: "agents",
+				Shape: ShapeRewriteExt, RewriteSuffix: ".toml",
+				IncludeFile: canonicalAgents,
+				Notes:       "Codex reads custom subagents from .codex/agents/<name>.toml (name/description/developer_instructions)",
+			},
+			AssetKindSkills: {
+				Tool: types.ToolIdCodex, Kind: AssetKindSkills,
+				SourceSubdir: "skills", DestSubdir: "../.agents/skills",
+				Shape: ShapeDirPerItem,
+				Notes: "Codex discovers Agent Skills at .agents/skills/<name>/SKILL.md while LazyAI keeps MCP/agents/hooks under .codex.",
+			},
+			AssetKindTemplates: {
+				Tool: types.ToolIdCodex, Kind: AssetKindTemplates,
+				Shape: ShapeNone,
+				Notes: "Codex has no template surface",
+			},
+			AssetKindCommands: {
+				Tool: types.ToolIdCodex, Kind: AssetKindCommands,
+				Shape: ShapeNone,
+				Notes: "Codex has no slash command surface (custom prompts deprecated)",
+			},
+			AssetKindChatModes: {
+				Tool: types.ToolIdCodex, Kind: AssetKindChatModes,
+				Shape: ShapeNone,
+				Notes: "Codex has no chat mode surface",
+			},
+			AssetKindOutputStyles: {
+				Tool: types.ToolIdCodex, Kind: AssetKindOutputStyles,
+				Shape: ShapeNone,
+			},
+			AssetKindPrompts: {
+				Tool: types.ToolIdCodex, Kind: AssetKindPrompts,
+				Shape: ShapeNone,
+				Notes: "Codex custom prompts are deprecated; reusable instructions ship as skills",
+			},
+			AssetKindSystemPrompts: {
+				Tool: types.ToolIdCodex, Kind: AssetKindSystemPrompts,
+				Shape: ShapeNone,
+				Notes: "Codex has no project system-prompt file; use AGENTS.md context",
+			},
+		},
 	}
 	outputMappings = m
 	return m

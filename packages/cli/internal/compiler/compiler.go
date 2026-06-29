@@ -57,6 +57,15 @@ var ToolOverrideMap = map[string]ToolOverrides{
 		Description: "This project uses Antigravity with LazyAI integration.",
 		Notes:       "## Antigravity-Specific Notes\n\n- Gemini settings: `.gemini/settings.json`\n- Hooks: `.gemini/hooks/lazyai/*`\n- Skills: `.agents/skills/<name>/SKILL.md`.",
 	},
+	string(types.ToolIdCodex): {
+		Description: "This project uses Codex (OpenAI Codex CLI) with LazyAI integration.",
+		Notes: "## Codex-Specific Notes\n\n" +
+			"- Project instructions: `AGENTS.md` at project root\n" +
+			"- MCP servers: `.codex/config.toml` `[mcp_servers.<name>]`\n" +
+			"- Subagents: `.codex/agents/<name>.toml` (name/description/developer_instructions)\n" +
+			"- Skills: `.agents/skills/<name>/SKILL.md` (read natively by Codex)\n" +
+			"- Hooks: `.codex/hooks.json`.",
+	},
 }
 
 // CompiledFile represents a single compiled output file.

@@ -13,7 +13,7 @@ This page maps **agent tool capability** across the seven LazyAI targets: how ea
 
 ## Root finding
 
-Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capability via `mode:` and `role:` only — there is **no machine-readable per-tool capability** (no `tools:` allowlist, no `readonly` flag). Some canonical sources even contradict themselves (e.g. `researcher.md` declares `mode: all` while its description says "read-only codebase explorer"). Because no capability signal exists, every adapter improvises, and read-only roles (researcher, reviewer) are emitted **unrestricted** on most targets.
+Canonical agents (`packages/cli/library/canonical/agents/*.md`) now express capability via a **machine-readable `tools:` grant list** (#569). Each agent carries a 7-token vocabulary (`read, edit, shell, search, web, mcp, spawn`); read-only roles (researcher, reviewer, evidence-verifier) declare `tools: [read, search]`, while full-capability roles carry the full grant set. The legacy `mode:`/`role:` self-contradiction (e.g. `researcher.md` declaring `mode: all`) has been removed. Every adapter derives per-agent restrictions from this single source via `frontmatter.ParseAgentToolGrants`, so read-only roles are emitted **restricted** on every target that has a native mechanism.
 
 ## Per-agent tool model by target
 
@@ -44,9 +44,9 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 
 | Target | Current emission | Respects per-agent tools? | Gap |
 |---|---|---|---|
-| Claude Code | agent `.md` with **name + description only** (`RewriteAgentForClaudeCode`) | ❌ no `tools`/`disallowedTools` | read-only agents unrestricted |
-| OpenCode | canonical agents → description + marker only; only built-in `plan`/`build`/`explore` get `permission` in `opencode.json` | ⚠️ partial (named built-ins only) | canonical agents get no `permission`/`mode`/`tools` |
-| Copilot | `.agent.md` with **hardcoded** `tools: ["read","search","edit","shell"]` for every agent; skills `tools:["*"]` | ❌ blanket allowlist | read-only agents get `edit`+`shell` |
+| Claude Code | agent `.md` via `RewriteAgentForClaudeCode`; read-only agents emit `disallowedTools: Edit Write Bash` (PascalCase), full-capability agents none | ✅ `disallowedTools` from canonical grants | none (done in #570) |
+| OpenCode | canonical read-only agents emit `permission: {edit: deny, bash: deny}` via `RewriteAgentForOpenCode`; full-capability agents get no permission block (OpenCode default); no `tools:` gate map emitted | ✅ `permission` from canonical grants | none (done in #572) |
+| Copilot | `.agent.md` with per-agent `tools` derived from canonical grants (`copilotAgentMarkdownContent`/`ParseAgentToolGrants`); read-only → `["read","search"]` | ✅ per-agent Copilot tool list | none (done in #571) |
 | Pi | agents copied; no tools field (Pi has no mechanism) | ✅ correct by design | none (document intentional non-mapping) |
 | OMP | `RewriteAgentForOMP` transform: `tools` (OMP allowlist from canonical grants), `thinkingLevel`, `autoloadSkills` (from `skills:`); LazyAI-only fields dropped | ✅ read-only agents restricted (`tools: ["read","search"]`); full-capability agents get OMP equivalents | ✅ closed by #573 |
 | Kiro | canonical agents → `.kiro/agents/<name>.json` via `RewriteAgentForKiro`; `tools`/`allowedTools` from `ParseAgentToolGrants` (#574) | ✅ `tools` + `allowedTools` from canonical `tools:` | none (done in #574) |
@@ -55,9 +55,9 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 ## Evidence (file:line)
 
 - Canonical: `packages/cli/library/canonical/agents/researcher.md:5-7` (`tools: [read, search]`); all canonical agents carry `tools:` grants as of #569.
-- Claude: `packages/cli/internal/adapter/agent_transform.go` `RewriteAgentForClaudeCode` (name+description only); `claudecode_frontmatter_test.go`.
-- OpenCode: `opencode.go:73-101` (hardcoded `plan`/`build`/`explore` permissions), `opencode.go:134-141` + `agent_transform.go` `RewriteAgentForOpenCode` (description-only).
-- Copilot: `copilot.go:322` (`tools: ["read","search","edit","shell"]`).
+- Claude: `agent_transform.go:103` `RewriteAgentForClaudeCode` + `claudeDisallowedTools` (`disallowedTools` from grants); `claudecode_frontmatter_test.go:364` `TestRewriteAgentForClaudeCode_ToolGrants` (#570).
+- OpenCode: `agent_transform.go:194` `RewriteAgentForOpenCode` (`permission:{edit:deny,bash:deny}` from `ParseAgentToolGrants`); `opencode_adapter_test.go:109` `TestOpenCodeAdapter_CanonicalReadOnlyAgentsGetPermission` (#572).
+- Copilot: `copilot.go:300` `copilotAgentMarkdownContent` + `ParseAgentToolGrants` (`copilot.go:358`); `TestCopilotAgentMarkdownContent_ReadOnly` / `_FullCapNonCopilotGrantsOmitted` (#571).
 - OMP: `agent_transform.go` `RewriteAgentForOMP`; `omp.go` (transform-based copy via `CopyLibraryDirectoryOption.Transform`); `omp_frontmatter_test.go` (#573).
 - Kiro: `kiro.go`; `agent_transform.go` `RewriteAgentForKiro`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON required, confirmed).
 - Pi: `pi.go`, `docs/ai-cli-tools/tool-systems/pi.md` (no per-agent mechanism).

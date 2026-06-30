@@ -266,6 +266,7 @@ func validateOutputStylesSchemas(t *testing.T, dir string) {
 		}
 	}
 }
+
 func TestClaudeCode_InstalledCanonicalAgentsHaveRequiredFields(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -351,6 +352,150 @@ func TestClaudeCode_InstalledCanonicalAgentsHaveRequiredFields(t *testing.T) {
 						t.Errorf("agent %q has empty '%s' field", id, field)
 					}
 				}
+			}
+		})
+	}
+}
+
+// TestRewriteAgentForClaudeCode_ToolGrants verifies that read-only canonical
+// agents emit disallowedTools: Edit Write Bash in Claude Code frontmatter, that
+// full-access agents emit no restriction keys at all, and that tool names use
+// PascalCase with space separation (no commas).
+func TestRewriteAgentForClaudeCode_ToolGrants(t *testing.T) {
+	ctx := &AdapterContext{LibraryFS: createTestFS()}
+
+	readOnlySource := func(name string) []byte {
+		return []byte("---\nname: " + name + "\ndescription: A read-only agent.\ntools:\n  - read\n  - search\n---\n\n# System Prompt\n\nYou are " + name + ".")
+	}
+	fullAccessSource := func(name string) []byte {
+		return []byte("---\nname: " + name + "\ndescription: A full-access agent.\ntools:\n  - read\n  - edit\n  - shell\n  - search\n  - web\n  - mcp\n  - spawn\n---\n\n# System Prompt\n\nYou are " + name + ".")
+	}
+	legacySource := func(name string) []byte {
+		return []byte("---\nname: " + name + "\ndescription: A legacy agent with no tools field.\ntier: balanced\n---\n\n# System Prompt\n\nYou are " + name + ".")
+	}
+
+	t.Run("read_only_agents_have_disallowedTools", func(t *testing.T) {
+		for _, name := range []string{"researcher", "reviewer", "evidence-verifier"} {
+			t.Run(name, func(t *testing.T) {
+				out, err := RewriteAgentForClaudeCode(readOnlySource(name), ctx)
+				if err != nil {
+					t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+				}
+
+				raw := string(out)
+
+				// Must contain disallowedTools key
+				if !strings.Contains(raw, "disallowedTools:") {
+					t.Errorf("agent %q: expected disallowedTools in frontmatter; got:\n%s", name, raw)
+				}
+
+				fm, _, err := frontmatter.ExtractFrontmatter(out)
+				if err != nil {
+					t.Fatalf("agent %q: parse frontmatter: %v", name, err)
+				}
+
+				toolsVal, hasTools := fm["disallowedTools"]
+				if !hasTools {
+					t.Fatalf("agent %q: disallowedTools key missing from parsed frontmatter", name)
+				}
+				toolsStr, _ := toolsVal.(string)
+
+				// Must deny Edit, Write, and Bash
+				for _, denied := range []string{"Edit", "Write", "Bash"} {
+					if !strings.Contains(toolsStr, denied) {
+						t.Errorf("agent %q: disallowedTools missing %q; got %q", name, denied, toolsStr)
+					}
+				}
+
+				// PascalCase: must not contain lowercase variants
+				for _, bad := range []string{"edit", "write", "bash"} {
+					if strings.Contains(toolsStr, bad) {
+						t.Errorf("agent %q: disallowedTools has lowercase %q; must be PascalCase; got %q", name, bad, toolsStr)
+					}
+				}
+
+				// Whitespace-separated: must not contain comma-space
+				if strings.Contains(toolsStr, ", ") {
+					t.Errorf("agent %q: disallowedTools uses comma-space separator; must be whitespace; got %q", name, toolsStr)
+				}
+
+				// Must not also emit a tools: allowlist (would be redundant/conflicting)
+				if _, hasAllowlist := fm["tools"]; hasAllowlist {
+					t.Errorf("agent %q: unexpected tools allowlist in Claude frontmatter for read-only agent", name)
+				}
+			})
+		}
+	})
+
+	t.Run("full_access_agents_are_unrestricted", func(t *testing.T) {
+		for _, name := range []string{"implementer", "deployer"} {
+			t.Run(name, func(t *testing.T) {
+				out, err := RewriteAgentForClaudeCode(fullAccessSource(name), ctx)
+				if err != nil {
+					t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+				}
+
+				raw := string(out)
+
+				if strings.Contains(raw, "disallowedTools:") {
+					t.Errorf("agent %q: full-access agent must not emit disallowedTools; got:\n%s", name, raw)
+				}
+				if strings.Contains(raw, "tools:") {
+					t.Errorf("agent %q: full-access agent must not emit tools allowlist; got:\n%s", name, raw)
+				}
+			})
+		}
+	})
+
+	t.Run("legacy_agents_are_unrestricted", func(t *testing.T) {
+		out, err := RewriteAgentForClaudeCode(legacySource("guide"), ctx)
+		if err != nil {
+			t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+		}
+		raw := string(out)
+		if strings.Contains(raw, "disallowedTools:") {
+			t.Errorf("legacy agent: must not emit disallowedTools when no tools field; got:\n%s", raw)
+		}
+	})
+
+	t.Run("whitespace_separation_not_comma", func(t *testing.T) {
+		out, err := RewriteAgentForClaudeCode(readOnlySource("researcher"), ctx)
+		if err != nil {
+			t.Fatalf("RewriteAgentForClaudeCode: %v", err)
+		}
+		raw := string(out)
+		if strings.Contains(raw, ", ") {
+			t.Errorf("disallowedTools uses comma-space; must be space-separated; got:\n%s", raw)
+		}
+	})
+}
+
+// TestClaudeDisallowedTools_Helper exercises claudeDisallowedTools directly for
+// the edge cases that the integration tests do not exhaustively cover.
+func TestClaudeDisallowedTools_Helper(t *testing.T) {
+	cases := []struct {
+		name   string
+		grants []frontmatter.AgentToolGrant
+		want   []string
+	}{
+		{"nil_grants_unrestricted", nil, nil},
+		{"empty_grants_unrestricted", []frontmatter.AgentToolGrant{}, nil},
+		{"read_only", []frontmatter.AgentToolGrant{frontmatter.AgentToolRead, frontmatter.AgentToolSearch}, []string{"Edit", "Write", "Bash"}},
+		{"read_only_just_read", []frontmatter.AgentToolGrant{frontmatter.AgentToolRead}, []string{"Edit", "Write", "Bash"}},
+		{"read_only_just_search", []frontmatter.AgentToolGrant{frontmatter.AgentToolSearch}, []string{"Edit", "Write", "Bash"}},
+		{"full_set_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolRead, frontmatter.AgentToolEdit, frontmatter.AgentToolShell, frontmatter.AgentToolSearch, frontmatter.AgentToolWeb, frontmatter.AgentToolMCP, frontmatter.AgentToolSpawn}, nil},
+		{"edit_present_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolRead, frontmatter.AgentToolEdit}, nil},
+		{"shell_present_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolRead, frontmatter.AgentToolShell}, nil},
+		{"web_present_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolWeb}, nil},
+		{"mcp_present_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolMCP}, nil},
+		{"spawn_present_unrestricted", []frontmatter.AgentToolGrant{frontmatter.AgentToolSpawn}, nil},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := claudeDisallowedTools(c.grants)
+			if !slicesEqual(got, c.want) {
+				t.Errorf("claudeDisallowedTools(%v) = %v, want %v", c.grants, got, c.want)
 			}
 		})
 	}

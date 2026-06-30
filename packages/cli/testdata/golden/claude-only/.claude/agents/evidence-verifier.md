@@ -1,6 +1,7 @@
 ---
 name: evidence-verifier
 description: "Verify claims against source evidence. Given a claim and source material, determine whether the claim is supported, contradicted, or inconclusive."
+disallowedTools: Edit Write Bash
 ---
 
 <!-- vibe-lab:managed kind=agent surface=claude name=evidence-verifier source=.agents/agents/evidence-verifier.md -->

@@ -122,7 +122,7 @@ S-1 (auth + verify)
 
 <!-- The human approver records approval here. Do NOT let an AI author this line. -->
 
-Human Gate: PENDING
+Human Gate: APPROVED by rluisb at 2026-06-30T09:30:00-03:00 — Path B approved: treat official Kiro docs as authoritative; proceed with B2 capability mapping now that #569 is merged.
 
 <!-- When approving: confirm whether runtime verification is available (selects Path A or B),
      and whether B2 (capability mapping) should be deferred until #569 or attempted in parallel. -->

@@ -137,7 +137,7 @@ func AtomicWriteFile(path string, data []byte, perm os.FileMode) (string, error)
 }
 
 // WithFileLock acquires a lock file, retries until timeout, and runs fn while held.
-func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Duration, fn func() error) error {
+func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Duration, fn func() error) (err error) {
 	if err := EnsureDir(filepath.Dir(lockPath)); err != nil {
 		return err
 	}
@@ -166,7 +166,11 @@ func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Durati
 				return aierror.Unknown(fmt.Sprintf("close lock file: %s", lockPath), closeErr)
 			}
 
-			defer os.Remove(lockPath)
+			defer func() {
+				if removeErr := removeLockFile(lockPath); removeErr != nil && err == nil {
+					err = removeErr
+				}
+			}()
 			return fn()
 		}
 		if !os.IsExist(err) {
@@ -237,6 +241,22 @@ func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Durati
 			return err
 		}
 		continue
+	}
+}
+
+func removeLockFile(lockPath string) error {
+	deadline := time.Now().Add(2 * time.Second)
+	var lastErr error
+	for {
+		err := os.Remove(lockPath)
+		if err == nil || os.IsNotExist(err) {
+			return nil
+		}
+		lastErr = err
+		if time.Now().After(deadline) {
+			return aierror.Unknown(fmt.Sprintf("remove lock file %s", lockPath), lastErr)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

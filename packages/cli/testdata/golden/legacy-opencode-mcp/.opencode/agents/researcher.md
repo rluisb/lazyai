@@ -1,5 +1,8 @@
 ---
 description: "Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation."
+permission:
+  bash: deny
+  edit: deny
 ---
 
 <!-- vibe-lab:managed kind=agent surface=opencode name=researcher source=.agents/agents/researcher.md -->

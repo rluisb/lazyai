@@ -8,7 +8,7 @@ Kiro is a stable LazyAI target for Kiro agent profiles, skills, prompt templates
 .
 ├── AGENTS.md
 └── .kiro/
-    ├── agents/<agent>.md
+    ├── agents/<agent>.json
     ├── skills/<skill>/SKILL.md
     ├── prompts/<prompt>.md
     ├── hooks/block-destructive-shell.json
@@ -29,7 +29,7 @@ flowchart LR
 | Kiro concept | LazyAI source |
 |---|---|
 | Root instructions | `AGENTS.md` |
-| Custom agent profiles | canonical agent markdown under `.kiro/agents/` |
+| Custom agent profiles | canonical agents transformed to JSON at `.kiro/agents/<name>.json`; `tools`/`allowedTools` from `tools:` frontmatter |
 | Skills | Agent Skills-compatible `SKILL.md` directories |
 | Prompts | prompt markdown under `.kiro/prompts/` |
 | Hooks | native Kiro v3 hook JSON under `.kiro/hooks/` |

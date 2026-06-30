@@ -335,7 +335,7 @@ func buildOutputMappings() map[types.ToolId]map[AssetKind]OutputTarget {
 				Tool: types.ToolIdKiro, Kind: AssetKindAgents,
 				SourceSubdir: "canonical/agents", DestSubdir: "agents",
 				Shape: ShapeFlat, IncludeFile: canonicalAgents,
-				Notes: "Kiro CLI v3 reads custom agent profiles from .kiro/agents/<name>.md",
+				Notes: "Kiro CLI v3 reads custom agent profiles from .kiro/agents/<name>.json (JSON required; .md not recognized)",
 			},
 			AssetKindSkills: {
 				Tool: types.ToolIdKiro, Kind: AssetKindSkills,

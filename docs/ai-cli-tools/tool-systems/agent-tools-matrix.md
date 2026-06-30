@@ -48,18 +48,18 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 | OpenCode | canonical agents → description + marker only; only built-in `plan`/`build`/`explore` get `permission` in `opencode.json` | ⚠️ partial (named built-ins only) | canonical agents get no `permission`/`mode`/`tools` |
 | Copilot | `.agent.md` with **hardcoded** `tools: ["read","search","edit","shell"]` for every agent; skills `tools:["*"]` | ❌ blanket allowlist | read-only agents get `edit`+`shell` |
 | Pi | agents copied; no tools field (Pi has no mechanism) | ✅ correct by design | none (document intentional non-mapping) |
-| OMP | canonical agents **copied verbatim** (`omp.go`) | ❌ no OMP-native `tools`/`spawns`/`thinkingLevel` | LazyAI-only fields leak; native features unused |
-| Kiro | canonical agents copied verbatim as `.md` | ❌ no `tools`/`allowedTools` | doc says JSON (`.kiro/agents/<name>.json`); spec 030 says `.md` tolerated — reconcile |
+| OMP | `RewriteAgentForOMP` transform: `tools` (OMP allowlist from canonical grants), `thinkingLevel`, `autoloadSkills` (from `skills:`); LazyAI-only fields dropped | ✅ read-only agents restricted (`tools: ["read","search"]`); full-capability agents get OMP equivalents | ✅ closed by #573 |
+| Kiro | canonical agents → `.kiro/agents/<name>.json` via `RewriteAgentForKiro`; `tools`/`allowedTools` from `ParseAgentToolGrants` (#574) | ✅ `tools` + `allowedTools` from canonical `tools:` | none (done in #574) |
 | Antigravity | **no agent/subagent files** (skills-only); emits subagent blueprint rules, workflow skills, hook expansion | ⚠️ blueprint only (rules doc, not enforced by file format) | **#575 implemented**: subagent capability blueprint (`.agents/rules/lazyai-subagents.md`), workflow skills (`workflow-*/SKILL.md`), write-guard + PreInvocation hooks; commands surface: n/a |
 
 ## Evidence (file:line)
 
-- Canonical: `packages/cli/library/canonical/agents/researcher.md:5` (`mode: all` vs read-only desc); no `tools:` in any canonical agent.
+- Canonical: `packages/cli/library/canonical/agents/researcher.md:5-7` (`tools: [read, search]`); all canonical agents carry `tools:` grants as of #569.
 - Claude: `packages/cli/internal/adapter/agent_transform.go` `RewriteAgentForClaudeCode` (name+description only); `claudecode_frontmatter_test.go`.
 - OpenCode: `opencode.go:73-101` (hardcoded `plan`/`build`/`explore` permissions), `opencode.go:134-141` + `agent_transform.go` `RewriteAgentForOpenCode` (description-only).
 - Copilot: `copilot.go:322` (`tools: ["read","search","edit","shell"]`).
-- OMP: `omp.go:48-58` (verbatim `CopyLibraryDirectory`).
-- Kiro: `kiro.go:39-44`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON) vs `specs/030-kiro-cli-v3-output-gaps/spec.md:35` (`.md` tolerated, no transform).
+- OMP: `agent_transform.go` `RewriteAgentForOMP`; `omp.go` (transform-based copy via `CopyLibraryDirectoryOption.Transform`); `omp_frontmatter_test.go` (#573).
+- Kiro: `kiro.go`; `agent_transform.go` `RewriteAgentForKiro`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON required, confirmed).
 - Pi: `pi.go`, `docs/ai-cli-tools/tool-systems/pi.md` (no per-agent mechanism).
 - Antigravity: `antigravity.go` (no agent emission; blueprint at `antigravity/subagents-blueprint.md`; workflow emission via `CopyLibraryDirectory`; hooks in `antigravity/hooks.json`).
 

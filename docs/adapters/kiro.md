@@ -15,7 +15,7 @@ The Kiro adapter generates native configuration for [Kiro CLI v3](https://kiro.d
 
 | Path | Description |
 |---|---|
-| `.kiro/agents/<name>.md` | Custom agent profiles (canonical agents with frontmatter) |
+| `.kiro/agents/<name>.json` | Custom agent profiles (JSON; required format per official Kiro CLI v3 docs) |
 | `.kiro/skills/<name>/SKILL.md` | Skill directories |
 | `.kiro/prompts/<name>.md` | Prompt templates |
 | `.kiro/hooks/<name>.json` | Native Kiro v3 hook descriptors |
@@ -26,7 +26,7 @@ The Kiro adapter generates native configuration for [Kiro CLI v3](https://kiro.d
 
 | Asset kind | Shape | Destination |
 |---|---|---|
-| Agents | flat | `.kiro/agents/<name>.md` |
+| Agents | flat | `.kiro/agents/<name>.json` |
 | Skills | dir-per-item | `.kiro/skills/<name>/SKILL.md` |
 | Prompts | flat | `.kiro/prompts/<name>.md` |
 | Templates | none | — |
@@ -48,7 +48,7 @@ Skills are written as Agent Skills-compatible directories: `.kiro/skills/<name>/
 
 ## Agent Behavior
 
-Canonical agents are written as flat markdown files under `.kiro/agents/`. A default "guide" agent is always installed. Kiro CLI v3 discovers agent profiles from `.kiro/agents/` (workspace) and `~/.kiro/agents/` (global) per `kiro.dev/docs/cli/v3/agent-config` (updated 2026-06-17). Agent files use YAML frontmatter (minimum: `description`) with the markdown body as the system prompt.
+Canonical agents are transformed to `.kiro/agents/<name>.json` JSON files. The JSON format is required by Kiro CLI v3 (`.md` is not recognized). A default "guide" agent is always installed. Kiro CLI v3 discovers agent profiles from `.kiro/agents/` (workspace) and `~/.kiro/agents/` (global) per `kiro.dev/docs/cli/custom-agents/`. Each emitted file contains `name`, `description`, `tools`, `allowedTools`, and `prompt` fields; `tools` and `allowedTools` are populated from the canonical agent `tools:` frontmatter via `frontmatter.ParseAgentToolGrants`.
 
 ## Prompt Behavior
 

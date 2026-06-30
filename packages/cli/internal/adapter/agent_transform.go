@@ -3,6 +3,7 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -254,6 +255,70 @@ func RewriteAgentForCodex(source []byte, ctx *AdapterContext) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// kiroAgentJSON is the serialized shape of a Kiro custom agent file
+// (.kiro/agents/<name>.json). Required fields per official docs: name,
+// description, tools, allowedTools, and prompt. Optional fields (resources,
+// model, mcpServers, includeMcpJson, hooks) are deferred per #574 scope.
+// Ref: https://kiro.dev/docs/cli/custom-agents/
+type kiroAgentJSON struct {
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Tools        []string `json:"tools"`
+	AllowedTools []string `json:"allowedTools"`
+	Prompt       string   `json:"prompt"`
+}
+
+// RewriteAgentForKiro transforms a canonical library agent (markdown with
+// name/description/tools frontmatter) into a Kiro custom agent JSON file.
+// The markdown body becomes the prompt field. Source frontmatter is parsed
+// generically so baseline agents without a LazyAI tier are accepted.
+//
+// tools is populated from ParseAgentToolGrants; nil grants (no tools: key
+// in frontmatter) produce empty arrays. allowedTools is set equal to tools
+// so every granted tool is auto-approved; it is never a superset of tools.
+func RewriteAgentForKiro(source []byte, ctx *AdapterContext) ([]byte, error) {
+	_ = ctx
+	fm, body, err := frontmatter.ExtractFrontmatter(source)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("kiro adapter: agent source missing name")
+	}
+	description := strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
+	if description == "" {
+		description = inheritedDescription(fm)
+	}
+	prompt := strings.TrimSpace(string(stripModelSection(body)))
+
+	grants, err := frontmatter.ParseAgentToolGrants(source)
+	if err != nil {
+		return nil, fmt.Errorf("kiro adapter: parse tool grants for %q: %w", name, err)
+	}
+
+	tools := make([]string, 0, len(grants))
+	for _, g := range grants {
+		tools = append(tools, string(g))
+	}
+	// allowedTools must never be a superset of tools; setting equal means
+	// every granted tool is auto-approved without exceeding the whitelist.
+	allowedTools := make([]string, len(tools))
+	copy(allowedTools, tools)
+
+	out, err := json.MarshalIndent(kiroAgentJSON{
+		Name:         name,
+		Description:  description,
+		Tools:        tools,
+		AllowedTools: allowedTools,
+		Prompt:       prompt,
+	}, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("kiro adapter: marshal agent %q: %w", name, err)
+	}
+	return append(out, '\n'), nil
+}
+
 // modelSectionRe matches the Claude-centric `## Model\n<paragraph>\n\n`
 // editorial section inserted in the source `library/agents/*.md` files.
 // It exists to give human readers context about Claude tier selection;
@@ -378,4 +443,171 @@ func loadLibraryAgentMd(ctx *AdapterContext, name string) ([]byte, bool) {
 		}
 	}
 	return nil, false
+}
+
+// ompToolsForGrants maps canonical capability grants to the OMP-native tool
+// name allowlist. Canonical grant → OMP tool name(s):
+//
+//	read   → "read"
+//	edit   → "edit", "write"  (OMP has both as distinct write operations)
+//	shell  → "bash"
+//	search → "search"
+//	web    → "web_search"
+//	mcp    → (skip — no generic OMP MCP token; server-specific mcp__<srv>_<tool>)
+//	spawn  → "task"
+//
+// Nil/empty grants (no tools: field in source) returns the full default set,
+// preserving unrestricted legacy behaviour for agents without a capability
+// declaration.
+func ompToolsForGrants(grants []frontmatter.AgentToolGrant) []string {
+	if len(grants) == 0 {
+		return []string{"read", "search", "bash", "edit", "write", "web_search", "task"}
+	}
+	var tools []string
+	for _, g := range grants {
+		switch g {
+		case frontmatter.AgentToolRead:
+			tools = append(tools, "read")
+		case frontmatter.AgentToolSearch:
+			tools = append(tools, "search")
+		case frontmatter.AgentToolEdit:
+			tools = append(tools, "edit", "write")
+		case frontmatter.AgentToolShell:
+			tools = append(tools, "bash")
+		case frontmatter.AgentToolWeb:
+			tools = append(tools, "web_search")
+		case frontmatter.AgentToolMCP:
+			// No generic OMP MCP token; server-specific names (mcp__<srv>_<tool>) are
+			// configured outside agent frontmatter.
+		case frontmatter.AgentToolSpawn:
+			tools = append(tools, "task")
+		}
+	}
+	return tools
+}
+
+// ompIsReadOnly reports whether grants contain only read/search tokens, meaning
+// the agent has no mutation capability. Returns false for nil/empty grants
+// (unrestricted legacy agents).
+func ompIsReadOnly(grants []frontmatter.AgentToolGrant) bool {
+	if len(grants) == 0 {
+		return false
+	}
+	for _, g := range grants {
+		if g != frontmatter.AgentToolRead && g != frontmatter.AgentToolSearch {
+			return false
+		}
+	}
+	return true
+}
+
+// ompThinkingLevel derives the OMP thinkingLevel value from capability grants
+// and agent name:
+//
+//	Read-only grants (only read/search) → "low"
+//	name == "planner"                  → "high"
+//	anything else                      → "auto"
+func ompThinkingLevel(name string, grants []frontmatter.AgentToolGrant) string {
+	if ompIsReadOnly(grants) {
+		return "low"
+	}
+	if strings.ToLower(name) == "planner" {
+		return "high"
+	}
+	return "auto"
+}
+
+// extractStringList returns the string slice stored under key in a parsed
+// frontmatter map. Returns nil when the key is absent, the value is not a
+// YAML sequence, or the sequence contains no non-empty string items.
+func extractStringList(fm map[string]any, key string) []string {
+	val, ok := fm[key]
+	if !ok || val == nil {
+		return nil
+	}
+	items, ok := val.([]any)
+	if !ok {
+		return nil
+	}
+	var result []string
+	for _, item := range items {
+		s, ok := item.(string)
+		if ok && s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// RewriteAgentForOMP transforms a library agent into an OMP-native subagent
+// file.
+//
+// Output frontmatter:
+//   - name, description (required)
+//   - tools: OMP allowlist derived from canonical capability grants (ParseAgentToolGrants)
+//   - thinkingLevel: "low" for read-only, "high" for planner, "auto" otherwise
+//   - autoloadSkills: from canonical skills:, omitted when empty
+//
+// LazyAI-only fields (role, mode, temperature, steps) are dropped.
+// The vibe-lab managed marker is inserted; the body is preserved verbatim.
+func RewriteAgentForOMP(source []byte, ctx *AdapterContext) ([]byte, error) {
+	_ = ctx
+	fm, body, err := frontmatter.ExtractFrontmatter(source)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(frontmatter.ExtractField(fm, "name"))
+	if name == "" {
+		return nil, fmt.Errorf("omp adapter: agent source missing name")
+	}
+	description := strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
+
+	grants, err := frontmatter.ParseAgentToolGrants(source)
+	if err != nil {
+		return nil, fmt.Errorf("omp adapter: parse tool grants for %q: %w", name, err)
+	}
+
+	tools := ompToolsForGrants(grants)
+	thinkingLvl := ompThinkingLevel(name, grants)
+	skills := extractStringList(fm, "skills")
+
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("name: ")
+	b.WriteString(name)
+	b.WriteByte('\n')
+	b.WriteString("description: ")
+	b.WriteString(yamlDoubleQuote(description))
+	b.WriteByte('\n')
+	// Emit tools as an inline YAML sequence of quoted strings.
+	b.WriteString("tools: [")
+	for i, t := range tools {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteByte('"')
+		b.WriteString(t)
+		b.WriteByte('"')
+	}
+	b.WriteString("]\n")
+	b.WriteString("thinkingLevel: ")
+	b.WriteString(thinkingLvl)
+	b.WriteByte('\n')
+	if len(skills) > 0 {
+		b.WriteString("autoloadSkills: [")
+		for i, s := range skills {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteByte('"')
+			b.WriteString(s)
+			b.WriteByte('"')
+		}
+		b.WriteString("]\n")
+	}
+	b.WriteString("---\n\n")
+	b.WriteString(managedAgentMarker("omp", name))
+	b.WriteString("\n\n")
+	b.Write(trimLeadingNewlines(body))
+	return []byte(b.String()), nil
 }

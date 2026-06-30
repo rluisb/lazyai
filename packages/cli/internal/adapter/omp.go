@@ -45,6 +45,8 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 	if err := files.EnsureDir(filepath.Join(ompDir, "hooks", "pre")); err != nil {
 		return nil, fmt.Errorf("creating directory %s: %w", filepath.Join(ompDir, "hooks", "pre"), err)
 	}
+	// Transform canonical agents into OMP-native frontmatter (name, description,
+	// tools, thinkingLevel, autoloadSkills). LazyAI-only fields are dropped.
 	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
 		Ctx:          ctx,
 		SourceSubdir: "canonical/agents",
@@ -53,6 +55,13 @@ func (a *OmpAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) {
 			return filepath.Join(ompDir, "agents", filepath.Base(file))
 		},
 		IncludeFile: isCanonicalAgentFile,
+		Transform: func(content []byte) []byte {
+			out, rerr := RewriteAgentForOMP(content, ctx)
+			if rerr != nil {
+				return content // fall back to verbatim copy on transform error
+			}
+			return out
+		},
 	}); err != nil {
 		return nil, err
 	}

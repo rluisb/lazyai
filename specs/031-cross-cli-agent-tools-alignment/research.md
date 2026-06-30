@@ -34,7 +34,7 @@ capability, so each adapter improvises its agent-tools emission:
 
 ## Unknowns / Risks
 
-- Kiro agent format contradiction: `kiro.md` (JSON) vs `specs/030-kiro-cli-v3-output-gaps/spec.md:35` (`.md` tolerated). Requires verification (#574).
+- Kiro agent format resolved (#574): `.kiro/agents/<name>.json` is required per official kiro.dev docs; the `specs/030` A-003 "`.md` tolerated" finding predated this research and was retracted. Adapter now emits JSON via `RewriteAgentForKiro`. Canonical tool grants (`tools:`) from #569 are wired into `tools`/`allowedTools` fields.
 - Antigravity stance is a product decision (#575); scope expanded to emit tool capability across every surface that supports tool usage (subagents, skills, workflows, hooks, commands).
 - `agent_transform.go` is a single-file collision point for #570 + #572.
 

@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	aierror "github.com/rluisb/lazyai/packages/cli/internal/error"
@@ -173,7 +174,7 @@ func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Durati
 			}()
 			return fn()
 		}
-		if !os.IsExist(err) {
+		if !isLockHeldError(lockPath, err) {
 			return aierror.Unknown(fmt.Sprintf("acquire lock %s", lockPath), err)
 		}
 
@@ -200,7 +201,7 @@ func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Durati
 		guardPath := lockPath + ".stale-cleanup"
 		guardFile, guardErr := os.OpenFile(guardPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if guardErr != nil {
-			if !os.IsExist(guardErr) {
+			if !isLockHeldError(guardPath, guardErr) {
 				return aierror.Unknown(fmt.Sprintf("acquire stale cleanup guard %s", guardPath), guardErr)
 			}
 			// Guard exists — check if it's stale (cleaner crashed).
@@ -242,6 +243,17 @@ func WithFileLock(lockPath string, timeout time.Duration, staleAfter time.Durati
 		}
 		continue
 	}
+}
+
+func isLockHeldError(lockPath string, err error) bool {
+	if os.IsExist(err) {
+		return true
+	}
+	if runtime.GOOS != "windows" || !os.IsPermission(err) {
+		return false
+	}
+	_, statErr := os.Stat(lockPath)
+	return statErr == nil
 }
 
 func removeLockFile(lockPath string) error {

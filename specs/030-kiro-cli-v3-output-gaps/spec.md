@@ -18,7 +18,7 @@ LazyAI is a canonical `.ai/` source compiler that emits tool-native config; it i
 
 | Surface | Path | Source |
 |---|---|---|
-| Agents | `.kiro/agents/<name>.md` | `packages/cli/internal/adapter/kiro.go` |
+| Agents | `.kiro/agents/<name>.json` | `packages/cli/internal/adapter/kiro.go` |
 | Skills | `.kiro/skills/<name>/SKILL.md` | `packages/cli/internal/adapter/kiro.go` |
 | Prompts | `.kiro/prompts/<name>.md` | `packages/cli/internal/adapter/kiro.go` |
 | MCP | `.kiro/settings/mcp.json` | `packages/cli/internal/adapter/mcp_compiler.go:compileKiroMCP` |
@@ -32,7 +32,7 @@ Kiro CLI v3 docs (verified 2026-06-24) introduced native surfaces the adapter di
 - **Powers** — `https://kiro.dev/docs/powers/`: importable packages (`POWER.md` + optional `mcp.json` + `steering/`), installed via marketplace, GitHub URL, or local folder import. No auto-discovered `.kiro/powers/` repo path is documented.
 
 Verified design facts driving scope:
-- Canonical agent frontmatter is already valid Kiro v3 (unknown YAML keys tolerated); **no agent transform is needed** (`ResearchAgentFrontmatter` finding; `kiro.go` copies agents verbatim via `ShapeFlat`).
+- Kiro CLI v3 official docs (kiro.dev) state custom agents are JSON at `.kiro/agents/<name>.json`; the original ResearchAgentFrontmatter finding that "no agent transform is needed" predated this verification and is retracted by #574. An agent transform (markdown → JSON) was added in #574.
 - Hooks are emitted in adapter `Install` via `CopyLibraryDirectory`, **not** through the `output_mapping.go` `AssetKind` table (peer pattern: Claude `claudecode/hooks/`, OMP `omp/hooks/`, Antigravity `antigravity/hooks.json`).
 - Golden tests (`internal/compiler/golden_test.go:TestCompilerGolden`) compare output byte-for-byte against `testdata/golden/<project>/`.
 
@@ -121,7 +121,7 @@ Verified design facts driving scope:
 
 - **A-001:** Kiro v3 hook JSON schema is `{"version":"v1","hooks":[{name,trigger,action:{type,command|prompt},…}]}` with 11 triggers — HIGH (source-verified via docs).
 - **A-002:** Kiro command hooks can invoke a co-located script or inline command — MEDIUM (verify exact command-resolution semantics during implementation before finalizing the `command` value).
-- **A-003:** Canonical agent frontmatter needs no Kiro transform — HIGH (verified).
+- **A-003:** Agent format is `.kiro/agents/<name>.json` — JSON required; `.md` is not recognized by Kiro CLI v3. **Retracted** "no transform needed" (original finding predated official doc verification); agent JSON transform added in #574. — HIGH (official docs verified 2026-06-29 via kiro.md research).
 - **A-004:** `output_mapping.go` needs no change because hooks are emitted in `Install`, not via `AssetKind` — HIGH (verified against peer adapters).
 
 > A-002 is MEDIUM and MUST be verified (or restated as a risk) before the hook `command` field is finalized.
@@ -133,7 +133,7 @@ Verified design facts driving scope:
 - Emitting `.kiro/specs/` — specs are user-authored `/spec new` artifacts.
 - Emitting a repo-local Kiro `permissions.yaml` — docs forbid repo-injected permission rules.
 - Emitting a direct `.kiro/powers/` directory — no documented auto-discovery path.
-- Any Kiro agent frontmatter transform — canonical frontmatter is already valid Kiro v3.
+- Any Kiro agent frontmatter-only passthrough — replaced in #574 with a JSON transform; canonical markdown agents are now transformed to `.json`.
 - Inline per-agent `mcpServers`/`permissions` in Kiro agent profiles — optional future enhancement.
 - A markdown→JSON hook transform engine (Approach B) — deferred; Approach A (pre-authored Kiro JSON) is the initial path.
 

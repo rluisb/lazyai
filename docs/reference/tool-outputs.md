@@ -201,7 +201,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
 .
 ├── AGENTS.md
 └── .kiro/
-    ├── agents/<agent>.md
+    ├── agents/<agent>.json
     ├── skills/<skill>/SKILL.md
     ├── prompts/<prompt>.md
     ├── hooks/block-destructive-shell.json
@@ -209,7 +209,7 @@ This page documents what `lazyai-cli` writes for each configured companion tool,
     └── settings/mcp.json
 ```
 
-- **Agents surface:** `.kiro/agents/<name>.md` (Kiro CLI v3 custom agent profiles).
+- **Agents surface:** `.kiro/agents/<name>.json` (JSON required by Kiro CLI v3; emitted via `RewriteAgentForKiro` with `tools`/`allowedTools` from canonical `tools:` frontmatter).
 - **Skills surface:** `.kiro/skills/<name>/SKILL.md`.
 - **Commands / prompts / chat modes:** prompts at `.kiro/prompts/*.md`; no commands or chat modes.
 - **Hook runtime surface:** `.kiro/hooks/*.json` plus any referenced hook scripts. Only source-verified Kiro v3 trigger mappings are emitted.

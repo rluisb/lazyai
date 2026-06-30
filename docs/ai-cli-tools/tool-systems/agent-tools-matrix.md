@@ -50,7 +50,7 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 | Pi | agents copied; no tools field (Pi has no mechanism) | ✅ correct by design | none (document intentional non-mapping) |
 | OMP | canonical agents **copied verbatim** (`omp.go`) | ❌ no OMP-native `tools`/`spawns`/`thinkingLevel` | LazyAI-only fields leak; native features unused |
 | Kiro | canonical agents copied verbatim as `.md` | ❌ no `tools`/`allowedTools` | doc says JSON (`.kiro/agents/<name>.json`); spec 030 says `.md` tolerated — reconcile |
-| Antigravity | **no agent/subagent files** (skills-only) | n/a | decide & document subagent stance |
+| Antigravity | **no agent/subagent files** (skills-only); emits subagent blueprint rules, workflow skills, hook expansion | ⚠️ blueprint only (rules doc, not enforced by file format) | **#575 implemented**: subagent capability blueprint (`.agents/rules/lazyai-subagents.md`), workflow skills (`workflow-*/SKILL.md`), write-guard + PreInvocation hooks; commands surface: n/a |
 
 ## Evidence (file:line)
 
@@ -61,7 +61,7 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 - OMP: `omp.go:48-58` (verbatim `CopyLibraryDirectory`).
 - Kiro: `kiro.go:39-44`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON) vs `specs/030-kiro-cli-v3-output-gaps/spec.md:35` (`.md` tolerated, no transform).
 - Pi: `pi.go`, `docs/ai-cli-tools/tool-systems/pi.md` (no per-agent mechanism).
-- Antigravity: `antigravity.go` (no agent emission).
+- Antigravity: `antigravity.go` (no agent emission; blueprint at `antigravity/subagents-blueprint.md`; workflow emission via `CopyLibraryDirectory`; hooks in `antigravity/hooks.json`).
 
 ## Tracking
 

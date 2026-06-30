@@ -13,6 +13,29 @@
       }
     ]
   },
+  "lazyai-write-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".gemini/hooks/lazyai/write-guard.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "lazyai-workflow-gate": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": ".gemini/hooks/lazyai/workflow-gate.sh",
+        "timeout": 10
+      }
+    ]
+  },
   "lazyai-objective-workflow-gate": {
     "Stop": [
       {

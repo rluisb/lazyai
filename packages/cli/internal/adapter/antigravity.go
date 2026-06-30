@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/rluisb/lazyai/packages/cli/internal/configmerge"
 	"github.com/rluisb/lazyai/packages/cli/internal/files"
@@ -110,6 +111,20 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 	}); err != nil {
 		return nil, err
 	}
+	// Emit library workflows as orchestrator SKILL.md files under a workflow-
+	// prefix so the Antigravity orchestrator can load them as skills. Each
+	// workflow's description is annotated with its write/subagent requirements.
+	if err := CopyLibraryDirectory(CopyLibraryDirectoryOption{
+		Ctx:          ctx,
+		SourceSubdir: "workflows",
+		ToDestPath: func(file string) string {
+			name := fileID(file)
+			return filepath.Join(skillsDir, "workflow-"+name, "SKILL.md")
+		},
+		Transform: workflowSkillAnnotate,
+	}); err != nil {
+		return nil, err
+	}
 
 	// Antigravity IDE discovers workspace rules from .agents/rules/*.md, not from
 	// a bare root AGENTS.md. Emit a thin rules file that imports the canonical
@@ -133,8 +148,63 @@ func (a *AntigravityAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, 
 		if err := trackFile(ctx, rulesPath, "compiled:antigravity-rules"); err != nil {
 			return nil, err
 		}
+
+		// Emit subagent capability blueprint so the orchestrator knows which
+		// define_subagent enable flags to apply for each canonical role (#575).
+		// Skipped at global scope — global rules are user-managed.
+		blueprintSrc := "antigravity/subagents-blueprint.md"
+		blueprintPath := filepath.Join(rulesDir, "lazyai-subagents.md")
+		var blueprintBody []byte
+		if ctx.LibraryFS != nil {
+			var err error
+			blueprintBody, err = fs.ReadFile(ctx.LibraryFS, blueprintSrc)
+			if err != nil {
+				return nil, fmt.Errorf("read %s: %w", blueprintSrc, err)
+			}
+		} else {
+			var err error
+			blueprintBody, err = files.ReadFile(filepath.Join(ctx.LibraryDir, blueprintSrc))
+			if err != nil {
+				return nil, fmt.Errorf("read %s: %w", blueprintSrc, err)
+			}
+		}
+		if err := files.WriteFile(blueprintPath, blueprintBody, 0o644); err != nil {
+			return nil, err
+		}
+		if err := trackFile(ctx, blueprintPath, blueprintSrc); err != nil {
+			return nil, err
+		}
 	}
 	return ctx.FileRecords, nil
+}
+
+// workflowSkillAnnotate appends a tool-access annotation to the description
+// field in the YAML frontmatter of a library workflow file. This makes
+// the required enable_write_tools / enable_subagent_tools flags visible to
+// Antigravity orchestrators that load the workflow as a SKILL.md.
+func workflowSkillAnnotate(content []byte) []byte {
+	const annotation = " Uses write tools, shell execution, and may spawn" +
+		" subagents. Invoke with enable_write_tools=true and" +
+		" enable_subagent_tools=true."
+	lines := strings.Split(string(content), "\n")
+	dashes := 0
+	for i, line := range lines {
+		if line == "---" {
+			dashes++
+			if dashes >= 2 {
+				break
+			}
+			continue
+		}
+		if dashes == 1 && strings.HasPrefix(line, "description:") {
+			trimmed := strings.TrimRight(line, ".")
+			if !strings.Contains(trimmed, "enable_write_tools") {
+				lines[i] = trimmed + "." + annotation
+			}
+			break
+		}
+	}
+	return []byte(strings.Join(lines, "\n"))
 }
 
 func (a *AntigravityAdapter) CompileMCP(ctx CompileContext) ([]types.TrackedFile, error) {

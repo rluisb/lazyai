@@ -1,6 +1,7 @@
 ---
 name: reviewer
 description: "Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only."
+disallowedTools: Edit Write Bash
 ---
 
 <!-- vibe-lab:managed kind=agent surface=claude name=reviewer source=.agents/agents/reviewer.md -->

@@ -95,10 +95,11 @@ func expandOpenCodeMetaProvider(configured []string) []string {
 }
 
 // RewriteAgentForClaudeCode transforms a library agent into a Claude Code agent
-// file. Output frontmatter contains only name and description; the source body is
-// preserved verbatim after the vibe-lab managed marker. Baseline agents carry
-// no LazyAI tier metadata, so this path parses generic frontmatter instead of
-// frontmatter.ParseAgentSpec.
+// file. Output frontmatter contains name, description, and — for read-only
+// agents — a disallowedTools line that denies Edit, Write, and Bash. The source
+// body is preserved verbatim after the vibe-lab managed marker. Baseline agents
+// carry no LazyAI tier metadata, so this path parses generic frontmatter instead
+// of frontmatter.ParseAgentSpec.
 func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, error) {
 	_ = ctx
 	fm, body, err := frontmatter.ExtractFrontmatter(source)
@@ -112,6 +113,12 @@ func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, erro
 	description := strings.TrimSpace(frontmatter.ExtractField(fm, "description"))
 	body = trimLeadingNewlines(body)
 
+	grants, grantErr := frontmatter.ParseAgentToolGrants(source)
+	if grantErr != nil {
+		return nil, fmt.Errorf("claude adapter: %w", grantErr)
+	}
+	disallowed := claudeDisallowedTools(grants)
+
 	var b strings.Builder
 	b.WriteString("---\n")
 	b.WriteString("name: ")
@@ -119,11 +126,38 @@ func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, erro
 	b.WriteByte('\n')
 	b.WriteString("description: ")
 	b.WriteString(yamlDoubleQuote(description))
-	b.WriteString("\n---\n\n")
+	b.WriteByte('\n')
+	if len(disallowed) > 0 {
+		b.WriteString("disallowedTools: ")
+		b.WriteString(strings.Join(disallowed, " "))
+		b.WriteByte('\n')
+	}
+	b.WriteString("---\n\n")
 	b.WriteString(managedAgentMarker("claude", name))
 	b.WriteString("\n\n")
 	b.Write(body)
 	return []byte(b.String()), nil
+}
+
+// claudeDisallowedTools returns the Claude Code disallowedTools list for the
+// given canonical grants. Returns nil (no restriction) for nil grants (legacy
+// unrestricted) or full-capability grants. Returns ["Edit", "Write", "Bash"]
+// for read-only agents (grants containing only read and/or search tokens).
+func claudeDisallowedTools(grants []frontmatter.AgentToolGrant) []string {
+	if len(grants) == 0 {
+		// nil or empty: unrestricted legacy — emit nothing.
+		return nil
+	}
+	for _, g := range grants {
+		switch g {
+		case frontmatter.AgentToolEdit, frontmatter.AgentToolShell,
+			frontmatter.AgentToolWeb, frontmatter.AgentToolMCP, frontmatter.AgentToolSpawn:
+			// Has at least one write/exec/spawn capability — not read-only.
+			return nil
+		}
+	}
+	// Only read and/or search grants present: deny destructive Claude built-ins.
+	return []string{"Edit", "Write", "Bash"}
 }
 
 // RewriteAgentForOpenCode transforms a library agent into the baseline

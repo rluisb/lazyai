@@ -1,5 +1,8 @@
 ---
 description: "Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only."
+permission:
+  bash: deny
+  edit: deny
 ---
 
 <!-- vibe-lab:managed kind=agent surface=opencode name=reviewer source=.agents/agents/reviewer.md -->

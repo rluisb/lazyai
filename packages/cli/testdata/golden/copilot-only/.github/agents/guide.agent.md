@@ -1,7 +1,7 @@
 ---
 name: guide
 description: "Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "edit", "shell", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=guide source=.agents/agents/guide.md -->

@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: "Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=reviewer source=.agents/agents/reviewer.md -->

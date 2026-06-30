@@ -312,6 +312,8 @@ func copilotAgentMarkdownContent(source []byte) []byte {
 		description = "Agent for the LazyAI runtime."
 	}
 
+	toolsLine := copilotToolsLine(source)
+
 	bodyStr := strings.TrimLeft(string(body), "\n")
 	var b strings.Builder
 	b.WriteString("---\n")
@@ -319,7 +321,9 @@ func copilotAgentMarkdownContent(source []byte) []byte {
 	b.WriteString(agentName)
 	b.WriteString("\ndescription: ")
 	b.WriteString(strconv.Quote(description))
-	b.WriteString("\ntools: [\"read\", \"search\", \"edit\", \"shell\"]\n---\n\n")
+	b.WriteString("\n")
+	b.WriteString(toolsLine)
+	b.WriteString("\n---\n\n")
 	b.WriteString(managedAgentMarker("copilot", agentName))
 	b.WriteString("\n\n")
 	b.WriteString(bodyStr)
@@ -328,6 +332,61 @@ func copilotAgentMarkdownContent(source []byte) []byte {
 	}
 	b.WriteString("\n")
 	return []byte(b.String())
+}
+
+// copilotToolsLine derives the YAML `tools:` line from the canonical agent's
+// grant list. Grants that have no Copilot equivalent (web, mcp, spawn) are
+// silently omitted. If the source has no `tools:` frontmatter field (nil
+// grants), the legacy full list is used to preserve backward-compatible
+// behavior for unannotated agents.
+func copilotToolsLine(source []byte) string {
+	// Known Copilot-native grants in the order they appear in the legacy list.
+	copilotGrants := map[frontmatter.AgentToolGrant]struct{}{
+		frontmatter.AgentToolRead:   {},
+		frontmatter.AgentToolSearch: {},
+		frontmatter.AgentToolEdit:   {},
+		frontmatter.AgentToolShell:  {},
+	}
+	// Emit order matches the canonical ordering for predictability.
+	legacyOrder := []frontmatter.AgentToolGrant{
+		frontmatter.AgentToolRead,
+		frontmatter.AgentToolSearch,
+		frontmatter.AgentToolEdit,
+		frontmatter.AgentToolShell,
+	}
+
+	grants, _ := frontmatter.ParseAgentToolGrants(source)
+	if grants == nil {
+		// Fallback: unannotated agent or parse error — preserve full legacy list.
+		return buildCopilotToolsLine(legacyOrder)
+	}
+
+	var selected []frontmatter.AgentToolGrant
+	for _, g := range grants {
+		if _, ok := copilotGrants[g]; ok {
+			selected = append(selected, g)
+		}
+	}
+	if len(selected) == 0 {
+		// No recognized Copilot-native grants; fall back to legacy full list.
+		return buildCopilotToolsLine(legacyOrder)
+	}
+	return buildCopilotToolsLine(selected)
+}
+
+// buildCopilotToolsLine formats a list of grants as a YAML inline array string:
+// `tools: ["read", "search"]`.
+func buildCopilotToolsLine(grants []frontmatter.AgentToolGrant) string {
+	var b strings.Builder
+	b.WriteString("tools: [")
+	for i, g := range grants {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(strconv.Quote(string(g)))
+	}
+	b.WriteString("]")
+	return b.String()
 }
 
 // copyCopilotInstructions copies instruction files from library/copilot/instructions/ to the target instructions directory.

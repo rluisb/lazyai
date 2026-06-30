@@ -1,7 +1,7 @@
 ---
 name: planner
 description: "Specification and planning agent. Produces executable plans with four-point clarity, evidence, acceptance criteria, rollback criteria, and TDD mode selection."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "edit", "shell", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=planner source=.agents/agents/planner.md -->

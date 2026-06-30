@@ -125,15 +125,44 @@ func RewriteAgentForClaudeCode(source []byte, ctx *AdapterContext) ([]byte, erro
 	return []byte(b.String()), nil
 }
 
+// opencodePermissionForGrants derives the OpenCode permission map from
+// canonical tool grants. Returns nil when grants are nil (legacy/unrestricted)
+// or when the agent holds write or shell capability (no restriction needed
+// — OpenCode defaults to allowing all tools).
+//
+// Read-only agents — those whose grants contain neither edit nor shell —
+// receive { "bash": "deny", "edit": "deny" } to prevent working-tree
+// mutations or shell execution.
+func opencodePermissionForGrants(grants []frontmatter.AgentToolGrant) map[string]string {
+	if grants == nil {
+		return nil
+	}
+	for _, g := range grants {
+		if g == frontmatter.AgentToolEdit || g == frontmatter.AgentToolShell {
+			return nil
+		}
+	}
+	return map[string]string{
+		"bash": "deny",
+		"edit": "deny",
+	}
+}
+
 // RewriteAgentForOpenCode transforms a library agent into the baseline
 // OpenCode agent shape for emitted .opencode/agents files.
 //
 // OpenCode emits only the quoted description and the managed marker. Source
 // frontmatter is parsed generically so baseline agents without a LazyAI tier
-// are accepted.
+// are accepted. Canonical agents with only read/search grants receive
+// permission: { bash: deny, edit: deny } so they cannot mutate the working
+// tree or execute shell commands.
 func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([]byte, error) {
 	_ = mode
 	_ = ctx
+	grants, err := frontmatter.ParseAgentToolGrants(source)
+	if err != nil {
+		return nil, fmt.Errorf("opencode adapter: parse tool grants: %w", err)
+	}
 	fm, body, err := frontmatter.ExtractFrontmatter(source)
 	if err != nil {
 		return nil, err
@@ -147,6 +176,7 @@ func RewriteAgentForOpenCode(source []byte, ctx *AdapterContext, mode string) ([
 	return BuildOpenCodeAgentFrontmatter(cleaned, OpenCodeAgentOpts{
 		Description:   description,
 		ManagedMarker: managedAgentMarker("opencode", name),
+		Permission:    opencodePermissionForGrants(grants),
 	}), nil
 }
 

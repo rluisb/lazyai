@@ -102,6 +102,95 @@ func TestOpenCodeAdapter_Install_FromFS(t *testing.T) {
 	}
 }
 
+// TestOpenCodeAdapter_CanonicalReadOnlyAgentsGetPermission verifies that
+// researcher, reviewer, and evidence-verifier emit permission: { edit: deny,
+// bash: deny } after install, while full-capability agents (e.g. guide) emit
+// no permission block. This is the core acceptance criterion for #572.
+func TestOpenCodeAdapter_CanonicalReadOnlyAgentsGetPermission(t *testing.T) {
+	targetDir := t.TempDir()
+	repoRoot := testRepoRoot(t)
+	libFS := os.DirFS(filepath.Join(repoRoot, "library"))
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryFS:  libFS,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Agents: types.ALL_AGENTS[:],
+			Skills: types.ALL_SKILLS[:],
+		},
+	}
+
+	adapter := &OpenCodeAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("OpenCode Install failed: %v", err)
+	}
+
+	agentsDir := filepath.Join(targetDir, ".opencode", "agents")
+
+	readOnlyCases := []struct {
+		file string
+	}{
+		{"researcher.md"},
+		{"reviewer.md"},
+		{"evidence-verifier.md"},
+	}
+	for _, tc := range readOnlyCases {
+		t.Run(tc.file, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(agentsDir, tc.file))
+			if err != nil {
+				t.Fatalf("agent file not found: %v", err)
+			}
+			fm, _, err := frontmatter.ExtractFrontmatter(data)
+			if err != nil {
+				t.Fatalf("frontmatter parse error: %v", err)
+			}
+			perm, ok := fm["permission"].(map[string]any)
+			if !ok {
+				t.Fatalf("permission key missing or wrong type (got %T); full fm: %v", fm["permission"], fm)
+			}
+			if got, _ := perm["edit"].(string); got != "deny" {
+				t.Errorf("permission.edit = %q, want \"deny\"", got)
+			}
+			if got, _ := perm["bash"].(string); got != "deny" {
+				t.Errorf("permission.bash = %q, want \"deny\"", got)
+			}
+			// FR-013: must not emit deprecated tools or maxSteps
+			if _, ok := fm["tools"]; ok {
+				t.Errorf("FR-013: tools key must not be emitted in agent frontmatter")
+			}
+			if _, ok := fm["maxSteps"]; ok {
+				t.Errorf("FR-013: maxSteps key must not be emitted in agent frontmatter")
+			}
+		})
+	}
+
+	// Full-capability agents must not carry a capability-derived permission block —
+	// OpenCode's default (all tools allowed) is the correct behavior for them.
+	fullCapCases := []struct {
+		file string
+	}{
+		{"guide.md"},
+		{"implementer.md"},
+	}
+	for _, tc := range fullCapCases {
+		t.Run("no-perm-"+tc.file, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(agentsDir, tc.file))
+			if err != nil {
+				t.Fatalf("agent file not found: %v", err)
+			}
+			fm, _, err := frontmatter.ExtractFrontmatter(data)
+			if err != nil {
+				t.Fatalf("frontmatter parse error: %v", err)
+			}
+			if _, ok := fm["permission"]; ok {
+				t.Errorf("full-capability agent should not emit permission block; fm: %v", fm)
+			}
+		})
+	}
+}
+
 // --- Test: OpenCode adapter global scope path resolution ---
 
 func TestOpenCodeAdapter_GlobalScope_UsesGlobalPath(t *testing.T) {

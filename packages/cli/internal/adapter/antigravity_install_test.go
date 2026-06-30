@@ -24,6 +24,29 @@ const antigravityHooksJSON = `{
       }
     ]
   },
+  "lazyai-write-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".gemini/hooks/lazyai/write-guard.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "lazyai-workflow-gate": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": ".gemini/hooks/lazyai/workflow-gate.sh",
+        "timeout": 10
+      }
+    ]
+  },
   "lazyai-objective-workflow-gate": {
     "Stop": [
       {
@@ -42,7 +65,10 @@ func TestAntigravityAdapter_Install_ProducesAgentSkillsSurfaceAtAgentsDir(t *tes
 	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "block-destructive-shell.sh"), "#!/usr/bin/env bash\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "objective-workflow-gate.sh"), "#!/usr/bin/env bash\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "write-guard.sh"), "#!/usr/bin/env bash\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks", "lazyai", "workflow-gate.sh"), "#!/usr/bin/env bash\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"), "# Subagent Capability Blueprint\n")
 	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
 	writeFile(t, filepath.Join(libDir, "skills", "issue-triage.md"), "# issue triage\n")
 
@@ -65,16 +91,26 @@ func TestAntigravityAdapter_Install_ProducesAgentSkillsSurfaceAtAgentsDir(t *tes
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "settings.json"))
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "block-destructive-shell.sh"))
 	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "objective-workflow-gate.sh"))
+	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "write-guard.sh"))
+	assertFileExists(t, filepath.Join(targetDir, ".gemini", "hooks", "lazyai", "workflow-gate.sh"))
 	assertFileExists(t, filepath.Join(targetDir, ".agents", "hooks.json"))
 	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "diagnose", "SKILL.md"))
 	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "issue-triage", "SKILL.md"))
+	assertFileExists(t, filepath.Join(targetDir, ".agents", "rules", "lazyai-subagents.md"))
 
 	content, err := os.ReadFile(filepath.Join(targetDir, ".agents", "hooks.json"))
 	if err != nil {
 		t.Fatalf("read hooks.json failed: %v", err)
 	}
-	if !strings.Contains(string(content), ".gemini/hooks/lazyai/block-destructive-shell.sh") {
+	hooksStr := string(content)
+	if !strings.Contains(hooksStr, ".gemini/hooks/lazyai/block-destructive-shell.sh") {
 		t.Fatalf("hooks.json missing block-destructive-shell hook command")
+	}
+	if !strings.Contains(hooksStr, ".gemini/hooks/lazyai/write-guard.sh") {
+		t.Fatalf("hooks.json missing write-guard hook command")
+	}
+	if !strings.Contains(hooksStr, "PreInvocation") {
+		t.Fatalf("hooks.json missing PreInvocation workflow-gate slot")
 	}
 	if _, err := os.Stat(filepath.Join(targetDir, ".agents", "agents")); err == nil {
 		t.Fatalf("unexpected .agents/agents directory")
@@ -91,6 +127,7 @@ func TestAntigravityAdapter_Install_UsesWorkspaceRootForAgentsAndGemini(t *testi
 
 	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"), "# Blueprint\n")
 	writeFile(t, filepath.Join(libDir, "skills", "review.md"), "# review\n")
 
 	ctx := &AdapterContext{
@@ -342,6 +379,7 @@ func TestAntigravityAdapter_Install_EmitsWorkspaceRules(t *testing.T) {
 
 	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
 	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"), "# Blueprint\n")
 	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
 
 	ctx := &AdapterContext{
@@ -367,6 +405,117 @@ func TestAntigravityAdapter_Install_EmitsWorkspaceRules(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "@/AGENTS.md") {
 		t.Fatalf(".agents/rules/lazyai.md must import @/AGENTS.md; got:\n%s", body)
+	}
+}
+
+// TestAntigravityAdapter_Install_EmitsSubagentBlueprint pins #575 task 1:
+// project/workspace installs must emit .agents/rules/lazyai-subagents.md
+// containing the subagent capability blueprint. Skipped at global scope.
+func TestAntigravityAdapter_Install_EmitsSubagentBlueprint(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"),
+		"# Subagent Capability Blueprint\n\nenable_write_tools table here\n")
+	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Skills: []types.SkillId{types.SkillIdDiagnose},
+		},
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity Install failed: %v", err)
+	}
+
+	blueprintPath := filepath.Join(targetDir, ".agents", "rules", "lazyai-subagents.md")
+	assertFileExists(t, blueprintPath)
+	body, err := os.ReadFile(blueprintPath)
+	if err != nil {
+		t.Fatalf("read lazyai-subagents.md: %v", err)
+	}
+	if !strings.Contains(string(body), "enable_write_tools") {
+		t.Fatalf(".agents/rules/lazyai-subagents.md must contain enable_write_tools; got:\n%s", body)
+	}
+}
+
+// TestAntigravityAdapter_Install_SubagentBlueprintSkippedAtGlobal pins #575:
+// global installs must NOT emit .agents/rules/lazyai-subagents.md — global
+// rules are user-managed in ~/.gemini/GEMINI.md.
+func TestAntigravityAdapter_Install_SubagentBlueprintSkippedAtGlobal(t *testing.T) {
+	homeDir := t.TempDir()
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"), "# Blueprint\n")
+	writeFile(t, filepath.Join(libDir, "skills", "diagnose.md"), "# diagnose\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		HomeDir:    homeDir,
+		SetupScope: types.SetupScopeGlobal,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+		Selections: AdapterSelections{
+			Skills: []types.SkillId{types.SkillIdDiagnose},
+		},
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity global Install failed: %v", err)
+	}
+
+	blueprintPath := filepath.Join(homeDir, ".agents", "rules", "lazyai-subagents.md")
+	assertFileNotWritten(t, blueprintPath)
+}
+
+// TestAntigravityAdapter_Install_EmitsWorkflowSkills pins #575 task 4:
+// library workflows must be emitted as workflow-<name>/SKILL.md alongside
+// capability skills, with their descriptions annotated for tool-access.
+func TestAntigravityAdapter_Install_EmitsWorkflowSkills(t *testing.T) {
+	targetDir := t.TempDir()
+	libDir := t.TempDir()
+
+	writeFile(t, filepath.Join(libDir, "antigravity", "settings.json"), "{}\n")
+	writeFile(t, filepath.Join(libDir, "antigravity", "hooks.json"), antigravityHooksJSON)
+	writeFile(t, filepath.Join(libDir, "antigravity", "subagents-blueprint.md"), "# Blueprint\n")
+	writeFile(t, filepath.Join(libDir, "workflows", "feature.md"),
+		"---\nname: feature\ndescription: Use when adding product behavior.\nstatus: draft\n---\n# Feature Workflow\n")
+	writeFile(t, filepath.Join(libDir, "workflows", "bugfix.md"),
+		"---\nname: bugfix\ndescription: Use when fixing broken behavior.\nstatus: draft\n---\n# Bugfix Workflow\n")
+
+	ctx := &AdapterContext{
+		TargetDir:  targetDir,
+		SetupScope: types.SetupScopeProject,
+		LibraryDir: libDir,
+		Strategy:   types.ConflictStrategyAlign,
+	}
+
+	adapter := &AntigravityAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Antigravity Install failed: %v", err)
+	}
+
+	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "workflow-feature", "SKILL.md"))
+	assertFileExists(t, filepath.Join(targetDir, ".agents", "skills", "workflow-bugfix", "SKILL.md"))
+
+	body, err := os.ReadFile(filepath.Join(targetDir, ".agents", "skills", "workflow-feature", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read workflow-feature SKILL.md: %v", err)
+	}
+	if !strings.Contains(string(body), "enable_write_tools") {
+		t.Fatalf("workflow-feature/SKILL.md description must contain enable_write_tools annotation; got:\n%s", body)
 	}
 }
 

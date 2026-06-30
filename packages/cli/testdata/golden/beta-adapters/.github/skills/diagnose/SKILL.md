@@ -77,3 +77,11 @@ Promote only through `memory-promotion` after approval.
 - `issue-triage` — classify before debugging.
 - `no-workarounds` — reject symptom patches.
 - `memory-promotion` — promote durable diagnostic learning.
+
+## Tool Access
+
+Primarily read-only. Reads files, runs targeted diagnostic commands to reproduce
+failures, and reads test output. File mutations occur only when writing the
+diagnosis report or applying a root-cause fix — those steps require
+`enable_write_tools`. Invoke from a read-only subagent for the investigation
+phase; switch to a write-capable subagent for the fix phase.

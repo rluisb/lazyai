@@ -26,3 +26,10 @@ phase: research
 - Agent: Scout
 - Output feeds into: `plan` skill
 - Output location: specs/features/NNN-name/research.md
+
+## Tool Access
+
+Read-only. Does not require `enable_write_tools`. Reads files, searches code, and
+reads URLs — no file mutations. Safe to invoke from a subagent with
+`enable_write_tools=false` (Antigravity: omit the flag; Copilot: `tools:["read","search"]`;
+OMP: `tools:[read,search]`).

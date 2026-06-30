@@ -23,6 +23,17 @@
           }
         ],
         "matcher": "run_shell_command"
+      },
+      {
+        "hooks": [
+          {
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/lazyai/write-guard.sh",
+            "name": "write-guard",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ],
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content"
       }
     ]
   }

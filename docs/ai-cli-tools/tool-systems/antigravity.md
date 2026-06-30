@@ -169,6 +169,7 @@ MCP governed by `mcp` action (default Ask). Disable specific tools: `"disabledTo
 8. `hooks.json` `Stop`/`*Invocation` are flat handler arrays; `*ToolUse` use `{matcher,hooks[]}`.
 9. `hooks.json` `timeout` is seconds; hooks embedded in `settings.json` may be milliseconds per the schema — don't mix.
 10. Antigravity is GUI-oriented; headless validation/init is a no-op.
+11. Antigravity has no commands surface (no `.agents/commands/` discovery, no slash-command registration). The closest analog is orchestrator skills under `.agents/skills/` — load a skill as a subagent's instructions instead of a slash command.
 
 ## Sources
 

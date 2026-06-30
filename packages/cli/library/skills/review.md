@@ -198,3 +198,11 @@ Verify:  Intent stated; all 🔴/🟡 findings have file:line refs; Article VI a
 Rules:   YAGNI check mandatory; Article VI verdict explicit (PASS/FAIL); no style-only comments; escalate on constitutional violation.
 Output:  specs/code-reviews/{NNN-pr-name}/review.md + Verdict block + ledger entry.
 ```
+
+## Tool Access
+
+Write-capable. Reads PR diffs, source code, specs, and standards (read-only
+phase), then writes a review file to `specs/code-reviews/{NNN-pr-name}/review.md`.
+Requires `enable_write_tools=true` for the output-writing step. The read/analysis
+phase alone can be invoked from a read-only subagent if the write is deferred to
+a separate step.

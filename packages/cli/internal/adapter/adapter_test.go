@@ -169,6 +169,9 @@ func createTestFS() fstest.MapFS {
 		"antigravity/settings.json": &fstest.MapFile{
 			Data: []byte("{\"hooks\":{}}\n"),
 		},
+		"antigravity/subagents-blueprint.md": &fstest.MapFile{
+			Data: []byte("# Subagent Capability Blueprint\n"),
+		},
 		"antigravity/hooks/lazyai/block-destructive-shell.sh": &fstest.MapFile{
 			Data: []byte("#!/usr/bin/env bash\nexit 0\n"),
 		},

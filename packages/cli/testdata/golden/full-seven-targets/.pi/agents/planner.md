@@ -2,7 +2,14 @@
 name: planner
 description: Specification and planning agent. Produces executable plans with four-point clarity, evidence, acceptance criteria, rollback criteria, and TDD mode selection.
 role: planner
-mode: all
+tools:
+  - read
+  - edit
+  - shell
+  - search
+  - web
+  - mcp
+  - spawn
 temperature: 0.2
 steps: 18
 skills:

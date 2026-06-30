@@ -4,75 +4,75 @@ entries:
   - path: packages/cli/library/canonical/agents/guide.md
     kind: agent
     source_repo: github.com/rluisb/lazyai
-    source_ref: issue #253 front-door default agent; recorded 2026-06-16
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
     source_path: packages/cli/library/canonical/agents/guide.md
-    local_sha256: e0c584d950d2a8ae518bef7b963d8239929e03eb18072d30624e27849006ed2c
+    local_sha256: c583414013d410872e6bb92028ec2379572b4536f2638c65eeacc752faba6e31
     mode: LazyAI-authored
-    notes: LazyAI-authored front-door default agent that intentionally diverges from
-      current vibe-lab default-agent parity.
+    notes: LazyAI-authored front-door default agent with explicit canonical tool
+      grants; intentionally diverges from current vibe-lab default-agent parity.
   - path: packages/cli/library/canonical/agents/implementer.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/implementer.md
-    local_sha256: 45c872c0ccac682e0441a70271b1a7cec256871d45de263422d950604645f708
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/implementer.md
+    local_sha256: a2494b03b0ac90602667f20816fbea3ba0fdf0ccc23b5e1e8558bcbfe31ecdd9
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit tool grants; no
+      longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/researcher.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/researcher.md
-    local_sha256: 509188e86a40a9c7df01c4da329627c8a963291e59f8c354a959af4fe3bd243a
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/researcher.md
+    local_sha256: a4cddaba701bdf1ae17b393169243778fb1cab3e67917eb1894b46eca27af72d
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit read-only tool
+      grants; no longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/deployer.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/deployer.md
-    local_sha256: 75af99ed74ffdbb0265a156028138e9bd5e73ff7c7ef01e3b346d41735e5c9ad
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/deployer.md
+    local_sha256: 08fc714c63cee3df2b6cd217055a24e6827775192f9c283661bba80d55782505
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit tool grants; no
+      longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/responder.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/responder.md
-    local_sha256: c50f8d048a777c0fe075b7081593ac9100ca36d414c7fd9976dcaf099cd6ba2a
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/responder.md
+    local_sha256: 935fa062e41ad66213e1aaee75d7060777c8d962031072178cfa23ae226e0a57
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit tool grants; no
+      longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/planner.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/planner.md
-    local_sha256: 50d5755a37ece50d3764017d2e49eb8addf16adf8b4bbdd9970080adbe36d1ca
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/planner.md
+    local_sha256: 1e56858a2e07c3bf326fc1d0fc44a72a2ed7c897aaacf16c033197c0281aab1a
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit tool grants; no
+      longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/reviewer.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/reviewer.md
-    local_sha256: 30ca8c5f4e12a4e05b4da8b618aff2cd99be32b0031f3d6de797de20518f105d
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/reviewer.md
+    local_sha256: 4d3c7157bd26e1094203878eaa023398ef959577bacf2e15417271286949764d
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit read-only tool
+      grants; no longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/agents/evidence-verifier.md
     kind: agent
-    source_repo: github.com/rluisb/vibe-lab
-    source_ref: current local baseline /Users/ricardo/code/vibe-lab; recorded 2026-06-16
-    source_path: .agents/agents/evidence-verifier.md
-    local_sha256: 1518d4e43f537173f4e9623d3cf5a1d43c5b50300f9dd1f1a19090f5fd381019
-    mode: exact-baseline
-    notes: Copied byte-for-byte from the current vibe-lab baseline for exact default
-      agent parity.
+    source_repo: github.com/rluisb/lazyai
+    source_ref: issue #569 canonical agent tool grants; recorded 2026-06-29
+    source_path: packages/cli/library/canonical/agents/evidence-verifier.md
+    local_sha256: 5066e1f3857ff9835c5bbddd0c236f164c63980f62bebd37892faf045496e492
+    mode: LazyAI-authored
+    notes: LazyAI-authored canonical agent metadata with explicit read-only tool
+      grants; no longer byte-for-byte vibe-lab baseline.
   - path: packages/cli/library/canonical/commands/graphify.md
     kind: command
     source_repo: github.com/rluisb/lazyai

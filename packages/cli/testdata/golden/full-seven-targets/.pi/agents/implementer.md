@@ -2,7 +2,14 @@
 name: implementer
 description: Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode.
 role: implementer
-mode: all
+tools:
+  - read
+  - edit
+  - shell
+  - search
+  - web
+  - mcp
+  - spawn
 temperature: 0.1
 steps: 25
 skills:

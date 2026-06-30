@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: "Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "edit", "shell", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=implementer source=.agents/agents/implementer.md -->

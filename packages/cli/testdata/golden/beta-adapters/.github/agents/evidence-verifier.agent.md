@@ -1,7 +1,7 @@
 ---
 name: evidence-verifier
 description: "Verify claims against source evidence. Given a claim and source material, determine whether the claim is supported, contradicted, or inconclusive."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=evidence-verifier source=.agents/agents/evidence-verifier.md -->

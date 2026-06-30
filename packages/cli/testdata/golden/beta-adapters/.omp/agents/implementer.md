@@ -1,22 +1,12 @@
 ---
 name: implementer
-description: Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode.
-role: implementer
-tools:
-  - read
-  - edit
-  - shell
-  - search
-  - web
-  - mcp
-  - spawn
-temperature: 0.1
-steps: 25
-skills:
-  - build-mode
-  - tdd-planning
-  - refresh-dev-containers
+description: "Universal implementer — builds from specs, writes tests first, preserves existing tests, and follows the selected TDD mode."
+tools: ["read", "edit", "write", "bash", "search", "web_search", "task"]
+thinkingLevel: auto
+autoloadSkills: ["build-mode", "tdd-planning", "refresh-dev-containers"]
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=implementer source=.agents/agents/implementer.md -->
 
 # System Prompt
 

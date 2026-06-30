@@ -1,18 +1,11 @@
 ---
 name: responder
-description: Site Reliability Engineer agent. Incident response, SLO tracking, error budget analysis.
-role: responder
-tools:
-  - read
-  - edit
-  - shell
-  - search
-  - web
-  - mcp
-  - spawn
-temperature: 0.2
-steps: 14
+description: "Site Reliability Engineer agent. Incident response, SLO tracking, error budget analysis."
+tools: ["read", "edit", "write", "bash", "search", "web_search", "task"]
+thinkingLevel: auto
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=responder source=.agents/agents/responder.md -->
 
 # System Prompt
 

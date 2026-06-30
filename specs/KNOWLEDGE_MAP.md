@@ -33,6 +33,7 @@
 | 027 | Production readiness hardening — release pipeline correctness, enforcing CI gates (smoke/integration/lint), backup-restore path-traversal fix, notify sanitization, `validate skills` honesty, setupscan scope correctness, and deferred snapshot/opencode coverage | ✅ Complete | `specs/027-production-readiness-hardening/` |
 | 028 | Fake projects testing plan and evidence collection | ✅ Complete | `specs/028-fake-projects-testing-plan/` |
 | 029 | LazyAI V2 — canonical `.ai/lazyai.json` manifest + `.ai/lock.json` driven compile pipeline (discover→parse→resolve→validate→plan→write), adapter capabilities model + docs-conformance fixtures, validation hardening (`validate --all` + secret scanner + path/symlink safety + doctor security report), migration/eject, multi-tool plugin bundles, local eval validation, and `.ai/` v1 schema freeze; Codex dropped (7 targets), binary stays `lazyai-cli` | ✅ Complete | `specs/029-lazyai-v2/` |
+| 031 | Cross-CLI agent-tools alignment — machine-readable canonical `tools:` grant model (7-token vocabulary: `read, edit, shell, search, web, mcp, spawn`) + per-adapter capability translation (Claude `disallowedTools`, Copilot/OMP/Kiro `tools`, OpenCode `permission`, Antigravity subagent blueprint; Pi intentional non-mapping) + agent-tools compatibility matrix | ✅ Complete — epic #568, issues #569–#575 merged | `specs/031-cross-cli-agent-tools-alignment/` |
 
 ## Standards
 

@@ -2,7 +2,9 @@
 name: reviewer
 description: Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only.
 role: reviewer
-mode: all
+tools:
+  - read
+  - search
 temperature: 0.1
 steps: 14
 skills:

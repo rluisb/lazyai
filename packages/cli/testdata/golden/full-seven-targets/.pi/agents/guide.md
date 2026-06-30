@@ -2,7 +2,14 @@
 name: guide
 description: Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome.
 role: guide
-mode: all
+tools:
+  - read
+  - edit
+  - shell
+  - search
+  - web
+  - mcp
+  - spawn
 temperature: 0.2
 steps: 18
 ---

@@ -2,7 +2,9 @@
 name: researcher
 description: Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation.
 role: researcher
-mode: all
+tools:
+  - read
+  - search
 temperature: 0.2
 steps: 10
 skills:

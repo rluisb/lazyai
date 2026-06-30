@@ -96,7 +96,7 @@ Emit the derived list in JSON array style: `tools: ["read", "search"]` or `tools
 
 ---
 
-Human Gate: PENDING
+Human Gate: APPROVED by rluisb at 2026-06-30T09:30:00-03:00
 <!-- The human approver records approval by replacing the line above with:
      Human Gate: APPROVED — <approver> <date>
      AI-generated approvals are rejected by pre-commit hook and CI. -->

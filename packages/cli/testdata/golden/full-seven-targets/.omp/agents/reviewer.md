@@ -1,15 +1,12 @@
 ---
 name: reviewer
-description: Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only.
-role: reviewer
-tools:
-  - read
-  - search
-temperature: 0.1
-steps: 14
-skills:
-  - zero-point
+description: "Universal verifier. Quality gates, spec traceability, adversarial testing, security audits. Read-only."
+tools: ["read", "search"]
+thinkingLevel: low
+autoloadSkills: ["zero-point"]
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=reviewer source=.agents/agents/reviewer.md -->
 
 # System Prompt
 

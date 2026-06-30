@@ -1,15 +1,12 @@
 ---
 name: researcher
-description: Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation.
-role: researcher
-tools:
-  - read
-  - search
-temperature: 0.2
-steps: 10
-skills:
-  - tdd-planning
+description: "Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation."
+tools: ["read", "search"]
+thinkingLevel: low
+autoloadSkills: ["tdd-planning"]
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=researcher source=.agents/agents/researcher.md -->
 
 # System Prompt
 

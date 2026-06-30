@@ -264,6 +264,6 @@ After #569 merges and implementation is complete:
 
 <!-- The human approver records approval here. Do NOT let an AI author this line. -->
 
-Human Gate: PENDING
+Human Gate: APPROVED by rluisb at 2026-06-30T09:30:00-03:00
 
 <!-- When approving, replace the line above with: Human Gate: APPROVED — [initials] [date] -->

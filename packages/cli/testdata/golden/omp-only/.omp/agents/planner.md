@@ -1,20 +1,12 @@
 ---
 name: planner
-description: Specification and planning agent. Produces executable plans with four-point clarity, evidence, acceptance criteria, rollback criteria, and TDD mode selection.
-role: planner
-tools:
-  - read
-  - edit
-  - shell
-  - search
-  - web
-  - mcp
-  - spawn
-temperature: 0.2
-steps: 18
-skills:
-  - tdd-planning
+description: "Specification and planning agent. Produces executable plans with four-point clarity, evidence, acceptance criteria, rollback criteria, and TDD mode selection."
+tools: ["read", "edit", "write", "bash", "search", "web_search", "task"]
+thinkingLevel: high
+autoloadSkills: ["tdd-planning"]
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=planner source=.agents/agents/planner.md -->
 
 # System Prompt
 

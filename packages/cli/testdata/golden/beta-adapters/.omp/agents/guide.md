@@ -1,18 +1,11 @@
 ---
 name: guide
-description: Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome.
-role: guide
-tools:
-  - read
-  - edit
-  - shell
-  - search
-  - web
-  - mcp
-  - spawn
-temperature: 0.2
-steps: 18
+description: "Front-door default agent. Answers directly, chats naturally, and only suggests or delegates specialists when that improves the outcome."
+tools: ["read", "edit", "write", "bash", "search", "web_search", "task"]
+thinkingLevel: auto
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=guide source=.agents/agents/guide.md -->
 
 # System Prompt
 

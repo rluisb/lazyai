@@ -1,18 +1,11 @@
 ---
 name: deployer
-description: Infrastructure, deployment, and CI/CD operations agent.
-role: deployer
-tools:
-  - read
-  - edit
-  - shell
-  - search
-  - web
-  - mcp
-  - spawn
-temperature: 0.2
-steps: 14
+description: "Infrastructure, deployment, and CI/CD operations agent."
+tools: ["read", "edit", "write", "bash", "search", "web_search", "task"]
+thinkingLevel: auto
 ---
+
+<!-- vibe-lab:managed kind=agent surface=omp name=deployer source=.agents/agents/deployer.md -->
 
 # System Prompt
 

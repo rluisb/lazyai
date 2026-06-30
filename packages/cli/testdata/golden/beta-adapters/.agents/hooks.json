@@ -20,5 +20,28 @@
         "type": "command"
       }
     ]
+  },
+  "lazyai-workflow-gate": {
+    "PreInvocation": [
+      {
+        "command": ".gemini/hooks/lazyai/workflow-gate.sh",
+        "timeout": 10,
+        "type": "command"
+      }
+    ]
+  },
+  "lazyai-write-guard": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": ".gemini/hooks/lazyai/write-guard.sh",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content"
+      }
+    ]
   }
 }

@@ -1162,6 +1162,32 @@ entries:
     reason_kept: Antigravity hook script emitted for objective completion gating.
     reason_compressed_or_changed: Copied from the current vibe-lab generated runtime asset.
     token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/lazyai/write-guard.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity hook script emitted as a global safety net for
+      write-capable tools.
+    reason_compressed_or_changed: LazyAI-authored guard for the Antigravity write-tool matcher.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/hooks/lazyai/workflow-gate.sh
+    kind: hook
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity PreInvocation hook slot reserved for workflow
+      orchestration gates.
+    reason_compressed_or_changed: LazyAI-authored no-op hook preserving the
+      Antigravity workflow gate extension point.
+    token_rent_relevant: false
+  - path: packages/cli/library/antigravity/subagents-blueprint.md
+    kind: rule
+    category: adapter-support
+    adapter_targets: [antigravity]
+    reason_kept: Antigravity rules blueprint documents define_subagent enable flags
+      for canonical LazyAI roles.
+    reason_compressed_or_changed: LazyAI-authored projection of canonical agent
+      capability grants onto Antigravity subagent flags.
+    token_rent_relevant: false
   - path: packages/cli/library/workflows/adversarial-review.md
     kind: workflow
     category: setup-core

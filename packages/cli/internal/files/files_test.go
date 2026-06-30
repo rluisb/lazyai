@@ -473,3 +473,24 @@ func TestWithFileLock_RemovesStaleLock(t *testing.T) {
 		t.Fatalf("expected stale lock to be removed")
 	}
 }
+
+func TestWithFileLock_RemovesLockWhenFunctionPanics(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	lockPath := filepath.Join(dir, "panic.lock")
+
+	defer func() {
+		if recovered := recover(); recovered == nil {
+			t.Fatalf("expected lock function panic")
+		}
+		if FileExists(lockPath) {
+			t.Fatalf("expected lock to be removed after panic")
+		}
+	}()
+
+	_ = WithFileLock(lockPath, time.Second, time.Minute, func() error {
+		panic("boom")
+	})
+	t.Fatalf("expected lock function panic")
+}

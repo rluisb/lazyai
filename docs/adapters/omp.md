@@ -53,7 +53,37 @@ Project-scope root instructions land at `.omp/AGENTS.md`, which is read by OMP's
 
 ## Agent Behavior
 
-Canonical agents are written as flat markdown files under `.omp/agents/`. OMP reads task agents from this directory.
+Canonical agents are **transformed** (not copied verbatim) into OMP-native subagent files under `.omp/agents/<name>.md`. The transform (`RewriteAgentForOMP` in `agent_transform.go`) produces frontmatter that OMP can natively consume.
+
+**Emitted frontmatter fields:**
+
+| Field | Source | Notes |
+|---|---|---|
+| `name` | canonical `name:` | required |
+| `description` | canonical `description:` | double-quoted |
+| `tools` | derived from canonical `tools:` grants | OMP allowlist; see mapping below |
+| `thinkingLevel` | derived from grants + agent name | `"low"` for read-only, `"high"` for planner, `"auto"` otherwise |
+| `autoloadSkills` | canonical `skills:` list | omitted when the source has no `skills:` list |
+
+**Dropped fields (LazyAI-only, not OMP-native):** `role`, `mode`, `temperature`, `steps`.
+
+**Canonical grant → OMP tool name mapping:**
+
+| Canonical grant | OMP tool name(s) |
+|---|---|
+| `read` | `read` |
+| `edit` | `edit`, `write` |
+| `shell` | `bash` |
+| `search` | `search` |
+| `web` | `web_search` |
+| `mcp` | (omitted — no generic OMP MCP token; server-specific names are configured separately) |
+| `spawn` | `task` |
+
+**Read-only restriction:** agents whose canonical `tools:` list contains only `read` and/or `search` (`researcher`, `reviewer`, `evidence-verifier`) receive `tools: ["read", "search"]` only. Mutation tools (`bash`, `edit`, `write`, `task`) are absent.
+
+**No `tools:` field in source:** agents without a canonical `tools:` declaration receive the full default OMP set (`read`, `search`, `bash`, `edit`, `write`, `web_search`, `task`), preserving unrestricted legacy behaviour.
+
+**Body:** the agent system-prompt body is preserved verbatim after the vibe-lab managed marker.
 
 ## Scope Support
 
@@ -78,4 +108,5 @@ No (`CanRunHeadless() = false`).
 | Test file | What it verifies |
 |---|---|
 | `omp_adapter_test.go` | Agents + skills, commands + prompts, hooks, global scope, MCP compile |
+| `omp_frontmatter_test.go` | `RewriteAgentForOMP` unit tests (read-only restriction, shell grant, planner thinking level, managed marker, body preservation, nil-grants fallback, multi-skill mapping); `TestOmpAdapter_Install_AgentFrontmatterContent` integration test (installed researcher.md has OMP-native fields, no LazyAI fields) |
 | `scaffold/root_test.go` | #560: `TestScaffoldCompiledRootOmpProjectLandsInOmpDir` — project-scope root at `.omp/AGENTS.md`; `TestScaffoldCompiledRootOmpDoesNotAffectOtherTargets` |

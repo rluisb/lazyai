@@ -1,7 +1,7 @@
 ---
 name: deployer
 description: "Infrastructure, deployment, and CI/CD operations agent."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "edit", "shell", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=deployer source=.agents/agents/deployer.md -->

@@ -1,7 +1,7 @@
 ---
 name: responder
 description: "Site Reliability Engineer agent. Incident response, SLO tracking, error budget analysis."
-tools: ["read", "search", "edit", "shell"]
+tools: ["read", "edit", "shell", "search"]
 ---
 
 <!-- vibe-lab:managed kind=agent surface=copilot name=responder source=.agents/agents/responder.md -->

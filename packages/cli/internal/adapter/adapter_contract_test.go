@@ -111,6 +111,20 @@ func canonicalAgentFixture(name, description string) []byte {
 	return []byte("---\nname: " + name + "\ndescription: " + description + "\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\n---\n\n# " + name + "\n\nAgent body.\n")
 }
 
+// canonicalReadOnlyAgentFixture returns a canonical agent source that declares
+// only read+search grants — matching the researcher/reviewer/evidence-verifier
+// pattern. Used to assert that Copilot emission excludes edit/shell.
+func canonicalReadOnlyAgentFixture(name, description string) []byte {
+	return []byte("---\nname: " + name + "\ndescription: " + description + "\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\ntools:\n  - read\n  - search\n---\n\n# " + name + "\n\nAgent body.\n")
+}
+
+// canonicalFullCapAgentFixture returns a canonical agent source that declares
+// all four Copilot-native grants (read, search, edit, shell) plus web and spawn
+// to verify that non-Copilot grants are silently omitted.
+func canonicalFullCapAgentFixture(name, description string) []byte {
+	return []byte("---\nname: " + name + "\ndescription: " + description + "\ntier: balanced\ntemperature: 0.1\nthinking: low\nrisk: 3\ntools:\n  - read\n  - search\n  - edit\n  - shell\n  - web\n  - spawn\n---\n\n# " + name + "\n\nAgent body.\n")
+}
+
 func canonicalSkillFixture(name, description string) []byte {
 	return []byte("---\nname: " + name + "\ndescription: " + description + "\ntier: balanced\nthinking: low\nrisk: 3\n---\n\n# " + name + "\n\nSkill body.\n")
 }

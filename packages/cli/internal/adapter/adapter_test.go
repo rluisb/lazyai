@@ -23,7 +23,7 @@ func createTestFS() fstest.MapFS {
 			Data: canonicalAgentFixture("implementer", "Test implementer agent."),
 		},
 		"canonical/agents/researcher.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("researcher", "Test researcher agent."),
+			Data: canonicalReadOnlyAgentFixture("researcher", "Test researcher agent."),
 		},
 		"canonical/agents/deployer.md": &fstest.MapFile{
 			Data: canonicalAgentFixture("deployer", "Test deployer agent."),
@@ -35,10 +35,10 @@ func createTestFS() fstest.MapFS {
 			Data: canonicalAgentFixture("planner", "Test planner agent."),
 		},
 		"canonical/agents/reviewer.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("reviewer", "Test reviewer agent."),
+			Data: canonicalReadOnlyAgentFixture("reviewer", "Test reviewer agent."),
 		},
 		"canonical/agents/evidence-verifier.md": &fstest.MapFile{
-			Data: canonicalAgentFixture("evidence-verifier", "Test evidence verifier agent."),
+			Data: canonicalReadOnlyAgentFixture("evidence-verifier", "Test evidence verifier agent."),
 		},
 		"agents/extra.md": &fstest.MapFile{
 			Data: []byte("---\nname: Extra\ndescription: Test unselected agent.\nmodel: opus\n---\n\n# Extra\n\nYou are not selected by default."),

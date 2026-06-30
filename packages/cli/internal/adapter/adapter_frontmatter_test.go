@@ -160,8 +160,8 @@ func TestRewriteAgentForOpenCode_BaselineNoTier(t *testing.T) {
 }
 
 // TestCopilotAgentMarkdownContent_BaselineNoTier verifies the Copilot .agent.md
-// shape for a baseline-style source: name, quoted description, tools array,
-// managed marker, body.
+// shape for a baseline-style source with no `tools:` field: the fallback full
+// list ["read", "search", "edit", "shell"] must be emitted (backward compat).
 func TestCopilotAgentMarkdownContent_BaselineNoTier(t *testing.T) {
 	source := baselineAgentSource("implementer", "Universal implementer.")
 	out := copilotAgentMarkdownContent(source)
@@ -169,12 +169,48 @@ func TestCopilotAgentMarkdownContent_BaselineNoTier(t *testing.T) {
 	if !strings.Contains(string(out), wantMarker) {
 		t.Errorf("missing managed marker:\n%s", out)
 	}
+	// No tools: field in source → fallback full list.
 	if !strings.Contains(string(out), `tools: ["read", "search", "edit", "shell"]`) {
-		t.Errorf("missing expected tools array:\n%s", out)
+		t.Errorf("missing expected tools array (fallback):\n%s", out)
 	}
 	for _, forbidden := range []string{"tier:", "model:", "temperature:", "mode:", "steps:", "thinking:", "risk:", "skills:"} {
 		if strings.Contains(string(out), forbidden) {
 			t.Errorf("output contains forbidden key %q:\n%s", forbidden, out)
+		}
+	}
+}
+
+// TestCopilotAgentMarkdownContent_ReadOnly verifies that a read-only agent
+// (tools: [read, search]) emits only those two Copilot tools and never edit/shell.
+func TestCopilotAgentMarkdownContent_ReadOnly(t *testing.T) {
+	source := canonicalReadOnlyAgentFixture("reviewer", "Universal reviewer.")
+	out := copilotAgentMarkdownContent(source)
+	outStr := string(out)
+
+	if !strings.Contains(outStr, `tools: ["read", "search"]`) {
+		t.Errorf("read-only agent: want tools=[read,search], got:\n%s", outStr)
+	}
+	for _, absent := range []string{`"edit"`, `"shell"`} {
+		if strings.Contains(outStr, absent) {
+			t.Errorf("read-only agent: emitted forbidden tool %s:\n%s", absent, outStr)
+		}
+	}
+}
+
+// TestCopilotAgentMarkdownContent_FullCapNonCopilotGrantsOmitted verifies that
+// grants with no Copilot equivalent (web, spawn) are silently dropped and only
+// the four Copilot-native tools are emitted.
+func TestCopilotAgentMarkdownContent_FullCapNonCopilotGrantsOmitted(t *testing.T) {
+	source := canonicalFullCapAgentFixture("implementer", "Full-capability implementer.")
+	out := copilotAgentMarkdownContent(source)
+	outStr := string(out)
+
+	if !strings.Contains(outStr, `tools: ["read", "search", "edit", "shell"]`) {
+		t.Errorf("full-cap agent: want full Copilot tool list, got:\n%s", outStr)
+	}
+	for _, absent := range []string{`"web"`, `"spawn"`, `"mcp"`} {
+		if strings.Contains(outStr, absent) {
+			t.Errorf("full-cap agent: emitted non-Copilot grant %s:\n%s", absent, outStr)
 		}
 	}
 }
@@ -239,5 +275,35 @@ func TestCopilotAdapter_DefaultSevenBaselineAgentsOnly(t *testing.T) {
 	// The canonical reviewer description from createTestFS: "Test reviewer agent."
 	if !strings.Contains(string(reviewerContent), "Test reviewer agent.") {
 		t.Errorf("reviewer.agent.md does not contain canonical description; got:\n%s", reviewerContent)
+	}
+}
+
+// TestCopilotAdapter_ReviewerToolsReadOnly asserts that the integration path
+// (FS-based emission via copyCopilotAgents) respects the reviewer's read-only
+// capability: reviewer.agent.md must contain tools: ["read", "search"] and
+// must not contain "edit" or "shell" in its tools line.
+func TestCopilotAdapter_ReviewerToolsReadOnly(t *testing.T) {
+	ctx, targetDir := createTestAdapterContext(t)
+	ctx.LibraryFS = createTestFS()
+	ctx.LibraryDir = ""
+	ctx.Selections = AdapterSelections{}
+	adapter := &CopilotAdapter{}
+	if _, err := adapter.Install(ctx); err != nil {
+		t.Fatalf("Copilot Install failed: %v", err)
+	}
+	agentsDir := filepath.Join(targetDir, ".github", "agents")
+	reviewerPath := filepath.Join(agentsDir, "reviewer.agent.md")
+	content, err := os.ReadFile(reviewerPath)
+	if err != nil {
+		t.Fatalf("read reviewer.agent.md: %v", err)
+	}
+	contentStr := string(content)
+	if !strings.Contains(contentStr, `tools: ["read", "search"]`) {
+		t.Errorf("reviewer.agent.md: want tools=[read,search], got:\n%s", contentStr)
+	}
+	for _, absent := range []string{`"edit"`, `"shell"`} {
+		if strings.Contains(contentStr, absent) {
+			t.Errorf("reviewer.agent.md: contains forbidden tool %s:\n%s", absent, contentStr)
+		}
 	}
 }

@@ -222,8 +222,8 @@ func TestKiroAdapter_Install_AgentsAndSkills(t *testing.T) {
 	}
 
 	for _, rel := range []string{
-		".kiro/agents/guide.md",
-		".kiro/agents/reviewer.md",
+		".kiro/agents/guide.json",
+		".kiro/agents/reviewer.json",
 		".kiro/skills/diagnose/SKILL.md",
 		".kiro/skills/issue-triage/SKILL.md",
 		".kiro/hooks/block-destructive-shell.json",

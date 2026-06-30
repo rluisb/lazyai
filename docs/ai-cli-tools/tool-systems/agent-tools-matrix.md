@@ -49,7 +49,7 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 | Copilot | `.agent.md` with **hardcoded** `tools: ["read","search","edit","shell"]` for every agent; skills `tools:["*"]` | ❌ blanket allowlist | read-only agents get `edit`+`shell` |
 | Pi | agents copied; no tools field (Pi has no mechanism) | ✅ correct by design | none (document intentional non-mapping) |
 | OMP | `RewriteAgentForOMP` transform: `tools` (OMP allowlist from canonical grants), `thinkingLevel`, `autoloadSkills` (from `skills:`); LazyAI-only fields dropped | ✅ read-only agents restricted (`tools: ["read","search"]`); full-capability agents get OMP equivalents | ✅ closed by #573 |
-| Kiro | canonical agents copied verbatim as `.md` | ❌ no `tools`/`allowedTools` | doc says JSON (`.kiro/agents/<name>.json`); spec 030 says `.md` tolerated — reconcile |
+| Kiro | canonical agents → `.kiro/agents/<name>.json` via `RewriteAgentForKiro`; `tools`/`allowedTools` from `ParseAgentToolGrants` (#574) | ✅ `tools` + `allowedTools` from canonical `tools:` | none (done in #574) |
 | Antigravity | **no agent/subagent files** (skills-only) | n/a | decide & document subagent stance |
 
 ## Evidence (file:line)
@@ -59,7 +59,7 @@ Canonical agents (`packages/cli/library/canonical/agents/*.md`) express capabili
 - OpenCode: `opencode.go:73-101` (hardcoded `plan`/`build`/`explore` permissions), `opencode.go:134-141` + `agent_transform.go` `RewriteAgentForOpenCode` (description-only).
 - Copilot: `copilot.go:322` (`tools: ["read","search","edit","shell"]`).
 - OMP: `agent_transform.go` `RewriteAgentForOMP`; `omp.go` (transform-based copy via `CopyLibraryDirectoryOption.Transform`); `omp_frontmatter_test.go` (#573).
-- Kiro: `kiro.go:39-44`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON) vs `specs/030-kiro-cli-v3-output-gaps/spec.md:35` (`.md` tolerated, no transform).
+- Kiro: `kiro.go`; `agent_transform.go` `RewriteAgentForKiro`; `docs/ai-cli-tools/tool-systems/kiro.md` (JSON required, confirmed).
 - Pi: `pi.go`, `docs/ai-cli-tools/tool-systems/pi.md` (no per-agent mechanism).
 - Antigravity: `antigravity.go` (no agent emission).
 

@@ -8,9 +8,9 @@ import (
 )
 
 // KiroAdapter installs the Kiro IDE/CLI setup surface. Kiro CLI v3 discovers
-// custom agent profiles from .kiro/agents/<name>.md, skills from
-// .kiro/skills/<name>/SKILL.md, prompt templates from .kiro/prompts/*.md,
-// and native hooks from .kiro/hooks/<name>.json.
+// custom agent profiles from .kiro/agents/<name>.json (.json required; .md is
+// not recognized), skills from .kiro/skills/<name>/SKILL.md, prompt templates
+// from .kiro/prompts/*.md, and native hooks from .kiro/hooks/<name>.json.
 type KiroAdapter struct{}
 
 func (a *KiroAdapter) ID() types.ToolId  { return types.ToolIdKiro }
@@ -36,9 +36,20 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		return nil, err
 	}
 
-	if err := copyCanonicalDefaultAgent(ctx,
-		filepath.Join(kiroDir, "agents", defaultAgentID+".md"),
-		nil,
+	// Default agent: emit as JSON per official Kiro docs (kiro.dev/docs/cli/custom-agents/).
+	if err := CopyWithRecord(
+		"canonical/agents/"+defaultAgentID+".md",
+		filepath.Join(kiroDir, "agents", defaultAgentID+".json"),
+		ctx, true,
+		func(content []byte) []byte {
+			out, err := RewriteAgentForKiro(content, ctx)
+			if err != nil {
+				adapterLog.Warn("kiro default agent rewrite failed", "adapter", "kiro", "error", err)
+				return content
+			}
+			return out
+		},
+		0o644,
 	); err != nil {
 		return nil, err
 	}
@@ -48,10 +59,18 @@ func (a *KiroAdapter) Install(ctx *AdapterContext) ([]types.TrackedFile, error) 
 		SourceSubdir: "canonical/agents",
 		SelectionKey: "agents",
 		ToDestPath: func(file string) string {
-			return filepath.Join(kiroDir, "agents", file)
+			return filepath.Join(kiroDir, "agents", fileID(file)+".json")
 		},
 		IncludeFile: func(file string) bool {
 			return !isDefaultAgentFile(file) && isCanonicalAgentFile(file)
+		},
+		Transform: func(content []byte) []byte {
+			out, err := RewriteAgentForKiro(content, ctx)
+			if err != nil {
+				adapterLog.Warn("kiro agent rewrite fell back to verbatim copy", "adapter", "kiro", "error", err)
+				return content
+			}
+			return out
 		},
 	}); err != nil {
 		return nil, err

@@ -51,7 +51,7 @@ var ToolOverrideMap = map[string]ToolOverrides{
 	},
 	string(types.ToolIdKiro): {
 		Description: "This project uses Kiro with LazyAI integration.",
-		Notes:       "## Kiro-Specific Notes\n\n- Agents: `.kiro/agents/<name>.md`\n- Skills: `.kiro/skills/<name>/SKILL.md`\n- Prompts: `.kiro/prompts/<name>.md`.",
+		Notes:       "## Kiro-Specific Notes\n\n- Agents: `.kiro/agents/<name>.json` (JSON required; .md not recognized)\n- Skills: `.kiro/skills/<name>/SKILL.md`\n- Prompts: `.kiro/prompts/<name>.md`.",
 	},
 	string(types.ToolIdAntigravity): {
 		Description: "This project uses Antigravity with LazyAI integration.",

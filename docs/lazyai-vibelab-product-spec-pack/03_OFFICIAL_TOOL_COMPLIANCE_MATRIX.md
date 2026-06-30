@@ -314,7 +314,7 @@ Officially required/available surfaces:
 
 LazyAI requirements:
 
-- [x] Generate `.kiro/agents/*.md` (custom agent profiles; Kiro CLI v3 discovers from `.kiro/agents/`).
+- [x] Generate `.kiro/agents/*.json` (custom agent profiles as JSON; Kiro CLI v3 requires `.json` format; emitted via `RewriteAgentForKiro` with `tools`/`allowedTools` from canonical `tools:` frontmatter).
 - [x] Generate `.kiro/skills/<name>/SKILL.md`.
 - [x] Generate `.kiro/prompts/*.md`.
 - [x] Generate `.kiro/settings/mcp.json` (via `compileKiroMCP`; reuses Claude Code MCP format).

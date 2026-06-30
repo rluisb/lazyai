@@ -60,7 +60,7 @@ LazyAI's workflow catalog is canonical source material, not a universal runtime 
 - **Project/workspace scope support:** Yes
 - **Global scope support:** Yes
 - **Workflow delivery:** no `.kiro/workflows` emission; workflow intent must map only to verified Kiro-native surfaces.
-- **Special behavior:** emits `.kiro/agents/<name>.md`, `.kiro/skills/<name>/SKILL.md`, `.kiro/prompts/*.md`, and `.kiro/settings/mcp.json`; no `.kiro/workflows` directory is emitted
+- **Special behavior:** emits `.kiro/agents/<name>.json` (JSON required; transforms canonical markdown agents via `RewriteAgentForKiro` with `tools`/`allowedTools` from canonical `tools:` frontmatter), `.kiro/skills/<name>/SKILL.md`, `.kiro/prompts/*.md`, and `.kiro/settings/mcp.json`; no `.kiro/workflows` directory is emitted
 
 ## Antigravity
 
@@ -92,7 +92,7 @@ Ownership decision: ADR-007 — Workflow Runtime Ownership (Accepted), recorded 
 | Project scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Workspace scope | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Global scope | Yes | Yes | Yes (probe-gated) | Yes | Yes | Yes | Yes |
-| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.md` | — |
+| Default agent entry | `.opencode/agents/guide.md` | `.claude/agents/guide.md` | `.github/agents/guide.agent.md` | — | `.omp/agents/guide.md` | `.kiro/agents/guide.json` | — |
 | Skills surface | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.github/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` | `.omp/skills/<name>/SKILL.md` | `.kiro/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
 | Hook runtime | `.opencode/plugins/vibe-lab-hooks.js` | `.claude/hooks/*.sh` + settings hooks | `.github/hooks/*.{json,sh}` | `.pi/extensions/*.ts` | `.omp/hooks/*` | `.kiro/hooks/*.json` | `.gemini/hooks/lazyai/*.sh` + settings hooks |
 | MCP output | `opencode.json` (managed MCP under top-level `mcp`) | `.mcp.json` / Claude settings | `.vscode/mcp.json` / `~/.copilot/mcp-config.json` | Capability only; no config currently written | `.omp/mcp.json` / OMP config | `.kiro/settings/mcp.json` | `~/.gemini/config/mcp_config.json` |

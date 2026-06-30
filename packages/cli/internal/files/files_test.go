@@ -1,9 +1,11 @@
 package files
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -493,4 +495,26 @@ func TestWithFileLock_RemovesLockWhenFunctionPanics(t *testing.T) {
 		panic("boom")
 	})
 	t.Fatalf("expected lock function panic")
+}
+
+func TestIsLockHeldError_ClassifiesExpectedErrors(t *testing.T) {
+	t.Parallel()
+
+	lockPath := filepath.Join(t.TempDir(), "held.lock")
+
+	if !isLockHeldError(lockPath, fs.ErrExist) {
+		t.Fatalf("expected existing lock error to be held")
+	}
+	if isLockHeldError(lockPath, fs.ErrPermission) {
+		t.Fatalf("expected permission error without a lock file to remain fatal")
+	}
+	if err := os.WriteFile(lockPath, []byte("held"), 0o600); err != nil {
+		t.Fatalf("seed lock file: %v", err)
+	}
+
+	got := isLockHeldError(lockPath, fs.ErrPermission)
+	want := runtime.GOOS == "windows"
+	if got != want {
+		t.Fatalf("permission lock classification = %v, want %v", got, want)
+	}
 }

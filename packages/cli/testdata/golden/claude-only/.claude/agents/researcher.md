@@ -1,6 +1,7 @@
 ---
 name: researcher
 description: "Scout agent — read-only codebase explorer. Gathers evidence, maps existing tests, and identifies TDD planning constraints before implementation."
+disallowedTools: Edit Write Bash
 ---
 
 <!-- vibe-lab:managed kind=agent surface=claude name=researcher source=.agents/agents/researcher.md -->

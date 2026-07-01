@@ -51,7 +51,6 @@ var rootCommandCategoryEntries = [...]rootCommandCategoryEntry{
 	{name: "update", category: commandCategorySetupCore},
 	{name: "update-self", category: commandCategorySetupCore},
 	{name: "validate", category: commandCategorySetupCore},
-	{name: "workspace", category: commandCategorySetupCore},
 }
 
 func rootCommandCategory(cmd *cobra.Command) (commandCategory, bool) {

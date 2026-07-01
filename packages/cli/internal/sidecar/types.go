@@ -76,20 +76,6 @@ type SidecarFile struct {
 	Sidecar *SidecarConfig `yaml:"sidecar"`
 }
 
-// WorkspaceConfig holds the global workspace registry.
-// Defined here to avoid a circular dependency with cmd package.
-type WorkspaceConfig struct {
-	Workspaces []WorkspaceEntry `yaml:"workspaces"`
-	Active     string           `yaml:"active"`
-}
-
-// WorkspaceEntry represents a registered project/workspace.
-type WorkspaceEntry struct {
-	Name    string         `yaml:"name"`
-	Path    string         `yaml:"path"`
-	Sidecar *SidecarConfig `yaml:"sidecar,omitempty"`
-}
-
 // Layer is one discovered (or always-present, for Global) config source.
 type Layer struct {
 	Level  string         // "global" | "workspace" | "project"

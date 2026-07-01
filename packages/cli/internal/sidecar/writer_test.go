@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,89 +122,4 @@ func TestWriteSidecarAt_NeverProducesFlatLazyaiSidecarYamlFile(t *testing.T) {
 			require.True(t, os.IsNotExist(err), "flat sidecar file must never be produced")
 		})
 	}
-}
-
-func TestSaveWorkspaceConfig_WritesSingleSlotBackup(t *testing.T) {
-	_, _, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	firstConfig := &WorkspaceConfig{
-		Active: "first",
-		Workspaces: []WorkspaceEntry{
-			{Name: "workspace-a", Path: "/placeholder/a"},
-		},
-	}
-	secondConfig := &WorkspaceConfig{
-		Active: "second",
-		Workspaces: []WorkspaceEntry{
-			{Name: "workspace-b", Path: "/placeholder/b"},
-		},
-	}
-
-	require.NoError(t, SaveWorkspaceConfig(firstConfig))
-	require.NoError(t, SaveWorkspaceConfig(secondConfig))
-
-	path, err := getWorkspacesConfigPath()
-	require.NoError(t, err)
-
-	newData, err := os.ReadFile(path)
-	require.NoError(t, err)
-	backupData, err := os.ReadFile(path + ".bak")
-	require.NoError(t, err)
-
-	var newFile WorkspaceConfig
-	var backup WorkspaceConfig
-	require.NoError(t, yaml.Unmarshal(newData, &newFile))
-	require.NoError(t, yaml.Unmarshal(backupData, &backup))
-
-	assert.Equal(t, secondConfig, &newFile)
-	assert.Equal(t, firstConfig, &backup)
-}
-
-func TestUpdateWorkspaceConfig_PreservesConcurrentMutations(t *testing.T) {
-	_, _, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	require.NoError(t, SaveWorkspaceConfig(&WorkspaceConfig{}))
-
-	var wg sync.WaitGroup
-	errCh := make(chan error, 2)
-
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		errCh <- UpdateWorkspaceConfig(func(cfg *WorkspaceConfig) error {
-			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "a", Path: "/placeholder/a"})
-			return nil
-		})
-	}()
-	go func() {
-		defer wg.Done()
-		errCh <- UpdateWorkspaceConfig(func(cfg *WorkspaceConfig) error {
-			cfg.Workspaces = append(cfg.Workspaces, WorkspaceEntry{Name: "b", Path: "/placeholder/b"})
-			return nil
-		})
-	}()
-	wg.Wait()
-	close(errCh)
-
-	errCount := 0
-	for err := range errCh {
-		if err != nil {
-			errCount++
-		}
-	}
-	require.Zero(t, errCount)
-
-	cfg, err := LoadWorkspaceConfig()
-	require.NoError(t, err)
-
-	got := map[string]bool{}
-	for _, workspace := range cfg.Workspaces {
-		got[workspace.Name] = true
-	}
-
-	assert.Len(t, cfg.Workspaces, 2)
-	assert.True(t, got["a"])
-	assert.True(t, got["b"])
 }

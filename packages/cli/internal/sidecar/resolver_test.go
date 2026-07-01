@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 // setupTestEnv creates temporary directories and workspace config for testing.
@@ -35,20 +34,6 @@ func setupTestEnv(t *testing.T) (homeDir, projectRoot, globalDir string, cleanup
 	}
 
 	return homeDir, projectRoot, globalDir, cleanup
-}
-
-// writeWorkspaceConfig writes a workspace config to the global config dir.
-// Still called by remover_test.go (out of scope for this wave — the
-// registry/remover package survives until Phase 3), so it is kept even
-// though nothing in this file uses it anymore.
-func writeWorkspaceConfig(t *testing.T, cfg *WorkspaceConfig) {
-	t.Helper()
-	dir, err := getGlobalConfigDir()
-	require.NoError(t, err)
-	path := filepath.Join(dir, "workspaces.yaml")
-	data, err := yaml.Marshal(cfg)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0o644))
 }
 
 // writeGlobalSidecar writes the current $HOME's .lazyai/sidecar.yaml.

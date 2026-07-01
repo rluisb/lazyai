@@ -33,6 +33,7 @@
 | 027 | Production readiness hardening — release pipeline correctness, enforcing CI gates (smoke/integration/lint), backup-restore path-traversal fix, notify sanitization, `validate skills` honesty, setupscan scope correctness, and deferred snapshot/opencode coverage | ✅ Complete | `specs/027-production-readiness-hardening/` |
 | 028 | Fake projects testing plan and evidence collection | ✅ Complete | `specs/028-fake-projects-testing-plan/` |
 | 029 | LazyAI V2 — canonical `.ai/lazyai.json` manifest + `.ai/lock.json` driven compile pipeline (discover→parse→resolve→validate→plan→write), adapter capabilities model + docs-conformance fixtures, validation hardening (`validate --all` + secret scanner + path/symlink safety + doctor security report), migration/eject, multi-tool plugin bundles, local eval validation, and `.ai/` v1 schema freeze; Codex dropped (7 targets), binary stays `lazyai-cli` | ✅ Complete | `specs/029-lazyai-v2/` |
+| 579 | LazyAI config directory redesign — canonical `.lazyai/sidecar.yaml` at every scope, positional directory-position discovery replacing the central `~/.lazyai/workspaces.yaml` registry, and genuine field-level merge resolution (project > workspace > global > default); `sidecar attach/detach` and the entire `workspace` command group deleted (no positional equivalent for name-based registration) | ✅ Complete — issues #578/#579 both closed by this work | `specs/refactors/579-lazyai-config-directory/`, `specs/adrs/008-lazyai-config-directory-redesign.md` |
 
 ## Standards
 

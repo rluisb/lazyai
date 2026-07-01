@@ -27,7 +27,7 @@ var sidecarInitCmd = &cobra.Command{
 }
 
 var sidecarStatusCmd = &cobra.Command{
-	Use:   "status [--scope workspace|project|global]",
+	Use:   "status",
 	Short: "Show resolved sidecar paths for the current scope",
 	RunE:  runSidecarStatus,
 }
@@ -47,20 +47,18 @@ var sidecarDetachCmd = &cobra.Command{
 }
 
 var sidecarDoctorCmd = &cobra.Command{
-	Use:   "doctor [--scope workspace|project|global]",
+	Use:   "doctor",
 	Short: "Validate sidecar configuration and paths",
 	RunE:  runSidecarDoctor,
 }
 
 func init() {
-	sidecarInitCmd.Flags().String("scope", "", "Scope: workspace|project|global (default: workspace if active workspace exists, else project)")
+	sidecarInitCmd.Flags().String("scope", "", "Scope label: workspace|project|global (default: project) — workspace and project write identically, see docs")
 	sidecarInitCmd.Flags().String("path", "", "Sidecar root path (required)")
 	sidecarInitCmd.Flags().String("specs-dir", "", "Override specs directory name")
 	sidecarInitCmd.Flags().String("docs-dir", "", "Override docs directory name")
 	sidecarInitCmd.Flags().String("plans-dir", "", "Override plans directory name")
 	_ = sidecarInitCmd.MarkFlagRequired("path")
-
-	sidecarStatusCmd.Flags().String("scope", "", "Scope: workspace|project|global (default: auto)")
 
 	sidecarAttachCmd.Flags().String("scope", "", "Scope: workspace|project (default: workspace)")
 	sidecarAttachCmd.Flags().String("path", "", "Sidecar root path (required)")
@@ -71,8 +69,6 @@ func init() {
 
 	sidecarDetachCmd.Flags().String("scope", "", "Scope: workspace|project (default: workspace)")
 	sidecarDetachCmd.Flags().Bool("force", false, "Skip confirmation prompt")
-
-	sidecarDoctorCmd.Flags().String("scope", "", "Scope: workspace|project|global (default: auto)")
 
 	sidecarCmd.AddCommand(sidecarInitCmd)
 	sidecarCmd.AddCommand(sidecarStatusCmd)
@@ -88,7 +84,20 @@ func init() {
 // ---------------------------------------------------------------------------
 
 func runSidecarInit(cmd *cobra.Command, args []string) error {
-	scope, err := determineScope(cmd, true)
+	scope := sidecarpkg.ScopeProject
+	if scopeFlag, _ := cmd.Flags().GetString("scope"); scopeFlag != "" {
+		parsed, err := parseScope(scopeFlag)
+		if err != nil {
+			return err
+		}
+		scope = parsed
+	}
+
+	cwd, err := getProjectRoot()
+	if err != nil {
+		return fmt.Errorf("getting project root: %w", err)
+	}
+	dir, err := sidecarpkg.ScopeRoot(scope, cwd)
 	if err != nil {
 		return err
 	}
@@ -114,42 +123,14 @@ func runSidecarInit(cmd *cobra.Command, args []string) error {
 		PlansDir: defaultDir(cmd, "plans-dir", "plans"),
 	}
 
-	switch scope {
-	case sidecarpkg.ScopeWorkspace:
-		var workspaceName string
-		err = sidecarpkg.UpdateWorkspaceConfig(func(wsCfg *sidecarpkg.WorkspaceConfig) error {
-			if wsCfg.Active == "" {
-				return fmt.Errorf("no active workspace set; use 'lazyai-cli workspace switch' first")
-			}
-			w := findWorkspace(wsCfg, wsCfg.Active)
-			if w == nil {
-				return fmt.Errorf("active workspace '%s' not found", wsCfg.Active)
-			}
-			w.Sidecar = cfg
-			workspaceName = w.Name
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		fmt.Printf("✅ Sidecar initialized for workspace '%s'\n", workspaceName)
-	case sidecarpkg.ScopeProject:
-		projectRoot, err := getProjectRoot()
-		if err != nil {
-			return fmt.Errorf("getting project root: %w", err)
-		}
-		if _, err := os.Stat(projectRoot); err != nil {
-			return fmt.Errorf("project root not accessible: %w", err)
-		}
-		if err := sidecarpkg.WriteProjectSidecar(projectRoot, cfg); err != nil {
-			return err
-		}
-		fmt.Printf("✅ Sidecar initialized for project: %s\n", projectRoot)
-	case sidecarpkg.ScopeGlobal:
-		if err := sidecarpkg.WriteGlobalSidecar(cfg); err != nil {
-			return err
-		}
-		fmt.Printf("✅ Global sidecar initialized\n")
+	if err := sidecarpkg.WriteSidecarAt(dir, cfg); err != nil {
+		return err
+	}
+
+	if scope == sidecarpkg.ScopeGlobal {
+		fmt.Printf("✅ Global sidecar initialized: %s\n", dir)
+	} else {
+		fmt.Printf("✅ Sidecar initialized (%s scope): %s\n", scope.String(), dir)
 	}
 
 	fmt.Printf("   Path:      %s\n", cfg.Path)
@@ -165,39 +146,58 @@ func runSidecarInit(cmd *cobra.Command, args []string) error {
 }
 
 func runSidecarStatus(cmd *cobra.Command, args []string) error {
-	scope, err := determineScope(cmd, false)
-	if err != nil {
-		return err
-	}
-
-	projectRoot, err := getProjectRoot()
+	cwd, err := getProjectRoot()
 	if err != nil {
 		return fmt.Errorf("getting project root: %w", err)
 	}
-	resolved, err := sidecarpkg.Resolve(scope, projectRoot)
+	layers, err := sidecarpkg.DiscoverLayers(cwd)
+	if err != nil {
+		return err
+	}
+	resolved, err := sidecarpkg.Resolve(cwd)
 	if err != nil {
 		return err
 	}
 
-	// Table format: Scope, Config Level, Docs Dir, Specs Dir, Plans Dir
-	fmt.Println("Sidecar Status")
-	fmt.Println(strings.Repeat("-", 90))
-	fmt.Printf("%-12s %-14s %-22s %-22s %-22s\n", "Scope", "Config Level", "Docs Dir", "Specs Dir", "Plans Dir")
-	fmt.Println(strings.Repeat("-", 90))
-	fmt.Printf("%-12s %-14s %-22s %-22s %-22s\n",
-		scope.String(),
-		resolved.ConfigLevel,
-		truncate(resolved.DocsDir, 20),
-		truncate(resolved.SpecsDir, 20),
-		truncate(resolved.PlansDir, 20),
-	)
-	fmt.Println(strings.Repeat("-", 90))
+	fmt.Printf("Sidecar Status (cwd: %s)\n\n", cwd)
+	fmt.Println("Layers discovered:")
+	printLayerLine("global", layers.Global)
+	if layers.Workspace != nil {
+		printLayerLine("workspace", *layers.Workspace)
+	} else {
+		fmt.Printf("  %-10s %-45s (not found)\n", "workspace", "")
+	}
+	if layers.Project != nil {
+		printLayerLine("project", *layers.Project)
+	} else {
+		fmt.Printf("  %-10s %-45s (not found)\n", "project", "")
+	}
 
-	if resolved.ConfigLevel == "default" {
+	fmt.Println()
+	fmt.Println("Resolved paths:")
+	fmt.Printf("  %-10s %-25s (from: %s)\n", "docs_dir", resolved.DocsDir, resolved.Provenance["docs_dir"])
+	fmt.Printf("  %-10s %-25s (from: %s)\n", "specs_dir", resolved.SpecsDir, resolved.Provenance["specs_dir"])
+	fmt.Printf("  %-10s %-25s (from: %s)\n", "plans_dir", resolved.PlansDir, resolved.Provenance["plans_dir"])
+
+	if resolved.IsAllDefault() {
 		fmt.Println()
-		fmt.Println("  (No sidecar configured — using scope default paths)")
+		fmt.Println("(No .lazyai/ configuration found — using built-in defaults. Run 'sidecar init' to configure.)")
 	}
 	return nil
+}
+
+// printLayerLine prints one discovered-layer row for `sidecar status`,
+// showing the layer's sidecar.yaml path and whether it was actually found.
+func printLayerLine(label string, layer sidecarpkg.Layer) {
+	sidecarPath := filepath.Join(layer.Root, ".lazyai", "sidecar.yaml")
+	status := "not found"
+	if layer.Config != nil {
+		status = "found"
+	}
+	if label == "global" && layer.Config == nil {
+		status = "not found — built-in defaults"
+	}
+	fmt.Printf("  %-10s %-45s (%s)\n", label, sidecarPath, status)
 }
 func runSidecarAttach(cmd *cobra.Command, args []string) error {
 	scope, err := determineScope(cmd, true)
@@ -284,7 +284,7 @@ func runSidecarAttach(cmd *cobra.Command, args []string) error {
 		if !projectInfo.IsDir() {
 			return fmt.Errorf("project path is not a directory: %s", absProject)
 		}
-		if err := sidecarpkg.WriteProjectSidecar(absProject, cfg); err != nil {
+		if err := sidecarpkg.WriteSidecarAt(absProject, cfg); err != nil {
 			return err
 		}
 		fmt.Printf("✅ Sidecar attached to project: %s\n", absProject)
@@ -404,7 +404,7 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("✅ Sidecar detached from workspace '%s'\n", workspaceName)
 	case sidecarpkg.ScopeProject:
-		cfg, err := sidecarpkg.LoadProjectSidecar(absProject)
+		cfg, err := sidecarpkg.LoadSidecarAt(absProject)
 		if err != nil {
 			return err
 		}
@@ -439,28 +439,27 @@ func runSidecarDetach(cmd *cobra.Command, args []string) error {
 }
 
 func runSidecarDoctor(cmd *cobra.Command, args []string) error {
-	scope, err := determineScope(cmd, false)
-	if err != nil {
-		return err
-	}
-
-	projectRoot, err := getProjectRoot()
+	cwd, err := getProjectRoot()
 	if err != nil {
 		return fmt.Errorf("getting project root: %w", err)
 	}
-	issues, err := sidecarpkg.Doctor(scope, projectRoot)
+	issues, err := sidecarpkg.Doctor(cwd)
 	if err != nil {
 		return err
 	}
 
 	if len(issues) == 0 {
-		fmt.Printf("✅ Sidecar doctor: all paths valid for %s scope.\n", scope.String())
+		fmt.Println("✅ Sidecar doctor: all discovered layers valid.")
 		return nil
 	}
 
 	hasErrors := false
 	for _, issue := range issues {
-		fmt.Printf("%s: %s\n", issue.Severity, issue.Message)
+		if issue.Level == "" {
+			fmt.Printf("[general] %s: %s\n", issue.Severity, issue.Message)
+		} else {
+			fmt.Printf("[%s] %s: %s\n", issue.Level, issue.Severity, issue.Message)
+		}
 		if issue.Severity == sidecarpkg.IssueSeverityError {
 			hasErrors = true
 		}

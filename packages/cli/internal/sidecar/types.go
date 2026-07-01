@@ -79,3 +79,19 @@ type WorkspaceEntry struct {
 	Path    string         `yaml:"path"`
 	Sidecar *SidecarConfig `yaml:"sidecar,omitempty"`
 }
+
+// Layer is one discovered (or always-present, for Global) config source.
+type Layer struct {
+	Level  string         // "global" | "workspace" | "project"
+	Root   string         // scope root: home dir (global), discovered ancestor dir (workspace), cwd (project)
+	Config *SidecarConfig // never nil when the Layer itself is non-nil/present (Global.Config may be nil if absent)
+}
+
+// Layers is the result of one discovery pass from a given cwd.
+// Global is always populated (Config may be nil if ~/.lazyai/sidecar.yaml is absent).
+// Workspace and Project are nil when no layer was found at that level.
+type Layers struct {
+	Global    Layer
+	Workspace *Layer
+	Project   *Layer
+}

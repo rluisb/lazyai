@@ -1,7 +1,7 @@
 # ADR-008: LazyAI Config Directory Redesign — Positional Discovery, Field-Level Merge, Registry Deletion
 
 **Date:** 2026-07-01
-**Status:** Proposed — awaiting human approval to proceed to Implementation (Plan phase gate)
+**Status:** Accepted — human approved 2026-07-01, proceeding to Implementation
 **Deciders:** LazyAI maintainers
 **Constitution:** [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md)
 

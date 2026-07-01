@@ -121,7 +121,7 @@ lazyai-cli create agent release-reviewer --description "Reviews release readines
 
 ### Manage Sidecars
 
-Attach optional docs/specs/plans directories to workspace, project, or global scope.
+Point optional docs/specs/plans directories at workspace, project, or global scope. `--scope` defaults to `project` when omitted; a workspace-scope config is created by running `sidecar init --scope workspace` from the shared ancestor directory — there is no separate registration step and no `sidecar attach` command.
 
 ```bash
 lazyai-cli sidecar init --scope project --path ../shared-docs
@@ -228,33 +228,6 @@ Checks:
 - Verify required YAML frontmatter fields (`name`, `description`)
 - Verify quick reference sections are present and non-empty where required
 - Validate referenced scripts for skills with command actions are resolvable
-## Workspace
-
-Manage multi-project workspaces.
-
-### List Workspaces
-
-```bash
-lazyai-cli workspace list
-```
-
-### Add a Workspace
-
-```bash
-lazyai-cli workspace add /path/to/project --name my-project
-```
-
-### Switch Active Workspace
-
-```bash
-lazyai-cli workspace switch my-project
-```
-
-### Show Workspace Status
-
-```bash
-lazyai-cli workspace status
-```
 
 ## Runtime migration note
 

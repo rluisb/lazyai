@@ -1,7 +1,7 @@
 # SPEC: LazyAI Internal Sidecar
 
 **Version:** 1.1.0
-**Status:** Approved
+**Status:** Superseded by ADR-008 (see specs/adrs/008-lazyai-config-directory-redesign.md)
 **Author:** turbo-crank (Fortnite multi-agent system)
 **Date:** 2026-06-17
 

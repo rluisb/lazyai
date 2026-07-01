@@ -117,7 +117,7 @@ The table below covers every active command category and command family in this 
 
 Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are removed from active runtime and listed only in migration docs.
 
-### setup-core (21 commands)
+### setup-core (20 commands)
 
 | Command | Description |
 |---|---|
@@ -136,12 +136,11 @@ Legacy `orchestrator`, `eval`, `task`, and `workflow` command surfaces are remov
 | `migrate` | Migrate from prior setup format/version. |
 | `server` | Manage MCP entries (`server list/add/remove/doctor`). |
 | `setup` | Inspect setup inventory and planning output. |
-| `sidecar` | Manage optional sidecar docs/specs/plans (`init`, `status`, `attach`, `detach`, `doctor`). |
+| `sidecar` | Manage optional sidecar docs/specs/plans (`init`, `status`, `doctor`). |
 | `status` | Show current setup state. |
 | `update` | Update managed files from current embedded library versions. |
 | `update-self` | Update `lazyai-cli` to latest GitHub Release. |
 | `validate` | Validate setup artifacts (`validate agents`, `validate skills`, `validate --all`, `validate evals`). |
-| `workspace` | Manage multi-project workspaces (`add`, `list`, `switch`, `status`). |
 
 ### ops-runtime-extra (12 commands)
 

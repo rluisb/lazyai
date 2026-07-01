@@ -99,45 +99,37 @@ lazyai-cli init \
 
 ## Sidecar and scope behavior
 
-LazyAI can optionally store docs, specs, and plans in a **sidecar** directory instead of the scope root. Sidecar configuration is scope-aware and follows a deterministic resolution chain.
+LazyAI can optionally store docs, specs, and plans in a **sidecar** directory instead of the scope root. Sidecar configuration is discovered positionally — by directory position, not by name or registration — and resolved with a field-level merge across up to three layers.
 
-### Resolution priority
+### Layer discovery (walk-up)
 
-When resolving docs/specs/plans directories, LazyAI checks sidecar configuration in this order:
+LazyAI looks for `.lazyai/sidecar.yaml` files at up to three positions relative to the current working directory (`cwd`):
 
-1. **Workspace sidecar** — highest priority, configured in the active workspace entry of `~/.lazyai/workspaces.yaml`
-2. **Project sidecar** — configured in `.lazyai-sidecar.yaml` at the project root
-3. **Global sidecar** — configured in `~/.lazyai/sidecar.yaml`
-4. **Scope default** — if no sidecar is configured at any level:
-   - `project` scope → project root
-   - `workspace` scope → active workspace path
-   - `global` scope → `~/.lazyai/`
+1. **Project** — `cwd` itself. If `cwd/.lazyai/sidecar.yaml` exists, that's the project layer.
+2. **Workspace** — the nearest ancestor directory *above* `cwd` (never `cwd` itself) that has a `.lazyai/sidecar.yaml`. LazyAI walks upward one directory at a time, stopping at the first hit. The walk never enters `$HOME` (it stops just before) and never goes past the filesystem root.
+3. **Global** — `~/.lazyai/sidecar.yaml`. Always present as a layer (built-in defaults apply if the file itself is absent).
 
-### Workspace as the primary use case
+There is no name-based registration and no "active workspace" pointer — whichever ancestor directory happens to contain a `.lazyai/sidecar.yaml` *is* the workspace layer for anything run from below it.
 
-The **workspace scope** is the recommended way to use sidecars. In a multi-repo team, you typically have one planning repo that acts as the workspace root. By attaching a sidecar to that workspace, all projects in the workspace share the same docs/specs/plans directory by default.
+### Field-level merge
 
-Example workspace sidecar block in `~/.lazyai/workspaces.yaml`:
+Resolution is a per-field merge, not a single winning layer. For each of `docs_dir`, `specs_dir`, and `plans_dir` independently, LazyAI takes the first non-empty value found in this precedence order:
 
-```yaml
-workspaces:
-  - name: acme-workspace
-    path: /Users/me/projects/acme-planning
-    sidecar:
-      path: /Users/me/kb/acme-docs
-      specs_dir: specs
-      docs_dir: docs
-      plans_dir: plans
-active: acme-workspace
-```
+**project > workspace > global > built-in default**
+
+This means a project-level config that sets only `docs_dir` still inherits `specs_dir`/`plans_dir` from the workspace or global layer (whichever set them) rather than losing them. `sidecar status` reports which layer supplied each resolved field.
+
+### Workspace as an ancestor directory
+
+A "workspace" is no longer something you attach or activate by name — it's simply whichever ancestor directory above your project has a `.lazyai/sidecar.yaml`. In a multi-repo team, you typically run `sidecar init --scope workspace` once from the shared planning/parent directory; every project underneath it then automatically picks up its settings on the next resolution, with no separate registration step. Moving or renaming that ancestor directory has no special effect beyond the normal filesystem walk finding (or not finding) it again.
 
 ### Optional fallback behavior
 
-Sidecar is **always optional**. If no sidecar is configured at any level, LazyAI falls back to the scope default with no behavior change from today. No sidecar = no errors, no warnings, no migration needed.
+Sidecar is **always optional**. If no `.lazyai/sidecar.yaml` is found at any layer, LazyAI falls back to the built-in defaults with no behavior change. No sidecar = no errors, no warnings, no migration needed.
 
 ### Explicit exclusions
 
 - **No Skeeper or external provider integration.** The sidecar is purely local. There is no `skeeper` field, no provider abstraction, and no remote sync.
 - **No content migration.** `sidecar init` does not move existing docs/specs/plans.
-- **No multi-sidecar.** One sidecar per scope level.
-- **No auto-discovery.** Sidecars are explicitly configured, not detected from parent directories or environment variables.
+- **No multi-sidecar.** One `.lazyai/sidecar.yaml` per discovered layer.
+- **Bounded discovery only.** The walk-up looks for `.lazyai/sidecar.yaml` files only, stopping before `$HOME` or at the filesystem root — it does not read environment variables, and it does not keep climbing past the first workspace hit to look for a more distant layer.

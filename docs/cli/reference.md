@@ -10,7 +10,7 @@ These are the top-level commands registered by source under `packages/cli/cmd/`:
 
 | Category | Commands |
 |---|---|
-| `setup-core` | `add`, `build-plugin`, `compile`, `completion`, `config`, `create`, `doctor`, `eject`, `import`, `info`, `init`, `list`, `migrate`, `server`, `setup`, `sidecar`, `status`, `update`, `update-self`, `validate`, `workspace` |
+| `setup-core` | `add`, `build-plugin`, `compile`, `completion`, `config`, `create`, `doctor`, `eject`, `import`, `info`, `init`, `list`, `migrate`, `server`, `setup`, `sidecar`, `status`, `update`, `update-self`, `validate` |
 | `ops-runtime-extra` | `auth`, `backup`, `cost`, `git`, `ledger`, `memory`, `message`, `metrics`, `notify`, `restore-runtime-db`, `secret`, `session` |
 | `dev-harness` | `models` |
 | `retired/archived` | `completions` (hidden deprecated alias for `completion`) |
@@ -56,7 +56,6 @@ Removed command surfaces such as `task`, `workflow`, `orchestration`, `mcp-setup
 - [Message](#message)
 - [Metrics](#metrics)
 - [Memory](#memory)
-- [Workspace](#workspace)
 - [Completion](#completion)
 - [Git](#git)
 - [Backup](#backup)
@@ -1128,65 +1127,6 @@ lazyai-cli memory search database
 
 ---
 
-
-## Workspace
-
-
-Manage multi-project workspaces.
-
-### `workspace list`
-
-List registered workspaces.
-
-**Example:**
-```bash
-lazyai-cli workspace list
-```
-
----
-
-### `workspace add [path]`
-
-Register a project path as a workspace.
-
-**Arguments:**
-- `path` (required): Path to the project directory
-
-**Flags:**
-- `--name`: Override workspace name (default: directory basename)
-
-**Example:**
-```bash
-lazyai-cli workspace add /path/to/project --name my-project
-```
-
----
-
-### `workspace switch [name]`
-
-Set the active workspace by name.
-
-**Arguments:**
-- `name` (required): Workspace name
-
-**Example:**
-```bash
-lazyai-cli workspace switch my-project
-```
-
----
-
-### `workspace status`
-
-Show active workspace details.
-
-**Example:**
-```bash
-lazyai-cli workspace status
-```
-
----
-
 ## Completion
 
 ### `completion [shell]`
@@ -1427,15 +1367,15 @@ lazyai-cli notify test
 
 ## Sidecar
 
-Manage optional sidecar directories for docs, specs, and plans.
+Manage optional sidecar directories for docs, specs, and plans. Sidecar configuration is discovered positionally — LazyAI walks up from the current directory to find `.lazyai/sidecar.yaml` layers and merges them field-by-field. See [Scopes → Sidecar and scope behavior](../concepts/scopes.md#sidecar-and-scope-behavior) for the full discovery/merge model. Remaining surface: `init`, `status`, `doctor` — there is no `attach`/`detach` and no separate `workspace` command; a "workspace" layer is just an ancestor directory's `.lazyai/sidecar.yaml`, created the same way as a project layer.
 
 ### `sidecar init`
 
-Initialize a sidecar configuration at the specified scope.
+Initialize a sidecar config at the given scope. Writes `<target>/.lazyai/sidecar.yaml`.
 
 **Flags:**
-- `--scope`: Scope level (`workspace`, `project`, `global`). Default: `workspace`.
-- `--path`: Sidecar root path (required).
+- `--scope`: Scope label (`workspace`, `project`, `global`). Default: `project`. `workspace` and `project` write to the identical path (`cwd/.lazyai/sidecar.yaml`) — the value is purely a label for the confirmation message and ledger entry, not a different write target; see Scopes doc. `--scope global` writes to `~/.lazyai/sidecar.yaml`.
+- `--path`: Sidecar root path (required). This is the sidecar's *content root* (where docs/specs/plans actually live) — independent of where `sidecar.yaml` itself is written.
 - `--specs-dir`: Override specs directory name. Default: `specs`.
 - `--docs-dir`: Override docs directory name. Default: `docs`.
 - `--plans-dir`: Override plans directory name. Default: `plans`.
@@ -1443,11 +1383,12 @@ Initialize a sidecar configuration at the specified scope.
 **Examples:**
 
 ```bash
-# Workspace sidecar (recommended)
-lazyai-cli sidecar init --scope workspace --path /Users/me/kb/my-workspace
+# Project-scope sidecar (default when --scope is omitted)
+lazyai-cli sidecar init --path ../shared-docs
 
-# Project sidecar
-lazyai-cli sidecar init --scope project --path ../shared-docs
+# Workspace-scope sidecar — run from the shared ancestor directory;
+# every project underneath it picks this up automatically
+lazyai-cli sidecar init --scope workspace --path /Users/me/kb/my-workspace
 
 # Global sidecar
 lazyai-cli sidecar init --scope global --path ~/kb
@@ -1455,7 +1396,7 @@ lazyai-cli sidecar init --scope global --path ~/kb
 
 ### `sidecar status`
 
-Show resolved docs/specs/plans paths for the current scope, including which config level provided each value.
+Show every discovered `.lazyai/sidecar.yaml` layer (global, workspace, project) plus the resolved docs/specs/plans paths, with per-field provenance showing which layer supplied each value.
 
 **Flags:** none
 
@@ -1463,50 +1404,26 @@ Show resolved docs/specs/plans paths for the current scope, including which conf
 
 ```bash
 lazyai-cli sidecar status
-# → Scope: workspace | Config level: workspace
-# → Docs:  /Users/me/kb/my-workspace/docs
-# → Specs: /Users/me/kb/my-workspace/specs
-# → Plans: /Users/me/kb/my-workspace/plans
+# → Sidecar Status (cwd: /path/to/project)
+# →
+# → Layers discovered:
+# →   global     /Users/me/.lazyai/sidecar.yaml            (found)
+# →   workspace  /path/to/.lazyai/sidecar.yaml             (not found)
+# →   project    /path/to/project/.lazyai/sidecar.yaml     (found)
+# →
+# → Resolved paths:
+# →   docs_dir   /path/to/project/docs    (from: project)
+# →   specs_dir  /path/to/project/specs   (from: global)
+# →   plans_dir  /path/to/project/plans   (from: default)
 ```
 
-### `sidecar attach`
-
-Attach a sidecar to the active workspace or project. Requires an existing config target.
-
-**Flags:**
-- `--scope`: Scope level (`workspace`, `project`). Default: `workspace`.
-- `--path`: Sidecar root path (required).
-- `--specs-dir`: Override specs directory name.
-- `--docs-dir`: Override docs directory name.
-- `--plans-dir`: Override plans directory name.
-
-**Example:**
-
-```bash
-lazyai-cli sidecar attach --path /tmp/kb
-```
-
-### `sidecar detach`
-
-Remove the sidecar configuration from the active workspace or project.
-
-**Flags:**
-- `--scope`: Scope level (`workspace`, `project`). Default: `workspace`.
-- `--force`: Skip confirmation prompt.
-
-**Example:**
-
-```bash
-lazyai-cli sidecar detach
-# → Remove workspace sidecar? [y/N]
-```
+If no layer is found anywhere, `sidecar status` additionally prints: `(No .lazyai/ configuration found — using built-in defaults. Run 'sidecar init' to configure.)`
 
 ### `sidecar doctor`
 
-Validate all configured sidecar paths exist and are writable. Reports issues with exit codes.
+Validate every discovered sidecar layer's path exists and is writable, and flag a legacy `~/.lazyai/workspaces.yaml` if still present. Reports issues with exit codes.
 
-**Flags:**
-- `--scope`: Scope to validate (`workspace`, `project`, `global`). Default: `workspace`.
+**Flags:** none
 
 **Exit codes:**
 - `0`: All paths valid, or warnings only (e.g., missing path that will be created on first write). WARN lines are printed but the command succeeds.
@@ -1516,10 +1433,15 @@ Validate all configured sidecar paths exist and are writable. Reports issues wit
 
 ```bash
 lazyai-cli sidecar doctor
-# → ✅ Sidecar path exists and is writable
-# → ✅ Docs dir: /Users/me/kb/docs
-# → ✅ Specs dir: /Users/me/kb/specs
-# → ✅ Plans dir: /Users/me/kb/plans
+# → ✅ Sidecar doctor: all discovered layers valid.
+```
+
+Each reported issue is prefixed with the layer it came from — `[global]`, `[workspace]`, or `[project]` — or `[general]` for issues not tied to a single layer (e.g. the legacy-registry warning):
+
+```bash
+lazyai-cli sidecar doctor
+# → [project] ERROR: sidecar path does not exist: /path/to/project/kb
+# → [general] WARN: found legacy ~/.lazyai/workspaces.yaml (workspace registry removed in #579) — re-create any workspace/project sidecars you still need with 'sidecar init' from the intended directory
 ```
 
 ## Environment Variables

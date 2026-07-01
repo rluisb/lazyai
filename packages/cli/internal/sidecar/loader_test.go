@@ -10,149 +10,84 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestLoadWorkspaceSidecar_MissingFile(t *testing.T) {
-	_, _, _, cleanup := setupTestEnv(t)
-	defer cleanup()
+// TestLoadSidecarAt_MissingFile replaces TestLoadProjectSidecar_MissingFile
+// and TestLoadGlobalSidecar_MissingFile: LoadSidecarAt is a single unified
+// function regardless of scope root, so both scenarios are subtests of one
+// table.
+func TestLoadSidecarAt_MissingFile(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{name: "project-style root"},
+		{name: "global-style root"},
+	}
 
-	// No workspaces.yaml written.
-	cfg, err := LoadWorkspaceSidecar()
-	require.NoError(t, err)
-	assert.Nil(t, cfg)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scopeRoot := t.TempDir()
+
+			cfg, err := LoadSidecarAt(scopeRoot)
+			require.NoError(t, err)
+			assert.Nil(t, cfg)
+		})
+	}
 }
 
-func TestLoadWorkspaceSidecar_NoSidecarBlock(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
+// TestLoadSidecarAt_Valid replaces TestLoadProjectSidecar_Valid and
+// TestLoadGlobalSidecar_Valid.
+func TestLoadSidecarAt_Valid(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{name: "project-style root"},
+		{name: "global-style root"},
+	}
 
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-			},
-		},
-		Active: "my-project",
-	})
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scopeRoot := t.TempDir()
+			cfg := &SidecarConfig{
+				Path:     "../kb",
+				SpecsDir: "specs",
+				DocsDir:  "docs",
+				PlansDir: "plans",
+			}
+			require.NoError(t, WriteSidecarAt(scopeRoot, cfg))
 
-	cfg, err := LoadWorkspaceSidecar()
-	require.NoError(t, err)
-	assert.Nil(t, cfg)
+			got, err := LoadSidecarAt(scopeRoot)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, "../kb", got.Path)
+			assert.Equal(t, "specs", got.SpecsDir)
+			assert.Equal(t, "docs", got.DocsDir)
+			assert.Equal(t, "plans", got.PlansDir)
+		})
+	}
 }
 
-func TestLoadWorkspaceSidecar_WithSidecar(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
+// TestLoadSidecarAt_MalformedYAML replaces TestLoadProjectSidecar_MalformedYAML
+// and TestLoadGlobalSidecar_MalformedYAML.
+func TestLoadSidecarAt_MalformedYAML(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{name: "project-style root"},
+		{name: "global-style root"},
+	}
 
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-				Sidecar: &SidecarConfig{
-					Path: "/placeholder/kb",
-				},
-			},
-		},
-		Active: "my-project",
-	})
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scopeRoot := t.TempDir()
+			lazyaiDir := filepath.Join(scopeRoot, ".lazyai")
+			require.NoError(t, os.MkdirAll(lazyaiDir, 0o755))
+			path := filepath.Join(lazyaiDir, "sidecar.yaml")
+			require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
 
-	cfg, err := LoadWorkspaceSidecar()
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-	assert.Equal(t, "/placeholder/kb", cfg.Path)
-}
-
-func TestLoadWorkspaceSidecar_NoActiveWorkspace(t *testing.T) {
-	_, _, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{},
-		Active:     "",
-	})
-
-	cfg, err := LoadWorkspaceSidecar()
-	require.NoError(t, err)
-	assert.Nil(t, cfg)
-}
-
-func TestLoadProjectSidecar_MissingFile(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	cfg, err := LoadProjectSidecar(projectRoot)
-	require.NoError(t, err)
-	assert.Nil(t, cfg)
-}
-
-func TestLoadProjectSidecar_Valid(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:     "../kb",
-		SpecsDir: "specs",
-		DocsDir:  "docs",
-		PlansDir: "plans",
-	})
-
-	cfg, err := LoadProjectSidecar(projectRoot)
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-	assert.Equal(t, "../kb", cfg.Path)
-	assert.Equal(t, "specs", cfg.SpecsDir)
-	assert.Equal(t, "docs", cfg.DocsDir)
-	assert.Equal(t, "plans", cfg.PlansDir)
-}
-
-func TestLoadProjectSidecar_MalformedYAML(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
-
-	_, err := LoadProjectSidecar(projectRoot)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "parsing project sidecar")
-}
-
-func TestLoadGlobalSidecar_MissingFile(t *testing.T) {
-	_, _, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	cfg, err := LoadGlobalSidecar()
-	require.NoError(t, err)
-	assert.Nil(t, cfg)
-}
-
-func TestLoadGlobalSidecar_Valid(t *testing.T) {
-	_, _, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     filepath.Join(globalDir, "kb"),
-		SpecsDir: "specs",
-		DocsDir:  "docs",
-		PlansDir: "plans",
-	})
-
-	cfg, err := LoadGlobalSidecar()
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-	assert.Equal(t, filepath.Join(globalDir, "kb"), cfg.Path)
-}
-
-func TestLoadGlobalSidecar_MalformedYAML(t *testing.T) {
-	_, _, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	path := filepath.Join(globalDir, "sidecar.yaml")
-	require.NoError(t, os.WriteFile(path, []byte("not: valid: yaml: ["), 0o644))
-
-	_, err := LoadGlobalSidecar()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "parsing global sidecar")
+			_, err := LoadSidecarAt(scopeRoot)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "parsing sidecar at")
+		})
+	}
 }
 
 func TestLoadWorkspaceConfig_MalformedYAML(t *testing.T) {

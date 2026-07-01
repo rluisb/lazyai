@@ -1,35 +1,9 @@
 package sidecar
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
 )
-
-// loadSidecarAtProbe is a Phase 1 stand-in for the Phase 2 LoadSidecarAt
-// primitive (spec.md §3.2), which does not exist yet. It implements the
-// identical contract LoadSidecarAt will carry: returns (nil, nil) when
-// <scopeRoot>/.lazyai/sidecar.yaml does not exist as a file, and only
-// returns a non-nil error on a real I/O/parse failure. DiscoverLayers is
-// written to call this helper exclusively so that swapping it for the real
-// LoadSidecarAt in Phase 2 is a zero-behavior-change, single-call-site edit.
-func loadSidecarAtProbe(scopeRoot string) (*SidecarConfig, error) {
-	path := filepath.Join(scopeRoot, ".lazyai", "sidecar.yaml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("reading sidecar at %s: %w", scopeRoot, err)
-	}
-	var file ProjectSidecarConfig
-	if err := yaml.Unmarshal(data, &file); err != nil {
-		return nil, fmt.Errorf("parsing sidecar at %s: %w", scopeRoot, err)
-	}
-	return file.Sidecar, nil
-}
 
 // evalSymlinksOrRaw resolves path via filepath.EvalSymlinks, falling back to
 // the raw (unresolved) path on any error (e.g. a dangling symlink or a
@@ -65,7 +39,7 @@ func DiscoverLayers(cwd string) (*Layers, error) {
 	globalRoot := home // "" if homeErr != nil
 	var globalConfig *SidecarConfig
 	if homeErr == nil {
-		cfg, err := loadSidecarAtProbe(globalRoot)
+		cfg, err := LoadSidecarAt(globalRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +47,7 @@ func DiscoverLayers(cwd string) (*Layers, error) {
 	}
 
 	// --- Project layer: cwd itself, checked first, independent of the walk ---
-	projectConfig, err := loadSidecarAtProbe(cwd)
+	projectConfig, err := LoadSidecarAt(cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +70,7 @@ func DiscoverLayers(cwd string) (*Layers, error) {
 			break
 		}
 
-		cfg, err := loadSidecarAtProbe(current)
+		cfg, err := LoadSidecarAt(current)
 		if err != nil {
 			return nil, err
 		}

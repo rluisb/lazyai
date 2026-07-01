@@ -47,7 +47,7 @@ func writeSidecarAtDir(t *testing.T, dir string, cfg *SidecarConfig) {
 	t.Helper()
 	lazyaiDir := filepath.Join(dir, ".lazyai")
 	require.NoError(t, os.MkdirAll(lazyaiDir, 0o755))
-	data, err := yaml.Marshal(ProjectSidecarConfig{Sidecar: cfg})
+	data, err := yaml.Marshal(SidecarFile{Sidecar: cfg})
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(lazyaiDir, "sidecar.yaml"), data, 0o644))
 }

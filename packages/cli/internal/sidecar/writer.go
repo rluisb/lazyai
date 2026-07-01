@@ -89,47 +89,23 @@ func saveWorkspaceConfigToPath(path string, cfg *WorkspaceConfig) error {
 	return nil
 }
 
-// WriteProjectSidecar writes .lazyai-sidecar.yaml in projectRoot.
-func WriteProjectSidecar(projectRoot string, cfg *SidecarConfig) error {
-	info, err := os.Stat(projectRoot)
-	if err != nil {
-		return fmt.Errorf("project root not accessible: %w", err)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("project root is not a directory: %s", projectRoot)
-	}
-
-	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
-	data, err := yaml.Marshal(ProjectSidecarConfig{Sidecar: cfg})
-	if err != nil {
-		return fmt.Errorf("marshaling project sidecar: %w", err)
+// WriteSidecarAt writes <scopeRoot>/.lazyai/sidecar.yaml, creating
+// <scopeRoot>/.lazyai/ (0o755) if needed, via the existing
+// files.AtomicWriteFile (temp+fsync+rename+single-slot .bak).
+func WriteSidecarAt(scopeRoot string, cfg *SidecarConfig) error {
+	dir := filepath.Join(scopeRoot, ".lazyai")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("creating sidecar directory: %w", err)
 	}
 
-	if _, err := files.AtomicWriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("writing project sidecar: %w", err)
-	}
-	return nil
-}
-
-// WriteGlobalSidecar writes ~/.lazyai/sidecar.yaml.
-func WriteGlobalSidecar(cfg *SidecarConfig) error {
-	dir, err := getGlobalConfigDir()
-	if err != nil {
-		return err
-	}
 	path := filepath.Join(dir, "sidecar.yaml")
-
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating global config directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(GlobalSidecarConfig{Sidecar: cfg})
+	data, err := yaml.Marshal(SidecarFile{Sidecar: cfg})
 	if err != nil {
-		return fmt.Errorf("marshaling global sidecar: %w", err)
+		return fmt.Errorf("marshaling sidecar: %w", err)
 	}
 
 	if _, err := files.AtomicWriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("writing global sidecar: %w", err)
+		return fmt.Errorf("writing sidecar: %w", err)
 	}
 	return nil
 }

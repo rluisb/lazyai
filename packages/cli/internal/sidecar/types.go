@@ -12,10 +12,21 @@ type SidecarConfig struct {
 
 // ResolvedPaths holds the final resolved directory paths.
 type ResolvedPaths struct {
-	DocsDir     string
-	SpecsDir    string
-	PlansDir    string
-	ConfigLevel string // "workspace", "project", "global", "default"
+	DocsDir    string
+	SpecsDir   string
+	PlansDir   string
+	Provenance map[string]string // keys: "docs_dir","specs_dir","plans_dir" -> "project"|"workspace"|"global"|"default"
+}
+
+// IsAllDefault reports whether every resolved field fell through to the
+// built-in default (i.e. no .lazyai/ layer anywhere set anything).
+func (r ResolvedPaths) IsAllDefault() bool {
+	for _, v := range r.Provenance {
+		if v != "default" {
+			return false
+		}
+	}
+	return true
 }
 
 // Scope represents the resolution scope.
@@ -54,15 +65,14 @@ type Issue struct {
 	Severity IssueSeverity
 	Message  string
 	Path     string
+	Level    string // "global" | "workspace" | "project" | "" (e.g. the workspaces.yaml migration hint)
 }
 
-// GlobalSidecarConfig is the top-level structure of ~/.lazyai/sidecar.yaml.
-type GlobalSidecarConfig struct {
-	Sidecar *SidecarConfig `yaml:"sidecar"`
-}
-
-// ProjectSidecarConfig is the top-level structure of .lazyai-sidecar.yaml.
-type ProjectSidecarConfig struct {
+// SidecarFile is the on-disk shape of every <scope-root>/.lazyai/sidecar.yaml,
+// at every scope. Replaces GlobalSidecarConfig + ProjectSidecarConfig (identical
+// shape, previously duplicated once per scope for no reason — no scope has ever
+// had a differently-shaped file).
+type SidecarFile struct {
 	Sidecar *SidecarConfig `yaml:"sidecar"`
 }
 

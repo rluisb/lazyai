@@ -3,6 +3,7 @@ package sidecar
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -11,98 +12,117 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestWriteProjectSidecar_RejectsMissingProjectRoot(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
+// TestWriteSidecarAt_RejectsMissingScopeRoot asserts that WriteSidecarAt
+// still fails when scopeRoot is genuinely unreachable. WriteSidecarAt does
+// MkdirAll(<scopeRoot>/.lazyai) internally, so a merely-missing intermediate
+// directory now succeeds via recursive creation (unlike the old
+// WriteProjectSidecar, which required scopeRoot to pre-exist) — the only
+// remaining failure mode is a scopeRoot whose parent chain cannot be
+// created at all, e.g. a permission-denied ancestor.
+func TestWriteSidecarAt_RejectsMissingScopeRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits required")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores permission bits")
+	}
 
-	err := WriteProjectSidecar(filepath.Join(projectRoot, "missing"), &SidecarConfig{})
+	tmpDir := t.TempDir()
+	lockedParent := filepath.Join(tmpDir, "locked")
+	require.NoError(t, os.Mkdir(lockedParent, 0o555))
+	t.Cleanup(func() { _ = os.Chmod(lockedParent, 0o755) })
+
+	scopeRoot := filepath.Join(lockedParent, "missing", "deeper")
+	err := WriteSidecarAt(scopeRoot, &SidecarConfig{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "project root not accessible")
 }
 
-func TestWriteProjectSidecar_RejectsFileProjectRoot(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	fileRoot := filepath.Join(projectRoot, "not-a-dir")
+// TestWriteSidecarAt_RejectsFileScopeRoot asserts scopeRoot being a regular
+// file (not a directory) is rejected — MkdirAll cannot create
+// <scopeRoot>/.lazyai underneath a file.
+func TestWriteSidecarAt_RejectsFileScopeRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	fileRoot := filepath.Join(tmpDir, "not-a-dir")
 	require.NoError(t, os.WriteFile(fileRoot, []byte("x"), 0o644))
 
-	err := WriteProjectSidecar(fileRoot, &SidecarConfig{})
+	err := WriteSidecarAt(fileRoot, &SidecarConfig{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "project root is not a directory")
 }
 
-func TestWriteProjectSidecar_WritesAtomicallyAndBacksUpExistingFile(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	oldConfig := &SidecarConfig{
-		Path:     "old-kb",
-		DocsDir:  "old-docs",
-		SpecsDir: "old-specs",
-		PlansDir: "old-plans",
-	}
-	newConfig := &SidecarConfig{
-		Path:     "new-kb",
-		DocsDir:  "new-docs",
-		SpecsDir: "new-specs",
-		PlansDir: "new-plans",
+// TestWriteSidecarAt_WritesAtomicallyAndBacksUpExistingFile replaces
+// TestWriteProjectSidecar_WritesAtomicallyAndBacksUpExistingFile and
+// TestWriteGlobalSidecar_WritesAtomicallyAndBacksUpExistingFile: WriteSidecarAt
+// is a single function regardless of which scope root it is called with, so
+// both scenarios are now subtests of the same table. Asserts the written
+// path is exactly <scopeRoot>/.lazyai/sidecar.yaml (standard doc Enforcement,
+// spec.md §8).
+func TestWriteSidecarAt_WritesAtomicallyAndBacksUpExistingFile(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{name: "project-style root"},
+		{name: "global-style root"},
 	}
 
-	writeProjectSidecar(t, projectRoot, oldConfig)
-	require.NoError(t, WriteProjectSidecar(projectRoot, newConfig))
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scopeRoot := t.TempDir()
 
-	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
-	newData, err := os.ReadFile(path)
-	require.NoError(t, err)
-	backupData, err := os.ReadFile(path + ".bak")
-	require.NoError(t, err)
+			oldConfig := &SidecarConfig{
+				Path:     "old-kb",
+				DocsDir:  "old-docs",
+				SpecsDir: "old-specs",
+				PlansDir: "old-plans",
+			}
+			newConfig := &SidecarConfig{
+				Path:     "new-kb",
+				DocsDir:  "new-docs",
+				SpecsDir: "new-specs",
+				PlansDir: "new-plans",
+			}
 
-	var newFile ProjectSidecarConfig
-	var backup ProjectSidecarConfig
-	require.NoError(t, yaml.Unmarshal(newData, &newFile))
-	require.NoError(t, yaml.Unmarshal(backupData, &backup))
+			require.NoError(t, WriteSidecarAt(scopeRoot, oldConfig))
+			require.NoError(t, WriteSidecarAt(scopeRoot, newConfig))
 
-	assert.Equal(t, newConfig, newFile.Sidecar)
-	assert.Equal(t, oldConfig, backup.Sidecar)
+			path := filepath.Join(scopeRoot, ".lazyai", "sidecar.yaml")
+			newData, err := os.ReadFile(path)
+			require.NoError(t, err)
+			backupData, err := os.ReadFile(path + ".bak")
+			require.NoError(t, err)
+
+			var newFile SidecarFile
+			var backup SidecarFile
+			require.NoError(t, yaml.Unmarshal(newData, &newFile))
+			require.NoError(t, yaml.Unmarshal(backupData, &backup))
+
+			assert.Equal(t, newConfig, newFile.Sidecar)
+			assert.Equal(t, oldConfig, backup.Sidecar)
+		})
+	}
 }
 
-func TestWriteGlobalSidecar_WritesAtomicallyAndBacksUpExistingFile(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	oldConfig := &SidecarConfig{
-		Path:     filepath.Join(projectRoot, "old-global"),
-		DocsDir:  "old-docs",
-		SpecsDir: "old-specs",
-		PlansDir: "old-plans",
-	}
-	newConfig := &SidecarConfig{
-		Path:     filepath.Join(projectRoot, "new-global"),
-		DocsDir:  "new-docs",
-		SpecsDir: "new-specs",
-		PlansDir: "new-plans",
+// TestWriteSidecarAt_NeverProducesFlatLazyaiSidecarYamlFile is one of the
+// standard doc's required Enforcement tests (spec.md §8): asserts the old
+// flat <scopeRoot>/.lazyai-sidecar.yaml file is never produced by the new
+// unified writer, for both root styles.
+func TestWriteSidecarAt_NeverProducesFlatLazyaiSidecarYamlFile(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{name: "project-style root"},
+		{name: "global-style root"},
 	}
 
-	writeGlobalSidecar(t, oldConfig)
-	require.NoError(t, WriteGlobalSidecar(newConfig))
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scopeRoot := t.TempDir()
+			require.NoError(t, WriteSidecarAt(scopeRoot, &SidecarConfig{Path: "kb"}))
 
-	globalDir, err := getGlobalConfigDir()
-	require.NoError(t, err)
-	path := filepath.Join(globalDir, "sidecar.yaml")
-
-	newData, err := os.ReadFile(path)
-	require.NoError(t, err)
-	backupData, err := os.ReadFile(path + ".bak")
-	require.NoError(t, err)
-
-	var newFile GlobalSidecarConfig
-	var backup GlobalSidecarConfig
-	require.NoError(t, yaml.Unmarshal(newData, &newFile))
-	require.NoError(t, yaml.Unmarshal(backupData, &backup))
-
-	assert.Equal(t, newConfig, newFile.Sidecar)
-	assert.Equal(t, oldConfig, backup.Sidecar)
+			flatPath := filepath.Join(scopeRoot, ".lazyai-sidecar.yaml")
+			_, err := os.Stat(flatPath)
+			require.True(t, os.IsNotExist(err), "flat sidecar file must never be produced")
+		})
+	}
 }
 
 func TestSaveWorkspaceConfig_WritesSingleSlotBackup(t *testing.T) {

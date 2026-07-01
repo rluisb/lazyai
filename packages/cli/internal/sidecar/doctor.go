@@ -12,61 +12,49 @@ type sidecarCandidate struct {
 	anchor string
 }
 
-// Doctor validates sidecar configuration for the given scope.
+// Doctor validates every discovered .lazyai/ layer (global, workspace if
+// found, project if found) relative to cwd, plus checks for a stale
+// ~/.lazyai/workspaces.yaml (migration hint, see
+// specs/refactors/579-lazyai-config-directory/spec.md §7). There is no
+// caller-supplied Scope — Doctor mirrors Resolve's full-discovery contract.
 // It returns a slice of issues; an empty slice means everything is valid.
-// Missing sidecar at any level is not an error — it results in an empty slice.
-func Doctor(scope Scope, projectRoot string) ([]Issue, error) {
-	var issues []Issue
-
-	globalDir, err := getGlobalConfigDir()
+// Missing sidecar at any level is not an error — it results in no issues
+// for that level.
+func Doctor(cwd string) ([]Issue, error) {
+	layers, err := DiscoverLayers(cwd)
 	if err != nil {
 		return nil, err
 	}
 
-	appendCandidate := func(level string, cfg *SidecarConfig, anchor string) {
-		issues = append(issues, validateSidecarCandidate(sidecarCandidate{
-			level:  level,
-			cfg:    cfg,
-			anchor: anchor,
-		})...)
+	var issues []Issue
+
+	appendCandidate := func(layer Layer) {
+		for _, issue := range validateSidecarCandidate(sidecarCandidate{
+			level:  layer.Level,
+			cfg:    layer.Config,
+			anchor: layer.Root,
+		}) {
+			issue.Level = layer.Level
+			issues = append(issues, issue)
+		}
 	}
 
-	switch scope {
-	case ScopeGlobal:
-		globalCfg, err := LoadGlobalSidecar()
-		if err != nil {
-			return nil, err
+	appendCandidate(layers.Global)
+	if layers.Workspace != nil {
+		appendCandidate(*layers.Workspace)
+	}
+	if layers.Project != nil {
+		appendCandidate(*layers.Project)
+	}
+
+	if home, err := os.UserHomeDir(); err == nil {
+		if _, err := os.Stat(filepath.Join(home, ".lazyai", "workspaces.yaml")); err == nil {
+			issues = append(issues, Issue{
+				Severity: IssueSeverityWarning,
+				Level:    "",
+				Message:  "found legacy ~/.lazyai/workspaces.yaml (workspace registry removed in #579) — re-create any workspace/project sidecars you still need with 'sidecar init' from the intended directory",
+			})
 		}
-		appendCandidate("global", globalCfg, globalDir)
-	case ScopeProject:
-		globalCfg, err := LoadGlobalSidecar()
-		if err != nil {
-			return nil, err
-		}
-		projectCfg, err := LoadProjectSidecar(projectRoot)
-		if err != nil {
-			return nil, err
-		}
-		appendCandidate("global", globalCfg, globalDir)
-		appendCandidate("project", projectCfg, projectRoot)
-	case ScopeWorkspace:
-		globalCfg, err := LoadGlobalSidecar()
-		if err != nil {
-			return nil, err
-		}
-		projectCfg, err := LoadProjectSidecar(projectRoot)
-		if err != nil {
-			return nil, err
-		}
-		workspaceCfg, err := LoadWorkspaceSidecar()
-		if err != nil {
-			return nil, err
-		}
-		appendCandidate("global", globalCfg, globalDir)
-		appendCandidate("project", projectCfg, projectRoot)
-		appendCandidate("workspace", workspaceCfg, globalDir)
-	default:
-		return nil, fmt.Errorf("unknown scope: %v", scope)
 	}
 
 	return issues, nil

@@ -37,13 +37,10 @@ func setupTestEnv(t *testing.T) (homeDir, projectRoot, globalDir string, cleanup
 	return homeDir, projectRoot, globalDir, cleanup
 }
 
-func ensureDirs(t *testing.T, paths ...string) {
-	for _, p := range paths {
-		require.NoError(t, os.MkdirAll(p, 0o755))
-	}
-}
-
 // writeWorkspaceConfig writes a workspace config to the global config dir.
+// Still called by remover_test.go (out of scope for this wave — the
+// registry/remover package survives until Phase 3), so it is kept even
+// though nothing in this file uses it anymore.
 func writeWorkspaceConfig(t *testing.T, cfg *WorkspaceConfig) {
 	t.Helper()
 	dir, err := getGlobalConfigDir()
@@ -54,45 +51,45 @@ func writeWorkspaceConfig(t *testing.T, cfg *WorkspaceConfig) {
 	require.NoError(t, os.WriteFile(path, data, 0o644))
 }
 
-// writeGlobalSidecar writes a global sidecar config.
+// writeGlobalSidecar writes the current $HOME's .lazyai/sidecar.yaml.
+// Rewritten to target the unified SidecarFile on-disk shape (via
+// writeSidecarAtDir, discovery_test.go) instead of the deleted
+// GlobalSidecarConfig wrapper / flat-file layout.
 func writeGlobalSidecar(t *testing.T, cfg *SidecarConfig) {
 	t.Helper()
-	dir, err := getGlobalConfigDir()
+	home, err := os.UserHomeDir()
 	require.NoError(t, err)
-	path := filepath.Join(dir, "sidecar.yaml")
-	data, err := yaml.Marshal(GlobalSidecarConfig{Sidecar: cfg})
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0o644))
+	writeSidecarAtDir(t, home, cfg)
 }
 
-// writeProjectSidecar writes a project sidecar config.
+// writeProjectSidecar writes <projectRoot>/.lazyai/sidecar.yaml. Rewritten
+// to target the unified SidecarFile shape instead of the deleted flat
+// ".lazyai-sidecar.yaml" / ProjectSidecarConfig wrapper.
 func writeProjectSidecar(t *testing.T, projectRoot string, cfg *SidecarConfig) {
 	t.Helper()
-	path := filepath.Join(projectRoot, ".lazyai-sidecar.yaml")
-	data, err := yaml.Marshal(ProjectSidecarConfig{Sidecar: cfg})
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0o644))
+	writeSidecarAtDir(t, projectRoot, cfg)
 }
 
 func TestResolve_NoSidecarAnyLevel(t *testing.T) {
 	_, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// No workspace config, no sidecars.
-	result, err := Resolve(ScopeProject, projectRoot)
+	// No layer anywhere: no global sidecar, no workspace ancestor, no
+	// project sidecar.
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, "default", result.ConfigLevel)
+	assert.True(t, result.IsAllDefault())
 	assert.Equal(t, filepath.Join(projectRoot, "docs"), result.DocsDir)
 	assert.Equal(t, filepath.Join(projectRoot, "specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(projectRoot, "plans"), result.PlansDir)
 }
 
 func TestResolve_GlobalOnly(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	sidecarPath := filepath.Join(globalDir, "kb")
+	sidecarPath := filepath.Join(homeDir, "kb")
 	require.NoError(t, os.MkdirAll(sidecarPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
@@ -102,20 +99,24 @@ func TestResolve_GlobalOnly(t *testing.T) {
 		PlansDir: "my-plans",
 	})
 
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, "global", result.ConfigLevel)
 	assert.Equal(t, filepath.Join(sidecarPath, "my-docs"), result.DocsDir)
 	assert.Equal(t, filepath.Join(sidecarPath, "my-specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(sidecarPath, "my-plans"), result.PlansDir)
+	assert.Equal(t, map[string]string{
+		"docs_dir":  "global",
+		"specs_dir": "global",
+		"plans_dir": "global",
+	}, result.Provenance)
 }
 
 func TestResolve_ProjectOverridesGlobal(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	globalPath := filepath.Join(globalDir, "global-kb")
+	globalPath := filepath.Join(homeDir, "global-kb")
 	projectPath := filepath.Join(projectRoot, "project-kb")
 	require.NoError(t, os.MkdirAll(globalPath, 0o755))
 	require.NoError(t, os.MkdirAll(projectPath, 0o755))
@@ -134,78 +135,42 @@ func TestResolve_ProjectOverridesGlobal(t *testing.T) {
 		PlansDir: "project-plans",
 	})
 
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, "project", result.ConfigLevel)
 	assert.Equal(t, filepath.Join(projectPath, "project-docs"), result.DocsDir)
 	assert.Equal(t, filepath.Join(projectPath, "project-specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(projectPath, "project-plans"), result.PlansDir)
-}
-
-func TestResolve_WorkspaceOverridesProject(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	workspacePath := filepath.Join(globalDir, "workspace-kb")
-	projectPath := filepath.Join(projectRoot, "project-kb")
-	require.NoError(t, os.MkdirAll(workspacePath, 0o755))
-	require.NoError(t, os.MkdirAll(projectPath, 0o755))
-
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-				Sidecar: &SidecarConfig{
-					Path:     workspacePath,
-					SpecsDir: "workspace-specs",
-					DocsDir:  "workspace-docs",
-					PlansDir: "workspace-plans",
-				},
-			},
-		},
-		Active: "my-project",
-	})
-
-	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:     projectPath,
-		SpecsDir: "project-specs",
-		DocsDir:  "project-docs",
-		PlansDir: "project-plans",
-	})
-
-	result, err := Resolve(ScopeWorkspace, projectRoot)
-	require.NoError(t, err)
-
-	assert.Equal(t, "workspace", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(workspacePath, "workspace-docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(workspacePath, "workspace-specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(workspacePath, "workspace-plans"), result.PlansDir)
+	assert.Equal(t, map[string]string{
+		"docs_dir":  "project",
+		"specs_dir": "project",
+		"plans_dir": "project",
+	}, result.Provenance)
 }
 
 func TestResolve_RelativePathResolution(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Global sidecar with relative path.
-	kbPath := filepath.Join(globalDir, "kb")
+	// Global sidecar with a relative Path anchors on the global layer's
+	// own Root (home), NOT home/.lazyai — spec.md §3.3 Refinement.
+	kbPath := filepath.Join(homeDir, "kb")
 	require.NoError(t, os.MkdirAll(kbPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     "kb", // relative to globalDir
+		Path:     "kb", // relative to homeDir
 		SpecsDir: "specs",
 		DocsDir:  "docs",
 		PlansDir: "plans",
 	})
 
-	result, err := Resolve(ScopeGlobal, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, "global", result.ConfigLevel)
 	assert.Equal(t, filepath.Join(kbPath, "docs"), result.DocsDir)
 	assert.Equal(t, filepath.Join(kbPath, "specs"), result.SpecsDir)
 	assert.Equal(t, filepath.Join(kbPath, "plans"), result.PlansDir)
+	assert.Equal(t, "global", result.Provenance["docs_dir"])
 }
 
 func TestResolve_AbsolutePathPassthrough(t *testing.T) {
@@ -223,31 +188,39 @@ func TestResolve_AbsolutePathPassthrough(t *testing.T) {
 		PlansDir: "plans",
 	})
 
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, "project", result.ConfigLevel)
 	assert.Equal(t, filepath.Join(absPath, "docs"), result.DocsDir)
 }
 
 func TestResolve_DefaultDirValues(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	kbPath := filepath.Join(globalDir, "kb")
+	kbPath := filepath.Join(homeDir, "kb")
 	require.NoError(t, os.MkdirAll(kbPath, 0o755))
 
-	// Sidecar with empty *_dir fields.
+	// Global sidecar sets Path but leaves every *_dir field blank. Under
+	// field-level merge, a blank RAW field means "not set by this layer" —
+	// docs/specs/plans all fall through to the true no-layer-sets-this-
+	// field default, anchored on the deepest present layer's Root (global's
+	// Root == homeDir), NOT on kbPath.
 	writeGlobalSidecar(t, &SidecarConfig{
 		Path: kbPath,
 	})
 
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	assert.Equal(t, filepath.Join(kbPath, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(kbPath, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(kbPath, "plans"), result.PlansDir)
+	assert.Equal(t, filepath.Join(homeDir, "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(homeDir, "specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(homeDir, "plans"), result.PlansDir)
+	assert.Equal(t, map[string]string{
+		"docs_dir":  "default",
+		"specs_dir": "default",
+		"plans_dir": "default",
+	}, result.Provenance)
 }
 
 func TestResolve_AbsoluteDirPaths(t *testing.T) {
@@ -268,162 +241,12 @@ func TestResolve_AbsoluteDirPaths(t *testing.T) {
 		PlansDir: "plans",
 	})
 
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
 	assert.Equal(t, absDocs, result.DocsDir)
 	assert.Equal(t, absSpecs, result.SpecsDir)
 	assert.Equal(t, filepath.Join(projectRoot, "plans"), result.PlansDir)
-}
-
-func TestResolve_WorkscopeFallback(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-			},
-		},
-		Active: "my-project",
-	})
-
-	result, err := Resolve(ScopeWorkspace, projectRoot)
-	require.NoError(t, err)
-
-	assert.Equal(t, "default", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(projectRoot, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(projectRoot, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(projectRoot, "plans"), result.PlansDir)
-}
-
-func TestResolve_GlobalScopeDefault(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	result, err := Resolve(ScopeGlobal, projectRoot)
-	require.NoError(t, err)
-
-	assert.Equal(t, "default", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(globalDir, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(globalDir, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(globalDir, "plans"), result.PlansDir)
-}
-
-func TestResolve_GlobalScopeIgnoresProjectAndWorkspace(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	globalSidecarPath := filepath.Join(globalDir, "global-sidecar")
-	projectSidecarPath := filepath.Join(projectRoot, "project-sidecar")
-	workspaceSidecarPath := filepath.Join(globalDir, "workspace-sidecar")
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name:    "my-project",
-				Path:    projectRoot,
-				Sidecar: &SidecarConfig{Path: workspaceSidecarPath},
-			},
-		},
-		Active: "my-project",
-	})
-	ensureDirs(t,
-		filepath.Join(globalSidecarPath, "docs"),
-		filepath.Join(globalSidecarPath, "specs"),
-		filepath.Join(globalSidecarPath, "plans"),
-		filepath.Join(projectSidecarPath, "docs"),
-		filepath.Join(projectSidecarPath, "specs"),
-		filepath.Join(projectSidecarPath, "plans"),
-		filepath.Join(workspaceSidecarPath, "docs"),
-		filepath.Join(workspaceSidecarPath, "specs"),
-		filepath.Join(workspaceSidecarPath, "plans"),
-	)
-
-	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     globalSidecarPath,
-		DocsDir:  "docs",
-		SpecsDir: "specs",
-		PlansDir: "plans",
-	})
-	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:     projectSidecarPath,
-		DocsDir:  "docs",
-		SpecsDir: "specs",
-		PlansDir: "plans",
-	})
-
-	result, err := Resolve(ScopeGlobal, projectRoot)
-	require.NoError(t, err)
-	assert.Equal(t, "global", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(globalSidecarPath, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(globalSidecarPath, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(globalSidecarPath, "plans"), result.PlansDir)
-}
-
-func TestResolve_ProjectScopeIgnoresWorkspaceSidecar(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	globalSidecarPath := filepath.Join(globalDir, "global-sidecar")
-	projectSidecarPath := filepath.Join(projectRoot, "project-sidecar")
-	workspaceSidecarPath := filepath.Join(globalDir, "workspace-sidecar")
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name:    "my-project",
-				Path:    projectRoot,
-				Sidecar: &SidecarConfig{Path: workspaceSidecarPath},
-			},
-		},
-		Active: "my-project",
-	})
-	ensureDirs(t,
-		filepath.Join(globalSidecarPath, "docs"),
-		filepath.Join(globalSidecarPath, "specs"),
-		filepath.Join(globalSidecarPath, "plans"),
-		filepath.Join(projectSidecarPath, "docs"),
-		filepath.Join(projectSidecarPath, "specs"),
-		filepath.Join(projectSidecarPath, "plans"),
-		filepath.Join(workspaceSidecarPath, "docs"),
-		filepath.Join(workspaceSidecarPath, "specs"),
-		filepath.Join(workspaceSidecarPath, "plans"),
-	)
-
-	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     globalSidecarPath,
-		DocsDir:  "docs",
-		SpecsDir: "specs",
-		PlansDir: "plans",
-	})
-	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:     projectSidecarPath,
-		DocsDir:  "docs",
-		SpecsDir: "specs",
-		PlansDir: "plans",
-	})
-
-	result, err := Resolve(ScopeProject, projectRoot)
-	require.NoError(t, err)
-	assert.Equal(t, "project", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(projectSidecarPath, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(projectSidecarPath, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(projectSidecarPath, "plans"), result.PlansDir)
-}
-
-func TestResolve_NoActiveWorkspace(t *testing.T) {
-	_, projectRoot, _, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{},
-		Active:     "",
-	})
-
-	_, err := Resolve(ScopeWorkspace, projectRoot)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no active workspace")
 }
 
 func TestResolve_RejectsEmptySidecarPath(t *testing.T) {
@@ -434,118 +257,172 @@ func TestResolve_RejectsEmptySidecarPath(t *testing.T) {
 		Path: "",
 	})
 
-	_, err := Resolve(ScopeProject, projectRoot)
+	_, err := Resolve(projectRoot)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sidecar path is required but empty")
 }
 
-func TestResolve_GlobalRelativePathUsesGlobalConfigDirAtProjectScope(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+// TestMergeLayers_PartialProjectConfigInheritsRemainingFieldsFromWorkspace
+// directly supersedes the deleted TestResolve_HigherPrioritySidecarReplacesWholeTuple:
+// a project layer setting only docs_dir must NOT wipe out workspace's
+// specs_dir/plans_dir, and global (which also sets all three) must lose to
+// workspace for those two fields since workspace outranks it.
+func TestMergeLayers_PartialProjectConfigInheritsRemainingFieldsFromWorkspace(t *testing.T) {
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
+
+	// filepath.Dir(projectRoot) sits strictly above projectRoot and is not
+	// homeDir (a sibling, not an ancestor) — a valid workspace-layer root.
+	workspaceRoot := filepath.Dir(projectRoot)
+
+	globalPath := filepath.Join(homeDir, "global-kb")
+	workspacePath := filepath.Join(workspaceRoot, "workspace-kb")
+	projectPath := filepath.Join(projectRoot, "project-kb")
+	require.NoError(t, os.MkdirAll(globalPath, 0o755))
+	require.NoError(t, os.MkdirAll(workspacePath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
 
 	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     "kb",
-		SpecsDir: "specs",
-		DocsDir:  "docs",
-		PlansDir: "plans",
+		Path:     globalPath,
+		DocsDir:  "global-docs",
+		SpecsDir: "global-specs",
+		PlansDir: "global-plans",
 	})
-
-	result, err := Resolve(ScopeProject, projectRoot)
-	require.NoError(t, err)
-
-	globalSidecarDir := filepath.Join(globalDir, "kb")
-	assert.Equal(t, "global", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(globalSidecarDir, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(globalSidecarDir, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(globalSidecarDir, "plans"), result.PlansDir)
-	assert.NotEqual(t, filepath.Join(projectRoot, "kb", "docs"), result.DocsDir)
-}
-
-func TestResolve_ProjectRelativePathUsesProjectRootAtWorkspaceScope(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-			},
-		},
-		Active: "my-project",
+	writeSidecarAtDir(t, workspaceRoot, &SidecarConfig{
+		Path:     workspacePath,
+		SpecsDir: "workspace-specs",
+		PlansDir: "workspace-plans",
 	})
-
 	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path: "project-kb",
+		Path:    projectPath,
+		DocsDir: "project-docs",
 	})
 
-	result, err := Resolve(ScopeWorkspace, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	projectSidecarDir := filepath.Join(projectRoot, "project-kb")
-	assert.Equal(t, "project", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "plans"), result.PlansDir)
-	assert.NotEqual(t, filepath.Join(globalDir, "project-kb", "docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(projectPath, "project-docs"), result.DocsDir)
+	assert.Equal(t, "project", result.Provenance["docs_dir"])
+	assert.Equal(t, filepath.Join(workspacePath, "workspace-specs"), result.SpecsDir)
+	assert.Equal(t, "workspace", result.Provenance["specs_dir"])
+	assert.Equal(t, filepath.Join(workspacePath, "workspace-plans"), result.PlansDir)
+	assert.Equal(t, "workspace", result.Provenance["plans_dir"])
 }
 
-func TestResolve_WorkspaceRelativePathUsesGlobalConfigDirAtWorkspaceScope(t *testing.T) {
-	_, projectRoot, globalDir, cleanup := setupTestEnv(t)
+func TestMergeLayers_ProjectFieldWinsOverWorkspaceAndGlobal(t *testing.T) {
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	writeWorkspaceConfig(t, &WorkspaceConfig{
-		Workspaces: []WorkspaceEntry{
-			{
-				Name: "my-project",
-				Path: projectRoot,
-				Sidecar: &SidecarConfig{
-					Path:     "workspace-kb",
-					SpecsDir: "workspace-specs",
-					DocsDir:  "workspace-docs",
-					PlansDir: "workspace-plans",
-				},
-			},
-		},
-		Active: "my-project",
-	})
+	workspaceRoot := filepath.Dir(projectRoot)
 
-	result, err := Resolve(ScopeWorkspace, projectRoot)
+	globalPath := filepath.Join(homeDir, "global-kb")
+	workspacePath := filepath.Join(workspaceRoot, "workspace-kb")
+	projectPath := filepath.Join(projectRoot, "project-kb")
+	require.NoError(t, os.MkdirAll(globalPath, 0o755))
+	require.NoError(t, os.MkdirAll(workspacePath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
+
+	writeGlobalSidecar(t, &SidecarConfig{Path: globalPath, DocsDir: "global-docs"})
+	writeSidecarAtDir(t, workspaceRoot, &SidecarConfig{Path: workspacePath, DocsDir: "workspace-docs"})
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{Path: projectPath, DocsDir: "project-docs"})
+
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	workspaceSidecarDir := filepath.Join(globalDir, "workspace-kb")
-	assert.Equal(t, "workspace", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(workspaceSidecarDir, "workspace-plans"), result.PlansDir)
-	assert.NotEqual(t, filepath.Join(projectRoot, "workspace-kb", "workspace-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(projectPath, "project-docs"), result.DocsDir)
+	assert.Equal(t, "project", result.Provenance["docs_dir"])
 }
 
-func TestResolve_HigherPrioritySidecarReplacesWholeTuple(t *testing.T) {
+func TestMergeLayers_ProvenanceReflectsActualSourcePerField(t *testing.T) {
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	workspaceRoot := filepath.Dir(projectRoot)
+
+	globalPath := filepath.Join(homeDir, "global-kb")
+	workspacePath := filepath.Join(workspaceRoot, "workspace-kb")
+	projectPath := filepath.Join(projectRoot, "project-kb")
+	require.NoError(t, os.MkdirAll(globalPath, 0o755))
+	require.NoError(t, os.MkdirAll(workspacePath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
+
+	// project sets only docs_dir; workspace sets only specs_dir; global
+	// sets neither, and no layer sets plans_dir at all -> "default".
+	writeGlobalSidecar(t, &SidecarConfig{Path: globalPath})
+	writeSidecarAtDir(t, workspaceRoot, &SidecarConfig{Path: workspacePath, SpecsDir: "workspace-specs"})
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{Path: projectPath, DocsDir: "project-docs"})
+
+	result, err := Resolve(projectRoot)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]string{
+		"docs_dir":  "project",
+		"specs_dir": "workspace",
+		"plans_dir": "default",
+	}, result.Provenance)
+	assert.Equal(t, filepath.Join(projectPath, "project-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(workspacePath, "workspace-specs"), result.SpecsDir)
+	// No layer sets plans_dir; deepest present root is the project layer's
+	// own Root (cwd), matching today's single-tuple fallback intent.
+	assert.Equal(t, filepath.Join(projectRoot, "plans"), result.PlansDir)
+}
+
+// TestMergeLayers_GlobalAlwaysAppliesAsBaseLayer is the third required case
+// for spec.md §8's enforcement row 3: global must still surface a field
+// neither project nor workspace touches, even though a "closer" layer
+// (project) is present for other fields.
+func TestMergeLayers_GlobalAlwaysAppliesAsBaseLayer(t *testing.T) {
+	homeDir, projectRoot, _, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	globalPath := filepath.Join(homeDir, "global-kb")
+	projectPath := filepath.Join(projectRoot, "project-kb")
+	require.NoError(t, os.MkdirAll(globalPath, 0o755))
+	require.NoError(t, os.MkdirAll(projectPath, 0o755))
+
+	writeGlobalSidecar(t, &SidecarConfig{
+		Path:     globalPath,
+		SpecsDir: "global-specs",
+	})
+	writeProjectSidecar(t, projectRoot, &SidecarConfig{
+		Path:    projectPath,
+		DocsDir: "project-docs",
+	})
+
+	result, err := Resolve(projectRoot)
+	require.NoError(t, err)
+
+	assert.Equal(t, filepath.Join(globalPath, "global-specs"), result.SpecsDir)
+	assert.Equal(t, "global", result.Provenance["specs_dir"])
+	assert.Equal(t, filepath.Join(projectPath, "project-docs"), result.DocsDir)
+	assert.Equal(t, "project", result.Provenance["docs_dir"])
+}
+
+// TestResolve_WorkspaceRelativePathUsesDiscoveredWorkspaceRoot supersedes
+// the deleted TestResolve_WorkspaceRelativePathUsesGlobalConfigDirAtWorkspaceScope,
+// which locked in the bug this refactor fixes (workspace anchored on
+// globalDir instead of its own discovered Root).
+func TestResolve_WorkspaceRelativePathUsesDiscoveredWorkspaceRoot(t *testing.T) {
 	_, projectRoot, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	writeGlobalSidecar(t, &SidecarConfig{
-		Path:     filepath.Join(string(os.PathSeparator), "global-kb"),
-		SpecsDir: "global-specs",
-		DocsDir:  "global-docs",
-		PlansDir: "global-plans",
+	workspaceRoot := filepath.Dir(projectRoot)
+
+	workspaceKB := filepath.Join(workspaceRoot, "workspace-kb")
+	require.NoError(t, os.MkdirAll(workspaceKB, 0o755))
+
+	writeSidecarAtDir(t, workspaceRoot, &SidecarConfig{
+		Path:     "workspace-kb", // relative -> must anchor on workspaceRoot
+		SpecsDir: "workspace-specs",
+		DocsDir:  "workspace-docs",
+		PlansDir: "workspace-plans",
 	})
 
-	writeProjectSidecar(t, projectRoot, &SidecarConfig{
-		Path:     "project-kb",
-		DocsDir:  "custom-docs",
-		SpecsDir: "",
-		PlansDir: "",
-	})
-
-	result, err := Resolve(ScopeProject, projectRoot)
+	result, err := Resolve(projectRoot)
 	require.NoError(t, err)
 
-	projectSidecarDir := filepath.Join(projectRoot, "project-kb")
-	assert.Equal(t, "project", result.ConfigLevel)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "custom-docs"), result.DocsDir)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "specs"), result.SpecsDir)
-	assert.Equal(t, filepath.Join(projectSidecarDir, "plans"), result.PlansDir)
-	assert.NotEqual(t, filepath.Join(string(os.PathSeparator), "global-kb", "custom-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(workspaceKB, "workspace-docs"), result.DocsDir)
+	assert.Equal(t, filepath.Join(workspaceKB, "workspace-specs"), result.SpecsDir)
+	assert.Equal(t, filepath.Join(workspaceKB, "workspace-plans"), result.PlansDir)
+	assert.Equal(t, "workspace", result.Provenance["docs_dir"])
 }

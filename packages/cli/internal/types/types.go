@@ -98,6 +98,8 @@ const (
 	SkillIdDocBackedClarify      SkillId = "doc-backed-clarify"
 	SkillIdFastFeedback          SkillId = "fast-feedback"
 	SkillIdFourPointVibeCoding   SkillId = "four-point-vibe-coding"
+	SkillIdGitHygiene            SkillId = "git-hygiene"
+	SkillIdGitOperations         SkillId = "git-operations"
 	SkillIdHandoff               SkillId = "handoff"
 	SkillIdIssueTriage           SkillId = "issue-triage"
 	SkillIdMemoryPromotion       SkillId = "memory-promotion"
@@ -105,6 +107,8 @@ const (
 	SkillIdPrReview              SkillId = "pr-review"
 	SkillIdProjectGuardrailsInit SkillId = "project-guardrails-init"
 	SkillIdReview                SkillId = "review"
+	SkillIdSecurityStandards     SkillId = "security-standards"
+	SkillIdShellStrategy         SkillId = "shell-strategy"
 	SkillIdSkillAuthoring        SkillId = "skill-authoring"
 	SkillIdSlackMessageFormatter SkillId = "slack-message-formatter"
 	SkillIdSlackfmt              SkillId = "slackfmt"
@@ -119,6 +123,7 @@ const (
 	SkillIdTaskToIssues          SkillId = "task-to-issues"
 	SkillIdTddPlanning           SkillId = "tdd-planning"
 	SkillIdTestFirstChange       SkillId = "test-first-change"
+	SkillIdWorktreeWorkflow      SkillId = "worktree-workflow"
 	SkillIdZoomOut               SkillId = "zoom-out"
 )
 
@@ -404,11 +409,15 @@ var (
 		SkillIdDocBackedClarify,
 		SkillIdFastFeedback,
 		SkillIdFourPointVibeCoding,
+		SkillIdGitHygiene,
+		SkillIdGitOperations,
 		SkillIdHandoff,
 		SkillIdIssueTriage,
 		SkillIdMemoryPromotion,
 		SkillIdNoWorkarounds,
 		SkillIdProjectGuardrailsInit,
+		SkillIdSecurityStandards,
+		SkillIdShellStrategy,
 		SkillIdSkillAuthoring,
 		SkillIdSlackMessageFormatter,
 		SkillIdSlackfmt,
@@ -423,6 +432,7 @@ var (
 		SkillIdTaskToIssues,
 		SkillIdTddPlanning,
 		SkillIdTestFirstChange,
+		SkillIdWorktreeWorkflow,
 		SkillIdZoomOut,
 	}
 

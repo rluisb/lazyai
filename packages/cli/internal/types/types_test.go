@@ -150,8 +150,8 @@ func TestAllSlices_ContainExpectedElements(t *testing.T) {
 	if len(ALL_AGENTS) != 8 {
 		t.Errorf("ALL_AGENTS has %d elements, want 8 canonical agents", len(ALL_AGENTS))
 	}
-	if len(ALL_SKILLS) != 32 {
-		t.Errorf("ALL_SKILLS has %d elements, want 32 active parity skills (22 core + 10 speckit/utility)", len(ALL_SKILLS))
+	if len(ALL_SKILLS) != 37 {
+		t.Errorf("ALL_SKILLS has %d elements, want 37 active skills (22 core parity + 10 speckit/utility + 5 pi-mined git/shell/security)", len(ALL_SKILLS))
 	}
 	if len(ALL_PROMPTS) != 5 {
 		t.Errorf("ALL_PROMPTS has %d elements, want 5", len(ALL_PROMPTS))

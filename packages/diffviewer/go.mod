@@ -3,7 +3,7 @@ module github.com/rluisb/lazyai/packages/diffviewer
 go 1.26.1
 
 require (
-	charm.land/bubbles/v2 v2.1.0
+	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.1.0
 	charm.land/lipgloss/v2 v2.0.6
 	charm.land/log/v2 v2.0.0

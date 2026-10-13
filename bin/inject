@@ -23,6 +23,7 @@ RUNTIME_CORE_FILES=(
   tdd-planning.md
   caveman-ai-memory.md
   llm-engineering-relationships.md
+  agent-skills.md
 )
 
 REFERENCE_CATALOG=(

@@ -20,6 +20,10 @@ _Avoid_: target, tool, adapter, CLI (when meaning the agent CLI)
 LazyAI's testing and maintenance commitment for a harness, distinct from its native format support. Tier 1 covers supported capabilities with compiler tests and harness smoke checks; tier 2 is provisional and experimental pending runtime verification.
 _Avoid_: compatibility level, feature parity
 
+**Context file**:
+The standing-instructions file a harness loads at session start. In LazyAI 2.0 the root AGENTS.md is the one compiled context file; CLAUDE.md only imports it.
+_Avoid_: memory file, rules file, instructions file
+
 **Agent Plugin**:
 A directory conforming to the Agent Plugins standard, with portable skills and MCP config. Both the project source and the LazyAI library are Agent Plugins.
 _Avoid_: bundle, package, `.ai/` tree

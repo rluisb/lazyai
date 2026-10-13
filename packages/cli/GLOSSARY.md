@@ -16,6 +16,10 @@ _Avoid_: v2, V2 compile
 An agent CLI that LazyAI emits configuration for, such as Claude Code, Codex, Pi, OpenCode or agy.
 _Avoid_: target, tool, adapter, CLI (when meaning the agent CLI)
 
+**Harness tier**:
+LazyAI's testing and maintenance commitment for a harness, distinct from its native format support. Tier 1 covers supported capabilities with compiler tests and harness smoke checks; tier 2 is provisional and experimental pending runtime verification.
+_Avoid_: compatibility level, feature parity
+
 **Agent Plugin**:
 A directory conforming to the Agent Plugins standard, with portable skills and MCP config. Both the project source and the LazyAI library are Agent Plugins.
 _Avoid_: bundle, package, `.ai/` tree

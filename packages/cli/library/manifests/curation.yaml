@@ -992,6 +992,24 @@ entries:
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's flat library/skills layout.
     token_rent_relevant: false
+  - path: packages/cli/library/skills/git-hygiene.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Human-gated git-hygiene skill mined from pi practice (feature
+      007-pi-mined-skills) and emitted to supported tool adapters.
+    reason_compressed_or_changed: LazyAI-authored from the approved 2026-07-02
+      pi-mined draft; not a vibe-lab baseline copy.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/git-operations.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Human-gated git-operations skill mined from pi practice (feature
+      007-pi-mined-skills) and emitted to supported tool adapters.
+    reason_compressed_or_changed: LazyAI-authored from the approved 2026-07-02
+      pi-mined draft; not a vibe-lab baseline copy.
+    token_rent_relevant: false
   - path: packages/cli/library/skills/handoff.md
     kind: skill
     category: adapter-support
@@ -1025,6 +1043,24 @@ entries:
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's flat library/skills layout.
     token_rent_relevant: false
+  - path: packages/cli/library/skills/security-standards.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Human-gated security-standards skill mined from pi practice
+      (feature 007-pi-mined-skills) and emitted to supported tool adapters.
+    reason_compressed_or_changed: LazyAI-authored from the approved 2026-07-02
+      pi-mined draft; not a vibe-lab baseline copy.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/shell-strategy.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Human-gated shell-strategy skill mined from pi practice (feature
+      007-pi-mined-skills) and emitted to supported tool adapters.
+    reason_compressed_or_changed: LazyAI-authored from the approved 2026-07-02
+      pi-mined draft; not a vibe-lab baseline copy.
+    token_rent_relevant: false
   - path: packages/cli/library/skills/skill-authoring.md
     kind: skill
     category: adapter-support
@@ -1048,6 +1084,15 @@ entries:
     reason_kept: Full parity test-first-change skill emitted to supported tool adapters.
     reason_compressed_or_changed: Copied from the current vibe-lab baseline into
       LazyAI's flat library/skills layout.
+    token_rent_relevant: false
+  - path: packages/cli/library/skills/worktree-workflow.md
+    kind: skill
+    category: adapter-support
+    adapter_targets: [claude-code, opencode, copilot, pi]
+    reason_kept: Human-gated worktree-workflow skill mined from pi practice
+      (feature 007-pi-mined-skills) and emitted to supported tool adapters.
+    reason_compressed_or_changed: LazyAI-authored from the approved 2026-07-02
+      pi-mined draft; not a vibe-lab baseline copy.
     token_rent_relevant: false
   - path: packages/cli/library/skills/zoom-out.md
     kind: skill

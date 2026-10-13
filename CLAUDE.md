@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 <!-- GENERATED FILE — do not edit manually. Run bin/inject to regenerate. -->
-<!-- Source hash: 1e257827c93ff68e51891ea5dea1a947ba23296ae2f05e31526a864e39f54ae5 -->
+<!-- Source hash: 7bc57ce1160b2e32e8b81080f8d535294e15e1751883f375b240434e418328bf -->
 
 <!-- constitution.md -->
 # How We Work (Constitution)
@@ -301,6 +301,21 @@ Raw model, CLI harness, project adapter, generated context, skill, agent, hook, 
 - **ai-memory** — advisory retrieved data unless explicitly system-authored.
 - **Human gate** — human-gated approval or rejection of high-impact actions.
 
+<!-- agent-skills.md -->
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on rluisb/lazyai via `gh`; wayfinder maps are issues with sub-issues and native blocking links. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: root `GLOSSARY-MAP.md` → `packages/cli/GLOSSARY.md`, `packages/diffviewer/GLOSSARY.md`; system-wide ADRs in `specs/adrs/`. See `docs/agents/domain.md`.
+
 ## On-Demand References
 
 Read these only when the trigger matches the current task:
@@ -320,25 +335,62 @@ Read these only when the trigger matches the current task:
 
 - **adhd-engineer**: ADHD-optimized cognitive scaffolding for senior/staff software engineers with ~10-minute focus windows.
 - **architecture-review**: Use before structural changes to make a lightweight ADR-style decision with constraints, trade-offs, and consequences.
+- **ask-matt**: Ask which skill or flow fits your situation. A router over the skills in this repo.
 - **caveman**: Use when a specification, plan, or assistant message is too verbose and needs a compact working summary without losing links to source context or replacing durable ai-memory.
+- **chief-of-staff**: Pursue a long-running goal in a single session by co-ordinating subagents.
+- **claude-handoff**: Hand the current conversation off to a fresh background agent that picks up the work immediately.
+- **code-review**: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
+- **codebase-design**: Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary.
 - **codebase-exploration**: Use when entering an unfamiliar repository or subsystem and you need a disciplined search-and-read strategy before changing code.
 - **create-agent**: Use when asked to create or revise a LazyAI agent source definition while keeping generated tool-native agent files derived, not hand-edited.
 - **create-hook**: Use when asked to create, scaffold, or write a new vibe-lab hook or hook policy. Defines one canonical POLICY.md and optional runtime scripts, with Claude Code hook and OpenCode plugin compatibility.
 - **create-skill**: Use when asked to create, scaffold, or write a new vibe-lab Agent Skill. Generates an Agent Skills compatible SKILL.md with optional scripts, references, assets, adapter symlinks, and verification.
 - **create-workflow**: Use when asked to create or design a vibe-lab workflow artifact that coordinates skills, agents, hooks, plugins, and verification gates across Claude Code, OpenCode, and OMP/Pi.
 - **diagnose**: Use when debugging a failing test, broken build, runtime error, or unexpected system behavior. Drives hypothesis-based investigation, root-cause fixes, verification, and reusable learning capture.
+- **diagnosing-bugs**: Diagnosis loop for hard bugs and performance regressions. Use when the user says "diagnose"/"debug this", or reports something broken/throwing/failing/slow.
 - **doc-backed-clarify**: Use at task intake when requirements or repository context are unclear. Supports lightweight, grill-me, and grill-me-with-docs clarification levels while always preserving the four-point pattern.
+- **domain-modeling**: Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a GLOSSARY.md, or recording or editing an ADR.
 - **fast-feedback**: Use during implementation to run the smallest meaningful verification command after each focused change.
 - **four-point-vibe-coding**: Use when starting or steering an agent task with four-point communication, clean-code-for-agents rules, and fast feedback.
-- **handoff**: Use when a session is ending, context needs to be preserved for a future session, or when transferring work between agents. Generates a structured handoff document with open questions, next steps, and context summary.
+- **git-guardrails-claude-code**: Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, branch -D, etc.) before they execute. Use when user wants to prevent destructive git operations, add git safety hooks, or block git push/reset in Claude Code.
+- **grill-me**: A relentless interview to sharpen a plan or design.
+- **grill-with-docs**: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
+- **grilling**: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
+- **handoff**: Compact the current conversation into a handoff document for another agent to pick up.
+- **implement-spec**: "Implement the result of /to-spec and /to-tickets in code."
+- **implement**: "Implement a piece of work based on a spec or set of tickets."
+- **improve-codebase-architecture**: Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.
 - **issue-triage**: Use when a bug report, error message, alert, or issue needs classification, deduplication, severity, ownership, refinement, and reusable triage learning before implementation.
+- **loop-me**: Grill me about specs for the workflows I want to build, within this workspace.
 - **memory-promotion**: Use at task closeout to propose durable ai-memory or documentation updates without writing silently, especially when caveman summaries, diagnoses, triage, or issue extraction reveal reusable knowledge.
+- **migrate-to-shoehorn**: Migrate test files from `as` type assertions to @total-typescript/shoehorn. Use when user mentions shoehorn, wants to replace `as` in tests, or needs partial test data.
 - **no-workarounds**: Use during review or debugging to reject temporary patches and require root-cause fixes for workaround-shaped changes.
+- **pr**: "Use when writing a PR body."
 - **project-guardrails-init**: Use when onboarding into a project to discover existing stack, architecture, commands, and conventions before proposing rules or memory.
+- **prototype**: Build a throwaway prototype to answer a design question. Use when the user wants to sanity-check whether a state model or logic feels right, or explore what a UI should look like.
+- **research**: Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent.
+- **retro**: "Conduct a retrospective on a coding session."
+- **scaffold-exercises**: Create exercise directory structures with sections, problems, solutions, and explainers that pass linting. Use when user wants to scaffold exercises, create exercise stubs, or set up a new course section.
+- **setup-matt-pocock-skills**: "Configure this repo for the engineering skills: set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of the other engineering skills."
+- **setup-pre-commit**: Set up Husky pre-commit hooks with lint-staged (Prettier), type checking, and tests in the current repo. Use when user wants to add pre-commit hooks, set up Husky, configure lint-staged, or add commit-time formatting/typechecking/testing.
+- **setup-ts-deep-modules**: Wire dependency-cruiser into a TypeScript repo so each package is a deep module, with implementation hidden in subfolders and reachable only through its entry-point files. User-invoked.
 - **skill-authoring**: Use when creating or modifying vibe-lab skills or adjacent artifact templates so Agent Skills compatibility, canonical source layout, adapter generation, and verification stay consistent.
 - **task-to-issues**: Use when extracting actionable tasks from meeting notes, Slack threads, PR descriptions, specs, or other unstructured text. Converts ephemeral notes into tracked issues with context, acceptance criteria, deduplication, and learning capture.
 - **tdd-planning**: Use during research or planning before implementation to choose a TDD mode, define red tests, preserve existing tests, and produce the test-first artifact for a feature, bugfix, or refactor.
+- **tdd**: Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions "red-green-refactor", or wants integration tests.
+- **teach**: Teach the user a new skill or concept, within this workspace.
 - **test-first-change**: Use when changing behavior so the agent drives the edit through a failing test, preserves existing tests, follows the selected TDD mode, and verifies red-green-refactor evidence.
+- **to-questionnaire**: Turn a decision you can't fully answer into a questionnaire for someone else to fill in.
+- **to-spec**: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
+- **to-tickets**: Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, published to the configured tracker (edges as text in one file per ticket locally, or native blocking links on a real tracker).
+- **triage**: Move issues and external PRs through a state machine of triage roles, categorise, verify, grill if needed, and write agent-ready briefs.
+- **wait-what**: "Stop. That last message did not land: re-pitch it."
+- **wayfinder**: Plan a huge chunk of work (more than one agent session can hold) as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear.
+- **wizard**: Generate an interactive bash wizard that walks a human through steps only they can perform. Use when provisioning infrastructure, setting up credentials or CI secrets, walking an unfamiliar third-party dashboard, or running a one-off migration or cutover. Don't invoke this for steps the agent can perform itself.
+- **writing-beats**: Writing, exploit; assemble raw material into a journey of beats, grounding each term before a beat leans on it.
+- **writing-for-agents**: Writing documents for agents. Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md.
+- **writing-fragments**: "Writing, explore: mine raw fragments, no structure yet."
+- **writing-shape**: "Writing, exploit: shape raw material into an article, paragraph by paragraph."
 - **zoom-out**: Use when stuck in implementation details and losing sight of the bigger picture, or when a bug suggests an architectural problem rather than a local fix. Forces a structured step back to re-evaluate assumptions and design.
 ## Shared Agents
 

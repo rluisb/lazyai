@@ -79,3 +79,9 @@ PROJECT_UNDERSTANDING.md
 # CocoIndex Code (ccc)
 /.cocoindex_code/
 evidences/
+
+# Local tool state and build artifacts
+.playwright-mcp/
+.ai-jail
+packages/diffviewer/lazyai-diffviewer
+tmp/lazyai-cli-audit

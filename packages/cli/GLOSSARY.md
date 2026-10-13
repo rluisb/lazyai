@@ -36,6 +36,14 @@ _Avoid_: `.ai/` tree, canonical tree, source plugin
 The Agent Plugin shipped inside `lazyai-cli` that a project source references and LazyAI merges in at compile.
 _Avoid_: packs, starter, library content (when meaning a copy in the project)
 
+**Skill core**:
+The fixed set of skills the LazyAI library ships in 2.0, each covering one step of the engineering loop or LazyAI authoring.
+_Avoid_: skill pack, starter skills, speckit
+
+**Router skill**:
+The `lazyai` skill that tells the agent which skill fits the user's current step; it suggests, it never dispatches.
+_Avoid_: orchestrator, dispatcher, rpi
+
 **Namespace folder**:
 The `io.github.rluisb.lazyai/` folder inside an Agent Plugin, holding the parts the Agent Plugins standard does not cover.
 _Avoid_: extension dir, LazyAI dir

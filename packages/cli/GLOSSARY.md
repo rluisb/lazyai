@@ -44,6 +44,18 @@ _Avoid_: skill pack, starter skills, speckit
 The `lazyai` skill that tells the agent which skill fits the user's current step; it suggests, it never dispatches.
 _Avoid_: orchestrator, dispatcher, rpi
 
+**Owned content**:
+A whole file, a marked region, or a config key that LazyAI wrote and records in the lock; everything else in the project belongs to the user.
+_Avoid_: managed file, generated file (when meaning ownership)
+
+**Lock**:
+The committed record of every piece of owned content and the hash it had when LazyAI last wrote it.
+_Avoid_: lockfile store, manifest, journal
+
+**Drift**:
+Owned content whose current hash no longer matches the lock, meaning someone edited it after LazyAI wrote it.
+_Avoid_: conflict, stale (stale means the source changed, not the output)
+
 **Namespace folder**:
 The `io.github.rluisb.lazyai/` folder inside an Agent Plugin, holding the parts the Agent Plugins standard does not cover.
 _Avoid_: extension dir, LazyAI dir
